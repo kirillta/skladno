@@ -130,7 +130,7 @@ Requirements: Node.js 22 or later and npm 10 or later.
 3. Run `npm run dev`.
 4. Open `http://localhost:5173`. The page reports whether it can reach the local service at `http://127.0.0.1:8787/api/health`.
 
-Use `npm run typecheck` for TypeScript project checks, `npm test` for shared-contract tests, and `npm run build` for a production web build. The web package has no environment-variable exposure configured: credentials must never be prefixed with `VITE_` or imported by browser code.
+Use `npm run typecheck` for TypeScript project checks, `npm test` for shared-contract and SQLite repository tests, and `npm run build` for a production web build. The web package has no environment-variable exposure configured: credentials must never be prefixed with `VITE_` or imported by browser code.
 
 ### Workspace layout
 
