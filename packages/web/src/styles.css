@@ -1,0 +1,11 @@
+:root {
+  color: #202124;
+  background: #faf9f6;
+  font-family: system-ui, sans-serif;
+}
+
+body { margin: 0; }
+main { max-width: 42rem; margin: 12vh auto; padding: 2rem; }
+h1 { margin-bottom: 0.25rem; }
+p[data-state="ready"] { color: #17643a; }
+p[data-state="error"] { color: #a22b20; }

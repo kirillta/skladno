@@ -123,14 +123,22 @@ These features are intentionally held until the core editorial loop has been val
 
 ## Development
 
-The implementation skeleton has not been initialized yet. Setup and verification commands will be added here as part of the foundation issue.
+Requirements: Node.js 22 or later and npm 10 or later.
 
-Until then:
+1. Copy `.env.example` to `.env` and adjust local ports only if required. `OPENAI_API_KEY` is optional for this foundation and remains server-side.
+2. Run `npm install`.
+3. Run `npm run dev`.
+4. Open `http://localhost:5173`. The page reports whether it can reach the local service at `http://127.0.0.1:8787/api/health`.
 
-1. Select an issue whose dependencies are satisfied.
-2. Read its goal, scope, acceptance criteria, risks, and evaluation section.
-3. Follow the repository instructions in [AGENTS.md](AGENTS.md).
-4. Keep implementation within the selected issue's scope.
+Use `npm run typecheck` for TypeScript project checks, `npm test` for shared-contract tests, and `npm run build` for a production web build. The web package has no environment-variable exposure configured: credentials must never be prefixed with `VITE_` or imported by browser code.
+
+### Workspace layout
+
+- `packages/shared`: domain types, API shapes, validation, and the transport-neutral `ApplicationClient` interface.
+- `packages/server`: the loopback-only Node local service and server-side configuration.
+- `packages/web`: the React renderer and the HTTP implementation of `ApplicationClient`.
+
+Electron can later provide another `ApplicationClient` implementation through a narrow preload bridge; neither the React UI nor shared contracts need to change.
 
 ## Privacy
 
