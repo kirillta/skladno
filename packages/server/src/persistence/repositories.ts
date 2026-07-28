@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type {
   AcceptedChange, AppSetting, CreateDocumentInput, CreateMaterialInput, CreateSourceCitationInput,
-  CreateWorkflowArtifactInput, Document, DocumentVersion, Material, SourceCitation, UpdateMaterialInput,
+  CreateWorkflowArtifactInput, Document, DocumentVersion, Material, SaveDocumentDraftInput, SourceCitation, UpdateMaterialInput,
   WorkflowArtifact,
 } from "@skladno/shared";
 
 import type { SqliteDatabase } from "./database.js";
+import { DocumentConflictError } from "./errors.js";
 
 type Row = Record<string, unknown>;
 const now = () => new Date().toISOString();
@@ -59,9 +60,23 @@ export class Repositories {
   }
   listDocuments(): Document[] { return (this.database.prepare(`SELECT d.id document_id, d.title, d.created_at document_created_at, d.updated_at document_updated_at, v.* FROM documents d JOIN document_versions v ON v.id = d.current_version_id ORDER BY d.updated_at DESC, d.id ASC`).all() as Row[]).map(document); }
   getDocument(documentId: string): Document | undefined { const row = this.database.prepare(`SELECT d.id document_id, d.title, d.created_at document_created_at, d.updated_at document_updated_at, v.* FROM documents d JOIN document_versions v ON v.id = d.current_version_id WHERE d.id = ?`).get(documentId) as Row | undefined; return row && document(row); }
+  renameDocument(documentId: string, title: string): Document {
+    if (!this.getDocument(documentId)) throw new Error("Document not found.");
+    this.database.prepare("UPDATE documents SET title = ?, updated_at = ? WHERE id = ?").run(required(title, "Document title"), now(), documentId);
+    return this.getDocument(documentId)!;
+  }
+  deleteDocument(documentId: string): void {
+    if (this.database.prepare("DELETE FROM documents WHERE id = ?").run(documentId).changes === 0) throw new Error("Document not found.");
+  }
   listVersions(documentId: string): DocumentVersion[] { return (this.database.prepare("SELECT * FROM document_versions WHERE document_id = ? ORDER BY created_at ASC, id ASC").all(documentId) as Row[]).map(version); }
   acceptChange(documentId: string, change: AcceptedChange): DocumentVersion {
     return this.appendVersion(documentId, change.content, change.provenance);
+  }
+  saveDraft(documentId: string, input: SaveDocumentDraftInput): DocumentVersion {
+    const current = this.getDocument(documentId);
+    if (!current) throw new Error("Document not found.");
+    if (current.currentVersionId !== input.baseVersionId) throw new DocumentConflictError(current);
+    return this.appendVersion(documentId, input.content, { kind: "author-draft", baseVersionId: input.baseVersionId });
   }
   private appendVersion(documentId: string, content: string, provenance: Record<string, unknown>, restoredFromVersionId?: string): DocumentVersion {
     if (!this.getDocument(documentId)) throw new Error("Document not found.");
