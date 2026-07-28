@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@skladno/shared": "*"
