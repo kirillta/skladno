@@ -36,6 +36,21 @@ test("document API supports CRUD and revision-aware draft saves", async () => {
         assert.equal(savedResponse.status, HTTP_STATUS.OK);
         const saved = await savedResponse.json() as { id: string };
 
+        const proposal = await fetch(`${baseUrl}/${created.id}/proposal`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ baseVersionId: saved.id, content: "proposal", provenance: { kind: "accepted-proposal" } }),
+        });
+        assert.equal(proposal.status, HTTP_STATUS.CREATED);
+        const proposalVersion = await proposal.json() as { id: string };
+
+        const versions = await fetch(`${baseUrl}/${created.id}/versions`);
+        assert.equal(versions.status, HTTP_STATUS.OK);
+        assert.equal((await versions.json() as unknown[]).length, 3);
+
+        const restored = await fetch(`${baseUrl}/${created.id}/versions/${proposalVersion.id}/restore`, { method: HTTP_METHOD.POST });
+        assert.equal(restored.status, HTTP_STATUS.CREATED);
+
         const conflict = await fetch(`${baseUrl}/${created.id}/draft`, { method: HTTP_METHOD.PUT, headers: { "content-type": "application/json" }, body: JSON.stringify({ content: "stale", baseVersionId: created.currentVersionId }) });
         assert.equal(conflict.status, HTTP_STATUS.CONFLICT);
 

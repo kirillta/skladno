@@ -1,5 +1,6 @@
 import type {
     AcceptedChange,
+    AcceptProposalInput,
     AppSetting,
     CreateDocumentInput,
     CreateMaterialInput,
@@ -88,6 +89,11 @@ export class Repositories {
 
     acceptChange(documentId: string, change: AcceptedChange): DocumentVersion { 
         return this.documents.acceptChange(documentId, change); 
+    }
+
+
+    acceptProposal(documentId: string, input: AcceptProposalInput): DocumentVersion {
+        return this.documents.acceptProposal(documentId, input);
     }
 
 

@@ -1,6 +1,8 @@
 import {
     DocumentConflictError,
+    acceptProposalPath,
     documentsPath,
+    documentVersionsPath,
     editorialPath,
     healthPath,
     HTTP_METHOD,
@@ -11,11 +13,13 @@ import {
     type Document,
     type HealthResponse,
     type SaveDocumentDraftInput,
+    type AcceptProposalInput,
     type DocumentVersion,
     type WorkspaceClient,
     type EditorialClient,
     type EditorialEvent,
     type StartEditorialRequest,
+    restoreVersionPath,
 } from "@skladno/shared";
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
@@ -54,6 +58,21 @@ export class HttpApplicationClient implements ApplicationClient, WorkspaceClient
 
     async saveDraft(documentId: string, input: SaveDocumentDraftInput): Promise<DocumentVersion> {
         return this.request<DocumentVersion>(`${documentsPath}/${encodeURIComponent(documentId)}/draft`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+
+    async listVersions(documentId: string): Promise<DocumentVersion[]> {
+        return this.request<DocumentVersion[]>(documentVersionsPath(documentId));
+    }
+
+
+    async acceptProposal(documentId: string, input: AcceptProposalInput): Promise<DocumentVersion> {
+        return this.request<DocumentVersion>(acceptProposalPath(documentId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+    }
+
+
+    async restoreVersion(documentId: string, versionId: string): Promise<DocumentVersion> {
+        return this.request<DocumentVersion>(restoreVersionPath(documentId, versionId), { method: HTTP_METHOD.POST });
     }
 
 
