@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { DocumentConflictError, type Document, type EditorialEvent } from "@skladno/shared";
+import { DocumentConflictError, EDITORIAL_OPERATION, type Document, type EditorialOperation, type EditorialEvent } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
 
 type WorkspaceState = "loading" | "ready" | "error";
 type SaveState = "saved" | "saving" | "error";
+
+
+enum EditorialState {
+    Idle = "idle",
+    Streaming = "streaming",
+    Error = "error",
+}
 
 
 const client = new HttpApplicationClient();
@@ -28,10 +35,11 @@ export function App() {
     const draftsRef = useRef(drafts);
     const selectedRef = useRef(selectedId);
     const editorialRequest = useRef<AbortController>();
-    const [editorialPrompt, setEditorialPrompt] = useState("");
+    const [editorialContext, setEditorialContext] = useState("");
     const [proposal, setProposal] = useState("");
-    const [editorialState, setEditorialState] = useState<"idle" | "streaming" | "error">("idle");
+    const [editorialState, setEditorialState] = useState(EditorialState.Idle);
     const [editorialMessage, setEditorialMessage] = useState("");
+    const [lastEditorialOperation, setLastEditorialOperation] = useState<EditorialOperation>();
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -60,28 +68,35 @@ export function App() {
     }
 
 
-    function save(documentId: string, draft: string) {
+    function save(documentId: string, draft: string): Promise<boolean> {
         setSaveState("saving");
-        saveQueue.current = saveQueue.current.then(async () => {
+        const queuedSave = saveQueue.current.then(async () => {
             const baseVersionId = versions.current.get(documentId);
-            if (!baseVersionId) 
-                return;
+            if (!baseVersionId)
+                return false;
 
             try {
                 const version = await client.saveDraft(documentId, { content: draft, baseVersionId });
                 updateSavedVersion(documentId, version.id, version.content);
-                if (selectedRef.current === documentId) 
+                if (selectedRef.current === documentId)
                     setSaveState("saved");
+
+                return true;
             } catch (error) {
                 if (error instanceof DocumentConflictError) {
                     versions.current.set(documentId, error.document.currentVersionId);
                     setDocuments((items) => items.map((item) => item.id === documentId ? error.document : item));
                 }
 
-                if (selectedRef.current === documentId) 
+                if (selectedRef.current === documentId)
                     setSaveState("error");
+
+                return false;
             }
         });
+
+        saveQueue.current = queuedSave.then(() => undefined);
+        return queuedSave;
     }
 
 
@@ -154,20 +169,33 @@ export function App() {
     }
 
 
-    async function requestEditorialProposal() {
-        if (!selected || !editorialPrompt.trim())
+    async function requestEditorialProposal(operation: EditorialOperation) {
+        if (!selected)
             return;
+
+        const draft = draftsRef.current[selected.id] ?? "";
+        if (draft !== selected.currentVersion.content) {
+            const saved = await save(selected.id, draft);
+            if (!saved) {
+                setEditorialState(EditorialState.Error);
+                setEditorialMessage("Couldn’t save the current article, so no text was sent for review. Retry saving, then try again.");
+
+                return;
+            }
+        }
 
         const controller = new AbortController();
         editorialRequest.current = controller;
         setProposal("");
-        setEditorialState("streaming");
+        setEditorialState(EditorialState.Streaming);
+        setLastEditorialOperation(operation);
         setEditorialMessage("Preparing a proposal…");
 
         try {
             await client.streamEditorial(selected.id, {
                 requestId: crypto.randomUUID(),
-                prompt: editorialPrompt,
+                operation,
+                authorContext: editorialContext,
             }, (event: EditorialEvent) => {
                 if (event.type === "text_delta") {
                     setProposal((current) => current + event.delta);
@@ -176,16 +204,16 @@ export function App() {
                     setEditorialMessage(`${event.status === "started" ? "Using" : "Finished"} ${event.tool.replace("_", " ")}.`);
                 } else if (event.type === "completed") {
                     setProposal(event.text);
-                    setEditorialState("idle");
+                    setEditorialState(EditorialState.Idle);
                     setEditorialMessage("Proposal ready for review. It has not changed your article.");
                 } else {
-                    setEditorialState("error");
+                    setEditorialState(EditorialState.Error);
                     setEditorialMessage(event.message);
                 }
             }, controller.signal);
         } catch (error) {
             if (!controller.signal.aborted) {
-                setEditorialState("error");
+                setEditorialState(EditorialState.Error);
                 setEditorialMessage(error instanceof Error ? error.message : "Couldn’t get a proposal. Retry when ready.");
             }
         } finally {
@@ -198,7 +226,7 @@ export function App() {
     function cancelEditorialProposal() {
         editorialRequest.current?.abort();
         editorialRequest.current = undefined;
-        setEditorialState("idle");
+        setEditorialState(EditorialState.Idle);
         setEditorialMessage("Proposal cancelled. Your article is unchanged.");
     }
 
@@ -218,12 +246,15 @@ export function App() {
             </ul>}
             <section className="editorial-assistant" aria-label="Editorial assistant">
                 <h2>Editorial assistant</h2>
-                <textarea aria-label="Editorial request" value={editorialPrompt} onChange={(event) => setEditorialPrompt(event.target.value)} placeholder="Ask for a proposal…" disabled={!selected || editorialState === "streaming"} />
+                <p>Choose a workflow. Skladno creates a proposal for review and never replaces the saved article.</p>
+                <textarea aria-label="Theses or editorial guidance" value={editorialContext} onChange={(event) => setEditorialContext(event.target.value)} placeholder="Add theses, a tone, or revision guidance…" disabled={!selected || editorialState === EditorialState.Streaming} />
                 <div className="editorial-actions">
-                    <button type="button" onClick={() => void requestEditorialProposal()} disabled={!selected || !editorialPrompt.trim() || editorialState === "streaming"}>Create proposal</button>
-                    {editorialState === "streaming" && <button type="button" onClick={cancelEditorialProposal}>Cancel</button>}
+                    <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)} disabled={!selected || editorialState === EditorialState.Streaming}>Turn theses into narrative</button>
+                    <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FLOW_REVISION)} disabled={!selected || editorialState === EditorialState.Streaming}>Revise draft for flow</button>
+                    {editorialState === EditorialState.Streaming && <button type="button" onClick={cancelEditorialProposal}>Cancel</button>}
+                    {editorialState === EditorialState.Error && lastEditorialOperation && <button type="button" onClick={() => void requestEditorialProposal(lastEditorialOperation)}>Retry request</button>}
                 </div>
-                {editorialMessage && <p data-state={editorialState === "error" ? "error" : undefined} aria-live="polite">{editorialMessage}</p>}
+                {editorialMessage && <p data-state={editorialState === EditorialState.Error ? "error" : undefined} aria-live="polite">{editorialMessage}</p>}
                 {proposal && <output className="proposal">{proposal}</output>}
             </section>
         </aside>

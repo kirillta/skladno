@@ -1,9 +1,19 @@
 export const editorialPath = (documentId: string) => `/api/documents/${encodeURIComponent(documentId)}/editorial`;
 
 
+export const EDITORIAL_OPERATION = {
+    THESIS_TO_NARRATIVE: "thesis_to_narrative",
+    FLOW_REVISION: "flow_revision",
+} as const;
+
+
+export type EditorialOperation = typeof EDITORIAL_OPERATION[keyof typeof EDITORIAL_OPERATION];
+
+
 export interface StartEditorialRequest {
     requestId: string;
-    prompt: string;
+    operation: EditorialOperation;
+    authorContext?: string;
 }
 
 

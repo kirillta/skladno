@@ -3,6 +3,7 @@ import { HTTP_METHOD, HTTP_STATUS, type EditorialEvent } from "@skladno/shared";
 
 import type { ServerConfig } from "../../config.js";
 import { PROVIDER_STREAM_EVENT, requestAbortedSignal, writeEditorialEvent, type EditorialProvider } from "../../editorial/openai-responses-provider.js";
+import { createEditorialPrompt, isEditorialOperation } from "../../editorial/workflow-prompt.js";
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, string } from "../json.js";
 
@@ -28,10 +29,11 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         return false;
 
     const documentId = decodeURIComponent(match[1]);
+    const document = repositories.getDocument(documentId);
     const body = object(await readJson(request));
     const requestId = string(body.requestId, "requestId");
-    const prompt = string(body.prompt, "prompt");
-    const document = repositories.getDocument(documentId);
+    const operation = string(body.operation, "operation");
+    const authorContext = body.authorContext === undefined ? "" : string(body.authorContext, "authorContext");
 
     response.writeHead(HTTP_STATUS.OK, { "cache-control": "no-cache, no-transform", connection: "keep-alive", "content-type": "text/event-stream; charset=utf-8" });
 
@@ -42,8 +44,8 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         return true;
     }
 
-    if (!prompt.trim()) {
-        writeEditorialEvent(response, errorEvent(requestId, "provider", "Editorial request must not be empty.", false));
+    if (!isEditorialOperation(operation)) {
+        writeEditorialEvent(response, errorEvent(requestId, "provider", "Choose either thesis to narrative or flow revision.", false));
         response.end();
 
         return true;
@@ -58,6 +60,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
 
     const signal = requestAbortedSignal(request, response);
     const session = repositories.getEditorialSession(documentId);
+    const prompt = createEditorialPrompt(operation, authorContext);
     let completed = false;
 
     try {
@@ -65,6 +68,18 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
             if (event.type === PROVIDER_STREAM_EVENT.COMPLETED) {
                 completed = true;
                 repositories.saveEditorialSession(documentId, event.responseId);
+                repositories.createWorkflowArtifact({
+                    documentId,
+                    versionId: document.currentVersionId,
+                    kind: "editorial-proposal",
+                    content: JSON.stringify({
+                        requestId,
+                        operation,
+                        authorContext,
+                        responseId: event.responseId,
+                        proposal: event.text,
+                    }),
+                });
             }
 
             writeEditorialEvent(response, { ...event, requestId });

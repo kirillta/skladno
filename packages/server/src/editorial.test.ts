@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { HTTP_METHOD } from "@skladno/shared";
+import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
 
 import { PROVIDER_STREAM_EVENT, type EditorialProvider, type EditorialProviderRequest, type ProviderStreamEvent } from "./editorial/openai-responses-provider.js";
 import { createLocalService } from "./http.js";
@@ -58,7 +58,7 @@ test("editorial endpoint streams a typed proposal and saves context only after c
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ requestId: "request-1", prompt: "Improve the flow" }),
+            body: JSON.stringify({ requestId: "request-1", operation: EDITORIAL_OPERATION.FLOW_REVISION, authorContext: "Keep the direct tone." }),
         });
         const body = await response.text();
 
@@ -67,6 +67,16 @@ test("editorial endpoint streams a typed proposal and saves context only after c
         assert.equal(repositories.getEditorialSession(document.id)?.previousResponseId, "resp-1");
         assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
         assert.equal(provider.requests[0]?.article, "Original article");
+        assert.match(provider.requests[0]?.prompt ?? "", /Workflow: flow revision/);
+        assert.match(provider.requests[0]?.prompt ?? "", /Keep the direct tone/);
+        assert.match(provider.requests[0]?.prompt ?? "", /Do not invent facts/);
+        assert.deepEqual(JSON.parse(repositories.listWorkflowArtifacts(document.id)[0]!.content), {
+            requestId: "request-1",
+            operation: EDITORIAL_OPERATION.FLOW_REVISION,
+            authorContext: "Keep the direct tone.",
+            responseId: "resp-1",
+            proposal: "A proposal",
+        });
     });
 });
 
@@ -79,13 +89,14 @@ test("failed or incomplete editorial streams leave document and session unchange
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ requestId: "request-2", prompt: "Improve the flow" }),
+            body: JSON.stringify({ requestId: "request-2", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
         });
         const body = await response.text();
 
         assert.match(body, /"type":"text_delta"/);
         assert.match(body, /"type":"error","requestId":"request-2","code":"malformed_stream"/);
         assert.equal(repositories.getEditorialSession(document.id), undefined);
+        assert.deepEqual(repositories.listWorkflowArtifacts(document.id), []);
         assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
     });
 });
@@ -103,13 +114,14 @@ test("provider errors are actionable and leave the article unchanged", async () 
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ requestId: "request-provider-error", prompt: "Improve the flow" }),
+            body: JSON.stringify({ requestId: "request-provider-error", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
         });
         const body = await response.text();
 
         assert.match(body, /"type":"error","requestId":"request-provider-error","code":"network"/);
         assert.match(body, /Check your connection and API settings, then retry/);
         assert.equal(repositories.getEditorialSession(document.id), undefined);
+        assert.deepEqual(repositories.listWorkflowArtifacts(document.id), []);
         assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
     });
 });
@@ -129,7 +141,7 @@ test("cancelling an editorial stream does not change the article or session", as
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ requestId: "request-3", prompt: "Improve the flow" }),
+            body: JSON.stringify({ requestId: "request-3", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
             signal: controller.signal,
         });
         
@@ -139,6 +151,7 @@ test("cancelling an editorial stream does not change the article or session", as
 
         await new Promise((resolve) => setTimeout(resolve, 10));
         assert.equal(repositories.getEditorialSession(document.id), undefined);
+        assert.deepEqual(repositories.listWorkflowArtifacts(document.id), []);
         assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
     });
 });

@@ -7,11 +7,13 @@ export {
 } from "./health.js";
 export { HTTP_METHOD, HTTP_STATUS } from "./http.js";
 export {
+    EDITORIAL_OPERATION,
     editorialPath,
     type EditorialClient,
     type EditorialCompletedEvent,
     type EditorialErrorEvent,
     type EditorialEvent,
+    type EditorialOperation,
     type EditorialSession,
     type EditorialTextDeltaEvent,
     type EditorialToolStatusEvent,
