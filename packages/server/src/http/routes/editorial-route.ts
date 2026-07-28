@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { HTTP_METHOD, HTTP_STATUS, type EditorialEvent } from "@skladno/shared";
 
 import type { ServerConfig } from "../../config.js";
-import { requestAbortedSignal, writeEditorialEvent, type EditorialProvider } from "../../editorial/openai-responses-provider.js";
+import { PROVIDER_STREAM_EVENT, requestAbortedSignal, writeEditorialEvent, type EditorialProvider } from "../../editorial/openai-responses-provider.js";
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, string } from "../json.js";
 
@@ -62,7 +62,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
 
     try {
         for await (const event of provider.stream({ model: config.openAiModel, prompt, article: boundedArticleContext(document.currentVersion.content), previousResponseId: session?.previousResponseId }, signal)) {
-            if (event.type === "completed") {
+            if (event.type === PROVIDER_STREAM_EVENT.COMPLETED) {
                 completed = true;
                 repositories.saveEditorialSession(documentId, event.responseId);
             }

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { HTTP_METHOD } from "@skladno/shared";
 
-import type { EditorialProvider, EditorialProviderRequest, ProviderStreamEvent } from "./editorial/openai-responses-provider.js";
+import { PROVIDER_STREAM_EVENT, type EditorialProvider, type EditorialProviderRequest, type ProviderStreamEvent } from "./editorial/openai-responses-provider.js";
 import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";
 
@@ -47,10 +47,10 @@ async function withService(provider: EditorialProvider, run: (baseUrl: string, r
 
 test("editorial endpoint streams a typed proposal and saves context only after completion", async () => {
     const provider = new FixtureProvider([
-        { type: "text_delta", delta: "A " },
-        { type: "tool_status", tool: "web_search", status: "started" },
-        { type: "text_delta", delta: "proposal" },
-        { type: "completed", responseId: "resp-1", text: "A proposal" },
+        { type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: "A " },
+        { type: PROVIDER_STREAM_EVENT.TOOL_STATUS, tool: "web_search", status: "started" },
+        { type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: "proposal" },
+        { type: PROVIDER_STREAM_EVENT.COMPLETED, responseId: "resp-1", text: "A proposal" },
     ]);
 
     await withService(provider, async (baseUrl, repositories) => {
@@ -72,7 +72,7 @@ test("editorial endpoint streams a typed proposal and saves context only after c
 
 
 test("failed or incomplete editorial streams leave document and session unchanged", async () => {
-    const provider = new FixtureProvider([{ type: "text_delta", delta: "Partial" }]);
+    const provider = new FixtureProvider([{ type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: "Partial" }]);
 
     await withService(provider, async (baseUrl, repositories) => {
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
@@ -118,7 +118,7 @@ test("provider errors are actionable and leave the article unchanged", async () 
 test("cancelling an editorial stream does not change the article or session", async () => {
     const provider: EditorialProvider = {
         async *stream(_request, signal): AsyncIterable<ProviderStreamEvent> {
-            yield { type: "text_delta", delta: "Partial" };
+            yield { type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: "Partial" };
             await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
         },
     };

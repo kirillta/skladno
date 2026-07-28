@@ -9,10 +9,17 @@ export interface EditorialProviderRequest {
 }
 
 
+export const PROVIDER_STREAM_EVENT = {
+    TEXT_DELTA: "text_delta",
+    TOOL_STATUS: "tool_status",
+    COMPLETED: "completed",
+} as const;
+
+
 export type ProviderStreamEvent =
-    | { type: "text_delta"; delta: string }
-    | { type: "tool_status"; tool: string; status: "started" | "completed" }
-    | { type: "completed"; responseId: string; text: string };
+    | { type: typeof PROVIDER_STREAM_EVENT.TEXT_DELTA; delta: string }
+    | { type: typeof PROVIDER_STREAM_EVENT.TOOL_STATUS; tool: string; status: "started" | "completed" }
+    | { type: typeof PROVIDER_STREAM_EVENT.COMPLETED; responseId: string; text: string };
 
 
 export interface EditorialProvider {
@@ -93,18 +100,18 @@ export class OpenAiResponsesProvider implements EditorialProvider {
 
                 if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
                     text += event.delta;
-                    yield { type: "text_delta", delta: event.delta };
+                    yield { type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: event.delta };
                 } else if (event.type === "response.web_search_call.in_progress") {
-                    yield { type: "tool_status", tool: "web_search", status: "started" };
+                    yield { type: PROVIDER_STREAM_EVENT.TOOL_STATUS, tool: "web_search", status: "started" };
                 } else if (event.type === "response.web_search_call.completed") {
-                    yield { type: "tool_status", tool: "web_search", status: "completed" };
+                    yield { type: PROVIDER_STREAM_EVENT.TOOL_STATUS, tool: "web_search", status: "completed" };
                 } else if (event.type === "response.completed") {
                     const completedResponse = asObject(event.response);
                     if (!completedResponse || typeof completedResponse.id !== "string")
                         throw new Error("OpenAI completed without a response ID. Retry the request.");
 
                     completed = true;
-                    yield { type: "completed", responseId: completedResponse.id, text };
+                    yield { type: PROVIDER_STREAM_EVENT.COMPLETED, responseId: completedResponse.id, text };
                 } else if (event.type === "error" || event.type === "response.failed") {
                     throw new Error("OpenAI could not complete this request. Retry it in a moment.");
                 }
