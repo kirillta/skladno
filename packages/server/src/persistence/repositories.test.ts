@@ -8,47 +8,60 @@ import { openDatabase } from "./database.js";
 import { Repositories } from "./repositories.js";
 
 function withRepository(run: (repositories: Repositories, close: () => void) => void): void {
-  const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
-  const database = openDatabase(join(directory, "skladno.sqlite"));
-  try { run(new Repositories(database), () => database.close()); } finally { database.close(); rmSync(directory, { recursive: true, force: true }); }
+    const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
+    const database = openDatabase(join(directory, "skladno.sqlite"));
+    try { run(new Repositories(database), () => database.close()); } finally { database.close(); rmSync(directory, { recursive: true, force: true }); }
 }
 
-test("accepted edits and restores create immutable ordered versions", () => withRepository((repositories) => {
-  const document = repositories.createDocument({ title: "Versioned article", content: "first" });
-  const second = repositories.acceptChange(document.id, { content: "second", provenance: { kind: "accepted-proposal", operationId: "op-1" } });
-  const third = repositories.acceptChange(document.id, { content: "third", provenance: { kind: "accepted-proposal", operationId: "op-2" } });
-  const restored = repositories.restoreVersion(document.id, second.id);
-  const versions = repositories.listVersions(document.id);
 
-  assert.deepEqual(versions.map(({ content }) => content), ["first", "second", "third", "second"]);
-  assert.equal(repositories.getDocument(document.id)?.currentVersionId, restored.id);
-  assert.equal(restored.restoredFromVersionId, second.id);
-  assert.equal(repositories.listVersions(document.id).find((item) => item.id === third.id)?.content, "third");
+test("accepted edits and restores create immutable ordered versions", () => withRepository((repositories) => {
+    const document = repositories.createDocument({ title: "Versioned article", content: "first" });
+    const second = repositories.acceptChange(document.id, { content: "second", provenance: { kind: "accepted-proposal", operationId: "op-1" } });
+    const third = repositories.acceptChange(document.id, { content: "third", provenance: { kind: "accepted-proposal", operationId: "op-2" } });
+    const restored = repositories.restoreVersion(document.id, second.id);
+    const versions = repositories.listVersions(document.id);
+
+    assert.deepEqual(versions.map(({ content }) => content), ["first", "second", "third", "second"]);
+    assert.equal(repositories.getDocument(document.id)?.currentVersionId, restored.id);
+    assert.equal(restored.restoredFromVersionId, second.id);
+    assert.equal(repositories.listVersions(document.id).find((item) => item.id === third.id)?.content, "third");
 }));
 
+
 test("materials, settings, artifacts and citations persist through reopening", () => {
-  const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
-  const filename = join(directory, "skladno.sqlite");
-  const firstDatabase = openDatabase(filename); const first = new Repositories(firstDatabase);
-  const material = first.createMaterial({ name: "Voice sample", content: "Original." });
-  first.updateMaterial(material.id, { content: "Edited." });
-  const document = first.createDocument({ title: "Article", content: "Draft" });
-  const artifact = first.createWorkflowArtifact({ documentId: document.id, versionId: document.currentVersionId, kind: "fact-check", content: "Finding" });
-  first.createSourceCitation({ artifactId: artifact.id, url: "https://example.test/source", uncertainty: "medium" });
-  first.setSetting("publishingLimits", { characters: 3000 }); firstDatabase.close();
-  const secondDatabase = openDatabase(filename); const second = new Repositories(secondDatabase);
-  assert.equal(second.getMaterial(material.id)?.content, "Edited.");
-  assert.deepEqual(second.getSetting("publishingLimits")?.value, { characters: 3000 });
-  assert.equal(second.getDocument(document.id)?.currentVersion.content, "Draft");
-  assert.equal(second.listWorkflowArtifacts(document.id).length, 1);
-  assert.equal(second.listSourceCitations(artifact.id)[0]?.uncertainty, "medium");
-  secondDatabase.close(); rmSync(directory, { recursive: true, force: true });
+    const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
+    const filename = join(directory, "skladno.sqlite");
+    const firstDatabase = openDatabase(filename); 
+    
+    const first = new Repositories(firstDatabase);
+    const material = first.createMaterial({ name: "Voice sample", content: "Original." });
+    first.updateMaterial(material.id, { content: "Edited." });
+    
+    const document = first.createDocument({ title: "Article", content: "Draft" });
+    const artifact = first.createWorkflowArtifact({ documentId: document.id, versionId: document.currentVersionId, kind: "fact-check", content: "Finding" });
+    first.createSourceCitation({ artifactId: artifact.id, url: "https://example.test/source", uncertainty: "medium" });
+    first.setSetting("publishingLimits", { characters: 3000 }); firstDatabase.close();
+    
+    const secondDatabase = openDatabase(filename); 
+    const second = new Repositories(secondDatabase);
+    
+    assert.equal(second.getMaterial(material.id)?.content, "Edited.");
+    assert.deepEqual(second.getSetting("publishingLimits")?.value, { characters: 3000 });
+    assert.equal(second.getDocument(document.id)?.currentVersion.content, "Draft");
+    assert.equal(second.listWorkflowArtifacts(document.id).length, 1);
+    assert.equal(second.listSourceCitations(artifact.id)[0]?.uncertainty, "medium");
+
+    secondDatabase.close(); 
+    rmSync(directory, { recursive: true, force: true });
 });
 
+
 test("foreign keys and document ownership reject invalid writes", () => withRepository((repositories) => {
-  assert.throws(() => repositories.createWorkflowArtifact({ documentId: "missing", versionId: "missing", kind: "style", content: "x" }));
-  const one = repositories.createDocument({ title: "One", content: "one" });
-  const two = repositories.createDocument({ title: "Two", content: "two" });
-  assert.throws(() => repositories.restoreVersion(one.id, two.currentVersionId), /Version not found/);
-  assert.throws(() => repositories.createMaterial({ name: " ", content: "x" }), /must not be empty/);
+    assert.throws(() => repositories.createWorkflowArtifact({ documentId: "missing", versionId: "missing", kind: "style", content: "x" }));
+    
+    const one = repositories.createDocument({ title: "One", content: "one" });
+    const two = repositories.createDocument({ title: "Two", content: "two" });
+    
+    assert.throws(() => repositories.restoreVersion(one.id, two.currentVersionId), /Version not found/);
+    assert.throws(() => repositories.createMaterial({ name: " ", content: "x" }), /must not be empty/);
 }));

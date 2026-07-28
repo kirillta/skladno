@@ -48,6 +48,9 @@ Keep these boundaries:
 - UI code depends on a narrow application-client interface, not server internals.
 - OpenAI calls, web search, persistence, and secrets stay in the local service.
 - Domain logic should be transport-neutral so a future Electron client can reuse it.
+- Organize shared domain contracts into focused modules by concern. Do not accumulate unrelated records and inputs in a catch-all file as the application grows.
+- Preserve the root `@skladno/shared` barrel as the stable public import surface while allowing internal domain modules to evolve independently.
+- Define transport-level constants shared by the server and renderer, such as HTTP status codes, once in `shared`.
 - Electron main/preload APIs must remain narrow, typed, context-isolated, and renderer-safe.
 - SQLite schema changes require explicit, forward-only migrations.
 - Persist streamed or generated output only after the operation reaches a valid completed state.
@@ -87,6 +90,22 @@ Before handing off:
 3. Report checks that were run and checks that still require manual verification.
 4. Update documentation when behavior, setup, contracts, or architecture changes.
 
+## Code style
+
+Preserve the established spacious, vertically organized formatting across the workspace.
+
+- Use four spaces for indentation in TypeScript, TSX, JavaScript, JSON, CSS, and nested HTML content. Do not use tabs.
+- Keep opening braces on the same line as their declaration or control statement.
+- Put a single-statement conditional body on the following indented line and omit braces. Use braces when a branch contains multiple statements.
+- Do not pack independent statements onto one line. Give declarations, side effects, and returns their own lines.
+- Separate top-level declarations and class methods with two blank lines. Within a function, use a blank line to separate logical phases such as validation, setup, persistence, and return.
+- Expand non-trivial object literals so each property is on its own line. Apply the same structure to nested objects and arrays in JSON configuration.
+- Format fluent call chains vertically, with each chained operation on its own indented line when the chain would otherwise be dense.
+- Keep multiline boolean expressions vertically aligned beneath the opening parenthesis.
+- Use named constants for protocol values such as HTTP status codes; do not use magic numbers in handlers, clients, or tests.
+- Write CSS as expanded blocks: one selector per line when grouped, one declaration per line, a blank line between rules, and fully expanded media-query contents.
+- Preserve the surrounding style when editing an existing file; do not introduce compact one-line formatting into expanded code.
+
 ## Testing expectations
 
 Use the narrowest effective layer:
@@ -117,4 +136,3 @@ Do not invent substitute commands or introduce a second package manager.
 ## Backlog boundaries
 
 Issues in the `Future enhancements (post-MVP)` milestone are intentionally deferred until the core editorial loop has been validated with real publications. Do not pull them into MVP work unless the active issue explicitly changes scope.
-

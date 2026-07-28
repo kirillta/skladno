@@ -1,19 +1,19 @@
 {
-  "name": "skladno",
-  "private": true,
-  "version": "0.0.0",
-  "workspaces": [
-    "packages/*"
-  ],
-  "scripts": {
-    "dev": "concurrently -n server,web -c blue,green \"npm run dev --workspace @skladno/server\" \"npm run dev --workspace @skladno/web\"",
-    "typecheck": "tsc -b",
-    "build": "npm run build --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.2",
-    "concurrently": "^9.1.0",
-    "typescript": "^5.7.2"
-  }
+    "name": "skladno",
+    "private": true,
+    "version": "0.0.0",
+    "workspaces": [
+        "packages/*"
+    ],
+    "scripts": {
+        "dev": "concurrently -n server,web -c blue,green \"npm run dev --workspace @skladno/server\" \"npm run dev --workspace @skladno/web\"",
+        "typecheck": "tsc -b",
+        "build": "npm run build --workspaces --if-present",
+        "test": "npm run test --workspaces --if-present"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.2",
+        "concurrently": "^9.1.0",
+        "typescript": "^5.7.2"
+    }
 }

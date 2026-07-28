@@ -1,15 +1,24 @@
 {
-  "compilerOptions": {
-    "composite": true,
-    "noEmit": true,
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "strict": true,
-    "jsx": "react-jsx",
-    "skipLibCheck": true,
-    "types": ["vite/client"]
-  },
-  "references": [{ "path": "../shared" }],
-  "include": ["src", "vite.config.ts"]
+    "compilerOptions": {
+        "composite": true,
+        "noEmit": true,
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "strict": true,
+        "jsx": "react-jsx",
+        "skipLibCheck": true,
+        "types": [
+            "vite/client"
+        ]
+    },
+    "references": [
+        {
+            "path": "../shared"
+        }
+    ],
+    "include": [
+        "src",
+        "vite.config.ts"
+    ]
 }
