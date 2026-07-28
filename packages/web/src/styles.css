@@ -231,6 +231,7 @@ textarea::placeholder {
 
 .editorial-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: .5rem;
     margin-top: .5rem;
 }
