@@ -4,6 +4,7 @@ import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { HTTP_METHOD } from "@skladno/shared";
 
 import type { EditorialProvider, EditorialProviderRequest, ProviderStreamEvent } from "./editorial/openai-responses-provider.js";
 import { createLocalService } from "./http.js";
@@ -55,7 +56,7 @@ test("editorial endpoint streams a typed proposal and saves context only after c
     await withService(provider, async (baseUrl, repositories) => {
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
-            method: "POST",
+            method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-1", prompt: "Improve the flow" }),
         });
@@ -76,7 +77,7 @@ test("failed or incomplete editorial streams leave document and session unchange
     await withService(provider, async (baseUrl, repositories) => {
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
-            method: "POST",
+            method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-2", prompt: "Improve the flow" }),
         });
@@ -100,7 +101,7 @@ test("provider errors are actionable and leave the article unchanged", async () 
     await withService(provider, async (baseUrl, repositories) => {
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
-            method: "POST",
+            method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-provider-error", prompt: "Improve the flow" }),
         });
@@ -126,7 +127,7 @@ test("cancelling an editorial stream does not change the article or session", as
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
         const controller = new AbortController();
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
-            method: "POST",
+            method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-3", prompt: "Improve the flow" }),
             signal: controller.signal,

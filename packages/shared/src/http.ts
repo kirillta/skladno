@@ -8,3 +8,13 @@ export const HTTP_STATUS = {
     CONFLICT: 409,
     SERVICE_UNAVAILABLE: 503,
 } as const;
+
+
+export const HTTP_METHOD = {
+    GET: "GET",
+    POST: "POST",
+    PUT: "PUT",
+    PATCH: "PATCH",
+    DELETE: "DELETE",
+    OPTIONS: "OPTIONS",
+} as const;

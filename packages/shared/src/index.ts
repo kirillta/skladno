@@ -5,7 +5,7 @@ export {
     type ApplicationClient,
     type HealthResponse,
 } from "./health.js";
-export { HTTP_STATUS } from "./http.js";
+export { HTTP_METHOD, HTTP_STATUS } from "./http.js";
 export {
     editorialPath,
     type EditorialClient,

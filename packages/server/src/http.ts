@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage } from "node:http";
-import { HTTP_STATUS } from "@skladno/shared";
+import { HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 
 import type { ServerConfig } from "./config.js";
 import { OpenAiResponsesProvider, type EditorialProvider } from "./editorial/openai-responses-provider.js";
@@ -27,7 +27,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
             response.setHeader("vary", "Origin");
         }
 
-        if (request.method === "OPTIONS") {
+        if (request.method === HTTP_METHOD.OPTIONS) {
             response.setHeader("access-control-allow-methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
             response.setHeader("access-control-allow-headers", "content-type");
             response.writeHead(HTTP_STATUS.NO_CONTENT);

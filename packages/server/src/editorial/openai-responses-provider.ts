@@ -1,4 +1,4 @@
-import type { EditorialEvent } from "@skladno/shared";
+import { HTTP_METHOD, type EditorialEvent } from "@skladno/shared";
 
 
 export interface EditorialProviderRequest {
@@ -37,7 +37,7 @@ export class OpenAiResponsesProvider implements EditorialProvider {
 
     async *stream(request: EditorialProviderRequest, signal: AbortSignal): AsyncIterable<ProviderStreamEvent> {
         const response = await fetch("https://api.openai.com/v1/responses", {
-            method: "POST",
+            method: HTTP_METHOD.POST,
             headers: {
                 authorization: `Bearer ${this.apiKey}`,
                 "content-type": "application/json",

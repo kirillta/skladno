@@ -3,6 +3,7 @@ import {
     documentsPath,
     editorialPath,
     healthPath,
+    HTTP_METHOD,
     HTTP_STATUS,
     parseHealthResponse,
     type ApplicationClient,
@@ -37,28 +38,28 @@ export class HttpApplicationClient implements ApplicationClient, WorkspaceClient
 
 
     async createDocument(input: CreateDocumentInput): Promise<Document> {
-        return this.request<Document>(documentsPath, { method: "POST", body: JSON.stringify(input) });
+        return this.request<Document>(documentsPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 
     async renameDocument(documentId: string, title: string): Promise<Document> {
-        return this.request<Document>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: "PATCH", body: JSON.stringify({ title }) });
+        return this.request<Document>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: HTTP_METHOD.PATCH, body: JSON.stringify({ title }) });
     }
 
 
     async deleteDocument(documentId: string): Promise<void> {
-        await this.request<void>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: "DELETE" });
+        await this.request<void>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: HTTP_METHOD.DELETE });
     }
 
 
     async saveDraft(documentId: string, input: SaveDocumentDraftInput): Promise<DocumentVersion> {
-        return this.request<DocumentVersion>(`${documentsPath}/${encodeURIComponent(documentId)}/draft`, { method: "PUT", body: JSON.stringify(input) });
+        return this.request<DocumentVersion>(`${documentsPath}/${encodeURIComponent(documentId)}/draft`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
 
 
     async streamEditorial(documentId: string, input: StartEditorialRequest, onEvent: (event: EditorialEvent) => void, signal?: AbortSignal): Promise<void> {
         const response = await fetch(`${this.serviceUrl}${editorialPath(documentId)}`, {
-            method: "POST",
+            method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
             signal,

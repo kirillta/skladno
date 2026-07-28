@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { HTTP_STATUS, type EditorialEvent } from "@skladno/shared";
+import { HTTP_METHOD, HTTP_STATUS, type EditorialEvent } from "@skladno/shared";
 
 import type { ServerConfig } from "../../config.js";
 import { requestAbortedSignal, writeEditorialEvent, type EditorialProvider } from "../../editorial/openai-responses-provider.js";
@@ -24,7 +24,7 @@ function boundedArticleContext(content: string): string {
 
 export async function handleEditorialRoute(request: IncomingMessage, response: ServerResponse, pathname: string, config: ServerConfig, repositories: Repositories, provider: EditorialProvider | undefined): Promise<boolean> {
     const match = /^\/api\/documents\/([^/]+)\/editorial$/.exec(pathname);
-    if (request.method !== "POST" || !match)
+    if (request.method !== HTTP_METHOD.POST || !match)
         return false;
 
     const documentId = decodeURIComponent(match[1]);
