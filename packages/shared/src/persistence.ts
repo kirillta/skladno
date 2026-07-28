@@ -43,6 +43,12 @@ export interface CreateDocumentInput {
   provenance?: Record<string, unknown>;
 }
 
+/** A compare-and-swap draft write. A conflict means another writer saved first. */
+export interface SaveDocumentDraftInput {
+  content: string;
+  baseVersionId: string;
+}
+
 export interface AcceptedChange {
   content: string;
   provenance: Record<string, unknown>;

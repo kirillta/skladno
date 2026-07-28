@@ -1,9 +1,14 @@
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
 export interface ServerConfig {
   host: string;
   port: number;
   webOrigin: string;
   /** Reserved for explicit server-side model operations; never pass it to the UI. */
   openAiApiKey?: string;
+  databasePath: string;
 }
 
 function readPort(value: string | undefined): number {
@@ -16,10 +21,13 @@ function readPort(value: string | undefined): number {
 }
 
 export function loadServerConfig(environment = process.env): ServerConfig {
+  const dataDirectory = environment.SKLADNO_DATA_DIR || join(homedir(), ".skladno");
+  mkdirSync(dataDirectory, { recursive: true });
   return {
     host: environment.SKLADNO_SERVER_HOST || "127.0.0.1",
     port: readPort(environment.SKLADNO_SERVER_PORT),
     webOrigin: environment.SKLADNO_WEB_ORIGIN || "http://localhost:5173",
     openAiApiKey: environment.OPENAI_API_KEY || undefined,
+    databasePath: join(dataDirectory, "skladno.sqlite"),
   };
 }

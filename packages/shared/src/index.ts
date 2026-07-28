@@ -17,5 +17,7 @@ export type {
   Material,
   SourceCitation,
   UpdateMaterialInput,
+  SaveDocumentDraftInput,
   WorkflowArtifact,
 } from "./persistence.js";
+export { documentsPath, DocumentConflictError, type WorkspaceClient } from "./workspace.js";
