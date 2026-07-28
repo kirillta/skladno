@@ -36,6 +36,17 @@ const migrations = [
         );
         `,
     },
+    {
+        version: 2,
+        name: "editorial_sessions",
+        sql: `
+        CREATE TABLE editorial_sessions (
+            document_id TEXT PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+            previous_response_id TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

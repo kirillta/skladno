@@ -8,6 +8,7 @@ export interface ServerConfig {
     webOrigin: string;
     /** Reserved for explicit server-side model operations; never pass it to the UI. */
     openAiApiKey?: string;
+    openAiModel: string;
     databasePath: string;
 }
 
@@ -33,6 +34,7 @@ export function loadServerConfig(environment = process.env): ServerConfig {
         port: readPort(environment.SKLADNO_SERVER_PORT),
         webOrigin: environment.SKLADNO_WEB_ORIGIN || "http://localhost:5173",
         openAiApiKey: environment.OPENAI_API_KEY || undefined,
+        openAiModel: environment.OPENAI_MODEL || "gpt-5",
         databasePath: join(dataDirectory, "skladno.sqlite"),
     };
 }

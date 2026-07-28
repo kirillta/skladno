@@ -97,6 +97,7 @@ Preserve the established spacious, vertically organized formatting across the wo
 - Use four spaces for indentation in TypeScript, TSX, JavaScript, JSON, CSS, and nested HTML content. Do not use tabs.
 - Keep opening braces on the same line as their declaration or control statement.
 - Put a single-statement conditional body on the following indented line and omit braces. Use braces when a branch contains multiple statements.
+- Put a blank line after each control-flow statement and its body before the next independent statement, including consecutive guard clauses.
 - Do not pack independent statements onto one line. Give declarations, side effects, and returns their own lines.
 - Separate top-level declarations and class methods with two blank lines. Within a function, use a blank line to separate logical phases such as validation, setup, persistence, and return.
 - Expand non-trivial object literals so each property is on its own line. Apply the same structure to nested objects and arrays in JSON configuration.
