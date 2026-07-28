@@ -19,6 +19,17 @@ export {
     type EditorialToolStatusEvent,
     type StartEditorialRequest,
 } from "./editorial.js";
+export {
+    acceptProposalPath,
+    applyProposalChanges,
+    createTextProposal,
+    documentVersionsPath,
+    restoreVersionPath,
+    type AcceptProposalInput,
+    type ProposalChange,
+    type RevisionClient,
+    type TextProposal,
+} from "./revisions.js";
 export type {
     AcceptedChange,
     AppSetting,

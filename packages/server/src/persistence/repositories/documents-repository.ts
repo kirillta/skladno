@@ -1,4 +1,4 @@
-import type { AcceptedChange, CreateDocumentInput, Document, DocumentVersion, SaveDocumentDraftInput } from "@skladno/shared";
+import type { AcceptedChange, AcceptProposalInput, CreateDocumentInput, Document, DocumentVersion, SaveDocumentDraftInput } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { DocumentConflictError } from "../errors.js";
@@ -88,6 +88,18 @@ export class DocumentsRepository {
 
     acceptChange(documentId: string, change: AcceptedChange): DocumentVersion {
         return this.appendVersion(documentId, change.content, change.provenance);
+    }
+
+
+    acceptProposal(documentId: string, input: AcceptProposalInput): DocumentVersion {
+        const current = this.get(documentId);
+        if (!current)
+            throw new Error("Document not found.");
+
+        if (current.currentVersionId !== input.baseVersionId)
+            throw new DocumentConflictError(current);
+
+        return this.appendVersion(documentId, input.content, input.provenance);
     }
 
 

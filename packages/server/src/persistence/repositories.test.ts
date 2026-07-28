@@ -28,6 +28,23 @@ test("accepted edits and restores create immutable ordered versions", () => with
 }));
 
 
+test("proposal acceptance requires the reviewed version to still be current", () => withRepository((repositories) => {
+    const document = repositories.createDocument({ title: "Proposal", content: "before" });
+    const accepted = repositories.acceptProposal(document.id, {
+        baseVersionId: document.currentVersionId,
+        content: "after",
+        provenance: { kind: "accepted-proposal", operation: "flow_revision" },
+    });
+
+    assert.equal(accepted.content, "after");
+    assert.throws(() => repositories.acceptProposal(document.id, {
+        baseVersionId: document.currentVersionId,
+        content: "stale",
+        provenance: { kind: "accepted-proposal" },
+    }), /newer version/);
+}));
+
+
 test("materials, settings, artifacts and citations persist through reopening", () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
     const filename = join(directory, "skladno.sqlite");

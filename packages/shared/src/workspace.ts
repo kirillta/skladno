@@ -1,9 +1,10 @@
 import type { CreateDocumentInput, Document, DocumentVersion, SaveDocumentDraftInput } from "./persistence/documents.js";
+import type { RevisionClient } from "./revisions.js";
 
 export const documentsPath = "/api/documents";
 
 /** The transport-neutral operations required by the author workspace. */
-export interface WorkspaceClient {
+export interface WorkspaceClient extends RevisionClient {
     listDocuments(): Promise<Document[]>;
     createDocument(input: CreateDocumentInput): Promise<Document>;
     renameDocument(documentId: string, title: string): Promise<Document>;
