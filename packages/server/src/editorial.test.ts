@@ -155,3 +155,44 @@ test("cancelling an editorial stream does not change the article or session", as
         assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
     });
 });
+
+
+test("style review uses a compact local profile and saves cited findings as a proposal", async () => {
+    const provider = new FixtureProvider([
+        {
+            type: PROVIDER_STREAM_EVENT.COMPLETED,
+            responseId: "resp-style-1",
+            text: JSON.stringify({
+                proposal: "A concise proposal.",
+                findings: [{
+                    divergence: "The draft uses long paragraphs.",
+                    suggestion: "Split the opening paragraph.",
+                    traitIds: ["paragraphing"],
+                }],
+            }),
+        },
+    ]);
+
+    await withService(provider, async (baseUrl, repositories) => {
+        repositories.addStyleCorpusItem({ name: "Published sample", content: "I write short sentences.\n\nI keep paragraphs brief." });
+        const document = repositories.createDocument({ title: "Draft", content: "A long draft" });
+        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "style-request", operation: EDITORIAL_OPERATION.STYLE_REVIEW }),
+        });
+        const body = await response.text();
+        const artifact = repositories.listWorkflowArtifacts(document.id)[0]!;
+
+        assert.match(body, /"text":"A concise proposal."/);
+        assert.match(body, /"traitIds":\["paragraphing"\]/);
+        assert.match(provider.requests[0]!.prompt, /Supplied corpus traits/);
+        assert.doesNotMatch(provider.requests[0]!.prompt, /I write short sentences/);
+        assert.deepEqual(JSON.parse(artifact.content).findings, [{
+            divergence: "The draft uses long paragraphs.",
+            suggestion: "Split the opening paragraph.",
+            traitIds: ["paragraphing"],
+        }]);
+        assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "A long draft");
+    });
+});

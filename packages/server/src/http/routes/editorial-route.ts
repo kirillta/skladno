@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { HTTP_METHOD, HTTP_STATUS, type EditorialEvent } from "@skladno/shared";
+import { EDITORIAL_OPERATION, HTTP_METHOD, HTTP_STATUS, type EditorialEvent, type StyleFinding, type StyleReview } from "@skladno/shared";
 
 import type { ServerConfig } from "../../config.js";
 import { PROVIDER_STREAM_EVENT, requestAbortedSignal, writeEditorialEvent, type EditorialProvider } from "../../editorial/openai-responses-provider.js";
@@ -20,6 +20,34 @@ function boundedArticleContext(content: string): string {
 
     const half = Math.floor(maximumCharacters / 2);
     return `${content.slice(0, half)}\n\n[Middle of article omitted to bound editorial context.]\n\n${content.slice(-half)}`;
+}
+
+
+function parseStyleReview(value: string): { proposal: string; styleReview: StyleReview } {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+        throw new Error("Style review was not valid structured output. Retry the request.");
+
+    const record = parsed as Record<string, unknown>;
+    if (typeof record.proposal !== "string" || !Array.isArray(record.findings))
+        throw new Error("Style review was missing its proposal or findings. Retry the request.");
+
+    const findings = record.findings.map((finding): StyleFinding => {
+        if (typeof finding !== "object" || finding === null || Array.isArray(finding))
+            throw new Error("Style review included an invalid finding. Retry the request.");
+
+        const item = finding as Record<string, unknown>;
+        if (typeof item.divergence !== "string" || typeof item.suggestion !== "string" || !Array.isArray(item.traitIds) || !item.traitIds.every((traitId) => typeof traitId === "string"))
+            throw new Error("Style review included an invalid finding. Retry the request.");
+
+        return { 
+            divergence: item.divergence, 
+            suggestion: item.suggestion, 
+            traitIds: item.traitIds as string[] 
+        };
+    });
+
+    return { proposal: record.proposal, styleReview: { findings } };
 }
 
 
@@ -60,29 +88,53 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
 
     const signal = requestAbortedSignal(request, response);
     const session = repositories.getEditorialSession(documentId);
-    const prompt = createEditorialPrompt(operation, authorContext);
+    const styleProfile = operation === EDITORIAL_OPERATION.STYLE_REVIEW ? repositories.getStyleCorpus().profile : undefined;
+    if (operation === EDITORIAL_OPERATION.STYLE_REVIEW && !styleProfile) {
+        writeEditorialEvent(response, errorEvent(requestId, "provider", "Add at least one style corpus item before checking style.", false));
+        response.end();
+
+        return true;
+    }
+
+    const prompt = createEditorialPrompt(operation, authorContext, styleProfile);
     let completed = false;
 
     try {
         for await (const event of provider.stream({ model: config.openAiModel, prompt, article: boundedArticleContext(document.currentVersion.content), previousResponseId: session?.previousResponseId }, signal)) {
             if (event.type === PROVIDER_STREAM_EVENT.COMPLETED) {
+                const styleResult = operation === EDITORIAL_OPERATION.STYLE_REVIEW ? parseStyleReview(event.text) : undefined;
                 completed = true;
                 repositories.saveEditorialSession(documentId, event.responseId);
                 repositories.createWorkflowArtifact({
                     documentId,
                     versionId: document.currentVersionId,
-                    kind: "editorial-proposal",
+                    kind: operation === EDITORIAL_OPERATION.STYLE_REVIEW ? "style-review" : "editorial-proposal",
                     content: JSON.stringify({
                         requestId,
                         operation,
                         authorContext,
                         responseId: event.responseId,
-                        proposal: event.text,
+                        proposal: styleResult?.proposal ?? event.text,
+                        styleProfile,
+                        findings: styleResult?.styleReview.findings,
                     }),
                 });
+                if (styleResult)
+                    writeEditorialEvent(response, {
+                        type: "completed",
+                        requestId,
+                        responseId: event.responseId,
+                        text: styleResult.proposal,
+                        styleReview: styleResult.styleReview,
+                    });
+                else
+                    writeEditorialEvent(response, { ...event, requestId });
+
+                continue;
             }
 
-            writeEditorialEvent(response, { ...event, requestId });
+            if (operation !== EDITORIAL_OPERATION.STYLE_REVIEW || event.type !== PROVIDER_STREAM_EVENT.TEXT_DELTA)
+                writeEditorialEvent(response, { ...event, requestId });
         }
 
         if (!completed && !signal.aborted)

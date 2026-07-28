@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyProposalChanges, createTextProposal, DocumentConflictError, EDITORIAL_OPERATION, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type TextProposal } from "@skladno/shared";
+import { applyProposalChanges, createTextProposal, DocumentConflictError, EDITORIAL_OPERATION, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type StyleCorpus, type StyleReview, type TextProposal } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
 
 type WorkspaceState = "loading" | "ready" | "error";
@@ -45,6 +45,11 @@ export function App() {
     const [editorialState, setEditorialState] = useState(EditorialState.Idle);
     const [editorialMessage, setEditorialMessage] = useState("");
     const [lastEditorialOperation, setLastEditorialOperation] = useState<EditorialOperation>();
+    const [styleCorpus, setStyleCorpus] = useState<StyleCorpus>();
+    const [styleCorpusName, setStyleCorpusName] = useState("");
+    const [styleCorpusContent, setStyleCorpusContent] = useState("");
+    const [styleCorpusMessage, setStyleCorpusMessage] = useState("");
+    const [styleReview, setStyleReview] = useState<StyleReview>();
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -59,6 +64,7 @@ export function App() {
             setState("error");
             setMessage("Your local service is unavailable. Start it, then retry.");
         });
+        client.getStyleCorpus().then(setStyleCorpus).catch(() => setStyleCorpusMessage("Couldn’t load your local style corpus."));
     }, []);
 
 
@@ -210,6 +216,7 @@ export function App() {
         setProposal("");
         setProposalBase({ content: draft, versionId: versions.current.get(selected.id)! });
         setProposalResponseId(undefined);
+        setStyleReview(undefined);
         setSelectedChanges(new Set());
         setEditorialState(EditorialState.Streaming);
         setLastEditorialOperation(operation);
@@ -229,6 +236,7 @@ export function App() {
                 } else if (event.type === "completed") {
                     setProposal(event.text);
                     setProposalResponseId(event.responseId);
+                    setStyleReview(event.styleReview);
                     setEditorialState(EditorialState.Idle);
                     setEditorialMessage("Proposal ready for review. It has not changed your article.");
                 } else {
@@ -254,6 +262,7 @@ export function App() {
         setProposal("");
         setProposalBase(undefined);
         setSelectedChanges(new Set());
+        setStyleReview(undefined);
         setEditorialState(EditorialState.Idle);
         setEditorialMessage("Proposal cancelled. Your article is unchanged.");
     }
@@ -293,6 +302,7 @@ export function App() {
             setProposal("");
             setProposalBase(undefined);
             setSelectedChanges(new Set());
+            setStyleReview(undefined);
             setEditorialMessage("Accepted changes were saved as a new version.");
             loadHistory(selected.id);
         } catch (error) {
@@ -306,7 +316,38 @@ export function App() {
         setProposal("");
         setProposalBase(undefined);
         setSelectedChanges(new Set());
+        setStyleReview(undefined);
         setEditorialMessage("Proposal rejected. Your article is unchanged.");
+    }
+
+
+    async function addStyleCorpusItem() {
+        const name = styleCorpusName.trim();
+        if (!name || !styleCorpusContent.trim()) {
+            setStyleCorpusMessage("Give the sample a name and include its article text.");
+            return;
+        }
+
+        try {
+            const updated = await client.addStyleCorpusItem({ name, content: styleCorpusContent });
+            setStyleCorpus(updated);
+            setStyleCorpusName("");
+            setStyleCorpusContent("");
+            setStyleCorpusMessage("Style sample stored locally. Its compact profile is ready for review.");
+        } catch (error) {
+            setStyleCorpusMessage(error instanceof Error ? error.message : "Couldn’t add the style sample.");
+        }
+    }
+
+
+    async function removeStyleCorpusItem(materialId: string) {
+        try {
+            await client.removeStyleCorpusItem(materialId);
+            setStyleCorpus(await client.getStyleCorpus());
+            setStyleCorpusMessage("Style sample removed from local storage.");
+        } catch (error) {
+            setStyleCorpusMessage(error instanceof Error ? error.message : "Couldn’t remove the style sample.");
+        }
     }
 
 
@@ -350,12 +391,18 @@ export function App() {
                 <div className="editorial-actions">
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)} disabled={!selected || editorialState === EditorialState.Streaming}>Turn theses into narrative</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FLOW_REVISION)} disabled={!selected || editorialState === EditorialState.Streaming}>Revise draft for flow</button>
+                    <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.STYLE_REVIEW)} disabled={!selected || editorialState === EditorialState.Streaming || !styleCorpus?.profile}>Check style</button>
                     {editorialState === EditorialState.Streaming && <button type="button" onClick={cancelEditorialProposal}>Cancel</button>}
                     {editorialState === EditorialState.Error && lastEditorialOperation && <button type="button" onClick={() => void requestEditorialProposal(lastEditorialOperation)}>Retry request</button>}
                 </div>
                 {editorialMessage && <p data-state={editorialState === EditorialState.Error ? "error" : undefined} aria-live="polite">{editorialMessage}</p>}
                 {proposal && review && proposalResponseId && editorialState === EditorialState.Idle && <section className="proposal-review" aria-label="Proposal review">
                     <h3>Review proposal</h3>
+                    {styleReview && <section className="style-findings" aria-label="Style review findings">
+                        <h4>Style review</h4>
+                        <p>Advisory findings from your local corpus. Confidence: {styleCorpus?.profile?.confidence ?? "unknown"}.</p>
+                        {styleReview.findings.length === 0 ? <p>No material voice divergences were identified.</p> : <ul>{styleReview.findings.map((finding, index) => <li key={`${finding.divergence}-${index}`}><strong>{finding.divergence}</strong><span>{finding.suggestion}</span><small>Corpus traits: {finding.traitIds.join(", ")}</small></li>)}</ul>}
+                    </section>}
                     {review.changes.length === 0 ? <p>This proposal has no text changes. Your article is unchanged.</p> : <>
                         <p>Select the changes to accept. The proposal is compared with the saved version that was sent for review.</p>
                         <div className="proposal-changes">
@@ -373,6 +420,17 @@ export function App() {
                         </div>
                     </>}
                 </section>}
+            </section>
+            <section className="style-corpus" aria-label="Style corpus">
+                <h2>Your style corpus</h2>
+                <p>Samples stay on this device. Only the compact profile below is sent when you check style.</p>
+                {styleCorpus?.profile && <p className="style-profile">{styleCorpus.profile.corpusItemCount} sample(s), {styleCorpus.profile.characterCount.toLocaleString()} characters, <strong>{styleCorpus.profile.confidence}</strong> confidence.</p>}
+                {styleCorpus?.profile && <ul className="style-traits">{styleCorpus.profile.traits.map((trait) => <li key={trait.id}><strong>{trait.label}</strong><span>{trait.evidence}</span></li>)}</ul>}
+                <label>Sample name<input value={styleCorpusName} onChange={(event) => setStyleCorpusName(event.target.value)} placeholder="Published article title" /></label>
+                <label>Article text<textarea value={styleCorpusContent} onChange={(event) => setStyleCorpusContent(event.target.value)} placeholder="Paste an author-provided article…" /></label>
+                <button type="button" onClick={() => void addStyleCorpusItem()}>Add local sample</button>
+                {styleCorpusMessage && <p aria-live="polite">{styleCorpusMessage}</p>}
+                {styleCorpus && <ul className="style-corpus-items">{styleCorpus.items.map((item) => <li key={item.id}><span>{item.name} ({item.characterCount.toLocaleString()} characters)</span><button type="button" onClick={() => void removeStyleCorpusItem(item.id)}>Remove</button></li>)}</ul>}
             </section>
             {selected && <section className="version-history" aria-label="Version history">
                 <h2>Version history</h2>

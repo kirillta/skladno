@@ -20,10 +20,14 @@ import {
     type EditorialEvent,
     type StartEditorialRequest,
     restoreVersionPath,
+    styleCorpusPath,
+    type CreateStyleCorpusItemInput,
+    type StyleCorpus,
+    type StyleCorpusClient,
 } from "@skladno/shared";
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
-export class HttpApplicationClient implements ApplicationClient, WorkspaceClient, EditorialClient {
+export class HttpApplicationClient implements ApplicationClient, WorkspaceClient, EditorialClient, StyleCorpusClient {
     constructor(private readonly serviceUrl = "http://127.0.0.1:8787") { }
 
     async getHealth(): Promise<HealthResponse> {
@@ -73,6 +77,21 @@ export class HttpApplicationClient implements ApplicationClient, WorkspaceClient
 
     async restoreVersion(documentId: string, versionId: string): Promise<DocumentVersion> {
         return this.request<DocumentVersion>(restoreVersionPath(documentId, versionId), { method: HTTP_METHOD.POST });
+    }
+
+
+    async getStyleCorpus(): Promise<StyleCorpus> {
+        return this.request<StyleCorpus>(styleCorpusPath);
+    }
+
+
+    async addStyleCorpusItem(input: CreateStyleCorpusItemInput): Promise<StyleCorpus> {
+        return this.request<StyleCorpus>(styleCorpusPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+    }
+
+
+    async removeStyleCorpusItem(materialId: string): Promise<void> {
+        await this.request<void>(`${styleCorpusPath}/${encodeURIComponent(materialId)}`, { method: HTTP_METHOD.DELETE });
     }
 
 
