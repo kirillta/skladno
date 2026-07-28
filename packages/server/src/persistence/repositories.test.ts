@@ -82,3 +82,18 @@ test("foreign keys and document ownership reject invalid writes", () => withRepo
     assert.throws(() => repositories.restoreVersion(one.id, two.currentVersionId), /Version not found/);
     assert.throws(() => repositories.createMaterial({ name: " ", content: "x" }), /must not be empty/);
 }));
+
+
+test("style corpus keeps raw samples local and derives confidence from its local contents", () => withRepository((repositories) => {
+    const empty = repositories.getStyleCorpus();
+    assert.equal(empty.profile, undefined);
+
+    const corpus = repositories.addStyleCorpusItem({ name: "Author sample", content: "I explain systems directly.\n\nI use compact paragraphs." });
+    assert.equal(corpus.items.length, 1);
+    assert.equal(corpus.profile?.confidence, "low");
+    assert.ok(corpus.profile?.traits.some((trait) => trait.id === "sentence-length"));
+
+    repositories.removeStyleCorpusItem(corpus.items[0]!.id);
+    assert.equal(repositories.getStyleCorpus().profile, undefined);
+    assert.equal(repositories.getMaterial(corpus.items[0]!.id), undefined);
+}));

@@ -14,6 +14,8 @@ import type {
     SourceCitation,
     UpdateMaterialInput,
     WorkflowArtifact,
+    CreateStyleCorpusItemInput,
+    StyleCorpus,
 } from "@skladno/shared";
 
 import type { SqliteDatabase } from "./database.js";
@@ -22,6 +24,7 @@ import { EditorialSessionsRepository } from "./repositories/editorial-sessions-r
 import { MaterialsRepository } from "./repositories/materials-repository.js";
 import { SettingsRepository } from "./repositories/settings-repository.js";
 import { WorkflowArtifactsRepository } from "./repositories/workflow-artifacts-repository.js";
+import { StyleCorpusRepository } from "./repositories/style-corpus-repository.js";
 
 
 /** Compatibility facade for current application services. Domain repositories remain independently usable. */
@@ -31,6 +34,7 @@ export class Repositories {
     readonly workflowArtifacts: WorkflowArtifactsRepository;
     readonly settings: SettingsRepository;
     readonly editorialSessions: EditorialSessionsRepository;
+    readonly styleCorpus: StyleCorpusRepository;
 
 
     constructor(database: SqliteDatabase) {
@@ -39,6 +43,7 @@ export class Repositories {
         this.workflowArtifacts = new WorkflowArtifactsRepository(database);
         this.settings = new SettingsRepository(database);
         this.editorialSessions = new EditorialSessionsRepository(database, (documentId) => Boolean(this.documents.get(documentId)));
+        this.styleCorpus = new StyleCorpusRepository(database);
     }
 
 
@@ -144,5 +149,20 @@ export class Repositories {
 
     saveEditorialSession(documentId: string, responseId: string): EditorialSession { 
         return this.editorialSessions.save(documentId, responseId); 
+    }
+
+
+    getStyleCorpus(): StyleCorpus {
+        return this.styleCorpus.get();
+    }
+
+
+    addStyleCorpusItem(input: CreateStyleCorpusItemInput): StyleCorpus {
+        return this.styleCorpus.add(input);
+    }
+
+
+    removeStyleCorpusItem(materialId: string): void {
+        this.styleCorpus.remove(materialId);
     }
 }

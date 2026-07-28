@@ -15,10 +15,21 @@ export {
     type EditorialEvent,
     type EditorialOperation,
     type EditorialSession,
+    type StyleFinding,
+    type StyleReview,
     type EditorialTextDeltaEvent,
     type EditorialToolStatusEvent,
     type StartEditorialRequest,
 } from "./editorial.js";
+export {
+    styleCorpusPath,
+    type CreateStyleCorpusItemInput,
+    type StyleCorpus,
+    type StyleCorpusClient,
+    type StyleCorpusItem,
+    type StyleProfile,
+    type StyleTrait,
+} from "./style.js";
 export {
     acceptProposalPath,
     applyProposalChanges,

@@ -47,6 +47,20 @@ const migrations = [
         );
         `,
     },
+    {
+        version: 3,
+        name: "style_corpus_profiles",
+        sql: `
+        CREATE TABLE style_corpus_items (
+            material_id TEXT PRIMARY KEY REFERENCES materials(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE style_profiles (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            profile_json TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

@@ -32,6 +32,18 @@ export class MaterialsRepository {
         return row && material(row);
     }
 
+
+    list(): Material[] {
+        return (this.database.prepare("SELECT * FROM materials ORDER BY created_at, id").all() as Row[]).map(material);
+    }
+
+
+    delete(materialId: string): void {
+        const result = this.database.prepare("DELETE FROM materials WHERE id = ?").run(materialId);
+        if (result.changes === 0)
+            throw new Error("Material not found.");
+    }
+
     update(materialId: string, input: UpdateMaterialInput): Material {
         const existing = this.get(materialId);
         if (!existing)

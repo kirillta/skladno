@@ -4,6 +4,7 @@ export const editorialPath = (documentId: string) => `/api/documents/${encodeURI
 export const EDITORIAL_OPERATION = {
     THESIS_TO_NARRATIVE: "thesis_to_narrative",
     FLOW_REVISION: "flow_revision",
+    STYLE_REVIEW: "style_review",
 } as const;
 
 
@@ -44,6 +45,19 @@ export interface EditorialCompletedEvent {
     requestId: string;
     responseId: string;
     text: string;
+    styleReview?: StyleReview;
+}
+
+
+export interface StyleFinding {
+    divergence: string;
+    suggestion: string;
+    traitIds: string[];
+}
+
+
+export interface StyleReview {
+    findings: StyleFinding[];
 }
 
 

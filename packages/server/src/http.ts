@@ -6,6 +6,7 @@ import { OpenAiResponsesProvider, type EditorialProvider } from "./editorial/ope
 import { handleDocumentsRoute } from "./http/routes/documents-route.js";
 import { handleEditorialRoute } from "./http/routes/editorial-route.js";
 import { handleHealthRoute } from "./http/routes/health-route.js";
+import { handleStyleCorpusRoute } from "./http/routes/style-corpus-route.js";
 import { writeJson } from "./http/json.js";
 import { DocumentConflictError, Repositories } from "./persistence/index.js";
 
@@ -42,6 +43,9 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         try {
             if (await handleEditorialRoute(request, response, pathname, config, repositories, provider))
+                return;
+
+            if (await handleStyleCorpusRoute(request, response, pathname, repositories))
                 return;
 
             if (await handleDocumentsRoute(request, response, pathname, repositories))

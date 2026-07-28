@@ -36,6 +36,7 @@ AI output is always a proposal. The author reviews a diff and explicitly accepts
 The first release is a personal, single-user application running locally. It includes:
 
 - local article storage and autosave;
+- local author-style corpus management, compact profile derivation, and advisory style proposals;
 - a plain-text editor with Unicode-aware length guidance;
 - streamed editorial conversations;
 - thesis-to-draft composition and flow revision;
@@ -147,6 +148,7 @@ Skladno processes unpublished writing and style samples, so privacy is a product
 - API credentials stay in the privileged local service.
 - Private content and credentials must not appear in logs by default.
 - Model requests contain only the context required for the requested operation.
+- Style corpus articles remain local; style review sends a compact derived profile rather than the raw corpus.
 - Provider-side storage is disabled unless the user explicitly opts into a future feature that requires it.
 - Network-dependent actions are visible and initiated by the author.
 
