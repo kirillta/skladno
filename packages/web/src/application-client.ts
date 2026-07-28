@@ -1,7 +1,9 @@
 import {
     DocumentConflictError,
     documentsPath,
+    editorialPath,
     healthPath,
+    HTTP_METHOD,
     HTTP_STATUS,
     parseHealthResponse,
     type ApplicationClient,
@@ -11,10 +13,13 @@ import {
     type SaveDocumentDraftInput,
     type DocumentVersion,
     type WorkspaceClient,
+    type EditorialClient,
+    type EditorialEvent,
+    type StartEditorialRequest,
 } from "@skladno/shared";
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
-export class HttpApplicationClient implements ApplicationClient, WorkspaceClient {
+export class HttpApplicationClient implements ApplicationClient, WorkspaceClient, EditorialClient {
     constructor(private readonly serviceUrl = "http://127.0.0.1:8787") { }
 
     async getHealth(): Promise<HealthResponse> {
@@ -33,22 +38,58 @@ export class HttpApplicationClient implements ApplicationClient, WorkspaceClient
 
 
     async createDocument(input: CreateDocumentInput): Promise<Document> {
-        return this.request<Document>(documentsPath, { method: "POST", body: JSON.stringify(input) });
+        return this.request<Document>(documentsPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 
     async renameDocument(documentId: string, title: string): Promise<Document> {
-        return this.request<Document>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: "PATCH", body: JSON.stringify({ title }) });
+        return this.request<Document>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: HTTP_METHOD.PATCH, body: JSON.stringify({ title }) });
     }
 
 
     async deleteDocument(documentId: string): Promise<void> {
-        await this.request<void>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: "DELETE" });
+        await this.request<void>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: HTTP_METHOD.DELETE });
     }
 
 
     async saveDraft(documentId: string, input: SaveDocumentDraftInput): Promise<DocumentVersion> {
-        return this.request<DocumentVersion>(`${documentsPath}/${encodeURIComponent(documentId)}/draft`, { method: "PUT", body: JSON.stringify(input) });
+        return this.request<DocumentVersion>(`${documentsPath}/${encodeURIComponent(documentId)}/draft`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+
+    async streamEditorial(documentId: string, input: StartEditorialRequest, onEvent: (event: EditorialEvent) => void, signal?: AbortSignal): Promise<void> {
+        const response = await fetch(`${this.serviceUrl}${editorialPath(documentId)}`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(input),
+            signal,
+        });
+
+        if (!response.ok || !response.body)
+            throw new Error(`The editorial service could not be reached (${response.status}).`);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            buffer += decoder.decode(value, { stream: !done });
+            
+            const messages = buffer.split("\n\n");
+            buffer = messages.pop() ?? "";
+
+            for (const message of messages) {
+                const data = message.split("\n").find((line) => line.startsWith("data:"))?.slice(5).trim();
+                if (!data)
+                    continue;
+
+                onEvent(JSON.parse(data) as EditorialEvent);
+            }
+
+            if (done)
+                return;
+        }
     }
 
 

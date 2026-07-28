@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { DocumentConflictError, type Document } from "@skladno/shared";
+import { DocumentConflictError, type Document, type EditorialEvent } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
 
 type WorkspaceState = "loading" | "ready" | "error";
@@ -27,6 +27,11 @@ export function App() {
     const saveQueue = useRef(Promise.resolve());
     const draftsRef = useRef(drafts);
     const selectedRef = useRef(selectedId);
+    const editorialRequest = useRef<AbortController>();
+    const [editorialPrompt, setEditorialPrompt] = useState("");
+    const [proposal, setProposal] = useState("");
+    const [editorialState, setEditorialState] = useState<"idle" | "streaming" | "error">("idle");
+    const [editorialMessage, setEditorialMessage] = useState("");
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -148,6 +153,55 @@ export function App() {
         }
     }
 
+
+    async function requestEditorialProposal() {
+        if (!selected || !editorialPrompt.trim())
+            return;
+
+        const controller = new AbortController();
+        editorialRequest.current = controller;
+        setProposal("");
+        setEditorialState("streaming");
+        setEditorialMessage("Preparing a proposal…");
+
+        try {
+            await client.streamEditorial(selected.id, {
+                requestId: crypto.randomUUID(),
+                prompt: editorialPrompt,
+            }, (event: EditorialEvent) => {
+                if (event.type === "text_delta") {
+                    setProposal((current) => current + event.delta);
+                    setEditorialMessage("Writing proposal…");
+                } else if (event.type === "tool_status") {
+                    setEditorialMessage(`${event.status === "started" ? "Using" : "Finished"} ${event.tool.replace("_", " ")}.`);
+                } else if (event.type === "completed") {
+                    setProposal(event.text);
+                    setEditorialState("idle");
+                    setEditorialMessage("Proposal ready for review. It has not changed your article.");
+                } else {
+                    setEditorialState("error");
+                    setEditorialMessage(event.message);
+                }
+            }, controller.signal);
+        } catch (error) {
+            if (!controller.signal.aborted) {
+                setEditorialState("error");
+                setEditorialMessage(error instanceof Error ? error.message : "Couldn’t get a proposal. Retry when ready.");
+            }
+        } finally {
+            if (editorialRequest.current === controller)
+                editorialRequest.current = undefined;
+        }
+    }
+
+
+    function cancelEditorialProposal() {
+        editorialRequest.current?.abort();
+        editorialRequest.current = undefined;
+        setEditorialState("idle");
+        setEditorialMessage("Proposal cancelled. Your article is unchanged.");
+    }
+
     
     if (state !== "ready") 
         return <main className="startup"><h1>Skladno</h1><p aria-live="polite" data-state={state}>{message}</p></main>;
@@ -162,6 +216,16 @@ export function App() {
                     <div className="article-actions"><button type="button" onClick={() => { setRenameId(document.id); setRenameValue(document.title); }}>Rename</button><button type="button" onClick={() => void deleteArticle(document)}>Delete</button></div>
                 </li>)}
             </ul>}
+            <section className="editorial-assistant" aria-label="Editorial assistant">
+                <h2>Editorial assistant</h2>
+                <textarea aria-label="Editorial request" value={editorialPrompt} onChange={(event) => setEditorialPrompt(event.target.value)} placeholder="Ask for a proposal…" disabled={!selected || editorialState === "streaming"} />
+                <div className="editorial-actions">
+                    <button type="button" onClick={() => void requestEditorialProposal()} disabled={!selected || !editorialPrompt.trim() || editorialState === "streaming"}>Create proposal</button>
+                    {editorialState === "streaming" && <button type="button" onClick={cancelEditorialProposal}>Cancel</button>}
+                </div>
+                {editorialMessage && <p data-state={editorialState === "error" ? "error" : undefined} aria-live="polite">{editorialMessage}</p>}
+                {proposal && <output className="proposal">{proposal}</output>}
+            </section>
         </aside>
         <section className="editor-pane" aria-label="Article editor">
             {selected ? <><header><h2>{selected.title}</h2><p aria-live="polite" data-state={saveState}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn’t save. Your text is still here." : "Saved locally"}</p>{saveState === "error" && <button type="button" onClick={() => save(selected.id, draftsRef.current[selected.id] ?? "")}>Retry save</button>}</header>
