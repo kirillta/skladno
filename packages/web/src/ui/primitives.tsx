@@ -78,7 +78,7 @@ export function TabList({ children, ...props }: PropsWithChildren<HTMLAttributes
 
 
 export function Tab({ children, selected, ...props }: PropsWithChildren<ButtonHTMLAttributes<HTMLButtonElement> & { selected: boolean }>) {
-    return <button {...props} className={joinClassNames("min-h-9 shrink-0 border-b-2 border-transparent px-2.5 py-2 text-xs text-muted hover:text-ink", selected ? "border-brand font-semibold text-brand" : undefined, props.className)} role="tab" aria-selected={selected}>{children}</button>;
+    return <button {...props} className={joinClassNames("relative min-h-9 shrink-0 border-b-2 border-transparent px-2.5 py-2 text-xs text-muted hover:text-ink", selected ? "font-semibold text-brand after:absolute after:inset-x-2.5 after:bottom-0 after:h-0.5 after:bg-brand" : undefined, props.className)} role="tab" aria-selected={selected}>{children}</button>;
 }
 
 
@@ -109,7 +109,7 @@ export function Diff({ removed, added }: { removed?: ReactNode; added?: ReactNod
 
 
 export function Dialog({ children, ...props }: PropsWithChildren<DialogHTMLAttributes<HTMLDialogElement>>) {
-    return <dialog {...props} className={joinClassNames("rounded-panel border border-border bg-surface-raised p-5 text-ink shadow-raised backdrop:bg-ink/35", props.className)}>{children}</dialog>;
+    return <dialog {...props} className={joinClassNames("fixed inset-0 z-50 m-auto w-fit max-h-[calc(100dvh-2rem)] overflow-auto rounded-panel border border-border bg-surface-raised p-5 text-ink shadow-[0_0_0_100vmax_rgb(37_37_33_/_35%),0_1px_2px_rgb(37_37_33_/_8%),0_6px_18px_rgb(37_37_33_/_6%)]", props.className)}>{children}</dialog>;
 }
 
 
