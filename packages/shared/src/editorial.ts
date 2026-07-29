@@ -64,7 +64,7 @@ export interface StyleReview {
 export interface EditorialErrorEvent {
     type: "error";
     requestId: string;
-    code: "configuration" | "network" | "provider" | "malformed_stream" | "cancelled";
+    code: "configuration" | "network" | "provider" | "malformed_stream" | "invalid_output" | "session_expired" | "cancelled";
     message: string;
     retryable: boolean;
 }

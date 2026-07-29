@@ -2,7 +2,8 @@ import { createServer, type IncomingMessage } from "node:http";
 import { HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 
 import type { ServerConfig } from "./config.js";
-import { OpenAiResponsesProvider, type EditorialProvider } from "./editorial/openai-responses-provider.js";
+import { LangChainEditorialEngine } from "./editorial/langchain-editorial-engine.js";
+import type { EditorialEngine } from "./editorial/editorial-engine.js";
 import { handleDocumentsRoute } from "./http/routes/documents-route.js";
 import { handleEditorialRoute } from "./http/routes/editorial-route.js";
 import { handleHealthRoute } from "./http/routes/health-route.js";
@@ -16,7 +17,11 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 }
 
 
-export function createLocalService(config: ServerConfig, repositories: Repositories, provider: EditorialProvider | undefined = config.openAiApiKey ? new OpenAiResponsesProvider(config.openAiApiKey) : undefined) {
+export function createLocalService(config: ServerConfig, repositories: Repositories, engine: EditorialEngine | undefined = config.openAiApiKey ? new LangChainEditorialEngine({
+    apiKey: config.openAiApiKey,
+    model: config.openAiModel,
+    storeResponses: config.openAiStoreResponses,
+}) : undefined) {
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {
             writeJson(response, HTTP_STATUS.FORBIDDEN, { error: "Origin is not permitted." });
@@ -42,7 +47,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
 
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         try {
-            if (await handleEditorialRoute(request, response, pathname, config, repositories, provider))
+            if (await handleEditorialRoute(request, response, pathname, config, repositories, engine))
                 return;
 
             if (await handleStyleCorpusRoute(request, response, pathname, repositories))

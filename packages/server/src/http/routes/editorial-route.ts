@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { EDITORIAL_OPERATION, HTTP_METHOD, HTTP_STATUS, type EditorialEvent, type StyleFinding, type StyleReview } from "@skladno/shared";
+import { EDITORIAL_OPERATION, HTTP_METHOD, HTTP_STATUS, type EditorialEvent } from "@skladno/shared";
 
 import type { ServerConfig } from "../../config.js";
-import { PROVIDER_STREAM_EVENT, requestAbortedSignal, writeEditorialEvent, type EditorialProvider } from "../../editorial/openai-responses-provider.js";
-import { createEditorialPrompt, isEditorialOperation } from "../../editorial/workflow-prompt.js";
+import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine } from "../../editorial/editorial-engine.js";
+import { isEditorialOperation } from "../../editorial/workflow-prompt.js";
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, string } from "../json.js";
 
@@ -13,45 +13,12 @@ function errorEvent(requestId: string, code: Extract<EditorialEvent, { type: "er
 }
 
 
-function boundedArticleContext(content: string): string {
-    const maximumCharacters = 24_000;
-    if (content.length <= maximumCharacters)
-        return content;
-
-    const half = Math.floor(maximumCharacters / 2);
-    return `${content.slice(0, half)}\n\n[Middle of article omitted to bound editorial context.]\n\n${content.slice(-half)}`;
+function writeEditorialEvent(response: ServerResponse, event: EditorialEvent): void {
+    response.write(`event: editorial\ndata: ${JSON.stringify(event)}\n\n`);
 }
 
 
-function parseStyleReview(value: string): { proposal: string; styleReview: StyleReview } {
-    const parsed: unknown = JSON.parse(value);
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
-        throw new Error("Style review was not valid structured output. Retry the request.");
-
-    const record = parsed as Record<string, unknown>;
-    if (typeof record.proposal !== "string" || !Array.isArray(record.findings))
-        throw new Error("Style review was missing its proposal or findings. Retry the request.");
-
-    const findings = record.findings.map((finding): StyleFinding => {
-        if (typeof finding !== "object" || finding === null || Array.isArray(finding))
-            throw new Error("Style review included an invalid finding. Retry the request.");
-
-        const item = finding as Record<string, unknown>;
-        if (typeof item.divergence !== "string" || typeof item.suggestion !== "string" || !Array.isArray(item.traitIds) || !item.traitIds.every((traitId) => typeof traitId === "string"))
-            throw new Error("Style review included an invalid finding. Retry the request.");
-
-        return { 
-            divergence: item.divergence, 
-            suggestion: item.suggestion, 
-            traitIds: item.traitIds as string[] 
-        };
-    });
-
-    return { proposal: record.proposal, styleReview: { findings } };
-}
-
-
-export async function handleEditorialRoute(request: IncomingMessage, response: ServerResponse, pathname: string, config: ServerConfig, repositories: Repositories, provider: EditorialProvider | undefined): Promise<boolean> {
+export async function handleEditorialRoute(request: IncomingMessage, response: ServerResponse, pathname: string, config: ServerConfig, repositories: Repositories, engine: EditorialEngine | undefined): Promise<boolean> {
     const match = /^\/api\/documents\/([^/]+)\/editorial$/.exec(pathname);
     if (request.method !== HTTP_METHOD.POST || !match)
         return false;
@@ -79,15 +46,27 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         return true;
     }
 
-    if (!provider) {
+    if (!engine) {
         writeEditorialEvent(response, errorEvent(requestId, "configuration", "Add OPENAI_API_KEY to the local service environment, then retry.", false));
         response.end();
 
         return true;
     }
 
-    const signal = requestAbortedSignal(request, response);
-    const session = repositories.getEditorialSession(documentId);
+    const controller = new AbortController();
+    request.once("aborted", () => controller.abort());
+    request.once("close", () => {
+        if (!request.complete)
+            controller.abort();
+    });
+    
+    response.once("close", () => controller.abort());
+
+    const signal = controller.signal;
+    const session = config.openAiStoreResponses ? repositories.getEditorialSession(documentId) : undefined;
+    if (!config.openAiStoreResponses)
+        repositories.removeEditorialSession(documentId);
+
     const styleProfile = operation === EDITORIAL_OPERATION.STYLE_REVIEW ? repositories.getStyleCorpus().profile : undefined;
     if (operation === EDITORIAL_OPERATION.STYLE_REVIEW && !styleProfile) {
         writeEditorialEvent(response, errorEvent(requestId, "provider", "Add at least one style corpus item before checking style.", false));
@@ -96,15 +75,21 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         return true;
     }
 
-    const prompt = createEditorialPrompt(operation, authorContext, styleProfile);
     let completed = false;
 
     try {
-        for await (const event of provider.stream({ model: config.openAiModel, prompt, article: boundedArticleContext(document.currentVersion.content), previousResponseId: session?.previousResponseId }, signal)) {
-            if (event.type === PROVIDER_STREAM_EVENT.COMPLETED) {
-                const styleResult = operation === EDITORIAL_OPERATION.STYLE_REVIEW ? parseStyleReview(event.text) : undefined;
+        for await (const event of engine.stream({
+            operation,
+            article: document.currentVersion.content,
+            authorContext,
+            ...(styleProfile ? { styleProfile } : {}),
+            ...(session?.previousResponseId ? { previousResponseId: session.previousResponseId } : {}),
+        }, signal)) {
+            if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
                 completed = true;
-                repositories.saveEditorialSession(documentId, event.responseId);
+                if (config.openAiStoreResponses)
+                    repositories.saveEditorialSession(documentId, event.responseId);
+
                 repositories.createWorkflowArtifact({
                     documentId,
                     versionId: document.currentVersionId,
@@ -114,26 +99,17 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
                         operation,
                         authorContext,
                         responseId: event.responseId,
-                        proposal: styleResult?.proposal ?? event.text,
+                        proposal: event.text,
                         styleProfile,
-                        findings: styleResult?.styleReview.findings,
+                        findings: event.styleReview?.findings,
                     }),
                 });
-                if (styleResult)
-                    writeEditorialEvent(response, {
-                        type: "completed",
-                        requestId,
-                        responseId: event.responseId,
-                        text: styleResult.proposal,
-                        styleReview: styleResult.styleReview,
-                    });
-                else
-                    writeEditorialEvent(response, { ...event, requestId });
+                writeEditorialEvent(response, { ...event, requestId });
 
                 continue;
             }
 
-            if (operation !== EDITORIAL_OPERATION.STYLE_REVIEW || event.type !== PROVIDER_STREAM_EVENT.TEXT_DELTA)
+            if (operation !== EDITORIAL_OPERATION.STYLE_REVIEW || event.type !== EDITORIAL_ENGINE_EVENT.TEXT_DELTA)
                 writeEditorialEvent(response, { ...event, requestId });
         }
 
@@ -141,8 +117,19 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
             writeEditorialEvent(response, errorEvent(requestId, "malformed_stream", "OpenAI ended before completing the proposal. Retry the request.", true));
     } catch (error) {
         if (!signal.aborted) {
+            if (error instanceof EditorialEngineError && error.code === "session_expired")
+                repositories.removeEditorialSession(documentId);
+
             const message = error instanceof Error ? error.message : "The editorial request failed. Retry it in a moment.";
-            const code = /unreadable|invalid stream|ended before completing|without a response ID/i.test(message) ? "malformed_stream" : "network";
+            const code = error instanceof EditorialEngineError
+                ? ({
+                    invalid_output: "invalid_output",
+                    incomplete_stream: "malformed_stream",
+                    network: "network",
+                    provider: "provider",
+                    session_expired: "session_expired",
+                } as const)[error.code]
+                : "network";
             
             writeEditorialEvent(response, errorEvent(requestId, code, message, true));
         }

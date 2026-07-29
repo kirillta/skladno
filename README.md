@@ -73,7 +73,8 @@ React SPA
 local Node.js service
     ├── SQLite persistence and migrations
     ├── immutable document revisions
-    ├── OpenAI Responses API and SSE streaming
+    ├── LangChain.js orchestration over OpenAI Responses API
+    ├── typed SSE streaming to the renderer
     ├── web search for fact-checking
     └── local configuration and secrets
 
@@ -126,7 +127,7 @@ These features are intentionally held until the core editorial loop has been val
 
 Requirements: Node.js 22 or later and npm 10 or later.
 
-1. Copy `.env.example` to `.env` and adjust local ports only if required. `OPENAI_API_KEY` is optional for this foundation and remains server-side.
+1. Copy `.env.example` to `.env` and adjust local ports only if required. `OPENAI_API_KEY` remains server-side. `OPENAI_STORE_RESPONSES` is `false` by default; enable it only if you explicitly accept OpenAI-held response state for multi-turn continuation.
 2. Run `npm install`.
 3. Run `npm run dev`.
 4. Open `http://localhost:5173`. The page reports whether it can reach the local service at `http://127.0.0.1:8787/api/health`.
@@ -149,7 +150,9 @@ Skladno processes unpublished writing and style samples, so privacy is a product
 - Private content and credentials must not appear in logs by default.
 - Model requests contain only the context required for the requested operation.
 - Style corpus articles remain local; style review sends a compact derived profile rather than the raw corpus.
-- Provider-side storage is disabled unless the user explicitly opts into a future feature that requires it.
+- LangChain is server-side only. LangGraph is introduced with the later fact-check workflow, where stateful orchestration is needed.
+- Provider-side response storage is disabled by default. `OPENAI_STORE_RESPONSES=true` is an explicit opt-in for response-ID continuation and may retain response state with OpenAI.
+- LangSmith tracing is disabled for private editorial content.
 - Network-dependent actions are visible and initiated by the author.
 
 ## Status

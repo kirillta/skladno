@@ -27,4 +27,10 @@ export class EditorialSessionsRepository {
         
         return { documentId, previousResponseId, updatedAt };
     }
+
+
+    remove(documentId: string): void {
+        this.database.prepare("DELETE FROM editorial_sessions WHERE document_id = ?")
+            .run(documentId);
+    }
 }
