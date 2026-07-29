@@ -60,3 +60,17 @@ test("style review sends a compact profile rather than raw corpus text", async (
     assert.match(prompt, /paragraphing: Compact paragraphs/);
     assert.match(prompt, /No additional author guidance was provided/);
 });
+
+
+test("translation prompt names the target language and preserves protected tokens", async () => {
+    const prompt = await promptText({
+        operation: EDITORIAL_OPERATION.TRANSLATION,
+        article: "Use [[SKLADNO_PROTECTED_0]].",
+        authorContext: "Keep the direct tone.",
+        targetLanguage: "Spanish",
+    });
+
+    assert.match(prompt, /Translate the complete article into Spanish/);
+    assert.match(prompt, /copy every token exactly once/);
+    assert.match(prompt, /\[\[SKLADNO_PROTECTED_0\]\]/);
+});

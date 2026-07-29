@@ -61,6 +61,15 @@ const migrations = [
         );
         `,
     },
+    {
+        version: 4,
+        name: "translation_document_links",
+        sql: `
+        ALTER TABLE documents ADD COLUMN language TEXT;
+        ALTER TABLE documents ADD COLUMN source_document_id TEXT REFERENCES documents(id) ON DELETE SET NULL;
+        CREATE INDEX documents_source_document ON documents(source_document_id);
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

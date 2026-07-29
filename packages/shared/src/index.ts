@@ -24,6 +24,7 @@ export {
     type FactCheckFinding,
     type FactCheckSource,
     type StartEditorialRequest,
+    type TranslationMetadata,
 } from "./editorial.js";
 export {
     styleCorpusPath,

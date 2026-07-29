@@ -26,6 +26,8 @@ function document(row: Row): Document {
         updatedAt: String(row.document_updated_at),
         currentVersionId: currentVersion.id,
         currentVersion,
+        ...(row.language ? { language: String(row.language) } : {}),
+        ...(row.source_document_id ? { sourceDocumentId: String(row.source_document_id) } : {}),
     };
 }
 
@@ -39,8 +41,8 @@ export class DocumentsRepository {
         const versionId = createId();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            this.database.prepare("INSERT INTO documents (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)")
-                .run(documentId, required(input.title, "Document title"), timestamp, timestamp);
+            this.database.prepare("INSERT INTO documents (id, title, language, source_document_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)")
+                .run(documentId, required(input.title, "Document title"), input.language ?? null, input.sourceDocumentId ?? null, timestamp, timestamp);
             this.database.prepare("INSERT INTO document_versions (id, document_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
                 .run(versionId, documentId, input.content, JSON.stringify(input.provenance ?? { kind: "initial" }), timestamp);
             this.database.prepare("UPDATE documents SET current_version_id = ? WHERE id = ?").run(versionId, documentId);
@@ -54,12 +56,12 @@ export class DocumentsRepository {
 
 
     list(): Document[] {
-        return (this.database.prepare("SELECT d.id document_id, d.title, d.created_at document_created_at, d.updated_at document_updated_at, v.* FROM documents d JOIN document_versions v ON v.id = d.current_version_id ORDER BY d.updated_at DESC, d.id ASC").all() as Row[]).map(document);
+        return (this.database.prepare("SELECT d.id document_id, d.title, d.language, d.source_document_id, d.created_at document_created_at, d.updated_at document_updated_at, v.* FROM documents d JOIN document_versions v ON v.id = d.current_version_id ORDER BY d.updated_at DESC, d.id ASC").all() as Row[]).map(document);
     }
 
 
     get(documentId: string): Document | undefined {
-        const row = this.database.prepare("SELECT d.id document_id, d.title, d.created_at document_created_at, d.updated_at document_updated_at, v.* FROM documents d JOIN document_versions v ON v.id = d.current_version_id WHERE d.id = ?").get(documentId) as Row | undefined;
+        const row = this.database.prepare("SELECT d.id document_id, d.title, d.language, d.source_document_id, d.created_at document_created_at, d.updated_at document_updated_at, v.* FROM documents d JOIN document_versions v ON v.id = d.current_version_id WHERE d.id = ?").get(documentId) as Row | undefined;
         return row && document(row);
     }
 
