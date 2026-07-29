@@ -6,6 +6,7 @@ import { Button, Dialog, Diff, EmptyState, Field, Select, Tab, TabList, Textarea
 type WorkspaceState = "loading" | "ready" | "error";
 type SaveState = "saved" | "saving" | "error";
 type WorkspaceTab = "editor" | "diff" | "history" | "fact-check" | "style" | "translations" | "publish";
+type AssistantEntry = { id: string; text: string; tone: "info" | "success" | "error"; timestamp: string };
 
 
 const workflowStages = ["Talking points", "Narrative draft", "Author editing", "Flow and clarity", "Fact-checking", "Style review", "Translation", "Publication preview"] as const;
@@ -89,6 +90,8 @@ export function App() {
     const [workflowStage, setWorkflowStage] = useState(() => localStorage.getItem("skladno-workflow-stage") ?? "Author editing");
     const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("editor");
     const [distractionFree, setDistractionFree] = useState(() => localStorage.getItem("skladno-distraction-free") === "true");
+    const [assistantCollapsed, setAssistantCollapsed] = useState(() => localStorage.getItem("skladno-assistant-collapsed") === "true");
+    const [assistantHistory, setAssistantHistory] = useState<AssistantEntry[]>([]);
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -234,6 +237,20 @@ export function App() {
     }
 
 
+    function toggleAssistantPanel() {
+        setAssistantCollapsed((current) => {
+            const next = !current;
+            localStorage.setItem("skladno-assistant-collapsed", String(next));
+            return next;
+        });
+    }
+
+
+    function addAssistantEntry(text: string, tone: AssistantEntry["tone"] = "info") {
+        setAssistantHistory((items) => [{ id: crypto.randomUUID(), text, tone, timestamp: new Date().toISOString() }, ...items].slice(0, 20));
+    }
+
+
     async function createDocumentFromFlow(startFromPoints: boolean) {
         const title = newDocumentTitle.trim() || newArticleTitle(documents);
         const points = newDocumentPoints.trim();
@@ -324,6 +341,7 @@ export function App() {
         setEditorialState(EditorialState.Streaming);
         setLastEditorialOperation(operation);
         setEditorialMessage("Preparing a proposal…");
+        addAssistantEntry(`Reviewing saved revision ${versions.current.get(document.id)?.slice(0, 8) ?? "current"}. Your article will not change automatically.`);
 
         try {
             await client.streamEditorial(document.id, {
@@ -345,6 +363,7 @@ export function App() {
                     setTranslation(event.translation);
                     setEditorialState(EditorialState.Idle);
                     setEditorialMessage(event.factCheck ? "Fact check ready. It has not changed your article." : "Proposal ready for review. It has not changed your article.");
+                    addAssistantEntry(event.factCheck ? "Fact check completed. Findings are advisory." : "Proposal completed. Review it before accepting any changes.", "success");
                 } else {
                     setEditorialState(EditorialState.Error);
                     setEditorialMessage(event.message);
@@ -354,6 +373,7 @@ export function App() {
             if (!controller.signal.aborted) {
                 setEditorialState(EditorialState.Error);
                 setEditorialMessage(error instanceof Error ? error.message : "Couldn’t get a proposal. Retry when ready.");
+                addAssistantEntry("The request failed. No article text or revision history was changed.", "error");
             }
         } finally {
             if (editorialRequest.current === controller)
@@ -373,6 +393,7 @@ export function App() {
         setTranslation(undefined);
         setEditorialState(EditorialState.Idle);
         setEditorialMessage("Proposal cancelled. Your article is unchanged.");
+        addAssistantEntry("Request cancelled. No article text or revision history was changed.");
     }
 
 
@@ -544,7 +565,7 @@ export function App() {
     if (state !== "ready") 
         return <main className="min-h-screen bg-canvas px-8 pt-[12vh] font-ui text-ink"><div className="mx-auto max-w-2xl"><h1 className="text-lg font-semibold tracking-tight">Skladno</h1><p className="mt-2 text-sm text-muted" aria-live="polite" data-state={state}>{message}</p></div></main>;
 
-    return <main className={`grid min-h-screen grid-cols-1 bg-canvas font-ui text-ink md:h-screen ${distractionFree ? "md:grid-cols-[minmax(0,1fr)]" : navigationCollapsed ? "md:grid-cols-[4rem_minmax(0,1fr)]" : "md:grid-cols-[15rem_minmax(0,1fr)]"}`}>
+    return <main className={`grid min-h-screen grid-cols-1 bg-canvas font-ui text-ink md:h-screen ${distractionFree ? "md:grid-cols-[minmax(0,1fr)]" : assistantCollapsed ? navigationCollapsed ? "md:grid-cols-[4rem_minmax(0,1fr)]" : "md:grid-cols-[15rem_minmax(0,1fr)]" : navigationCollapsed ? "md:grid-cols-[4rem_minmax(0,1fr)_24rem]" : "md:grid-cols-[15rem_minmax(0,1fr)_24rem]"}`}>
         <aside className={`${distractionFree ? "hidden" : ""} overflow-y-auto border-b border-border bg-surface px-3 py-5 md:border-r md:border-b-0`} aria-label="Document navigation">
             <div className="flex items-center justify-between gap-2 px-2 pb-4"><h1 className={navigationCollapsed ? "sr-only" : "font-semibold tracking-tight"}>Skladno</h1><Button type="button" variant="quiet" aria-label={navigationCollapsed ? "Expand navigation" : "Collapse navigation"} onClick={toggleNavigation}>{navigationCollapsed ? ">" : "<"}</Button></div>
             <Button type="button" className="w-full" onClick={() => setIsCreateDialogOpen(true)}>{navigationCollapsed ? "+" : "New document"}</Button>
@@ -665,6 +686,17 @@ export function App() {
                 {workspaceTab === "editor" ? <><div className="flex items-center justify-between px-[clamp(1.5rem,5vw,5rem)] pt-3 text-xs text-muted"><span>{workflowStage} is advisory. It never changes your text or runs AI.</span><span className={publishCharacterCount > publishLimitProfile.characterLimit ? "text-danger" : publishCharacterCount >= publishLimitProfile.warningThreshold ? "text-caution" : "text-brand"}>{publishCharacterCount.toLocaleString()} / {publishLimitProfile.characterLimit.toLocaleString()} characters</span></div><textarea aria-label="Article text" value={content} onChange={(event) => { const value = event.target.value; setDrafts((items) => ({ ...items, [selected.id]: value })); }} placeholder="Start writing…" spellCheck /></> : <div className="m-auto w-full max-w-3xl p-8 text-sm leading-6 text-muted"><h3 className="text-base font-semibold text-ink">{workspaceTabs.find((tab) => tab.id === workspaceTab)?.label}</h3><p className="mt-2">This supporting view is available in the navigation panel and does not change your article automatically.</p><Button type="button" variant="secondary" className="mt-4" onClick={() => setWorkspaceTab("editor")}>Return to editor</Button></div>}
             </> : <EmptyState title="Select an article"><p>Create an article or choose one from the sidebar.</p></EmptyState>}
         </section>
+        {!distractionFree && <aside className={`${assistantCollapsed ? "hidden" : ""} min-w-0 overflow-y-auto border-l border-border bg-surface-raised p-4`} aria-label="Editorial assistant">
+            <div className="flex items-center justify-between gap-2"><div><h2 className="text-sm font-semibold">Editorial assistant</h2><p className="mt-1 text-xs text-muted">Proposals stay separate from your article.</p></div><Button type="button" variant="quiet" aria-label="Collapse assistant" onClick={toggleAssistantPanel}>×</Button></div>
+            <div className="mt-4 rounded-panel border border-border bg-canvas p-3 text-xs leading-5 text-muted"><strong className="text-ink">Input scope</strong><p className="mt-1">Sends the saved revision {selected ? selected.currentVersionId.slice(0, 8) : "—"} and only the guidance you enter below.</p></div>
+            <label className="mt-4 grid gap-1 text-xs text-muted">Editorial guidance<TextareaField value={editorialContext} onChange={(event) => setEditorialContext(event.target.value)} placeholder="Add talking points or revision guidance…" disabled={!selected || editorialState === EditorialState.Streaming} /></label>
+            <div className="mt-3 grid gap-2"><Button type="button" variant="secondary" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)} disabled={!selected || editorialState === EditorialState.Streaming}>Connect talking points</Button><Button type="button" variant="secondary" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FLOW_REVISION)} disabled={!selected || editorialState === EditorialState.Streaming}>Improve flow</Button><Button type="button" variant="secondary" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FACT_CHECK)} disabled={!selected || editorialState === EditorialState.Streaming}>Check facts</Button><Button type="button" variant="secondary" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.STYLE_REVIEW)} disabled={!selected || editorialState === EditorialState.Streaming || !styleCorpus?.profile}>Review style</Button><Button type="button" variant="secondary" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.TRANSLATION)} disabled={!selected || editorialState === EditorialState.Streaming || !targetLanguage.trim()}>Translate</Button></div>
+            {editorialState === EditorialState.Streaming && <Button type="button" variant="danger" className="mt-3 w-full" onClick={cancelEditorialProposal}>Stop request</Button>}
+            {editorialState === EditorialState.Error && lastEditorialOperation && <Button type="button" className="mt-3 w-full" onClick={() => void requestEditorialProposal(lastEditorialOperation)}>Retry request</Button>}
+            {editorialMessage && <p className={`mt-3 text-xs leading-5 ${editorialState === EditorialState.Error ? "text-danger" : "text-muted"}`} aria-live="polite">{editorialMessage}</p>}
+            <section className="mt-5 border-t border-border pt-4" aria-label="Assistant activity"><h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Activity</h3><ol className="mt-3 grid gap-3 text-xs leading-5">{assistantHistory.length === 0 ? <li className="text-muted">No requests in this local session.</li> : assistantHistory.map((entry) => <li key={entry.id} className={entry.tone === "error" ? "text-danger" : entry.tone === "success" ? "text-success" : "text-muted"}>{entry.text}<time className="mt-1 block text-[0.7rem] text-muted">{new Date(entry.timestamp).toLocaleTimeString()}</time></li>)}</ol></section>
+        </aside>}
+        {!distractionFree && assistantCollapsed && <Button type="button" className="fixed bottom-4 right-4 shadow-raised" onClick={toggleAssistantPanel}>Open assistant</Button>}
         <Dialog open={isCreateDialogOpen} aria-labelledby="new-document-title">
             <form method="dialog" className="grid w-[min(32rem,calc(100vw-2rem))] gap-4">
                 <div><h2 id="new-document-title" className="text-lg font-semibold">New document</h2><p className="mt-1 text-sm text-muted">Start with an empty draft or save your talking points for a reviewable narrative proposal.</p></div>
