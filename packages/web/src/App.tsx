@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { applyProposalChanges, countPublishingCharacters, createTextProposal, defaultPublishLimitProfileId, DocumentConflictError, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, preparePlainTextForPublishing, publishLimitProfiles, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type FactCheck, type PublishLimitProfileId, type StyleCorpus, type StyleReview, type TextProposal, type TranslationMetadata } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
-import { Button, Dialog, Diff, EmptyState, Field, Select, TextareaField } from "./ui/primitives";
+import { Button, Dialog, Diff, EmptyState, Field, Select, Tab, TabList, TextareaField } from "./ui/primitives";
 
 type WorkspaceState = "loading" | "ready" | "error";
 type SaveState = "saved" | "saving" | "error";
+type WorkspaceTab = "editor" | "diff" | "history" | "fact-check" | "style" | "translations" | "publish";
+
+
+const workflowStages = ["Talking points", "Narrative draft", "Author editing", "Flow and clarity", "Fact-checking", "Style review", "Translation", "Publication preview"] as const;
+const workspaceTabs: Array<{ id: WorkspaceTab; label: string }> = [
+    { id: "editor", label: "Editor" },
+    { id: "diff", label: "Diff" },
+    { id: "history", label: "Version History" },
+    { id: "fact-check", label: "Fact Check" },
+    { id: "style", label: "Style Profile" },
+    { id: "translations", label: "Translations" },
+    { id: "publish", label: "Publish" },
+];
 
 
 enum EditorialState {
@@ -73,6 +86,9 @@ export function App() {
     const [newDocumentPoints, setNewDocumentPoints] = useState("");
     const [newDocumentLanguage, setNewDocumentLanguage] = useState("English");
     const [newDocumentAudience, setNewDocumentAudience] = useState("");
+    const [workflowStage, setWorkflowStage] = useState(() => localStorage.getItem("skladno-workflow-stage") ?? "Author editing");
+    const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("editor");
+    const [distractionFree, setDistractionFree] = useState(() => localStorage.getItem("skladno-distraction-free") === "true");
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -198,6 +214,21 @@ export function App() {
         setNavigationCollapsed((current) => {
             const next = !current;
             localStorage.setItem("skladno-navigation-collapsed", String(next));
+            return next;
+        });
+    }
+
+
+    function changeWorkflowStage(stage: string) {
+        localStorage.setItem("skladno-workflow-stage", stage);
+        setWorkflowStage(stage);
+    }
+
+
+    function toggleDistractionFree() {
+        setDistractionFree((current) => {
+            const next = !current;
+            localStorage.setItem("skladno-distraction-free", String(next));
             return next;
         });
     }
@@ -513,8 +544,8 @@ export function App() {
     if (state !== "ready") 
         return <main className="min-h-screen bg-canvas px-8 pt-[12vh] font-ui text-ink"><div className="mx-auto max-w-2xl"><h1 className="text-lg font-semibold tracking-tight">Skladno</h1><p className="mt-2 text-sm text-muted" aria-live="polite" data-state={state}>{message}</p></div></main>;
 
-    return <main className={`grid min-h-screen grid-cols-1 bg-canvas font-ui text-ink md:h-screen ${navigationCollapsed ? "md:grid-cols-[4rem_minmax(0,1fr)]" : "md:grid-cols-[15rem_minmax(0,1fr)]"}`}>
-        <aside className="overflow-y-auto border-b border-border bg-surface px-3 py-5 md:border-r md:border-b-0" aria-label="Document navigation">
+    return <main className={`grid min-h-screen grid-cols-1 bg-canvas font-ui text-ink md:h-screen ${distractionFree ? "md:grid-cols-[minmax(0,1fr)]" : navigationCollapsed ? "md:grid-cols-[4rem_minmax(0,1fr)]" : "md:grid-cols-[15rem_minmax(0,1fr)]"}`}>
+        <aside className={`${distractionFree ? "hidden" : ""} overflow-y-auto border-b border-border bg-surface px-3 py-5 md:border-r md:border-b-0`} aria-label="Document navigation">
             <div className="flex items-center justify-between gap-2 px-2 pb-4"><h1 className={navigationCollapsed ? "sr-only" : "font-semibold tracking-tight"}>Skladno</h1><Button type="button" variant="quiet" aria-label={navigationCollapsed ? "Expand navigation" : "Collapse navigation"} onClick={toggleNavigation}>{navigationCollapsed ? ">" : "<"}</Button></div>
             <Button type="button" className="w-full" onClick={() => setIsCreateDialogOpen(true)}>{navigationCollapsed ? "+" : "New document"}</Button>
             {!navigationCollapsed && <>
@@ -629,8 +660,9 @@ export function App() {
             </>}
         </aside>
         <section className={ui.editorPane} aria-label="Article editor">
-            {selected ? <><header><h2>{selected.title}</h2><p aria-live="polite" data-state={saveState}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn’t save. Your text is still here." : "Saved locally"}</p>{saveState === "error" && <button type="button" onClick={() => save(selected.id, draftsRef.current[selected.id] ?? "")}>Retry save</button>}</header>
-                <textarea aria-label="Article text" value={content} onChange={(event) => { const value = event.target.value; setDrafts((items) => ({ ...items, [selected.id]: value })); }} placeholder="Start writing…" spellCheck />
+            {selected ? <><header className="flex-wrap"><div className="min-w-0"><h2>{selected.title}</h2><p className="mt-1 text-xs text-muted">Version {selected.currentVersionId.slice(0, 8)} · {selected.language ?? "Source language not set"}</p></div><Select className="max-w-44" aria-label="Workflow stage" value={workflowStage} onChange={(event) => changeWorkflowStage(event.target.value)}>{workflowStages.map((stage) => <option key={stage}>{stage}</option>)}</Select><p aria-live="polite" data-state={saveState}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn’t save. Your text is still here." : "Saved locally"}</p><Button type="button" variant="quiet" onClick={toggleDistractionFree}>{distractionFree ? "Show panels" : "Focus mode"}</Button>{saveState === "error" && <Button type="button" onClick={() => save(selected.id, draftsRef.current[selected.id] ?? "")}>Retry save</Button>}</header>
+                <div className="border-b border-border px-[clamp(1.5rem,5vw,5rem)] pt-3"><TabList>{workspaceTabs.map((tab) => <Tab key={tab.id} selected={workspaceTab === tab.id} onClick={() => setWorkspaceTab(tab.id)}>{tab.label}{tab.id === "diff" && review?.changes.length ? ` (${review.changes.length})` : ""}{tab.id === "fact-check" && factCheck?.findings.length ? ` (${factCheck.findings.length})` : ""}</Tab>)}</TabList></div>
+                {workspaceTab === "editor" ? <><div className="flex items-center justify-between px-[clamp(1.5rem,5vw,5rem)] pt-3 text-xs text-muted"><span>{workflowStage} is advisory. It never changes your text or runs AI.</span><span className={publishCharacterCount > publishLimitProfile.characterLimit ? "text-danger" : publishCharacterCount >= publishLimitProfile.warningThreshold ? "text-caution" : "text-brand"}>{publishCharacterCount.toLocaleString()} / {publishLimitProfile.characterLimit.toLocaleString()} characters</span></div><textarea aria-label="Article text" value={content} onChange={(event) => { const value = event.target.value; setDrafts((items) => ({ ...items, [selected.id]: value })); }} placeholder="Start writing…" spellCheck /></> : <div className="m-auto w-full max-w-3xl p-8 text-sm leading-6 text-muted"><h3 className="text-base font-semibold text-ink">{workspaceTabs.find((tab) => tab.id === workspaceTab)?.label}</h3><p className="mt-2">This supporting view is available in the navigation panel and does not change your article automatically.</p><Button type="button" variant="secondary" className="mt-4" onClick={() => setWorkspaceTab("editor")}>Return to editor</Button></div>}
             </> : <EmptyState title="Select an article"><p>Create an article or choose one from the sidebar.</p></EmptyState>}
         </section>
         <Dialog open={isCreateDialogOpen} aria-labelledby="new-document-title">
