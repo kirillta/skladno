@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { applyProposalChanges, countPublishingCharacters, createTextProposal, defaultPublishLimitProfileId, DocumentConflictError, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, preparePlainTextForPublishing, publishLimitProfiles, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type FactCheck, type PublishLimitProfileId, type StyleCorpus, type StyleReview, type TextProposal, type TranslationMetadata } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
+import { Button, Diff, EmptyState, Select, TextareaField } from "./ui/primitives";
 
 type WorkspaceState = "loading" | "ready" | "error";
 type SaveState = "saved" | "saving" | "error";
@@ -464,7 +465,7 @@ export function App() {
 
     return <main className="grid min-h-screen grid-cols-1 bg-canvas font-ui text-ink md:h-screen md:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="overflow-y-auto border-b border-border bg-surface px-3 py-5 md:border-r md:border-b-0" aria-label="Articles">
-            <div className="flex items-center justify-between gap-2 px-2 pb-4"><h1>Skladno</h1><button type="button" onClick={createArticle}>New article</button></div>
+            <div className="flex items-center justify-between gap-2 px-2 pb-4"><h1>Skladno</h1><Button type="button" onClick={createArticle}>New article</Button></div>
             {documents.length === 0 ? <p className="p-2 text-sm leading-6 text-muted">No articles yet. Create one to start writing.</p> : <ul className="m-0 list-none space-y-1 p-0">
                 {documents.map((document) => <li key={document.id} className={`rounded-md p-0.5 ${document.id === selectedId ? "bg-brand-soft" : ""}`}>
                     {renameId === document.id ? <input autoFocus aria-label="Article title" value={renameValue} onChange={(event) => setRenameValue(event.target.value)} onBlur={() => void commitRename(document.id)} onKeyDown={(event) => { if (event.key === "Enter") void commitRename(document.id); if (event.key === "Escape") setRenameId(undefined); }} />
@@ -476,15 +477,15 @@ export function App() {
                 <h2>Publish to LinkedIn</h2>
                 <p>Prepare a local plain-text copy. This never saves or changes your article.</p>
                 <label>Length guidance
-                    <select aria-label="Publishing length profile" value={publishLimitProfileId} onChange={(event) => void selectPublishLimitProfile(event.target.value as PublishLimitProfileId)}>
+                    <Select aria-label="Publishing length profile" value={publishLimitProfileId} onChange={(event) => void selectPublishLimitProfile(event.target.value as PublishLimitProfileId)}>
                         {publishLimitProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label} ({profile.characterLimit.toLocaleString()} characters)</option>)}
-                    </select>
+                    </Select>
                 </label>
                 <p className={`text-xs ${publishCharacterCount > publishLimitProfile.characterLimit ? "text-danger" : publishCharacterCount >= publishLimitProfile.warningThreshold ? "text-caution" : "text-brand"}`} aria-live="polite">
                     {publishCharacterCount.toLocaleString()} / {publishLimitProfile.characterLimit.toLocaleString()} characters
                     {publishCharacterCount > publishLimitProfile.characterLimit ? " — over this profile’s guidance." : publishCharacterCount >= publishLimitProfile.warningThreshold ? " — nearing this profile’s guidance." : " — within this profile’s guidance."}
                 </p>
-                <button type="button" onClick={() => void copyPublishingText()} disabled={!selected}>Copy plain text</button>
+                <Button type="button" onClick={() => void copyPublishingText()} disabled={!selected}>Copy plain text</Button>
                 <p className="publish-format-note">Links are kept as readable text. LinkedIn may not preserve every line break or other formatting exactly after paste.</p>
                 <output className="mt-2 block max-h-64 overflow-y-auto rounded-md border border-border bg-canvas p-2 font-editor text-xs leading-5 whitespace-pre-wrap select-text" aria-label="Plain-text publishing preview">{publishText || "Your plain-text preview will appear here."}</output>
                 {publishMessage && <p aria-live="polite">{publishMessage}</p>}
@@ -492,7 +493,7 @@ export function App() {
             <section className={ui.sidebarSection} aria-label="Editorial assistant">
                 <h2>Editorial assistant</h2>
                 <p>Choose a workflow. Skladno creates a proposal for review and never replaces the saved article.</p>
-                <textarea aria-label="Theses or editorial guidance" value={editorialContext} onChange={(event) => setEditorialContext(event.target.value)} placeholder="Add theses, a tone, or revision guidance…" disabled={!selected || editorialState === EditorialState.Streaming} />
+                <TextareaField aria-label="Theses or editorial guidance" value={editorialContext} onChange={(event) => setEditorialContext(event.target.value)} placeholder="Add theses, a tone, or revision guidance…" disabled={!selected || editorialState === EditorialState.Streaming} />
                 <div className="mt-2 flex flex-wrap gap-2">
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)} disabled={!selected || editorialState === EditorialState.Streaming}>Turn theses into narrative</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FLOW_REVISION)} disabled={!selected || editorialState === EditorialState.Streaming}>Revise draft for flow</button>
@@ -518,7 +519,7 @@ export function App() {
                 {proposal && translation && proposalResponseId && editorialState === EditorialState.Idle && <section className="mt-4 border-t border-border pt-4 text-xs leading-5" aria-label="Translation review">
                     <h3>Review {translation.targetLanguage} translation</h3>
                     <p>Protected code, links, and technical names were validated before this proposal. Edit the translation if needed, then save it as a separate linked article.</p>
-                    <textarea className={`${ui.field} mt-3 min-h-56 resize-y font-editor leading-6`} aria-label="Translation proposal" value={proposal} onChange={(event) => setProposal(event.target.value)} />
+                    <TextareaField className="mt-3 min-h-56 resize-y font-editor leading-6" aria-label="Translation proposal" value={proposal} onChange={(event) => setProposal(event.target.value)} />
                     <div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => void acceptTranslation()}>Accept as separate article</button><button type="button" className={ui.secondaryButton} onClick={rejectProposal}>Reject translation</button></div>
                 </section>}
                 {proposal && review && proposalResponseId && !translation && editorialState === EditorialState.Idle && <section className="mt-4 border-t border-border pt-4 text-xs leading-5" aria-label="Proposal review">
@@ -534,8 +535,7 @@ export function App() {
                             {review.changes.map((change, index) => <label key={change.id} className="grid gap-1 rounded-md border border-border bg-canvas p-2">
                                 <input type="checkbox" checked={selectedChanges.has(change.id)} onChange={() => toggleProposalChange(change.id)} />
                                 <span>Change {index + 1}</span>
-                                {change.baseLines.length > 0 && <del>{change.baseLines.join("\n")}</del>}
-                                {change.proposalLines.length > 0 && <ins>{change.proposalLines.join("\n")}</ins>}
+                                <Diff removed={change.baseLines.length > 0 ? change.baseLines.join("\n") : undefined} added={change.proposalLines.length > 0 ? change.proposalLines.join("\n") : undefined} />
                             </label>)}
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
@@ -574,7 +574,7 @@ export function App() {
         <section className={ui.editorPane} aria-label="Article editor">
             {selected ? <><header><h2>{selected.title}</h2><p aria-live="polite" data-state={saveState}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn’t save. Your text is still here." : "Saved locally"}</p>{saveState === "error" && <button type="button" onClick={() => save(selected.id, draftsRef.current[selected.id] ?? "")}>Retry save</button>}</header>
                 <textarea aria-label="Article text" value={content} onChange={(event) => { const value = event.target.value; setDrafts((items) => ({ ...items, [selected.id]: value })); }} placeholder="Start writing…" spellCheck />
-            </> : <div className="m-auto p-2 text-center text-sm leading-6 text-muted"><h2>Select an article</h2><p>Create an article or choose one from the sidebar.</p></div>}
+            </> : <EmptyState title="Select an article"><p>Create an article or choose one from the sidebar.</p></EmptyState>}
         </section>
     </main>;
 }

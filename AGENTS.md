@@ -107,6 +107,13 @@ Preserve the established spacious, vertically organized formatting across the wo
 - Write CSS as expanded blocks: one selector per line when grouped, one declaration per line, a blank line between rules, and fully expanded media-query contents.
 - Preserve the surrounding style when editing an existing file; do not introduce compact one-line formatting into expanded code.
 
+## Web UI foundation
+
+- Use Tailwind utility classes for web UI component styling. Do not introduce a parallel plain-CSS component layer.
+- Keep `packages/web/src/styles.css` limited to Tailwind imports, semantic design tokens, and truly global base behavior such as focus visibility and reduced motion.
+- Follow [`packages/web/src/ui/design-system.md`](packages/web/src/ui/design-system.md) when building or changing UI primitives and feature controls. It defines the available primitives, their state variants, accessibility baseline, and the non-color status and diff conventions.
+- Consume the semantic tokens exposed through Tailwind rather than introducing raw palette, radius, focus, or elevation values in feature code.
+
 ## Testing expectations
 
 Use the narrowest effective layer:
