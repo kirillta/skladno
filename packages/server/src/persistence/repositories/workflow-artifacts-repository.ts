@@ -51,6 +51,23 @@ export class WorkflowArtifactsRepository {
     }
 
 
+    createWithCitations(input: CreateWorkflowArtifactInput, citations: Omit<CreateSourceCitationInput, "artifactId">[]): WorkflowArtifact {
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            const artifact = this.create(input);
+            for (const citation of citations)
+                this.createCitation({ ...citation, artifactId: artifact.id });
+
+            this.database.exec("COMMIT;");
+
+            return artifact;
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
+    }
+
+
     listCitations(artifactId: string): SourceCitation[] {
         return (this.database.prepare("SELECT * FROM source_citations WHERE artifact_id = ? ORDER BY created_at ASC, id ASC").all(artifactId) as Row[])
             .map((row) => ({ 

@@ -4,6 +4,7 @@ export const editorialPath = (documentId: string) => `/api/documents/${encodeURI
 export const EDITORIAL_OPERATION = {
     THESIS_TO_NARRATIVE: "thesis_to_narrative",
     FLOW_REVISION: "flow_revision",
+    FACT_CHECK: "fact_check",
     STYLE_REVIEW: "style_review",
 } as const;
 
@@ -46,6 +47,7 @@ export interface EditorialCompletedEvent {
     responseId: string;
     text: string;
     styleReview?: StyleReview;
+    factCheck?: FactCheck;
 }
 
 
@@ -58,6 +60,36 @@ export interface StyleFinding {
 
 export interface StyleReview {
     findings: StyleFinding[];
+}
+
+
+export const FACT_CHECK_STATUS = {
+    SUPPORTED: "supported",
+    DISPUTED: "disputed",
+    UNVERIFIABLE: "unverifiable",
+} as const;
+
+
+export interface FactCheckSource {
+    url: string;
+    title: string;
+    excerpt?: string;
+    quality: "primary" | "credible" | "secondary" | "unknown";
+    publishedAt?: string;
+}
+
+
+export interface FactCheckFinding {
+    claim: string;
+    status: typeof FACT_CHECK_STATUS[keyof typeof FACT_CHECK_STATUS];
+    rationale: string;
+    uncertainty: string;
+    sources: FactCheckSource[];
+}
+
+
+export interface FactCheck {
+    findings: FactCheckFinding[];
 }
 
 

@@ -6,6 +6,7 @@ import type { StyleProfile, StyleReview } from "@skladno/shared";
 import { EDITORIAL_OPERATION } from "@skladno/shared";
 import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine, type EditorialEngineEvent, type EditorialEngineRequest } from "./editorial-engine.js";
 import { createEditorialMessages } from "./workflow-prompt.js";
+import { LangGraphFactCheck } from "./langgraph-fact-check.js";
 
 
 const styleReviewSchema = z.object({
@@ -82,6 +83,7 @@ function providerError(error: unknown, hadPreviousResponseId: boolean): Editoria
 
 export class LangChainEditorialEngine implements EditorialEngine {
     private readonly model: ChatOpenAI;
+    private readonly factCheck: LangGraphFactCheck;
 
 
     constructor(private readonly options: LangChainEditorialEngineOptions) {
@@ -91,6 +93,8 @@ export class LangChainEditorialEngine implements EditorialEngine {
             useResponsesApi: true,
             zdrEnabled: !options.storeResponses,
         });
+        
+        this.factCheck = new LangGraphFactCheck(options);
     }
 
 
@@ -107,6 +111,12 @@ export class LangChainEditorialEngine implements EditorialEngine {
 
 
     private async *streamOperation(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        if (request.operation === EDITORIAL_OPERATION.FACT_CHECK) {
+            yield* this.factCheck.stream(request.article, signal);
+
+            return;
+        }
+
         const prepared = await this.prepareRequest(request, signal);
 
         if (request.operation === EDITORIAL_OPERATION.STYLE_REVIEW) {

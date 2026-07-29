@@ -40,7 +40,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
     }
 
     if (!isEditorialOperation(operation)) {
-        writeEditorialEvent(response, errorEvent(requestId, "provider", "Choose either thesis to narrative or flow revision.", false));
+        writeEditorialEvent(response, errorEvent(requestId, "provider", "Choose an available editorial workflow.", false));
         response.end();
 
         return true;
@@ -63,7 +63,8 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
     response.once("close", () => controller.abort());
 
     const signal = controller.signal;
-    const session = config.openAiStoreResponses ? repositories.getEditorialSession(documentId) : undefined;
+    const isFactCheck = operation === EDITORIAL_OPERATION.FACT_CHECK;
+    const session = !isFactCheck && config.openAiStoreResponses ? repositories.getEditorialSession(documentId) : undefined;
     if (!config.openAiStoreResponses)
         repositories.removeEditorialSession(documentId);
 
@@ -87,13 +88,13 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         }, signal)) {
             if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
                 completed = true;
-                if (config.openAiStoreResponses)
+                if (!isFactCheck && config.openAiStoreResponses)
                     repositories.saveEditorialSession(documentId, event.responseId);
 
-                repositories.createWorkflowArtifact({
+                const artifactInput = {
                     documentId,
                     versionId: document.currentVersionId,
-                    kind: operation === EDITORIAL_OPERATION.STYLE_REVIEW ? "style-review" : "editorial-proposal",
+                    kind: isFactCheck ? "fact-check" : operation === EDITORIAL_OPERATION.STYLE_REVIEW ? "style-review" : "editorial-proposal",
                     content: JSON.stringify({
                         requestId,
                         operation,
@@ -102,8 +103,18 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
                         proposal: event.text,
                         styleProfile,
                         findings: event.styleReview?.findings,
+                        factCheck: event.factCheck,
                     }),
-                });
+                };
+                const citations = event.factCheck?.findings.flatMap((finding) => finding.sources.map((source) => ({
+                                url: source.url,
+                                title: source.title,
+                                excerpt: source.excerpt,
+                                uncertainty: `${source.quality}${source.publishedAt ? `; published ${source.publishedAt}` : ""}; ${finding.uncertainty}`,
+                            }))) ?? [];
+                isFactCheck
+                    ? repositories.createWorkflowArtifactWithCitations(artifactInput, citations)
+                    : repositories.createWorkflowArtifact(artifactInput);
                 writeEditorialEvent(response, { ...event, requestId });
 
                 continue;
