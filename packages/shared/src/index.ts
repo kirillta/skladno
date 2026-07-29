@@ -8,6 +8,7 @@ export {
 export { HTTP_METHOD, HTTP_STATUS } from "./http.js";
 export {
     EDITORIAL_OPERATION,
+    FACT_CHECK_STATUS,
     editorialPath,
     type EditorialClient,
     type EditorialCompletedEvent,
@@ -19,6 +20,9 @@ export {
     type StyleReview,
     type EditorialTextDeltaEvent,
     type EditorialToolStatusEvent,
+    type FactCheck,
+    type FactCheckFinding,
+    type FactCheckSource,
     type StartEditorialRequest,
 } from "./editorial.js";
 export {

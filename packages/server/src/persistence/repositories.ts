@@ -117,6 +117,11 @@ export class Repositories {
     }
 
 
+    createWorkflowArtifactWithCitations(input: CreateWorkflowArtifactInput, citations: Omit<CreateSourceCitationInput, "artifactId">[]): WorkflowArtifact {
+        return this.workflowArtifacts.createWithCitations(input, citations);
+    }
+
+
     listWorkflowArtifacts(documentId: string): WorkflowArtifact[] { 
         return this.workflowArtifacts.list(documentId); 
     }

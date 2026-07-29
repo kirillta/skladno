@@ -237,3 +237,51 @@ test("style review uses a compact local profile and saves cited findings as a pr
         assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "A long draft");
     });
 });
+
+
+test("fact checks persist completed findings and citations against the reviewed version", async () => {
+    const engine = new FixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "started" },
+        {
+            type: EDITORIAL_ENGINE_EVENT.COMPLETED,
+            responseId: "fact-check-complete",
+            text: "",
+            factCheck: {
+                findings: [
+                    {
+                        claim: "HTTP was standardized in 1999.",
+                        status: "supported",
+                        rationale: "The cited RFC records the publication date.",
+                        uncertainty: "The source is primary and dated.",
+                        sources: [{ url: "https://www.rfc-editor.org/rfc/rfc2616", title: "RFC 2616", quality: "primary", publishedAt: "1999-06" }],
+                    },
+                    {
+                        claim: "Every API uses HTTP.",
+                        status: "unverifiable",
+                        rationale: "No evidence was found for this universal claim.",
+                        uncertainty: "Absence of evidence is not support.",
+                        sources: [],
+                    },
+                ],
+            },
+        },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const document = repositories.createDocument({ title: "Draft", content: "An article" });
+        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "fact-request", operation: EDITORIAL_OPERATION.FACT_CHECK }),
+        });
+        const body = await response.text();
+        const artifact = repositories.listWorkflowArtifacts(document.id)[0]!;
+
+        assert.match(body, /"type":"tool_status","tool":"claim_extraction"/);
+        assert.match(body, /"status":"unverifiable"/);
+        assert.equal(artifact.kind, "fact-check");
+        assert.equal(artifact.versionId, document.currentVersionId);
+        assert.equal(repositories.listSourceCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
+        assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "An article");
+    });
+});

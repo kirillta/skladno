@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyProposalChanges, createTextProposal, DocumentConflictError, EDITORIAL_OPERATION, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type StyleCorpus, type StyleReview, type TextProposal } from "@skladno/shared";
+import { applyProposalChanges, createTextProposal, DocumentConflictError, EDITORIAL_OPERATION, FACT_CHECK_STATUS, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type FactCheck, type StyleCorpus, type StyleReview, type TextProposal } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
 
 type WorkspaceState = "loading" | "ready" | "error";
@@ -50,6 +50,7 @@ export function App() {
     const [styleCorpusContent, setStyleCorpusContent] = useState("");
     const [styleCorpusMessage, setStyleCorpusMessage] = useState("");
     const [styleReview, setStyleReview] = useState<StyleReview>();
+    const [factCheck, setFactCheck] = useState<FactCheck>();
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -217,6 +218,7 @@ export function App() {
         setProposalBase({ content: draft, versionId: versions.current.get(selected.id)! });
         setProposalResponseId(undefined);
         setStyleReview(undefined);
+        setFactCheck(undefined);
         setSelectedChanges(new Set());
         setEditorialState(EditorialState.Streaming);
         setLastEditorialOperation(operation);
@@ -237,8 +239,9 @@ export function App() {
                     setProposal(event.text);
                     setProposalResponseId(event.responseId);
                     setStyleReview(event.styleReview);
+                    setFactCheck(event.factCheck);
                     setEditorialState(EditorialState.Idle);
-                    setEditorialMessage("Proposal ready for review. It has not changed your article.");
+                    setEditorialMessage(event.factCheck ? "Fact check ready. It has not changed your article." : "Proposal ready for review. It has not changed your article.");
                 } else {
                     setEditorialState(EditorialState.Error);
                     setEditorialMessage(event.message);
@@ -263,6 +266,7 @@ export function App() {
         setProposalBase(undefined);
         setSelectedChanges(new Set());
         setStyleReview(undefined);
+        setFactCheck(undefined);
         setEditorialState(EditorialState.Idle);
         setEditorialMessage("Proposal cancelled. Your article is unchanged.");
     }
@@ -317,6 +321,7 @@ export function App() {
         setProposalBase(undefined);
         setSelectedChanges(new Set());
         setStyleReview(undefined);
+        setFactCheck(undefined);
         setEditorialMessage("Proposal rejected. Your article is unchanged.");
     }
 
@@ -391,11 +396,23 @@ export function App() {
                 <div className="editorial-actions">
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)} disabled={!selected || editorialState === EditorialState.Streaming}>Turn theses into narrative</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FLOW_REVISION)} disabled={!selected || editorialState === EditorialState.Streaming}>Revise draft for flow</button>
+                    <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FACT_CHECK)} disabled={!selected || editorialState === EditorialState.Streaming}>Check facts</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.STYLE_REVIEW)} disabled={!selected || editorialState === EditorialState.Streaming || !styleCorpus?.profile}>Check style</button>
                     {editorialState === EditorialState.Streaming && <button type="button" onClick={cancelEditorialProposal}>Cancel</button>}
                     {editorialState === EditorialState.Error && lastEditorialOperation && <button type="button" onClick={() => void requestEditorialProposal(lastEditorialOperation)}>Retry request</button>}
                 </div>
                 {editorialMessage && <p data-state={editorialState === EditorialState.Error ? "error" : undefined} aria-live="polite">{editorialMessage}</p>}
+                {factCheck && editorialState === EditorialState.Idle && <section className="fact-check-findings" aria-label="Fact check findings">
+                    <h3>Fact check</h3>
+                    <p>Advisory findings for this saved version. Missing evidence is not treated as truth.</p>
+                    {factCheck.findings.length === 0 ? <p>No externally verifiable claims were identified.</p> : <ul>{factCheck.findings.map((finding, index) => <li key={`${finding.claim}-${index}`} data-status={finding.status}>
+                        <strong>{finding.status === FACT_CHECK_STATUS.SUPPORTED ? "Supported" : finding.status === FACT_CHECK_STATUS.DISPUTED ? "Disputed" : "Unverifiable"}</strong>
+                        <span>{finding.claim}</span>
+                        <p>{finding.rationale}</p>
+                        <small>{finding.uncertainty}</small>
+                        {finding.sources.length > 0 && <ul>{finding.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a><small>{source.quality}{source.publishedAt ? ` · ${source.publishedAt}` : ""}{source.excerpt ? ` · ${source.excerpt}` : ""}</small></li>)}</ul>}
+                    </li>)}</ul>}
+                </section>}
                 {proposal && review && proposalResponseId && editorialState === EditorialState.Idle && <section className="proposal-review" aria-label="Proposal review">
                     <h3>Review proposal</h3>
                     {styleReview && <section className="style-findings" aria-label="Style review findings">
