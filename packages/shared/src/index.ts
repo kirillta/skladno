@@ -62,3 +62,16 @@ export type {
     WorkflowArtifact,
 } from "./persistence/index.js";
 export { documentsPath, DocumentConflictError, type WorkspaceClient } from "./workspace.js";
+export {
+    countPublishingCharacters,
+    defaultPublishLimitProfileId,
+    getPublishLimitProfile,
+    isPublishLimitProfileId,
+    preparePlainTextForPublishing,
+    publishLimitProfiles,
+    publishSettingsPath,
+    PUBLISH_LIMIT_PROFILE,
+    type PublishLimitProfile,
+    type PublishLimitProfileId,
+    type PublishingClient,
+} from "./publishing.js";

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { HTTP_METHOD, HTTP_STATUS, type Document } from "@skladno/shared";
+import { HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Document } from "@skladno/shared";
 import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";
 
@@ -58,6 +58,22 @@ test("document API supports CRUD and revision-aware draft saves", async () => {
         const renamed = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed draft" }) });
         assert.equal((await renamed.json() as Document).title, "Renamed draft");
         assert.ok(saved.id);
+
+        const settingsUrl = baseUrl.replace("/api/documents", publishSettingsPath);
+        const defaultProfile = await fetch(settingsUrl);
+        assert.equal(defaultProfile.status, HTTP_STATUS.OK);
+        assert.deepEqual(await defaultProfile.json(), { profileId: PUBLISH_LIMIT_PROFILE.LINKEDIN_POST });
+
+        const savedProfile = await fetch(settingsUrl, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ profileId: PUBLISH_LIMIT_PROFILE.LINKEDIN_SHORT }),
+        });
+        assert.equal(savedProfile.status, HTTP_STATUS.OK);
+        assert.deepEqual(await savedProfile.json(), { profileId: PUBLISH_LIMIT_PROFILE.LINKEDIN_SHORT });
+
+        const reloadedProfile = await fetch(settingsUrl);
+        assert.deepEqual(await reloadedProfile.json(), { profileId: PUBLISH_LIMIT_PROFILE.LINKEDIN_SHORT });
 
         assert.equal((await fetch(baseUrl)).status, HTTP_STATUS.OK);
         assert.equal((await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.DELETE })).status, HTTP_STATUS.NO_CONTENT);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyProposalChanges, createTextProposal, DocumentConflictError, EDITORIAL_OPERATION, FACT_CHECK_STATUS, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type FactCheck, type StyleCorpus, type StyleReview, type TextProposal, type TranslationMetadata } from "@skladno/shared";
+import { applyProposalChanges, countPublishingCharacters, createTextProposal, defaultPublishLimitProfileId, DocumentConflictError, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, preparePlainTextForPublishing, publishLimitProfiles, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type FactCheck, type PublishLimitProfileId, type StyleCorpus, type StyleReview, type TextProposal, type TranslationMetadata } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
 
 type WorkspaceState = "loading" | "ready" | "error";
@@ -53,6 +53,8 @@ export function App() {
     const [factCheck, setFactCheck] = useState<FactCheck>();
     const [targetLanguage, setTargetLanguage] = useState("Spanish");
     const [translation, setTranslation] = useState<TranslationMetadata>();
+    const [publishLimitProfileId, setPublishLimitProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
+    const [publishMessage, setPublishMessage] = useState("");
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -68,6 +70,7 @@ export function App() {
             setMessage("Your local service is unavailable. Start it, then retry.");
         });
         client.getStyleCorpus().then(setStyleCorpus).catch(() => setStyleCorpusMessage("Couldn’t load your local style corpus."));
+        client.getPublishLimitProfile().then(setPublishLimitProfileId).catch(() => setPublishMessage("Using the default publishing profile until local settings are available."));
     }, []);
 
 
@@ -81,6 +84,9 @@ export function App() {
     const review: TextProposal | undefined = proposalBase 
         ? createTextProposal(proposalBase.content, proposal) 
         : undefined;
+    const publishText = preparePlainTextForPublishing(content);
+    const publishCharacterCount = countPublishingCharacters(publishText);
+    const publishLimitProfile = getPublishLimitProfile(publishLimitProfileId);
 
 
     function loadHistory(documentId: string) {
@@ -417,6 +423,31 @@ export function App() {
         }
     }
 
+    async function selectPublishLimitProfile(profileId: PublishLimitProfileId) {
+        setPublishLimitProfileId(profileId);
+
+        try {
+            const savedProfileId = await client.setPublishLimitProfile(profileId);
+            setPublishLimitProfileId(savedProfileId);
+            setPublishMessage("Publishing profile saved locally.");
+        } catch (error) {
+            setPublishMessage(error instanceof Error ? error.message : "Couldn’t save the publishing profile locally.");
+        }
+    }
+
+
+    async function copyPublishingText() {
+        if (!selected)
+            return;
+
+        try {
+            await navigator.clipboard.writeText(publishText);
+            setPublishMessage("Plain text copied. It matches the preview below.");
+        } catch {
+            setPublishMessage("Couldn’t copy automatically. Select the preview text and copy it manually.");
+        }
+    }
+
     
     if (state !== "ready") 
         return <main className="startup"><h1>Skladno</h1><p aria-live="polite" data-state={state}>{message}</p></main>;
@@ -431,6 +462,23 @@ export function App() {
                     <div className="article-actions"><button type="button" onClick={() => { setRenameId(document.id); setRenameValue(document.title); }}>Rename</button><button type="button" onClick={() => void deleteArticle(document)}>Delete</button></div>
                 </li>)}
             </ul>}
+            <section className="publish-mode" aria-label="Publish mode">
+                <h2>Publish to LinkedIn</h2>
+                <p>Prepare a local plain-text copy. This never saves or changes your article.</p>
+                <label>Length guidance
+                    <select aria-label="Publishing length profile" value={publishLimitProfileId} onChange={(event) => void selectPublishLimitProfile(event.target.value as PublishLimitProfileId)}>
+                        {publishLimitProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label} ({profile.characterLimit.toLocaleString()} characters)</option>)}
+                    </select>
+                </label>
+                <p className={publishCharacterCount > publishLimitProfile.characterLimit ? "publish-warning" : publishCharacterCount >= publishLimitProfile.warningThreshold ? "publish-caution" : "publish-count"} aria-live="polite">
+                    {publishCharacterCount.toLocaleString()} / {publishLimitProfile.characterLimit.toLocaleString()} characters
+                    {publishCharacterCount > publishLimitProfile.characterLimit ? " — over this profile’s guidance." : publishCharacterCount >= publishLimitProfile.warningThreshold ? " — nearing this profile’s guidance." : " — within this profile’s guidance."}
+                </p>
+                <button type="button" onClick={() => void copyPublishingText()} disabled={!selected}>Copy plain text</button>
+                <p className="publish-format-note">Links are kept as readable text. LinkedIn may not preserve every line break or other formatting exactly after paste.</p>
+                <output className="publish-preview" aria-label="Plain-text publishing preview">{publishText || "Your plain-text preview will appear here."}</output>
+                {publishMessage && <p aria-live="polite">{publishMessage}</p>}
+            </section>
             <section className="editorial-assistant" aria-label="Editorial assistant">
                 <h2>Editorial assistant</h2>
                 <p>Choose a workflow. Skladno creates a proposal for review and never replaces the saved article.</p>

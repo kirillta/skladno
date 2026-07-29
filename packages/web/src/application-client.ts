@@ -24,10 +24,13 @@ import {
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
     type StyleCorpusClient,
+    publishSettingsPath,
+    type PublishLimitProfileId,
+    type PublishingClient,
 } from "@skladno/shared";
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
-export class HttpApplicationClient implements ApplicationClient, WorkspaceClient, EditorialClient, StyleCorpusClient {
+export class HttpApplicationClient implements ApplicationClient, WorkspaceClient, EditorialClient, StyleCorpusClient, PublishingClient {
     constructor(private readonly serviceUrl = "http://127.0.0.1:8787") { }
 
     async getHealth(): Promise<HealthResponse> {
@@ -92,6 +95,21 @@ export class HttpApplicationClient implements ApplicationClient, WorkspaceClient
 
     async removeStyleCorpusItem(materialId: string): Promise<void> {
         await this.request<void>(`${styleCorpusPath}/${encodeURIComponent(materialId)}`, { method: HTTP_METHOD.DELETE });
+    }
+
+
+    async getPublishLimitProfile(): Promise<PublishLimitProfileId> {
+        const response = await this.request<{ profileId: PublishLimitProfileId }>(publishSettingsPath);
+        return response.profileId;
+    }
+
+
+    async setPublishLimitProfile(profileId: PublishLimitProfileId): Promise<PublishLimitProfileId> {
+        const response = await this.request<{ profileId: PublishLimitProfileId }>(publishSettingsPath, {
+            method: HTTP_METHOD.PUT,
+            body: JSON.stringify({ profileId }),
+        });
+        return response.profileId;
     }
 
 
