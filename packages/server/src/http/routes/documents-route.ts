@@ -13,7 +13,12 @@ export async function handleDocumentsRoute(request: IncomingMessage, response: S
 
     if (request.method === HTTP_METHOD.POST && pathname === documentsPath) {
         const body = object(await readJson(request));
-        const input: CreateDocumentInput = { title: string(body.title, "title"), content: string(body.content, "content") };
+        const input: CreateDocumentInput = {
+            title: string(body.title, "title"),
+            content: string(body.content, "content"),
+            ...(body.language === undefined ? {} : { language: string(body.language, "language") }),
+            ...(body.sourceDocumentId === undefined ? {} : { sourceDocumentId: string(body.sourceDocumentId, "sourceDocumentId") }),
+        };
 
         writeJson(response, HTTP_STATUS.CREATED, repositories.createDocument(input));
         return true;

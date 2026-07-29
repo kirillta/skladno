@@ -15,6 +15,8 @@ export interface Document {
     updatedAt: string;
     currentVersionId: string;
     currentVersion: DocumentVersion;
+    language?: string;
+    sourceDocumentId?: string;
 }
 
 
@@ -23,6 +25,8 @@ export interface CreateDocumentInput {
     title: string;
     content: string;
     provenance?: Record<string, unknown>;
+    language?: string;
+    sourceDocumentId?: string;
 }
 
 

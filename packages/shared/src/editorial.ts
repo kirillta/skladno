@@ -6,6 +6,7 @@ export const EDITORIAL_OPERATION = {
     FLOW_REVISION: "flow_revision",
     FACT_CHECK: "fact_check",
     STYLE_REVIEW: "style_review",
+    TRANSLATION: "translation",
 } as const;
 
 
@@ -16,6 +17,7 @@ export interface StartEditorialRequest {
     requestId: string;
     operation: EditorialOperation;
     authorContext?: string;
+    targetLanguage?: string;
 }
 
 
@@ -48,6 +50,13 @@ export interface EditorialCompletedEvent {
     text: string;
     styleReview?: StyleReview;
     factCheck?: FactCheck;
+    translation?: TranslationMetadata;
+}
+
+
+export interface TranslationMetadata {
+    targetLanguage: string;
+    protectedSpans: string[];
 }
 
 

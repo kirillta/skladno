@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyProposalChanges, createTextProposal, DocumentConflictError, EDITORIAL_OPERATION, FACT_CHECK_STATUS, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type FactCheck, type StyleCorpus, type StyleReview, type TextProposal } from "@skladno/shared";
+import { applyProposalChanges, createTextProposal, DocumentConflictError, EDITORIAL_OPERATION, FACT_CHECK_STATUS, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type FactCheck, type StyleCorpus, type StyleReview, type TextProposal, type TranslationMetadata } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
 
 type WorkspaceState = "loading" | "ready" | "error";
@@ -51,6 +51,8 @@ export function App() {
     const [styleCorpusMessage, setStyleCorpusMessage] = useState("");
     const [styleReview, setStyleReview] = useState<StyleReview>();
     const [factCheck, setFactCheck] = useState<FactCheck>();
+    const [targetLanguage, setTargetLanguage] = useState("Spanish");
+    const [translation, setTranslation] = useState<TranslationMetadata>();
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -219,6 +221,7 @@ export function App() {
         setProposalResponseId(undefined);
         setStyleReview(undefined);
         setFactCheck(undefined);
+        setTranslation(undefined);
         setSelectedChanges(new Set());
         setEditorialState(EditorialState.Streaming);
         setLastEditorialOperation(operation);
@@ -228,7 +231,8 @@ export function App() {
             await client.streamEditorial(selected.id, {
                 requestId: crypto.randomUUID(),
                 operation,
-                authorContext: editorialContext,
+            authorContext: editorialContext,
+                ...(operation === EDITORIAL_OPERATION.TRANSLATION ? { targetLanguage } : {}),
             }, (event: EditorialEvent) => {
                 if (event.type === "text_delta") {
                     setProposal((current) => current + event.delta);
@@ -240,6 +244,7 @@ export function App() {
                     setProposalResponseId(event.responseId);
                     setStyleReview(event.styleReview);
                     setFactCheck(event.factCheck);
+                    setTranslation(event.translation);
                     setEditorialState(EditorialState.Idle);
                     setEditorialMessage(event.factCheck ? "Fact check ready. It has not changed your article." : "Proposal ready for review. It has not changed your article.");
                 } else {
@@ -267,6 +272,7 @@ export function App() {
         setSelectedChanges(new Set());
         setStyleReview(undefined);
         setFactCheck(undefined);
+        setTranslation(undefined);
         setEditorialState(EditorialState.Idle);
         setEditorialMessage("Proposal cancelled. Your article is unchanged.");
     }
@@ -316,12 +322,48 @@ export function App() {
     }
 
 
+    async function acceptTranslation() {
+        if (!selected || !translation || !proposal.trim())
+            return;
+
+        try {
+            const created = await client.createDocument({
+                title: `${selected.title} — ${translation.targetLanguage}`,
+                content: proposal,
+                language: translation.targetLanguage,
+                sourceDocumentId: selected.id,
+                provenance: {
+                    kind: "accepted-translation",
+                    sourceDocumentId: selected.id,
+                    sourceVersionId: proposalBase?.versionId,
+                    targetLanguage: translation.targetLanguage,
+                    responseId: proposalResponseId,
+                    protectedSpans: translation.protectedSpans,
+                },
+            });
+            versions.current.set(created.id, created.currentVersionId);
+            setDocuments((items) => [created, ...items]);
+            setDrafts((items) => ({ ...items, [created.id]: created.currentVersion.content }));
+            setSelectedId(created.id);
+            setHistory([created.currentVersion]);
+            setProposal("");
+            setProposalBase(undefined);
+            setTranslation(undefined);
+            setEditorialMessage("Translation saved as its own linked article. You can edit and restore it independently.");
+        } catch (error) {
+            setEditorialState(EditorialState.Error);
+            setEditorialMessage(error instanceof Error ? error.message : "Couldn’t create the translation article.");
+        }
+    }
+
+
     function rejectProposal() {
         setProposal("");
         setProposalBase(undefined);
         setSelectedChanges(new Set());
         setStyleReview(undefined);
         setFactCheck(undefined);
+        setTranslation(undefined);
         setEditorialMessage("Proposal rejected. Your article is unchanged.");
     }
 
@@ -385,7 +427,7 @@ export function App() {
             {documents.length === 0 ? <p className="empty">No articles yet. Create one to start writing.</p> : <ul className="article-list">
                 {documents.map((document) => <li key={document.id} className={document.id === selectedId ? "selected" : ""}>
                     {renameId === document.id ? <input autoFocus aria-label="Article title" value={renameValue} onChange={(event) => setRenameValue(event.target.value)} onBlur={() => void commitRename(document.id)} onKeyDown={(event) => { if (event.key === "Enter") void commitRename(document.id); if (event.key === "Escape") setRenameId(undefined); }} />
-                        : <button type="button" className="article" onClick={() => selectArticle(document.id)}>{document.title}</button>}
+                        : <button type="button" className="article" onClick={() => selectArticle(document.id)}>{document.title}{document.language ? <small>{document.language} translation</small> : null}</button>}
                     <div className="article-actions"><button type="button" onClick={() => { setRenameId(document.id); setRenameValue(document.title); }}>Rename</button><button type="button" onClick={() => void deleteArticle(document)}>Delete</button></div>
                 </li>)}
             </ul>}
@@ -398,6 +440,8 @@ export function App() {
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FLOW_REVISION)} disabled={!selected || editorialState === EditorialState.Streaming}>Revise draft for flow</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FACT_CHECK)} disabled={!selected || editorialState === EditorialState.Streaming}>Check facts</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.STYLE_REVIEW)} disabled={!selected || editorialState === EditorialState.Streaming || !styleCorpus?.profile}>Check style</button>
+                    <label className="translation-language">Translate to<input aria-label="Target language" value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)} disabled={!selected || editorialState === EditorialState.Streaming} /></label>
+                    <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.TRANSLATION)} disabled={!selected || editorialState === EditorialState.Streaming || !targetLanguage.trim()}>Translate article</button>
                     {editorialState === EditorialState.Streaming && <button type="button" onClick={cancelEditorialProposal}>Cancel</button>}
                     {editorialState === EditorialState.Error && lastEditorialOperation && <button type="button" onClick={() => void requestEditorialProposal(lastEditorialOperation)}>Retry request</button>}
                 </div>
@@ -413,7 +457,13 @@ export function App() {
                         {finding.sources.length > 0 && <ul>{finding.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a><small>{source.quality}{source.publishedAt ? ` · ${source.publishedAt}` : ""}{source.excerpt ? ` · ${source.excerpt}` : ""}</small></li>)}</ul>}
                     </li>)}</ul>}
                 </section>}
-                {proposal && review && proposalResponseId && editorialState === EditorialState.Idle && <section className="proposal-review" aria-label="Proposal review">
+                {proposal && translation && proposalResponseId && editorialState === EditorialState.Idle && <section className="proposal-review" aria-label="Translation review">
+                    <h3>Review {translation.targetLanguage} translation</h3>
+                    <p>Protected code, links, and technical names were validated before this proposal. Edit the translation if needed, then save it as a separate linked article.</p>
+                    <textarea className="translation-proposal" aria-label="Translation proposal" value={proposal} onChange={(event) => setProposal(event.target.value)} />
+                    <div className="editorial-actions"><button type="button" onClick={() => void acceptTranslation()}>Accept as separate article</button><button type="button" className="secondary-action" onClick={rejectProposal}>Reject translation</button></div>
+                </section>}
+                {proposal && review && proposalResponseId && !translation && editorialState === EditorialState.Idle && <section className="proposal-review" aria-label="Proposal review">
                     <h3>Review proposal</h3>
                     {styleReview && <section className="style-findings" aria-label="Style review findings">
                         <h4>Style review</h4>

@@ -1,4 +1,4 @@
-import type { EditorialOperation, FactCheck, StyleProfile, StyleReview } from "@skladno/shared";
+import type { EditorialOperation, FactCheck, StyleProfile, StyleReview, TranslationMetadata } from "@skladno/shared";
 
 
 export interface EditorialEngineRequest {
@@ -7,6 +7,7 @@ export interface EditorialEngineRequest {
     authorContext: string;
     styleProfile?: StyleProfile;
     previousResponseId?: string;
+    targetLanguage?: string;
 }
 
 
@@ -20,7 +21,7 @@ export const EDITORIAL_ENGINE_EVENT = {
 export type EditorialEngineEvent =
     | { type: typeof EDITORIAL_ENGINE_EVENT.TEXT_DELTA; delta: string }
     | { type: typeof EDITORIAL_ENGINE_EVENT.TOOL_STATUS; tool: string; status: "started" | "completed" }
-    | { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED; responseId: string; text: string; styleReview?: StyleReview; factCheck?: FactCheck };
+    | { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED; responseId: string; text: string; styleReview?: StyleReview; factCheck?: FactCheck; translation?: TranslationMetadata };
 
 
 export type EditorialEngineErrorCode = "provider" | "network" | "invalid_output" | "incomplete_stream" | "session_expired";

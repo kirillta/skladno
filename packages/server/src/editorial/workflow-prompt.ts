@@ -7,6 +7,7 @@ interface EditorialPromptInput {
     article: string;
     authorContext: string;
     styleProfile?: StyleProfile;
+    targetLanguage?: string;
 }
 
 
@@ -28,6 +29,12 @@ const flowTemplate = ChatPromptTemplate.fromMessages([
 const styleTemplate = ChatPromptTemplate.fromMessages([
     ["system", `You are an editorial assistant. ${commonGuardrails}`],
     ["human", "Workflow: style review. Compare the current draft against this compact, locally derived author-style profile. The raw corpus is not available to you. Identify only concrete, material divergences. Produce a conservative full-text proposal that addresses those divergences; do not make changes merely to imitate superficial habits. Each finding must cite one or more supplied trait IDs.\n\nCurrent article:\n{article}\n\nCorpus confidence: {confidence}\n\nSupplied corpus traits:\n{traits}\n\nAuthor guidance:\n{authorContext}"],
+]);
+
+
+const translationTemplate = ChatPromptTemplate.fromMessages([
+    ["system", "You are a technical translator. Translate faithfully without changing claims, numbers, or intended voice. Tokens in the form [[SKLADNO_PROTECTED_N]] are protected code, URLs, or technical names: copy every token exactly once and do not translate it. This is a proposal for author review; never say that you saved or changed the article."],
+    ["human", "Workflow: translation. Translate the complete article into {targetLanguage}. Return the translation and metadata through the requested structured response.\n\nCurrent article:\n{article}\n\nAuthor guidance:\n{authorContext}"],
 ]);
 
 
@@ -65,6 +72,16 @@ export async function createEditorialMessages(input: EditorialPromptInput) {
             ...values,
             confidence: `${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters). Treat low confidence as tentative.`,
             traits: styleTraits(input.styleProfile),
+        });
+    }
+
+    if (input.operation === EDITORIAL_OPERATION.TRANSLATION) {
+        if (!input.targetLanguage?.trim())
+            throw new Error("Choose a target language before requesting a translation.");
+
+        return translationTemplate.formatMessages({
+            ...values,
+            targetLanguage: input.targetLanguage.trim(),
         });
     }
 

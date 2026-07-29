@@ -239,6 +239,48 @@ test("style review uses a compact local profile and saves cited findings as a pr
 });
 
 
+test("translation carries its target language, preserves the source, and records review metadata", async () => {
+    const engine = new FixtureEngine([{
+        type: EDITORIAL_ENGINE_EVENT.COMPLETED,
+        responseId: "translation-1",
+        text: "Ejecuta `npm test` en https://example.com.",
+        translation: {
+            targetLanguage: "Spanish",
+            protectedSpans: ["`npm test`", "https://example.com"],
+        },
+    }]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const source = repositories.createDocument({ title: "Source", content: "Run `npm test` at https://example.com." });
+        const response = await fetch(`${baseUrl}/api/documents/${source.id}/editorial`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "translation-request", operation: EDITORIAL_OPERATION.TRANSLATION, targetLanguage: "Spanish" }),
+        });
+        const body = await response.text();
+        const artifact = repositories.listWorkflowArtifacts(source.id)[0]!;
+        const translated = repositories.createDocument({
+            title: "Source — Spanish",
+            content: "Ejecuta `npm test` en https://example.com.",
+            language: "Spanish",
+            sourceDocumentId: source.id,
+            provenance: { kind: "accepted-translation", targetLanguage: "Spanish" },
+        });
+
+        assert.match(body, /"targetLanguage":"Spanish"/);
+        assert.equal(engine.requests[0]?.targetLanguage, "Spanish");
+        assert.equal(repositories.getDocument(source.id)?.currentVersion.content, "Run `npm test` at https://example.com.");
+        assert.deepEqual(JSON.parse(artifact.content).translation, {
+            targetLanguage: "Spanish",
+            protectedSpans: ["`npm test`", "https://example.com"],
+        });
+        assert.equal(translated.language, "Spanish");
+        assert.equal(translated.sourceDocumentId, source.id);
+        assert.equal(repositories.restoreVersion(translated.id, translated.currentVersionId).content, translated.currentVersion.content);
+    });
+});
+
+
 test("fact checks persist completed findings and citations against the reviewed version", async () => {
     const engine = new FixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "started" },

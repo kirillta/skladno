@@ -7,6 +7,7 @@ import { EDITORIAL_OPERATION } from "@skladno/shared";
 import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine, type EditorialEngineEvent, type EditorialEngineRequest } from "./editorial-engine.js";
 import { createEditorialMessages } from "./workflow-prompt.js";
 import { LangGraphFactCheck } from "./langgraph-fact-check.js";
+import { protectArticleSpans, restoreProtectedSpans } from "./translation.js";
 
 
 const styleReviewSchema = z.object({
@@ -16,6 +17,12 @@ const styleReviewSchema = z.object({
         suggestion: z.string().min(1),
         traitIds: z.array(z.string().min(1)).min(1),
     })),
+});
+
+
+const translationSchema = z.object({
+    translation: z.string().min(1),
+    targetLanguage: z.string().min(1),
 });
 
 
@@ -125,7 +132,53 @@ export class LangChainEditorialEngine implements EditorialEngine {
             return;
         }
 
+        if (request.operation === EDITORIAL_OPERATION.TRANSLATION) {
+            yield* this.streamTranslation(request, signal);
+
+            return;
+        }
+
         yield* this.streamTextProposal(prepared);
+    }
+
+
+    private async *streamTranslation(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        const targetLanguage = request.targetLanguage?.trim();
+        if (!targetLanguage)
+            throw new EditorialEngineError("invalid_output", "Choose a target language before requesting a translation.");
+
+        const protectedArticle = protectArticleSpans(boundedArticleContext(request.article));
+        const messages = await createEditorialMessages({
+            operation: request.operation,
+            article: protectedArticle.protectedText,
+            authorContext: request.authorContext,
+            targetLanguage,
+        });
+        const structuredModel = this.model.withStructuredOutput(translationSchema, {
+            name: "article_translation",
+            strict: true,
+            includeRaw: true,
+        });
+        const output = await structuredModel.invoke(messages, { signal });
+        const parsed = output.parsed;
+        const completedResponseId = responseId(output.raw);
+
+        if (!parsed || !completedResponseId || parsed.targetLanguage.trim() !== targetLanguage)
+            throw new EditorialEngineError("invalid_output", "OpenAI returned incomplete translation metadata. Retry the translation.");
+
+        const text = restoreProtectedSpans(parsed.translation, protectedArticle.protectedSpans);
+        if (!text)
+            throw new EditorialEngineError("invalid_output", "The translation changed protected code, links, or technical names. Review the proposal and retry if you want an alternative.");
+
+        yield {
+            type: EDITORIAL_ENGINE_EVENT.COMPLETED,
+            responseId: completedResponseId,
+            text,
+            translation: {
+                targetLanguage,
+                protectedSpans: protectedArticle.protectedSpans,
+            },
+        };
     }
 
 

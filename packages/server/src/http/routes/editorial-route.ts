@@ -29,6 +29,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
     const requestId = string(body.requestId, "requestId");
     const operation = string(body.operation, "operation");
     const authorContext = body.authorContext === undefined ? "" : string(body.authorContext, "authorContext");
+    const targetLanguage = body.targetLanguage === undefined ? undefined : string(body.targetLanguage, "targetLanguage");
 
     response.writeHead(HTTP_STATUS.OK, { "cache-control": "no-cache, no-transform", connection: "keep-alive", "content-type": "text/event-stream; charset=utf-8" });
 
@@ -41,6 +42,13 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
 
     if (!isEditorialOperation(operation)) {
         writeEditorialEvent(response, errorEvent(requestId, "provider", "Choose an available editorial workflow.", false));
+        response.end();
+
+        return true;
+    }
+
+    if (operation === EDITORIAL_OPERATION.TRANSLATION && !targetLanguage?.trim()) {
+        writeEditorialEvent(response, errorEvent(requestId, "invalid_output", "Choose a target language before requesting a translation.", false));
         response.end();
 
         return true;
@@ -64,7 +72,8 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
 
     const signal = controller.signal;
     const isFactCheck = operation === EDITORIAL_OPERATION.FACT_CHECK;
-    const session = !isFactCheck && config.openAiStoreResponses ? repositories.getEditorialSession(documentId) : undefined;
+    const isTranslation = operation === EDITORIAL_OPERATION.TRANSLATION;
+    const session = !isFactCheck && !isTranslation && config.openAiStoreResponses ? repositories.getEditorialSession(documentId) : undefined;
     if (!config.openAiStoreResponses)
         repositories.removeEditorialSession(documentId);
 
@@ -84,11 +93,12 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
             article: document.currentVersion.content,
             authorContext,
             ...(styleProfile ? { styleProfile } : {}),
+            ...(targetLanguage ? { targetLanguage } : {}),
             ...(session?.previousResponseId ? { previousResponseId: session.previousResponseId } : {}),
         }, signal)) {
             if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
                 completed = true;
-                if (!isFactCheck && config.openAiStoreResponses)
+                if (!isFactCheck && !isTranslation && config.openAiStoreResponses)
                     repositories.saveEditorialSession(documentId, event.responseId);
 
                 const artifactInput = {
@@ -99,11 +109,13 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
                         requestId,
                         operation,
                         authorContext,
+                        ...(targetLanguage ? { targetLanguage } : {}),
                         responseId: event.responseId,
                         proposal: event.text,
                         styleProfile,
                         findings: event.styleReview?.findings,
                         factCheck: event.factCheck,
+                        translation: event.translation,
                     }),
                 };
                 const citations = event.factCheck?.findings.flatMap((finding) => finding.sources.map((source) => ({
