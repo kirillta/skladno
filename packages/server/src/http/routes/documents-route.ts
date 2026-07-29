@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { documentsPath, HTTP_METHOD, HTTP_STATUS, type AcceptProposalInput, type CreateDocumentInput, type SaveDocumentDraftInput } from "@skladno/shared";
+import { documentsPath, HTTP_METHOD, HTTP_STATUS, isPublishLimitProfileId, type AcceptProposalInput, type CreateDocumentInput, type SaveDocumentDraftInput } from "@skladno/shared";
 
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, string, writeJson } from "../json.js";
@@ -13,10 +13,16 @@ export async function handleDocumentsRoute(request: IncomingMessage, response: S
 
     if (request.method === HTTP_METHOD.POST && pathname === documentsPath) {
         const body = object(await readJson(request));
+        const publishingProfileId = body.publishingProfileId === undefined ? undefined : string(body.publishingProfileId, "publishingProfileId");
+        if (publishingProfileId !== undefined && !isPublishLimitProfileId(publishingProfileId))
+            throw new Error("publishingProfileId is not supported.");
+
         const input: CreateDocumentInput = {
             title: string(body.title, "title"),
             content: string(body.content, "content"),
             ...(body.language === undefined ? {} : { language: string(body.language, "language") }),
+            ...(body.audience === undefined ? {} : { audience: string(body.audience, "audience") }),
+            ...(publishingProfileId === undefined ? {} : { publishingProfileId }),
             ...(body.sourceDocumentId === undefined ? {} : { sourceDocumentId: string(body.sourceDocumentId, "sourceDocumentId") }),
         };
 

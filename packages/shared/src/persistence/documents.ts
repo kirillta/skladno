@@ -16,6 +16,8 @@ export interface Document {
     currentVersionId: string;
     currentVersion: DocumentVersion;
     language?: string;
+    audience?: string;
+    publishingProfileId?: string;
     sourceDocumentId?: string;
 }
 
@@ -26,6 +28,8 @@ export interface CreateDocumentInput {
     content: string;
     provenance?: Record<string, unknown>;
     language?: string;
+    audience?: string;
+    publishingProfileId?: string;
     sourceDocumentId?: string;
 }
 

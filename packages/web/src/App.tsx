@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { applyProposalChanges, countPublishingCharacters, createTextProposal, defaultPublishLimitProfileId, DocumentConflictError, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, preparePlainTextForPublishing, publishLimitProfiles, type Document, type DocumentVersion, type EditorialOperation, type EditorialEvent, type FactCheck, type PublishLimitProfileId, type StyleCorpus, type StyleReview, type TextProposal, type TranslationMetadata } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
-import { Button, Diff, EmptyState, Select, TextareaField } from "./ui/primitives";
+import { Button, Dialog, Diff, EmptyState, Field, Select, TextareaField } from "./ui/primitives";
 
 type WorkspaceState = "loading" | "ready" | "error";
 type SaveState = "saved" | "saving" | "error";
@@ -66,6 +66,13 @@ export function App() {
     const [translation, setTranslation] = useState<TranslationMetadata>();
     const [publishLimitProfileId, setPublishLimitProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
     const [publishMessage, setPublishMessage] = useState("");
+    const [libraryQuery, setLibraryQuery] = useState("");
+    const [navigationCollapsed, setNavigationCollapsed] = useState(() => localStorage.getItem("skladno-navigation-collapsed") === "true");
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [newDocumentTitle, setNewDocumentTitle] = useState("");
+    const [newDocumentPoints, setNewDocumentPoints] = useState("");
+    const [newDocumentLanguage, setNewDocumentLanguage] = useState("English");
+    const [newDocumentAudience, setNewDocumentAudience] = useState("");
     draftsRef.current = drafts;
     selectedRef.current = selectedId;
 
@@ -98,6 +105,7 @@ export function App() {
     const publishText = preparePlainTextForPublishing(content);
     const publishCharacterCount = countPublishingCharacters(publishText);
     const publishLimitProfile = getPublishLimitProfile(publishLimitProfileId);
+    const visibleDocuments = documents.filter((document) => `${document.title} ${document.language ?? ""} ${document.audience ?? ""}`.toLocaleLowerCase().includes(libraryQuery.trim().toLocaleLowerCase()));
 
 
     function loadHistory(documentId: string) {
@@ -186,6 +194,48 @@ export function App() {
     }
 
 
+    function toggleNavigation() {
+        setNavigationCollapsed((current) => {
+            const next = !current;
+            localStorage.setItem("skladno-navigation-collapsed", String(next));
+            return next;
+        });
+    }
+
+
+    async function createDocumentFromFlow(startFromPoints: boolean) {
+        const title = newDocumentTitle.trim() || newArticleTitle(documents);
+        const points = newDocumentPoints.trim();
+
+        try {
+            const created = await client.createDocument({
+                title,
+                content: startFromPoints ? points : "",
+                language: newDocumentLanguage.trim() || "English",
+                ...(newDocumentAudience.trim() ? { audience: newDocumentAudience.trim() } : {}),
+                publishingProfileId: publishLimitProfileId,
+                provenance: { kind: startFromPoints ? "author-talking-points" : "initial" },
+            });
+            versions.current.set(created.id, created.currentVersionId);
+            setDocuments((items) => [created, ...items]);
+            setDrafts((items) => ({ ...items, [created.id]: created.currentVersion.content }));
+            setSelectedId(created.id);
+            setHistory([created.currentVersion]);
+            setEditorialContext(startFromPoints ? points : "");
+            setIsCreateDialogOpen(false);
+            setNewDocumentTitle("");
+            setNewDocumentPoints("");
+            setNewDocumentAudience("");
+            if (startFromPoints)
+                void requestEditorialProposal(EDITORIAL_OPERATION.THESIS_TO_NARRATIVE, created, points);
+            else
+                setEditorialMessage("Empty draft created locally.");
+        } catch {
+            setSaveState("error");
+        }
+    }
+
+
     async function commitRename(documentId: string) {
         const title = renameValue.trim();
         setRenameId(undefined);
@@ -216,13 +266,13 @@ export function App() {
     }
 
 
-    async function requestEditorialProposal(operation: EditorialOperation) {
-        if (!selected)
+    async function requestEditorialProposal(operation: EditorialOperation, document = selected, context = editorialContext) {
+        if (!document)
             return;
 
-        const draft = draftsRef.current[selected.id] ?? "";
-        if (draft !== selected.currentVersion.content) {
-            const saved = await save(selected.id, draft);
+        const draft = draftsRef.current[document.id] ?? document.currentVersion.content;
+        if (draft !== document.currentVersion.content) {
+            const saved = await save(document.id, draft);
             if (!saved) {
                 setEditorialState(EditorialState.Error);
                 setEditorialMessage("Couldn’t save the current article, so no text was sent for review. Retry saving, then try again.");
@@ -234,7 +284,7 @@ export function App() {
         const controller = new AbortController();
         editorialRequest.current = controller;
         setProposal("");
-        setProposalBase({ content: draft, versionId: versions.current.get(selected.id)! });
+        setProposalBase({ content: draft, versionId: versions.current.get(document.id)! });
         setProposalResponseId(undefined);
         setStyleReview(undefined);
         setFactCheck(undefined);
@@ -245,10 +295,10 @@ export function App() {
         setEditorialMessage("Preparing a proposal…");
 
         try {
-            await client.streamEditorial(selected.id, {
+            await client.streamEditorial(document.id, {
                 requestId: crypto.randomUUID(),
                 operation,
-            authorContext: editorialContext,
+            authorContext: context,
                 ...(operation === EDITORIAL_OPERATION.TRANSLATION ? { targetLanguage } : {}),
             }, (event: EditorialEvent) => {
                 if (event.type === "text_delta") {
@@ -463,16 +513,22 @@ export function App() {
     if (state !== "ready") 
         return <main className="min-h-screen bg-canvas px-8 pt-[12vh] font-ui text-ink"><div className="mx-auto max-w-2xl"><h1 className="text-lg font-semibold tracking-tight">Skladno</h1><p className="mt-2 text-sm text-muted" aria-live="polite" data-state={state}>{message}</p></div></main>;
 
-    return <main className="grid min-h-screen grid-cols-1 bg-canvas font-ui text-ink md:h-screen md:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside className="overflow-y-auto border-b border-border bg-surface px-3 py-5 md:border-r md:border-b-0" aria-label="Articles">
-            <div className="flex items-center justify-between gap-2 px-2 pb-4"><h1>Skladno</h1><Button type="button" onClick={createArticle}>New article</Button></div>
-            {documents.length === 0 ? <p className="p-2 text-sm leading-6 text-muted">No articles yet. Create one to start writing.</p> : <ul className="m-0 list-none space-y-1 p-0">
-                {documents.map((document) => <li key={document.id} className={`rounded-md p-0.5 ${document.id === selectedId ? "bg-brand-soft" : ""}`}>
+    return <main className={`grid min-h-screen grid-cols-1 bg-canvas font-ui text-ink md:h-screen ${navigationCollapsed ? "md:grid-cols-[4rem_minmax(0,1fr)]" : "md:grid-cols-[15rem_minmax(0,1fr)]"}`}>
+        <aside className="overflow-y-auto border-b border-border bg-surface px-3 py-5 md:border-r md:border-b-0" aria-label="Document navigation">
+            <div className="flex items-center justify-between gap-2 px-2 pb-4"><h1 className={navigationCollapsed ? "sr-only" : "font-semibold tracking-tight"}>Skladno</h1><Button type="button" variant="quiet" aria-label={navigationCollapsed ? "Expand navigation" : "Collapse navigation"} onClick={toggleNavigation}>{navigationCollapsed ? ">" : "<"}</Button></div>
+            <Button type="button" className="w-full" onClick={() => setIsCreateDialogOpen(true)}>{navigationCollapsed ? "+" : "New document"}</Button>
+            {!navigationCollapsed && <>
+                <label className="mt-4 grid gap-1 text-xs text-muted">Search documents<Field aria-label="Search documents" value={libraryQuery} onChange={(event) => setLibraryQuery(event.target.value)} placeholder="Search titles and languages" /></label>
+                <section className="mt-4" aria-label="Recent documents"><h2 className="px-2 text-xs font-semibold uppercase tracking-wide text-muted">Recent documents</h2>
+                {documents.length === 0 ? <EmptyState title="No documents yet"><Button type="button" variant="secondary" onClick={() => setIsCreateDialogOpen(true)}>Create your first document</Button></EmptyState> : visibleDocuments.length === 0 ? <EmptyState title="No matching documents"><Button type="button" variant="quiet" onClick={() => setLibraryQuery("")}>Clear search</Button></EmptyState> : <ul className="m-0 mt-2 list-none space-y-1 p-0">
+                {visibleDocuments.map((document) => <li key={document.id} className={`rounded-md p-0.5 ${document.id === selectedId ? "bg-brand-soft" : ""}`}>
                     {renameId === document.id ? <input autoFocus aria-label="Article title" value={renameValue} onChange={(event) => setRenameValue(event.target.value)} onBlur={() => void commitRename(document.id)} onKeyDown={(event) => { if (event.key === "Enter") void commitRename(document.id); if (event.key === "Escape") setRenameId(undefined); }} />
-                        : <button type="button" className="block w-full truncate rounded px-2 py-2 text-left text-sm hover:bg-white/45" onClick={() => selectArticle(document.id)}>{document.title}{document.language ? <small>{document.language} translation</small> : null}</button>}
+                        : <button type="button" className="block w-full truncate rounded px-2 py-2 text-left text-sm hover:bg-white/45" onClick={() => selectArticle(document.id)}>{document.title}<small>{document.sourceDocumentId ? `Linked translation · ${document.language ?? "language not set"}` : `${document.language ?? "Language not set"} · ${new Date(document.updatedAt).toLocaleDateString()}`}</small></button>}
                     <div className="flex gap-2 px-2 pb-1"><button type="button" onClick={() => { setRenameId(document.id); setRenameValue(document.title); }}>Rename</button><button type="button" onClick={() => void deleteArticle(document)}>Delete</button></div>
-                </li>)}
-            </ul>}
+                </li>)}</ul>}</section>
+                <div className="mt-4 border-t border-border pt-4"><button type="button" className="w-full px-2 py-2 text-left text-sm hover:bg-brand-soft">Style profile</button><button type="button" className="w-full px-2 py-2 text-left text-sm hover:bg-brand-soft">Settings</button><p className="px-2 text-xs text-muted">Local service: {state === "ready" ? "connected" : "unavailable"}</p></div>
+            </>}
+            {!navigationCollapsed && <>
             <section className={ui.sidebarSection} aria-label="Publish mode">
                 <h2>Publish to LinkedIn</h2>
                 <p>Prepare a local plain-text copy. This never saves or changes your article.</p>
@@ -570,12 +626,23 @@ export function App() {
                     </li>)}
                 </ol>
             </section>}
+            </>}
         </aside>
         <section className={ui.editorPane} aria-label="Article editor">
             {selected ? <><header><h2>{selected.title}</h2><p aria-live="polite" data-state={saveState}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn’t save. Your text is still here." : "Saved locally"}</p>{saveState === "error" && <button type="button" onClick={() => save(selected.id, draftsRef.current[selected.id] ?? "")}>Retry save</button>}</header>
                 <textarea aria-label="Article text" value={content} onChange={(event) => { const value = event.target.value; setDrafts((items) => ({ ...items, [selected.id]: value })); }} placeholder="Start writing…" spellCheck />
             </> : <EmptyState title="Select an article"><p>Create an article or choose one from the sidebar.</p></EmptyState>}
         </section>
+        <Dialog open={isCreateDialogOpen} aria-labelledby="new-document-title">
+            <form method="dialog" className="grid w-[min(32rem,calc(100vw-2rem))] gap-4">
+                <div><h2 id="new-document-title" className="text-lg font-semibold">New document</h2><p className="mt-1 text-sm text-muted">Start with an empty draft or save your talking points for a reviewable narrative proposal.</p></div>
+                <label className="grid gap-1 text-sm">Title<Field value={newDocumentTitle} onChange={(event) => setNewDocumentTitle(event.target.value)} placeholder="Article title" autoFocus /></label>
+                <label className="grid gap-1 text-sm">Talking points <span className="text-xs text-muted">(optional)</span><TextareaField value={newDocumentPoints} onChange={(event) => setNewDocumentPoints(event.target.value)} placeholder="Claims, structure, links, or notes…" /></label>
+                <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1 text-sm">Source language<Field value={newDocumentLanguage} onChange={(event) => setNewDocumentLanguage(event.target.value)} /></label><label className="grid gap-1 text-sm">Audience <span className="text-xs text-muted">(optional)</span><Field value={newDocumentAudience} onChange={(event) => setNewDocumentAudience(event.target.value)} placeholder="e.g. engineering leaders" /></label></div>
+                <label className="grid gap-1 text-sm">Publishing profile<Select value={publishLimitProfileId} onChange={(event) => setPublishLimitProfileId(event.target.value as PublishLimitProfileId)}>{publishLimitProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>)}</Select></label>
+                <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="quiet" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button><Button type="button" variant="secondary" onClick={() => void createDocumentFromFlow(false)}>Create empty draft</Button><Button type="button" disabled={!newDocumentPoints.trim()} onClick={() => void createDocumentFromFlow(true)}>Save talking points</Button></div>
+            </form>
+        </Dialog>
     </main>;
 }
 

@@ -70,6 +70,14 @@ const migrations = [
         CREATE INDEX documents_source_document ON documents(source_document_id);
         `,
     },
+    {
+        version: 5,
+        name: "document_creation_metadata",
+        sql: `
+        ALTER TABLE documents ADD COLUMN audience TEXT;
+        ALTER TABLE documents ADD COLUMN publishing_profile_id TEXT;
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;
