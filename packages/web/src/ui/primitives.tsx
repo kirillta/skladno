@@ -23,8 +23,8 @@ const controlStateClasses: Record<ControlState, string> = {
 
 const buttonVariantClasses = {
     primary: "border-transparent bg-brand text-white hover:bg-brand-hover",
-    secondary: "border-brand bg-transparent text-brand hover:bg-brand-soft",
-    quiet: "border-transparent bg-transparent text-brand hover:bg-brand-soft",
+    secondary: "border-border bg-surface-raised text-brand hover:border-brand/45 hover:bg-brand-soft",
+    quiet: "border-transparent bg-transparent text-muted hover:bg-brand-soft hover:text-brand",
     danger: "border-transparent bg-transparent text-danger hover:bg-danger-soft",
 } as const;
 
@@ -73,12 +73,12 @@ export function Banner({ children, tone = "info", className, ...props }: PropsWi
 
 
 export function TabList({ children, ...props }: PropsWithChildren<HTMLAttributes<HTMLDivElement>>) {
-    return <div {...props} className={joinClassNames("flex gap-1 border-b border-border", props.className)} role="tablist">{children}</div>;
+    return <div {...props} className={joinClassNames("flex gap-2 overflow-x-auto border-b border-border", props.className)} role="tablist">{children}</div>;
 }
 
 
 export function Tab({ children, selected, ...props }: PropsWithChildren<ButtonHTMLAttributes<HTMLButtonElement> & { selected: boolean }>) {
-    return <button {...props} className={joinClassNames("min-h-10 border-b-2 border-transparent px-3 py-2 text-sm text-muted", selected ? "border-brand font-semibold text-brand" : undefined, props.className)} role="tab" aria-selected={selected}>{children}</button>;
+    return <button {...props} className={joinClassNames("min-h-9 shrink-0 border-b-2 border-transparent px-2.5 py-2 text-xs text-muted hover:text-ink", selected ? "border-brand font-semibold text-brand" : undefined, props.className)} role="tab" aria-selected={selected}>{children}</button>;
 }
 
 
