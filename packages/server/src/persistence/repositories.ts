@@ -152,6 +152,11 @@ export class Repositories {
     }
 
 
+    removeEditorialSession(documentId: string): void {
+        this.editorialSessions.remove(documentId);
+    }
+
+
     getStyleCorpus(): StyleCorpus {
         return this.styleCorpus.get();
     }

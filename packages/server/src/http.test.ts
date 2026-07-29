@@ -17,7 +17,8 @@ test("document API supports CRUD and revision-aware draft saves", async () => {
         port: 0, 
         webOrigin: "http://localhost:5173", 
         databasePath: "unused", 
-        openAiModel: "gpt-5" 
+        openAiModel: "gpt-5",
+        openAiStoreResponses: false,
     }, new Repositories(database));
     
     service.listen(0, "127.0.0.1");

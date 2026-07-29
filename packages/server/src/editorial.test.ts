@@ -6,29 +6,29 @@ import { join } from "node:path";
 import test from "node:test";
 import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
 
-import { PROVIDER_STREAM_EVENT, type EditorialProvider, type EditorialProviderRequest, type ProviderStreamEvent } from "./editorial/openai-responses-provider.js";
+import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine, type EditorialEngineEvent, type EditorialEngineRequest } from "./editorial/editorial-engine.js";
 import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";
 
 
-class FixtureProvider implements EditorialProvider {
-    requests: EditorialProviderRequest[] = [];
+class FixtureEngine implements EditorialEngine {
+    requests: EditorialEngineRequest[] = [];
 
-    constructor(private readonly events: ProviderStreamEvent[]) { }
+    constructor(private readonly events: EditorialEngineEvent[]) { }
 
-    async *stream(request: EditorialProviderRequest): AsyncIterable<ProviderStreamEvent> {
+    async *stream(request: EditorialEngineRequest): AsyncIterable<EditorialEngineEvent> {
         this.requests.push(request);
         yield* this.events;
     }
 }
 
 
-async function withService(provider: EditorialProvider, run: (baseUrl: string, repositories: Repositories) => Promise<void>): Promise<void> {
+async function withService(engine: EditorialEngine, run: (baseUrl: string, repositories: Repositories) => Promise<void>, storeResponses = true): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
     
-    const service = createLocalService({ host: "127.0.0.1", port: 0, webOrigin: "http://localhost:5173", databasePath: "unused", openAiModel: "gpt-5" }, repositories, provider);
+    const service = createLocalService({ host: "127.0.0.1", port: 0, webOrigin: "http://localhost:5173", databasePath: "unused", openAiModel: "gpt-5", openAiStoreResponses: storeResponses }, repositories, engine);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
     
@@ -46,14 +46,14 @@ async function withService(provider: EditorialProvider, run: (baseUrl: string, r
 
 
 test("editorial endpoint streams a typed proposal and saves context only after completion", async () => {
-    const provider = new FixtureProvider([
-        { type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: "A " },
-        { type: PROVIDER_STREAM_EVENT.TOOL_STATUS, tool: "web_search", status: "started" },
-        { type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: "proposal" },
-        { type: PROVIDER_STREAM_EVENT.COMPLETED, responseId: "resp-1", text: "A proposal" },
+    const engine = new FixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "A " },
+        { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "web_search", status: "started" },
+        { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "proposal" },
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "resp-1", text: "A proposal" },
     ]);
 
-    await withService(provider, async (baseUrl, repositories) => {
+    await withService(engine, async (baseUrl, repositories) => {
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
             method: HTTP_METHOD.POST,
@@ -66,10 +66,9 @@ test("editorial endpoint streams a typed proposal and saves context only after c
         assert.match(body, /"type":"completed","responseId":"resp-1","text":"A proposal"/);
         assert.equal(repositories.getEditorialSession(document.id)?.previousResponseId, "resp-1");
         assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
-        assert.equal(provider.requests[0]?.article, "Original article");
-        assert.match(provider.requests[0]?.prompt ?? "", /Workflow: flow revision/);
-        assert.match(provider.requests[0]?.prompt ?? "", /Keep the direct tone/);
-        assert.match(provider.requests[0]?.prompt ?? "", /Do not invent facts/);
+        assert.equal(engine.requests[0]?.article, "Original article");
+        assert.equal(engine.requests[0]?.operation, EDITORIAL_OPERATION.FLOW_REVISION);
+        assert.equal(engine.requests[0]?.authorContext, "Keep the direct tone.");
         assert.deepEqual(JSON.parse(repositories.listWorkflowArtifacts(document.id)[0]!.content), {
             requestId: "request-1",
             operation: EDITORIAL_OPERATION.FLOW_REVISION,
@@ -82,9 +81,9 @@ test("editorial endpoint streams a typed proposal and saves context only after c
 
 
 test("failed or incomplete editorial streams leave document and session unchanged", async () => {
-    const provider = new FixtureProvider([{ type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: "Partial" }]);
+    const engine = new FixtureEngine([{ type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial" }]);
 
-    await withService(provider, async (baseUrl, repositories) => {
+    await withService(engine, async (baseUrl, repositories) => {
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
             method: HTTP_METHOD.POST,
@@ -102,14 +101,57 @@ test("failed or incomplete editorial streams leave document and session unchange
 });
 
 
+test("storage-disabled editorial requests clear hidden session continuation", async () => {
+    const engine = new FixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "resp-stateless", text: "A proposal" },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const document = repositories.createDocument({ title: "Draft", content: "Original article" });
+        repositories.saveEditorialSession(document.id, "resp-old");
+
+        await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "request-stateless", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
+        });
+
+        assert.equal(engine.requests[0]?.previousResponseId, undefined);
+        assert.equal(repositories.getEditorialSession(document.id), undefined);
+    }, false);
+});
+
+
+test("expired provider session is cleared and can be retried as a fresh session", async () => {
+    const engine: EditorialEngine = {
+        async *stream(): AsyncIterable<EditorialEngineEvent> {
+            throw new EditorialEngineError("session_expired", "The saved editorial session is no longer available. Retry to start a fresh session.");
+        },
+    };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const document = repositories.createDocument({ title: "Draft", content: "Original article" });
+        repositories.saveEditorialSession(document.id, "resp-expired");
+        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "request-expired", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
+        });
+
+        assert.match(await response.text(), /"code":"session_expired"/);
+        assert.equal(repositories.getEditorialSession(document.id), undefined);
+    });
+});
+
+
 test("provider errors are actionable and leave the article unchanged", async () => {
-    const provider: EditorialProvider = {
-        async *stream(): AsyncIterable<ProviderStreamEvent> {
+    const engine: EditorialEngine = {
+        async *stream(): AsyncIterable<EditorialEngineEvent> {
             throw new Error("OpenAI could not complete this request (429). Check your connection and API settings, then retry.");
         },
     };
 
-    await withService(provider, async (baseUrl, repositories) => {
+    await withService(engine, async (baseUrl, repositories) => {
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
             method: HTTP_METHOD.POST,
@@ -128,14 +170,14 @@ test("provider errors are actionable and leave the article unchanged", async () 
 
 
 test("cancelling an editorial stream does not change the article or session", async () => {
-    const provider: EditorialProvider = {
-        async *stream(_request, signal): AsyncIterable<ProviderStreamEvent> {
-            yield { type: PROVIDER_STREAM_EVENT.TEXT_DELTA, delta: "Partial" };
+    const engine: EditorialEngine = {
+        async *stream(_request, signal): AsyncIterable<EditorialEngineEvent> {
+            yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial" };
             await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
         },
     };
 
-    await withService(provider, async (baseUrl, repositories) => {
+    await withService(engine, async (baseUrl, repositories) => {
         const document = repositories.createDocument({ title: "Draft", content: "Original article" });
         const controller = new AbortController();
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
@@ -158,22 +200,22 @@ test("cancelling an editorial stream does not change the article or session", as
 
 
 test("style review uses a compact local profile and saves cited findings as a proposal", async () => {
-    const provider = new FixtureProvider([
+    const engine = new FixtureEngine([
         {
-            type: PROVIDER_STREAM_EVENT.COMPLETED,
+            type: EDITORIAL_ENGINE_EVENT.COMPLETED,
             responseId: "resp-style-1",
-            text: JSON.stringify({
-                proposal: "A concise proposal.",
+            text: "A concise proposal.",
+            styleReview: {
                 findings: [{
                     divergence: "The draft uses long paragraphs.",
                     suggestion: "Split the opening paragraph.",
                     traitIds: ["paragraphing"],
                 }],
-            }),
+            },
         },
     ]);
 
-    await withService(provider, async (baseUrl, repositories) => {
+    await withService(engine, async (baseUrl, repositories) => {
         repositories.addStyleCorpusItem({ name: "Published sample", content: "I write short sentences.\n\nI keep paragraphs brief." });
         const document = repositories.createDocument({ title: "Draft", content: "A long draft" });
         const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
@@ -186,8 +228,7 @@ test("style review uses a compact local profile and saves cited findings as a pr
 
         assert.match(body, /"text":"A concise proposal."/);
         assert.match(body, /"traitIds":\["paragraphing"\]/);
-        assert.match(provider.requests[0]!.prompt, /Supplied corpus traits/);
-        assert.doesNotMatch(provider.requests[0]!.prompt, /I write short sentences/);
+        assert.equal(engine.requests[0]!.styleProfile?.traits.some((trait) => trait.id === "paragraphing"), true);
         assert.deepEqual(JSON.parse(artifact.content).findings, [{
             divergence: "The draft uses long paragraphs.",
             suggestion: "Split the opening paragraph.",

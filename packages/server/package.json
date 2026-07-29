@@ -9,7 +9,10 @@
         "test": "tsx --test src/**/*.test.ts"
     },
     "dependencies": {
-        "@skladno/shared": "*"
+        "@langchain/core": "^1.2.3",
+        "@langchain/openai": "^1.5.5",
+        "@skladno/shared": "*",
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "tsx": "^4.19.2"
