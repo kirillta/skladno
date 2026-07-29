@@ -15,6 +15,16 @@ enum EditorialState {
 
 const client = new HttpApplicationClient();
 
+const ui = {
+    primaryButton: "rounded-md bg-brand px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-55",
+    secondaryButton: "rounded-md border border-brand/60 px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-55",
+    textButton: "text-xs text-brand underline underline-offset-2 hover:text-brand/75 disabled:cursor-not-allowed disabled:opacity-55",
+    field: "w-full rounded-md border border-border bg-white/50 px-2 py-1.5 text-sm text-ink outline-none transition placeholder:text-ink/40 focus:border-brand focus:ring-2 focus:ring-brand/20",
+    sidebarSection: "mx-2 mt-4 border-t border-border pt-4 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:font-semibold [&_h4]:font-semibold [&_p]:mt-2 [&_p]:text-xs [&_p]:leading-5 [&_p]:text-muted [&_label]:mt-3 [&_label]:grid [&_label]:gap-1 [&_label]:text-xs [&_label]:text-muted [&_input]:w-full [&_input]:rounded-md [&_input]:border [&_input]:border-border [&_input]:bg-white/50 [&_input]:px-2 [&_input]:py-1.5 [&_input]:text-sm [&_input]:outline-none [&_input]:focus:border-brand [&_input]:focus:ring-2 [&_input]:focus:ring-brand/20 [&_textarea]:w-full [&_textarea]:rounded-md [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-white/50 [&_textarea]:p-2 [&_textarea]:text-sm [&_textarea]:outline-none [&_textarea]:focus:border-brand [&_textarea]:focus:ring-2 [&_textarea]:focus:ring-brand/20 [&_button]:rounded-md [&_button]:bg-brand [&_button]:px-2.5 [&_button]:py-1.5 [&_button]:text-xs [&_button]:font-medium [&_button]:text-white [&_button]:hover:bg-brand/90 [&_button]:disabled:cursor-not-allowed [&_button]:disabled:opacity-55 [&_ul]:mt-2 [&_ul]:space-y-2 [&_ul]:pl-4 [&_ol]:mt-3 [&_ol]:space-y-3 [&_ol]:pl-4 [&_li]:leading-5 [&_small]:block [&_small]:text-muted [&_output]:font-editor [&_p[data-state=error]]:text-danger",
+    editorPane: "flex min-w-0 flex-col [&_header]:flex [&_header]:min-h-[4.6rem] [&_header]:items-center [&_header]:gap-4 [&_header]:border-b [&_header]:border-border [&_header]:px-[clamp(1.5rem,5vw,5rem)] [&_header]:py-4 [&_header_h2]:truncate [&_header_h2]:text-lg [&_header_h2]:font-semibold [&_header_p]:ml-auto [&_header_p]:text-xs [&_header_p]:text-muted [&_header_button]:rounded-md [&_header_button]:bg-brand [&_header_button]:px-2.5 [&_header_button]:py-1.5 [&_header_button]:text-xs [&_header_button]:text-white [&>textarea]:min-h-[65vh] [&>textarea]:w-full [&>textarea]:flex-1 [&>textarea]:resize-none [&>textarea]:bg-transparent [&>textarea]:px-[clamp(1.5rem,12vw,12rem)] [&>textarea]:py-12 [&>textarea]:font-editor [&>textarea]:text-[clamp(1.1rem,1.7vw,1.35rem)] [&>textarea]:leading-[1.7] [&>textarea]:outline-none [&>textarea]:placeholder:text-ink/40",
+    mutedText: "text-xs leading-5 text-muted",
+};
+
 
 function newArticleTitle(documents: Document[]): string {
     return `Untitled article${documents.length ? ` ${documents.length + 1}` : ""}`;
@@ -450,19 +460,19 @@ export function App() {
 
     
     if (state !== "ready") 
-        return <main className="startup"><h1>Skladno</h1><p aria-live="polite" data-state={state}>{message}</p></main>;
+        return <main className="min-h-screen bg-canvas px-8 pt-[12vh] font-ui text-ink"><div className="mx-auto max-w-2xl"><h1 className="text-lg font-semibold tracking-tight">Skladno</h1><p className="mt-2 text-sm text-muted" aria-live="polite" data-state={state}>{message}</p></div></main>;
 
-    return <main className="workspace">
-        <aside aria-label="Articles">
-            <div className="sidebar-heading"><h1>Skladno</h1><button type="button" onClick={createArticle}>New article</button></div>
-            {documents.length === 0 ? <p className="empty">No articles yet. Create one to start writing.</p> : <ul className="article-list">
-                {documents.map((document) => <li key={document.id} className={document.id === selectedId ? "selected" : ""}>
+    return <main className="grid min-h-screen grid-cols-1 bg-canvas font-ui text-ink md:h-screen md:grid-cols-[18rem_minmax(0,1fr)]">
+        <aside className="overflow-y-auto border-b border-border bg-surface px-3 py-5 md:border-r md:border-b-0" aria-label="Articles">
+            <div className="flex items-center justify-between gap-2 px-2 pb-4"><h1>Skladno</h1><button type="button" onClick={createArticle}>New article</button></div>
+            {documents.length === 0 ? <p className="p-2 text-sm leading-6 text-muted">No articles yet. Create one to start writing.</p> : <ul className="m-0 list-none space-y-1 p-0">
+                {documents.map((document) => <li key={document.id} className={`rounded-md p-0.5 ${document.id === selectedId ? "bg-brand-soft" : ""}`}>
                     {renameId === document.id ? <input autoFocus aria-label="Article title" value={renameValue} onChange={(event) => setRenameValue(event.target.value)} onBlur={() => void commitRename(document.id)} onKeyDown={(event) => { if (event.key === "Enter") void commitRename(document.id); if (event.key === "Escape") setRenameId(undefined); }} />
-                        : <button type="button" className="article" onClick={() => selectArticle(document.id)}>{document.title}{document.language ? <small>{document.language} translation</small> : null}</button>}
-                    <div className="article-actions"><button type="button" onClick={() => { setRenameId(document.id); setRenameValue(document.title); }}>Rename</button><button type="button" onClick={() => void deleteArticle(document)}>Delete</button></div>
+                        : <button type="button" className="block w-full truncate rounded px-2 py-2 text-left text-sm hover:bg-white/45" onClick={() => selectArticle(document.id)}>{document.title}{document.language ? <small>{document.language} translation</small> : null}</button>}
+                    <div className="flex gap-2 px-2 pb-1"><button type="button" onClick={() => { setRenameId(document.id); setRenameValue(document.title); }}>Rename</button><button type="button" onClick={() => void deleteArticle(document)}>Delete</button></div>
                 </li>)}
             </ul>}
-            <section className="publish-mode" aria-label="Publish mode">
+            <section className={ui.sidebarSection} aria-label="Publish mode">
                 <h2>Publish to LinkedIn</h2>
                 <p>Prepare a local plain-text copy. This never saves or changes your article.</p>
                 <label>Length guidance
@@ -470,31 +480,31 @@ export function App() {
                         {publishLimitProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label} ({profile.characterLimit.toLocaleString()} characters)</option>)}
                     </select>
                 </label>
-                <p className={publishCharacterCount > publishLimitProfile.characterLimit ? "publish-warning" : publishCharacterCount >= publishLimitProfile.warningThreshold ? "publish-caution" : "publish-count"} aria-live="polite">
+                <p className={`text-xs ${publishCharacterCount > publishLimitProfile.characterLimit ? "text-danger" : publishCharacterCount >= publishLimitProfile.warningThreshold ? "text-caution" : "text-brand"}`} aria-live="polite">
                     {publishCharacterCount.toLocaleString()} / {publishLimitProfile.characterLimit.toLocaleString()} characters
                     {publishCharacterCount > publishLimitProfile.characterLimit ? " — over this profile’s guidance." : publishCharacterCount >= publishLimitProfile.warningThreshold ? " — nearing this profile’s guidance." : " — within this profile’s guidance."}
                 </p>
                 <button type="button" onClick={() => void copyPublishingText()} disabled={!selected}>Copy plain text</button>
                 <p className="publish-format-note">Links are kept as readable text. LinkedIn may not preserve every line break or other formatting exactly after paste.</p>
-                <output className="publish-preview" aria-label="Plain-text publishing preview">{publishText || "Your plain-text preview will appear here."}</output>
+                <output className="mt-2 block max-h-64 overflow-y-auto rounded-md border border-border bg-canvas p-2 font-editor text-xs leading-5 whitespace-pre-wrap select-text" aria-label="Plain-text publishing preview">{publishText || "Your plain-text preview will appear here."}</output>
                 {publishMessage && <p aria-live="polite">{publishMessage}</p>}
             </section>
-            <section className="editorial-assistant" aria-label="Editorial assistant">
+            <section className={ui.sidebarSection} aria-label="Editorial assistant">
                 <h2>Editorial assistant</h2>
                 <p>Choose a workflow. Skladno creates a proposal for review and never replaces the saved article.</p>
                 <textarea aria-label="Theses or editorial guidance" value={editorialContext} onChange={(event) => setEditorialContext(event.target.value)} placeholder="Add theses, a tone, or revision guidance…" disabled={!selected || editorialState === EditorialState.Streaming} />
-                <div className="editorial-actions">
+                <div className="mt-2 flex flex-wrap gap-2">
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)} disabled={!selected || editorialState === EditorialState.Streaming}>Turn theses into narrative</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FLOW_REVISION)} disabled={!selected || editorialState === EditorialState.Streaming}>Revise draft for flow</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FACT_CHECK)} disabled={!selected || editorialState === EditorialState.Streaming}>Check facts</button>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.STYLE_REVIEW)} disabled={!selected || editorialState === EditorialState.Streaming || !styleCorpus?.profile}>Check style</button>
-                    <label className="translation-language">Translate to<input aria-label="Target language" value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)} disabled={!selected || editorialState === EditorialState.Streaming} /></label>
+                    <label className="flex items-center gap-1 text-xs text-muted">Translate to<input aria-label="Target language" value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)} disabled={!selected || editorialState === EditorialState.Streaming} /></label>
                     <button type="button" onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.TRANSLATION)} disabled={!selected || editorialState === EditorialState.Streaming || !targetLanguage.trim()}>Translate article</button>
                     {editorialState === EditorialState.Streaming && <button type="button" onClick={cancelEditorialProposal}>Cancel</button>}
                     {editorialState === EditorialState.Error && lastEditorialOperation && <button type="button" onClick={() => void requestEditorialProposal(lastEditorialOperation)}>Retry request</button>}
                 </div>
                 {editorialMessage && <p data-state={editorialState === EditorialState.Error ? "error" : undefined} aria-live="polite">{editorialMessage}</p>}
-                {factCheck && editorialState === EditorialState.Idle && <section className="fact-check-findings" aria-label="Fact check findings">
+                {factCheck && editorialState === EditorialState.Idle && <section className="mt-4 border-t border-border pt-4 text-xs leading-5" aria-label="Fact check findings">
                     <h3>Fact check</h3>
                     <p>Advisory findings for this saved version. Missing evidence is not treated as truth.</p>
                     {factCheck.findings.length === 0 ? <p>No externally verifiable claims were identified.</p> : <ul>{factCheck.findings.map((finding, index) => <li key={`${finding.claim}-${index}`} data-status={finding.status}>
@@ -505,49 +515,49 @@ export function App() {
                         {finding.sources.length > 0 && <ul>{finding.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a><small>{source.quality}{source.publishedAt ? ` · ${source.publishedAt}` : ""}{source.excerpt ? ` · ${source.excerpt}` : ""}</small></li>)}</ul>}
                     </li>)}</ul>}
                 </section>}
-                {proposal && translation && proposalResponseId && editorialState === EditorialState.Idle && <section className="proposal-review" aria-label="Translation review">
+                {proposal && translation && proposalResponseId && editorialState === EditorialState.Idle && <section className="mt-4 border-t border-border pt-4 text-xs leading-5" aria-label="Translation review">
                     <h3>Review {translation.targetLanguage} translation</h3>
                     <p>Protected code, links, and technical names were validated before this proposal. Edit the translation if needed, then save it as a separate linked article.</p>
-                    <textarea className="translation-proposal" aria-label="Translation proposal" value={proposal} onChange={(event) => setProposal(event.target.value)} />
-                    <div className="editorial-actions"><button type="button" onClick={() => void acceptTranslation()}>Accept as separate article</button><button type="button" className="secondary-action" onClick={rejectProposal}>Reject translation</button></div>
+                    <textarea className={`${ui.field} mt-3 min-h-56 resize-y font-editor leading-6`} aria-label="Translation proposal" value={proposal} onChange={(event) => setProposal(event.target.value)} />
+                    <div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => void acceptTranslation()}>Accept as separate article</button><button type="button" className={ui.secondaryButton} onClick={rejectProposal}>Reject translation</button></div>
                 </section>}
-                {proposal && review && proposalResponseId && !translation && editorialState === EditorialState.Idle && <section className="proposal-review" aria-label="Proposal review">
+                {proposal && review && proposalResponseId && !translation && editorialState === EditorialState.Idle && <section className="mt-4 border-t border-border pt-4 text-xs leading-5" aria-label="Proposal review">
                     <h3>Review proposal</h3>
-                    {styleReview && <section className="style-findings" aria-label="Style review findings">
+                    {styleReview && <section className="mt-3 rounded-md bg-brand-soft/50 p-3" aria-label="Style review findings">
                         <h4>Style review</h4>
                         <p>Advisory findings from your local corpus. Confidence: {styleCorpus?.profile?.confidence ?? "unknown"}.</p>
                         {styleReview.findings.length === 0 ? <p>No material voice divergences were identified.</p> : <ul>{styleReview.findings.map((finding, index) => <li key={`${finding.divergence}-${index}`}><strong>{finding.divergence}</strong><span>{finding.suggestion}</span><small>Corpus traits: {finding.traitIds.join(", ")}</small></li>)}</ul>}
                     </section>}
                     {review.changes.length === 0 ? <p>This proposal has no text changes. Your article is unchanged.</p> : <>
                         <p>Select the changes to accept. The proposal is compared with the saved version that was sent for review.</p>
-                        <div className="proposal-changes">
-                            {review.changes.map((change, index) => <label key={change.id} className="proposal-change">
+                        <div className="grid gap-2">
+                            {review.changes.map((change, index) => <label key={change.id} className="grid gap-1 rounded-md border border-border bg-canvas p-2">
                                 <input type="checkbox" checked={selectedChanges.has(change.id)} onChange={() => toggleProposalChange(change.id)} />
                                 <span>Change {index + 1}</span>
                                 {change.baseLines.length > 0 && <del>{change.baseLines.join("\n")}</del>}
                                 {change.proposalLines.length > 0 && <ins>{change.proposalLines.join("\n")}</ins>}
                             </label>)}
                         </div>
-                        <div className="editorial-actions">
+                        <div className="mt-2 flex flex-wrap gap-2">
                             <button type="button" onClick={() => void acceptProposal()} disabled={selectedChanges.size === 0}>Accept selected</button>
                             <button type="button" onClick={() => void acceptProposal(new Set(review.changes.map((change) => change.id)))}>Accept whole proposal</button>
-                            <button type="button" className="secondary-action" onClick={rejectProposal}>Reject proposal</button>
+                            <button type="button" className={ui.secondaryButton} onClick={rejectProposal}>Reject proposal</button>
                         </div>
                     </>}
                 </section>}
             </section>
-            <section className="style-corpus" aria-label="Style corpus">
+            <section className={ui.sidebarSection} aria-label="Style corpus">
                 <h2>Your style corpus</h2>
                 <p>Samples stay on this device. Only the compact profile below is sent when you check style.</p>
-                {styleCorpus?.profile && <p className="style-profile">{styleCorpus.profile.corpusItemCount} sample(s), {styleCorpus.profile.characterCount.toLocaleString()} characters, <strong>{styleCorpus.profile.confidence}</strong> confidence.</p>}
-                {styleCorpus?.profile && <ul className="style-traits">{styleCorpus.profile.traits.map((trait) => <li key={trait.id}><strong>{trait.label}</strong><span>{trait.evidence}</span></li>)}</ul>}
+                {styleCorpus?.profile && <p className="mt-2 text-xs leading-5 text-muted">{styleCorpus.profile.corpusItemCount} sample(s), {styleCorpus.profile.characterCount.toLocaleString()} characters, <strong>{styleCorpus.profile.confidence}</strong> confidence.</p>}
+                {styleCorpus?.profile && <ul className="my-3 grid list-none gap-2 p-0 text-xs">{styleCorpus.profile.traits.map((trait) => <li key={trait.id}><strong>{trait.label}</strong><span>{trait.evidence}</span></li>)}</ul>}
                 <label>Sample name<input value={styleCorpusName} onChange={(event) => setStyleCorpusName(event.target.value)} placeholder="Published article title" /></label>
                 <label>Article text<textarea value={styleCorpusContent} onChange={(event) => setStyleCorpusContent(event.target.value)} placeholder="Paste an author-provided article…" /></label>
                 <button type="button" onClick={() => void addStyleCorpusItem()}>Add local sample</button>
                 {styleCorpusMessage && <p aria-live="polite">{styleCorpusMessage}</p>}
-                {styleCorpus && <ul className="style-corpus-items">{styleCorpus.items.map((item) => <li key={item.id}><span>{item.name} ({item.characterCount.toLocaleString()} characters)</span><button type="button" onClick={() => void removeStyleCorpusItem(item.id)}>Remove</button></li>)}</ul>}
+                {styleCorpus && <ul className="my-3 grid list-none gap-2 p-0 text-xs">{styleCorpus.items.map((item) => <li key={item.id}><span>{item.name} ({item.characterCount.toLocaleString()} characters)</span><button type="button" onClick={() => void removeStyleCorpusItem(item.id)}>Remove</button></li>)}</ul>}
             </section>
-            {selected && <section className="version-history" aria-label="Version history">
+            {selected && <section className={ui.sidebarSection} aria-label="Version history">
                 <h2>Version history</h2>
                 <p>Restoring creates a new version; it never overwrites history.</p>
                 {historyMessage && <p aria-live="polite">{historyMessage}</p>}
@@ -561,10 +571,11 @@ export function App() {
                 </ol>
             </section>}
         </aside>
-        <section className="editor-pane" aria-label="Article editor">
+        <section className={ui.editorPane} aria-label="Article editor">
             {selected ? <><header><h2>{selected.title}</h2><p aria-live="polite" data-state={saveState}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn’t save. Your text is still here." : "Saved locally"}</p>{saveState === "error" && <button type="button" onClick={() => save(selected.id, draftsRef.current[selected.id] ?? "")}>Retry save</button>}</header>
                 <textarea aria-label="Article text" value={content} onChange={(event) => { const value = event.target.value; setDrafts((items) => ({ ...items, [selected.id]: value })); }} placeholder="Start writing…" spellCheck />
-            </> : <div className="empty editor-empty"><h2>Select an article</h2><p>Create an article or choose one from the sidebar.</p></div>}
+            </> : <div className="m-auto p-2 text-center text-sm leading-6 text-muted"><h2>Select an article</h2><p>Create an article or choose one from the sidebar.</p></div>}
         </section>
     </main>;
 }
+
