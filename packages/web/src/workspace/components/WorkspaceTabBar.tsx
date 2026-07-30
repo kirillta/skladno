@@ -37,7 +37,7 @@ export function WorkspaceTabBar({ view, setView }: {
         tabs?.[next]?.focus();
     }
 
-    return <TabList aria-label="Article workspace views">
+    return <TabList className="min-h-10 px-3" aria-label="Article workspace views">
         {views.map((item, index) => <Tab key={item.id}
             id={`workspace-tab-${item.id}`}
             aria-controls={`workspace-panel-${item.id}`}

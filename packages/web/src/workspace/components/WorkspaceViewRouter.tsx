@@ -18,7 +18,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     corpus: StyleCorpusState; 
     publishing: PublishingState 
 }) {
-    const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className="p-5">{children}</section>;
+    const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "min-h-0 flex-1 overflow-y-auto p-5"}>{children}</section>;
 
     if (view === "write")
         return panel(<ArticleEditorView content={workspace.content} setContent={workspace.setContent} copy={publishing.copy} count={publishing.count} />);

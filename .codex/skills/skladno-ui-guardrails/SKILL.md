@@ -22,6 +22,9 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 - Use actual UI icons or inline SVGs with accessible labels; do not substitute unrelated glyphs or emojis.
 - Keep intentional empty areas quiet. Do not add duplicate hints, section headings, or controls when there is no content to organize.
 - Empty-state titles use regular-weight muted hint text, never strong or heading styling. Add extra top space only where the surrounding workspace needs it; for the empty Article Workspace, keep the create action comfortably below the workspace top rather than changing every empty state's vertical rhythm.
+- Keep the desktop Editorial Workspace at the viewport height. The Article Workspace, Article Library Panel, and Editorial Assistant Panel stretch to that height; scroll only their designated internal content regions, never the page shell.
+- The Article Status Bar is always visible at the bottom of the Article Workspace. Keep it a compact fixed 24px row; it must not absorb spare vertical space or be pushed beneath the viewport.
+- The writing surface is a white (`bg-surface-raised`) worksheet within the subtly tinted workspace canvas. Constrain its document column and keep long drafts scrolling inside the editor rather than changing the shell height.
 - Make actionable UI controls functional. Route existing actions through the established application state; do not leave dead buttons.
 - Use the current UI font for product identity text. Do not switch font families between expanded and collapsed representations of the same label.
 
