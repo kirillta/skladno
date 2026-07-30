@@ -54,8 +54,20 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
 }
 
 
-export function Badge({ children, className, ...props }: PropsWithChildren<HTMLAttributes<HTMLSpanElement>>) {
-    return <span {...props} className={joinClassNames("inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-xs font-semibold leading-4 text-brand", className)}>{children}</span>;
+export function Badge({ children, className, variant = "soft", compact = false, ...props }: PropsWithChildren<HTMLAttributes<HTMLSpanElement> & { variant?: "soft" | "solid"; compact?: boolean }>) {
+    return (
+        <span
+            {...props}
+            className={joinClassNames(
+                "inline-flex items-center rounded-full font-semibold",
+                variant === "solid" ? "bg-brand text-white" : "bg-brand-soft text-brand",
+                compact ? "size-4 shrink-0 justify-center p-0 text-[0.625rem] leading-none" : "gap-1 px-2 py-0.5 text-xs leading-4",
+                className,
+            )}
+        >
+            {children}
+        </span>
+    );
 }
 
 
@@ -103,7 +115,24 @@ export function Tooltip({ children, content }: { children: ReactNode; content: s
 }
 
 
-export function Diff({ removed, added }: { removed?: ReactNode; added?: ReactNode }) {
+export function Diff({ removed, added, layout = "stacked" }: { removed?: ReactNode; added?: ReactNode; layout?: "stacked" | "columns" }) {
+    const removedContent = removed ?? <span className="italic text-muted">No original text</span>;
+    const addedContent = added ?? <span className="italic text-muted">No proposed text</span>;
+
+    if (layout === "columns")
+        return (
+            <div className="grid overflow-hidden rounded-panel border border-border md:grid-cols-2" aria-label="Proposed text change">
+                <del className="block min-w-0 whitespace-pre-wrap border-b-4 border-danger bg-diff-removed p-4 decoration-danger md:border-b-0 md:border-r md:border-r-border md:border-l-4">
+                    <strong className="mb-3 block font-ui text-[0.65rem] uppercase tracking-[0.08em] text-danger">Original</strong>
+                    {removedContent}
+                </del>
+                <ins className="block min-w-0 whitespace-pre-wrap border-b-4 border-success bg-diff-added p-4 decoration-success md:border-b-0 md:border-l-4">
+                    <strong className="mb-3 block font-ui text-[0.65rem] uppercase tracking-[0.08em] text-success">Proposed</strong>
+                    {addedContent}
+                </ins>
+            </div>
+        );
+
     return <div className="overflow-hidden rounded-panel border border-border" aria-label="Proposed text change">{removed && <del className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,#fce9e6_6px,#fce9e6_12px)] p-2 decoration-danger"><strong>Removed: </strong>{removed}</del>}{added && <ins className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,#e9f5ed_6px,#e9f5ed_12px)] p-2 decoration-success"><strong>Added: </strong>{added}</ins>}</div>;
 }
 

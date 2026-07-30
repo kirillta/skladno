@@ -22,7 +22,7 @@ import {
     type TranslationMetadata,
 } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client";
-import { Button, Dialog, Diff, EmptyState, Field, Select, Tab, TabList, TextareaField } from "./ui/primitives";
+import { Badge, Button, Dialog, Diff, EmptyState, Field, Select, Tab, TabList, TextareaField } from "./ui/primitives";
 
 type WorkspaceState = "loading" | "ready" | "error";
 type SaveState = "saved" | "saving" | "error";
@@ -96,6 +96,15 @@ function revisionMarker(version: DocumentVersion): string {
 
 function isAssistantRevision(version: DocumentVersion): boolean {
     return revisionKind(version) === "accepted-proposal";
+}
+
+
+function proposalChangeDescription(baseLineCount: number, proposalLineCount: number): string {
+    if (baseLineCount === 0) return "Adds a new passage to the article.";
+
+    if (proposalLineCount === 0) return "Removes this passage from the article.";
+
+    return "Rewrites this passage while preserving the current article until you accept it.";
 }
 
 
@@ -415,6 +424,7 @@ export function App() {
                         setFactCheck(event.factCheck);
                         setTranslation(event.translation);
                         setEditorialState(EditorialState.Idle);
+                        if (!event.factCheck && !event.translation) setWorkspaceTab("diff");
                         setEditorialMessage(
                             event.factCheck
                                 ? "Fact check ready. It has not changed your article."
@@ -920,90 +930,6 @@ export function App() {
                                         )}
                                     </section>
                                 )}
-                                {proposal && translation && proposalResponseId && editorialState === EditorialState.Idle && (
-                                    <section className="mt-4 border-t border-border pt-4 text-xs leading-5" aria-label="Translation review">
-                                        <h3>Review {translation.targetLanguage} translation</h3>
-                                        <p>
-                                            Protected code, links, and technical names were validated before this proposal. Edit the translation if needed, then
-                                            save it as a separate linked article.
-                                        </p>
-                                        <TextareaField
-                                            className="mt-3 min-h-56 resize-y font-editor leading-6"
-                                            aria-label="Translation proposal"
-                                            value={proposal}
-                                            onChange={(event) => setProposal(event.target.value)}
-                                        />
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                            <button type="button" onClick={() => void acceptTranslation()}>
-                                                Accept as separate article
-                                            </button>
-                                            <button type="button" className={ui.secondaryButton} onClick={rejectProposal}>
-                                                Reject translation
-                                            </button>
-                                        </div>
-                                    </section>
-                                )}
-                                {proposal && review && proposalResponseId && !translation && editorialState === EditorialState.Idle && (
-                                    <section className="mt-4 border-t border-border pt-4 text-xs leading-5" aria-label="Proposal review">
-                                        <h3>Review proposal</h3>
-                                        {styleReview && (
-                                            <section className="mt-3 rounded-md bg-brand-soft/50 p-3" aria-label="Style review findings">
-                                                <h4>Style review</h4>
-                                                <p>Advisory findings from your local corpus. Confidence: {styleCorpus?.profile?.confidence ?? "unknown"}.</p>
-                                                {styleReview.findings.length === 0 ? (
-                                                    <p>No material voice divergences were identified.</p>
-                                                ) : (
-                                                    <ul>
-                                                        {styleReview.findings.map((finding, index) => (
-                                                            <li key={`${finding.divergence}-${index}`}>
-                                                                <strong>{finding.divergence}</strong>
-                                                                <span>{finding.suggestion}</span>
-                                                                <small>Corpus traits: {finding.traitIds.join(", ")}</small>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                )}
-                                            </section>
-                                        )}
-                                        {review.changes.length === 0 ? (
-                                            <p>This proposal has no text changes. Your article is unchanged.</p>
-                                        ) : (
-                                            <>
-                                                <p>Select the changes to accept. The proposal is compared with the saved version that was sent for review.</p>
-                                                <div className="grid gap-2">
-                                                    {review.changes.map((change, index) => (
-                                                        <label key={change.id} className="grid gap-1 rounded-md border border-border bg-canvas p-2">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedChanges.has(change.id)}
-                                                                onChange={() => toggleProposalChange(change.id)}
-                                                            />
-                                                            <span>Change {index + 1}</span>
-                                                            <Diff
-                                                                removed={change.baseLines.length > 0 ? change.baseLines.join("\n") : undefined}
-                                                                added={change.proposalLines.length > 0 ? change.proposalLines.join("\n") : undefined}
-                                                            />
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                                <div className="mt-2 flex flex-wrap gap-2">
-                                                    <button type="button" onClick={() => void acceptProposal()} disabled={selectedChanges.size === 0}>
-                                                        Accept selected
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => void acceptProposal(new Set(review.changes.map((change) => change.id)))}
-                                                    >
-                                                        Accept whole proposal
-                                                    </button>
-                                                    <button type="button" className={ui.secondaryButton} onClick={rejectProposal}>
-                                                        Reject proposal
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </section>
-                                )}
                             </section>
                             <section className={ui.sidebarSection} aria-label="Style corpus">
                                 <h2>Your style corpus</h2>
@@ -1126,7 +1052,11 @@ export function App() {
                                 {workspaceTabs.map((tab) => (
                                     <Tab key={tab.id} selected={workspaceTab === tab.id} onClick={() => setWorkspaceTab(tab.id)}>
                                         {tab.label}
-                                        {tab.id === "diff" && review?.changes.length ? ` (${review.changes.length})` : ""}
+                                        {tab.id === "diff" && review?.changes.length ? (
+                                            <Badge variant="solid" compact className="ml-1" aria-label={`${review.changes.length} pending suggestions`}>
+                                                {review.changes.length}
+                                            </Badge>
+                                        ) : null}
                                         {tab.id === "fact-check" && factCheck?.findings.length ? ` (${factCheck.findings.length})` : ""}
                                     </Tab>
                                 ))}
@@ -1159,6 +1089,187 @@ export function App() {
                                     spellCheck
                                 />
                             </>
+                        ) : workspaceTab === "diff" ? (
+                            <div className="w-full overflow-y-auto px-[clamp(1.5rem,5vw,5rem)] py-6">
+                                <div className="mx-auto w-full max-w-6xl pb-10">
+                                    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+                                        <div>
+                                            <h3 className="text-lg font-semibold">Review suggestions</h3>
+                                            {review && proposalResponseId && !translation ? (
+                                                <p className="mt-1 text-sm text-muted">
+                                                    {review.changes.length} {review.changes.length === 1 ? "suggestion" : "suggestions"} · {selectedChanges.size} selected · {review.changes.length - selectedChanges.size} pending
+                                                </p>
+                                            ) : (
+                                                <p className="mt-1 text-sm text-muted">Generated changes remain separate from your article until you explicitly accept them.</p>
+                                            )}
+                                        </div>
+                                        {review && proposalResponseId && !translation && review.changes.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button type="button" variant="secondary" onClick={rejectProposal}>
+                                                    Reject all
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => void acceptProposal(new Set(review.changes.map((change) => change.id)))}
+                                                    disabled={proposalIsStale}
+                                                    state={proposalIsStale ? "outdated" : "default"}
+                                                >
+                                                    Accept all
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {editorialState === EditorialState.Streaming && proposalBase && (
+                                        <section className="mt-5 rounded-panel border border-brand/30 bg-brand-soft/45 p-5" aria-label="Proposal in progress">
+                                            <p className="font-semibold text-brand">Preparing suggestions</p>
+                                            <p className="mt-1 text-sm text-muted" aria-live="polite">{editorialMessage || "Writing a proposal…"}</p>
+                                            <Button type="button" variant="secondary" className="mt-4" onClick={cancelEditorialProposal}>
+                                                Stop request
+                                            </Button>
+                                        </section>
+                                    )}
+
+                                    {proposalIsStale && review && proposalResponseId && !translation && (
+                                        <section className="mt-5 rounded-panel border border-warning bg-warning-soft p-4 text-sm leading-6 text-warning" role="status">
+                                            <strong className="block">This proposal is based on an older revision.</strong>
+                                            <p className="mt-1">Accepting is disabled so current article changes are never overwritten. Generate a new proposal before reviewing these suggestions.</p>
+                                            {lastEditorialOperation && (
+                                                <Button type="button" variant="secondary" className="mt-3" onClick={() => void requestEditorialProposal(lastEditorialOperation)}>
+                                                    Generate a new proposal
+                                                </Button>
+                                            )}
+                                        </section>
+                                    )}
+
+                                    {styleReview && review && proposalResponseId && !translation && (
+                                        <section className="mt-5 rounded-panel border border-border bg-brand-soft/40 p-4 text-sm leading-6" aria-label="Style review findings">
+                                            <h4 className="font-semibold">Style review context</h4>
+                                            {styleReview.findings.length === 0 ? (
+                                                <p className="mt-1 text-muted">No material voice divergences were identified in the reviewed revision.</p>
+                                            ) : (
+                                                <ul className="mt-2 grid gap-2">
+                                                    {styleReview.findings.map((finding, index) => (
+                                                        <li key={`${finding.divergence}-${index}`}>
+                                                            <strong>{finding.divergence}: </strong>
+                                                            <span>{finding.suggestion}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </section>
+                                    )}
+
+                                    {review && proposalResponseId && !translation && editorialState === EditorialState.Idle ? (
+                                        review.changes.length === 0 ? (
+                                            <EmptyState title="No text changes in this proposal">
+                                                <p>The article is unchanged. You can reject this proposal or request a different editorial operation.</p>
+                                                <Button type="button" variant="secondary" className="mt-3" onClick={rejectProposal}>
+                                                    Clear proposal
+                                                </Button>
+                                            </EmptyState>
+                                        ) : (
+                                            <div className="mt-5 grid gap-4">
+                                                {review.changes.map((change, index) => {
+                                                    const isSelected = selectedChanges.has(change.id);
+                                                    const description = proposalChangeDescription(change.baseLines.length, change.proposalLines.length);
+
+                                                    return (
+                                                        <article
+                                                            key={change.id}
+                                                            className={`overflow-hidden rounded-panel border bg-surface-raised ${isSelected ? "border-brand shadow-raised" : "border-border"}`}
+                                                            aria-labelledby={`proposal-change-${change.id}`}
+                                                        >
+                                                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+                                                                <label className="flex min-w-0 cursor-pointer items-start gap-3">
+                                                                    <input
+                                                                        className="mt-1 size-4 accent-brand"
+                                                                        type="checkbox"
+                                                                        checked={isSelected}
+                                                                        onChange={() => toggleProposalChange(change.id)}
+                                                                        disabled={proposalIsStale}
+                                                                    />
+                                                                    <span>
+                                                                        <strong id={`proposal-change-${change.id}`} className="block text-sm font-semibold">Suggestion {index + 1}</strong>
+                                                                        <span className="mt-0.5 block text-xs leading-5 text-muted">{description}</span>
+                                                                    </span>
+                                                                </label>
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className={`text-xs font-semibold ${isSelected ? "text-brand" : "text-muted"}`}>{isSelected ? "Selected" : "Pending"}</span>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant={isSelected ? "secondary" : "primary"}
+                                                                        className="min-h-8 px-2.5 py-1"
+                                                                        onClick={() => toggleProposalChange(change.id)}
+                                                                        disabled={proposalIsStale}
+                                                                    >
+                                                                        {isSelected ? "Remove selection" : "Select change"}
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                            <Diff
+                                                                layout="columns"
+                                                                removed={change.baseLines.length > 0 ? <span className="font-editor text-[1rem] leading-7 text-ink">{change.baseLines.join("\n")}</span> : undefined}
+                                                                added={change.proposalLines.length > 0 ? <span className="font-editor text-[1rem] leading-7 text-ink">{change.proposalLines.join("\n")}</span> : undefined}
+                                                            />
+                                                        </article>
+                                                    );
+                                                })}
+                                            </div>
+                                        )
+                                    ) : translation && proposalResponseId && editorialState === EditorialState.Idle ? (
+                                        <section className="mt-5 rounded-panel border border-border p-5" aria-label="Translation review">
+                                            <h4 className="font-semibold">Review {translation.targetLanguage} translation</h4>
+                                            <p className="mt-1 text-sm leading-6 text-muted">This will become a separate linked article when you accept it.</p>
+                                            <TextareaField
+                                                className="mt-4 min-h-64 resize-y font-editor leading-7"
+                                                aria-label="Translation proposal"
+                                                value={proposal}
+                                                onChange={(event) => setProposal(event.target.value)}
+                                            />
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                <Button type="button" onClick={() => void acceptTranslation()}>
+                                                    Accept as separate article
+                                                </Button>
+                                                <Button type="button" variant="secondary" onClick={rejectProposal}>
+                                                    Reject translation
+                                                </Button>
+                                            </div>
+                                        </section>
+                                    ) : editorialState !== EditorialState.Streaming ? (
+                                        <EmptyState title="No proposal ready for review">
+                                            <p>Ask the assistant to improve the current article, then compare each suggestion here before accepting it.</p>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                className="mt-3"
+                                                onClick={() => void requestEditorialProposal(EDITORIAL_OPERATION.FLOW_REVISION)}
+                                                disabled={editorialState === EditorialState.Error}
+                                            >
+                                                Improve flow
+                                            </Button>
+                                        </EmptyState>
+                                    ) : null}
+
+                                    {review && proposalResponseId && !translation && review.changes.length > 0 && editorialState === EditorialState.Idle && (
+                                        <div className="sticky bottom-0 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-canvas/95 py-4 backdrop-blur">
+                                            <p className="text-xs leading-5 text-muted">
+                                                {selectedChanges.size === 0
+                                                    ? "Select one or more suggestions to accept."
+                                                    : `Accepting ${selectedChanges.size} selected ${selectedChanges.size === 1 ? "suggestion" : "suggestions"} creates a new revision.`}
+                                            </p>
+                                            <Button
+                                                type="button"
+                                                onClick={() => void acceptProposal()}
+                                                disabled={selectedChanges.size === 0 || proposalIsStale}
+                                                state={proposalIsStale ? "outdated" : "default"}
+                                            >
+                                                Accept selected
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         ) : workspaceTab === "fact-check" ? (
                             <div className="mx-auto w-full max-w-4xl overflow-y-auto p-6">
                                 <h3 className="text-lg font-semibold">Fact check</h3>
