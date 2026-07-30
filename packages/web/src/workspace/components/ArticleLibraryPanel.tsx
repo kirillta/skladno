@@ -97,7 +97,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
 
             <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4" aria-label="Article library">
                 {articles.length > 0 && <>
-                    <p className="px-2 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted">Recent</p>
+                    <p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">Recent</p>
                     <div className="mt-2 space-y-1">
                         {visibleArticles.map((article) => {
                             const isSelected = article.id === selectedArticleId;
@@ -137,7 +137,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     </svg>
                     <span className="ml-2">Settings</span>
                 </Button>
-                <div className="flex items-center justify-between px-2 pb-1 pt-2 text-[0.65rem] font-medium text-muted">
+                <div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted">
                     <span>{languageCode(language)} &middot; Local</span>
                     <span className={`inline-flex items-center gap-1 ${saveTone}`} role="status">
                         <span aria-hidden="true">&#9679;</span>

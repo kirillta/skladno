@@ -22,7 +22,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
         </EmptyState>;
 
     return <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <ArticleHeader article={article} save={workspace.save} remove={workspace.remove} focusMode={layout.focusMode} setFocusMode={layout.setFocusMode} />
+        <ArticleHeader article={article} save={workspace.save} remove={workspace.remove} focusMode={layout.focusMode} setFocusMode={layout.setFocusMode} language={layout.targetLanguage} setLanguage={layout.setTargetLanguage} />
         <WorkspaceTabBar view={layout.view} setView={layout.setView} />
         <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} />
         <ArticleStatusBar saveState={workspace.saveState} characterCount={publishing.count} />

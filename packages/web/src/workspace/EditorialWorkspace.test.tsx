@@ -1,10 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Article, ArticleRevision } from "@skladno/shared";
 
 import { App } from "../App.js";
 import type { EditorialWorkspaceClient } from "../application-client.js";
+import { ArticleHeader } from "./components/ArticleHeader.js";
+import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 
 
 function article(id: string, title: string): Article {
@@ -44,5 +46,43 @@ describe("Editorial Workspace", () => {
             title: "Untitled article",
             content: ""
         });
+    });
+
+
+    it("offers focused editorial operations without applying a proposal", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+
+        const panel = render(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" />);
+        const panelScope = within(panel.container);
+
+        expect(panelScope.getByText(/Suggestions stay separate from your Article until you accept them\./)).toBeTruthy();
+        expect(panelScope.queryByRole("button", { name: "Thesis to narrative" })).toBeNull();
+
+        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
+
+        expect(panelScope.getByRole("button", { name: "Thesis to narrative" })).toBeTruthy();
+
+        await user.type(panelScope.getByRole("textbox", { name: "Editorial guidance" }), "Preserve the key claims.");
+        await user.click(panelScope.getByRole("button", { name: "Translation" }));
+        expect(onRequest).not.toHaveBeenCalled();
+
+        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+
+        expect(onRequest).toHaveBeenCalledWith("translation", "Preserve the key claims.", "Portuguese");
+    });
+
+
+    it("selects a target language from the Article Header", async () => {
+        const user = userEvent.setup();
+        const setLanguage = vi.fn();
+        const header = render(<ArticleHeader article={article("one", "First Article")} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={setLanguage} />);
+        const headerScope = within(header.container);
+
+        expect(headerScope.getByRole("combobox", { name: "Target language" })).toBeTruthy();
+
+        await user.selectOptions(headerScope.getByRole("combobox", { name: "Target language" }), "Portuguese");
+
+        expect(setLanguage).toHaveBeenCalledWith("Portuguese");
     });
 });

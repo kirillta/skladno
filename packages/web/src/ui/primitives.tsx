@@ -22,7 +22,7 @@ const controlStateClasses: Record<ControlState, string> = {
 
 
 const buttonVariantClasses = {
-    primary: "border-transparent bg-brand text-white hover:bg-brand-hover",
+    primary: "border-transparent bg-brand text-on-brand hover:bg-brand-hover",
     secondary: "border-border bg-surface-raised text-brand hover:border-brand/45 hover:bg-brand-soft",
     quiet: "border-transparent bg-transparent text-muted hover:bg-brand-soft hover:text-brand",
     danger: "border-transparent bg-transparent text-danger hover:bg-danger-soft",
@@ -60,8 +60,8 @@ export function Badge({ children, className, variant = "soft", compact = false, 
             {...props}
             className={joinClassNames(
                 "inline-flex items-center rounded-full font-semibold",
-                variant === "solid" ? "bg-brand text-white" : "bg-brand-soft text-brand",
-                compact ? "size-4 shrink-0 justify-center p-0 text-[0.625rem] leading-none" : "gap-1 px-2 py-0.5 text-xs leading-4",
+                variant === "solid" ? "bg-brand text-on-brand" : "bg-brand-soft text-brand",
+                compact ? "size-4 shrink-0 justify-center p-0 text-badge" : "gap-1 px-2 py-0.5 text-xs leading-4",
                 className,
             )}
         >
@@ -111,7 +111,7 @@ export function EmptyState({ title, children, className }: PropsWithChildren<{ t
 
 
 export function Tooltip({ children, content }: { children: ReactNode; content: string }) {
-    return <span className="group relative">{children}<span role="tooltip" className="pointer-events-none absolute z-10 w-max max-w-64 translate-y-1 rounded-control bg-ink p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{content}</span></span>;
+    return <span className="group relative">{children}<span role="tooltip" className="pointer-events-none absolute z-10 w-max max-w-64 translate-y-1 rounded-control bg-ink p-2 text-xs text-on-brand opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{content}</span></span>;
 }
 
 
@@ -123,22 +123,22 @@ export function Diff({ removed, added, layout = "stacked" }: { removed?: ReactNo
         return (
             <div className="grid overflow-hidden rounded-panel border border-border md:grid-cols-2" aria-label="Proposed text change">
                 <del className="block min-w-0 whitespace-pre-wrap border-b-4 border-danger bg-diff-removed p-4 decoration-danger md:border-b-0 md:border-r md:border-r-border md:border-l-4">
-                    <strong className="mb-3 block font-ui text-[0.65rem] uppercase tracking-[0.08em] text-danger">Original</strong>
+                    <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-danger">Original</strong>
                     {removedContent}
                 </del>
                 <ins className="block min-w-0 whitespace-pre-wrap border-b-4 border-success bg-diff-added p-4 decoration-success md:border-b-0 md:border-l-4">
-                    <strong className="mb-3 block font-ui text-[0.65rem] uppercase tracking-[0.08em] text-success">Proposed</strong>
+                    <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">Proposed</strong>
                     {addedContent}
                 </ins>
             </div>
         );
 
-    return <div className="overflow-hidden rounded-panel border border-border" aria-label="Proposed text change">{removed && <del className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,#fce9e6_6px,#fce9e6_12px)] p-2 decoration-danger"><strong>Removed: </strong>{removed}</del>}{added && <ins className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,#e9f5ed_6px,#e9f5ed_12px)] p-2 decoration-success"><strong>Added: </strong>{added}</ins>}</div>;
+    return <div className="overflow-hidden rounded-panel border border-border" aria-label="Proposed text change">{removed && <del className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,var(--color-diff-removed-stripe)_6px,var(--color-diff-removed-stripe)_12px)] p-2 decoration-danger"><strong>Removed: </strong>{removed}</del>}{added && <ins className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,var(--color-diff-added-stripe)_6px,var(--color-diff-added-stripe)_12px)] p-2 decoration-success"><strong>Added: </strong>{added}</ins>}</div>;
 }
 
 
 export function Dialog({ children, ...props }: PropsWithChildren<DialogHTMLAttributes<HTMLDialogElement>>) {
-    return <dialog {...props} className={joinClassNames("fixed inset-0 z-50 m-auto w-fit max-h-[calc(100dvh-2rem)] overflow-auto rounded-panel border border-border bg-surface-raised p-5 text-ink shadow-[0_0_0_100vmax_rgb(37_37_33_/_35%),0_1px_2px_rgb(37_37_33_/_8%),0_6px_18px_rgb(37_37_33_/_6%)]", props.className)}>{children}</dialog>;
+    return <dialog {...props} className={joinClassNames("fixed inset-0 z-50 m-auto w-fit max-h-[calc(100dvh-2rem)] overflow-auto rounded-panel border border-border bg-surface-raised p-5 text-ink shadow-dialog", props.className)}>{children}</dialog>;
 }
 
 

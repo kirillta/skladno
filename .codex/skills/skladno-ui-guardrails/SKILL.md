@@ -31,3 +31,5 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 ## Focused references
 
 Read [references/article-library-panel.md](references/article-library-panel.md) before changing the Article Library Panel or Navigation Rail.
+
+Read [references/editorial-assistant-panel.md](references/editorial-assistant-panel.md) before changing the Editorial Assistant Panel, its composer, Quick actions, or target-language flow.

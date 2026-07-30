@@ -2,6 +2,8 @@
 
 Use the semantic tokens in `styles.css`; feature code must not introduce palette, radius, focus, or elevation values. The paired system UI stack does not require a downloaded font. Article content uses the editorial serif stack.
 
+The complete typography and color reference is the [visual atlas](visual-atlas.md). Treat its named roles and semantic tokens as the allowed application vocabulary. When a new role is genuinely needed, add it to the atlas and token layer before using it in feature code.
+
 ## Control states
 
 `Button`, `Field`, and `TextareaField` accept `default`, `loading`, `success`, `warning`, `error`, `outdated`, and `conflicted` states. Use `Status` or `Banner` for visible status text and an icon; never present a state using color alone.
