@@ -1524,7 +1524,7 @@ export function App() {
                             </p>
                         </div>
                         <div className="flex gap-3 rounded-panel border border-info bg-info-soft p-4 text-sm leading-6 text-info" role="note">
-                            <span aria-hidden="true">△</span>
+                            <span aria-hidden="true">⚠</span>
                             <p>Your later revisions will not be deleted. They remain accessible in this history.</p>
                         </div>
                         <div className="flex justify-end gap-3">
