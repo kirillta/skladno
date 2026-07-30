@@ -1,0 +1,29 @@
+---
+name: skladno-ui-guardrails
+description: Preserve the established visual system and interaction hierarchy when changing Skladno's React/Tailwind user interface. Use for Skladno workspace, Article Library Panel, Navigation Rail, Editorial Assistant Panel, controls, responsive states, or any UI redesign and visual regression fix.
+---
+
+# Skladno UI Guardrails
+
+Keep Skladno’s editorial workspace visually stable while extending it. Treat existing design decisions as contracts unless the user explicitly asks to revise them.
+
+## Required workflow
+
+1. Read the repository `AGENTS.md`, `packages/web/src/ui/design-system.md`, relevant UI primitives, and the component being changed.
+2. Inspect the current rendered state before editing. Use the collaborative preview for desktop and collapsed-panel states when present.
+3. Reuse semantic Tailwind tokens and existing primitives. Do not introduce raw colors, radius, focus, elevation, or a parallel CSS layer.
+4. Preserve labels, keyboard access, accessible names, focus treatment, and non-color state cues while changing appearance.
+5. Run the narrowest relevant tests and typecheck. Visually inspect every changed responsive or collapsed state before handoff.
+
+## Decision rules
+
+- Keep the Article as the visual center; navigation and assistant areas stay secondary.
+- Preserve alignment across expanded and collapsed states. Match header and footer heights, baseline positions, padding rhythms, and control rows.
+- Use actual UI icons or inline SVGs with accessible labels; do not substitute unrelated glyphs or emojis.
+- Keep intentional empty areas quiet. Do not add duplicate hints, section headings, or controls when there is no content to organize.
+- Make actionable UI controls functional. Route existing actions through the established application state; do not leave dead buttons.
+- Use the current UI font for product identity text. Do not switch font families between expanded and collapsed representations of the same label.
+
+## Focused references
+
+Read [references/article-library-panel.md](references/article-library-panel.md) before changing the Article Library Panel or Navigation Rail.

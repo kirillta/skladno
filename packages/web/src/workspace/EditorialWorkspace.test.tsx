@@ -31,4 +31,17 @@ describe("Editorial Workspace", () => {
         await user.click(screen.getByRole("button", { name: "Create Article" }));
         expect(await screen.findByRole("heading", { name: "New Article" })).toBeTruthy();
     });
+
+
+    it("opens the create dialog from the empty Article workspace", async () => {
+        const client = fakeClient();
+        client.listArticles = vi.fn().mockResolvedValue([]);
+        const user = userEvent.setup();
+
+        render(<App client={client} />);
+
+        await user.click(await screen.findByRole("button", { name: "Create an article from the Article Library." }));
+
+        expect(screen.getByRole("heading", { name: "Create Article" })).toBeTruthy();
+    });
 });

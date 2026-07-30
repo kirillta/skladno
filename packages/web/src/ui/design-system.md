@@ -26,6 +26,16 @@ The desktop shell has an Article Library Panel, an Article Workspace with a cent
 
 At 1440 × 1024 and 1280 × 800, preserve a comfortable editorial line length before showing secondary content. Use tabs, collapse, or drawers for supporting work rather than permanently narrowing the editor.
 
+## Article Library Panel and Navigation Rail
+
+The expanded Article Library Panel is a narrow, full-height (`w-52`) supporting surface. Its header and collapsed Navigation Rail header share a `min-h-18` height so product identity and controls remain vertically aligned across modes. Use the Skladno wordmark in the expanded header and an `S` in the same UI font, size, weight, and brand color in the Navigation Rail.
+
+Keep search in a dedicated bordered row. It uses a compact search control (`min-h-9`, `py-1.5`, `pl-8`, `pr-2`) with a search icon. Show the `Recent` label only when the Article library contains Articles. When the library is empty, leave the panel content area quiet; the Article Workspace supplies the create-Article empty state.
+
+Each Article entry includes a document icon, title, detail line, and selected-state card. Keep the expanded utility area ordered as Style Profile, Settings, then language/local and save state. Align utility icons and captions to the left.
+
+The collapsed Navigation Rail uses `w-10`, keeps Style Profile and Settings as labeled icon-only controls at the bottom, and retains an accessible semantic save-state dot. Icon-only controls require at least a 36px target and an accessible label. Do not replace UI icons with unrelated glyphs or emojis.
+
 ## Workspace tabs
 
 Use accessible tabs for Write, Proposal Review, Revisions, Fact Check, Style Profile, Translations, and Publish. Each tab requires a stable ID, `aria-controls`, matching tab panel, and Arrow/Home/End keyboard navigation. Use compact badges only for actionable or stale content; the badge text must name the condition.

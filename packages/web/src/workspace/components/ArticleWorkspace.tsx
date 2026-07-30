@@ -5,18 +5,21 @@ import { ArticleStatusBar } from "./ArticleStatusBar.js";
 import { WorkspaceTabBar } from "./WorkspaceTabBar.js";
 import { WorkspaceViewRouter } from "./WorkspaceViewRouter.js";
 
-export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing }: { 
-    workspace: ArticleWorkspaceState; 
-    layout: WorkspaceLayoutState; 
-    editorial: EditorialProposalState; 
-    revisions: ArticleRevisionsState; 
-    corpus: StyleCorpusState; 
-    publishing: PublishingState 
+export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, openCreate }: {
+    workspace: ArticleWorkspaceState;
+    layout: WorkspaceLayoutState;
+    editorial: EditorialProposalState;
+    revisions: ArticleRevisionsState;
+    corpus: StyleCorpusState;
+    publishing: PublishingState;
+    openCreate: () => void
 }) {
     const article = workspace.selectedArticle;
 
     if (!article)
-        return <EmptyState title="No articles yet"><Button onClick={() => undefined}>Create an article from the Article Library.</Button></EmptyState>;
+        return <EmptyState title="No articles yet">
+            <Button onClick={openCreate}>Create an article from the Article Library.</Button>
+        </EmptyState>;
 
     return <>
         <ArticleHeader article={article} save={workspace.save} remove={workspace.remove} focusMode={layout.focusMode} setFocusMode={layout.setFocusMode} />
