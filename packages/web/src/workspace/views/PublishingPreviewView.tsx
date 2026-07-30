@@ -1,5 +1,5 @@
 import { publishLimitProfiles, type PublishLimitProfileId } from "@skladno/shared";
-import { Select, TextareaField } from "../../ui/primitives.js";
+import { Banner, Select, TextareaField } from "../../ui/primitives.js";
 
 export function PublishingPreviewView({ publishing }: { 
     publishing: { 
@@ -8,6 +8,7 @@ export function PublishingPreviewView({ publishing }: {
         profileId: PublishLimitProfileId; 
         profile: { characterLimit: number }; 
         message: string; 
+        messageTone: "info" | "success" | "error";
         setProfile: (id: PublishLimitProfileId) => Promise<void> 
     } 
 }) {
@@ -18,6 +19,6 @@ export function PublishingPreviewView({ publishing }: {
         </Select>
         <p className="mt-3 text-sm">{publishing.count} / {publishing.profile.characterLimit} characters</p>
         <TextareaField aria-label="Plain-text publishing preview" className="mt-3 min-h-72" readOnly value={publishing.text} />
-        {publishing.message && <p className="mt-2 text-sm text-muted">{publishing.message}</p>}
+        {publishing.message && <Banner className="mt-2" tone={publishing.messageTone}>{publishing.message}</Banner>}
     </div>;
 }

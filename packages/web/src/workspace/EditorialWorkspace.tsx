@@ -17,6 +17,7 @@ import {
     type TranslationMetadata,
 } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
+import { Banner } from "../ui/primitives.js";
 import { EditorialAssistantPanel as ExtractedEditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 import { ArticleLibraryPanel as ExtractedArticleLibraryPanel } from "./components/ArticleLibraryPanel.js";
 import { ArticleWorkspace as ExtractedArticleWorkspace } from "./components/ArticleWorkspace.js";
@@ -287,9 +288,13 @@ function useStyleCorpus(client: EditorialWorkspaceClient) {
 
 function usePublishing(client: EditorialWorkspaceClient, content: string) {
     const [profileId, setProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
-    const [message, setMessage] = useState("");
+    const [message, setMessage] = useState<{ text: string; tone: "info" | "success" | "error" }>({ text: "", tone: "info" });
 
-    useEffect(() => { client.getPublishLimitProfile().then(setProfileId).catch(() => setMessage("Using the default publishing profile.")); }, [client]);
+    useEffect(() => {
+        client.getPublishLimitProfile()
+            .then(setProfileId)
+            .catch(() => setMessage({ text: "Using the default publishing profile.", tone: "info" }));
+    }, [client]);
 
     const text = preparePlainTextForPublishing(content);
 
@@ -298,14 +303,15 @@ function usePublishing(client: EditorialWorkspaceClient, content: string) {
         count: countPublishingCharacters(text),
         profileId,
         profile: getPublishLimitProfile(profileId),
-        message,
+        message: message.text,
+        messageTone: message.tone,
         setProfile: async (id: PublishLimitProfileId) => { setProfileId(await client.setPublishLimitProfile(id)); },
         copy: async () => {
             try {
                 await navigator.clipboard.writeText(text);
-                setMessage("Publishing text copied.");
+                setMessage({ text: "Publishing text copied.", tone: "success" });
             } catch {
-                setMessage("Copy failed. Select the publishing text and copy it manually.");
+                setMessage({ text: "Copy failed. Select the publishing text and copy it manually.", tone: "error" });
             }
         }
     };
@@ -356,7 +362,7 @@ export function EditorialWorkspaceProvider({ client }: { client: EditorialWorksp
 
     if (workspace.state === "error")
         return <main className="grid min-h-screen place-items-center">
-            <p>{workspace.message}</p>
+            <Banner tone="error" role="alert">{workspace.message}</Banner>
         </main>;
 
     return <ExtractedWorkspaceShell focusMode={layout.focusMode} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.setSelectedArticleId} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>

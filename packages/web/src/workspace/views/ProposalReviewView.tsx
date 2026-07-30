@@ -1,5 +1,5 @@
 import type { TextProposal } from "@skladno/shared";
-import { Button, Diff, EmptyState } from "../../ui/primitives.js";
+import { Banner, Button, Diff, EmptyState } from "../../ui/primitives.js";
 
 export function ProposalReviewView({ review, stale, selectedChanges, setSelectedChanges, accept, reject }: {
     review: TextProposal | undefined;
@@ -14,7 +14,7 @@ export function ProposalReviewView({ review, stale, selectedChanges, setSelected
 
     return <div>
         <h2 className="font-semibold">Proposal Review</h2>
-        {stale && <p className="mt-3 rounded-control bg-warning-soft p-3 text-sm">This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.</p>}
+        {stale && <Banner className="mt-3" tone="warning">This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.</Banner>}
         {review.changes.map((change) => <label key={change.id} className="mt-3 block">
             <input type="checkbox"
                 checked={selectedChanges.has(change.id)}

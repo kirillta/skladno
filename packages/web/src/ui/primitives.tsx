@@ -74,13 +74,13 @@ export function Badge({ children, className, variant = "soft", compact = false, 
 export function Status({ label, children, tone = "info" }: PropsWithChildren<{ label: string; tone?: Tone }>) {
     const icon = tone === "error" || tone === "warning" ? "!" : tone === "success" ? "✓" : "i";
     const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
-    return <div className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone])}><span aria-hidden="true">{icon}</span><span><strong>{label}</strong>{children}</span></div>;
+    return <div className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone])} role="status"><span aria-hidden="true">{icon}</span><span><strong>{label}</strong>{children}</span></div>;
 }
 
 
-export function Banner({ children, tone = "info", className, ...props }: PropsWithChildren<HTMLAttributes<HTMLDivElement> & { tone?: Tone }>) {
+export function Banner({ children, tone = "info", className, role = "status", ...props }: PropsWithChildren<HTMLAttributes<HTMLDivElement> & { tone?: Tone }>) {
     const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
-    return <div {...props} className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone], className)} role="status"><span aria-hidden="true">{tone === "error" || tone === "warning" ? "!" : tone === "success" ? "✓" : "i"}</span>{children}</div>;
+    return <div {...props} className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone], className)} role={role}><span aria-hidden="true">{tone === "error" || tone === "warning" ? "!" : tone === "success" ? "✓" : "i"}</span>{children}</div>;
 }
 
 

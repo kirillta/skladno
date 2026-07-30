@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { EDITORIAL_OPERATION, type EditorialOperation } from "@skladno/shared";
-import { Button, TextareaField } from "../../ui/primitives.js";
+import { Banner, Button, Status, TextareaField } from "../../ui/primitives.js";
 
 
 const editorialOperationLabels: Record<EditorialOperation, string> = {
@@ -87,15 +87,15 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-8">
             <p className="max-w-sm text-base leading-8 text-muted">Ask for a focused editorial operation when you are ready. Suggestions stay separate from your Article until you accept them.</p>
-            {state === "streaming" && <p className="mt-5 text-sm text-brand" role="status">Preparing your proposal...</p>}
-            {message && <p className="mt-5 text-sm text-danger" role="alert">{message}</p>}
+            {state === "streaming" && <Status label="Preparing your proposal…" tone="info" />}
+            {message && <Banner className="mt-5" tone="error" role="alert">{message}</Banner>}
         </div>
         <div className="shrink-0 border-t border-border px-5 py-7">
             <div className="relative mt-auto py-3">
                 {quickActionsOpen && <div className="absolute bottom-full left-0 z-10 mb-2 w-52 rounded-panel border border-border bg-surface-raised p-1 shadow-raised">
                     {Object.values(EDITORIAL_OPERATION).map((operation) => <Button className="flex w-full justify-start text-xs" key={operation} disabled={state === "streaming"} variant="quiet" onClick={() => selectOperation(operation)}>{editorialOperationLabels[operation]}</Button>)}
                 </div>}
-                <Button className="flex items-center gap-2 text-sm font-medium" variant="secondary" aria-expanded={quickActionsOpen} aria-label={selectedOperation ? `Quick actions: ${editorialOperationLabels[selectedOperation]} selected` : "Quick actions"} onClick={() => setQuickActionsOpen((open) => !open)}>
+                <Button className="flex items-center gap-2" variant="secondary" aria-expanded={quickActionsOpen} aria-label={selectedOperation ? `Quick actions: ${editorialOperationLabels[selectedOperation]} selected` : "Quick actions"} onClick={() => setQuickActionsOpen((open) => !open)}>
                     {selectedOperation ? `Quick actions: ${editorialOperationLabels[selectedOperation]}` : "Quick actions"}
                     <DisclosureMark open={quickActionsOpen} />
                 </Button>
