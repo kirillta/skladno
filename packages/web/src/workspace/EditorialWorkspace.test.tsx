@@ -7,6 +7,7 @@ import { App } from "../App.js";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
+import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
 
 
 function article(id: string, title: string): Article {
@@ -76,7 +77,7 @@ describe("Editorial Workspace", () => {
     it("selects a target language from the Article Header", async () => {
         const user = userEvent.setup();
         const setLanguage = vi.fn();
-        const header = render(<ArticleHeader article={article("one", "First Article")} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={setLanguage} />);
+        const header = render(<ArticleHeader article={article("one", "First Article")} rename={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={setLanguage} />);
         const headerScope = within(header.container);
 
         expect(headerScope.getByRole("combobox", { name: "Target language" })).toBeTruthy();
@@ -84,5 +85,30 @@ describe("Editorial Workspace", () => {
         await user.selectOptions(headerScope.getByRole("combobox", { name: "Target language" }), "Portuguese");
 
         expect(setLanguage).toHaveBeenCalledWith("Portuguese");
+    });
+
+
+    it("renames an Article from its header when editing finishes", async () => {
+        const user = userEvent.setup();
+        const rename = vi.fn().mockResolvedValue(undefined);
+        const header = render(<ArticleHeader article={article("one", "Untitled article")} rename={rename} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={vi.fn()} />);
+        const headerScope = within(header.container);
+
+        await user.click(headerScope.getByRole("button", { name: "Rename article: Untitled article" }));
+        await user.clear(headerScope.getByRole("textbox", { name: "Article title" }));
+        await user.type(headerScope.getByRole("textbox", { name: "Article title" }), "A better title");
+        await user.tab();
+
+        expect(rename).toHaveBeenCalledWith("one", "A better title");
+    });
+
+
+    it("shows the current revision and character count in the Article Status Bar", () => {
+        const statusBar = render(<ArticleStatusBar revisionId="08c8217d-full-revision-id" characterCount={1234} />);
+        const statusBarScope = within(statusBar.container);
+
+        expect(statusBarScope.getByText("Revision 08c8217d")).toBeTruthy();
+        expect(statusBarScope.getByText(/characters/)).toBeTruthy();
+        expect(statusBarScope.queryByText("Saved")).toBeNull();
     });
 });
