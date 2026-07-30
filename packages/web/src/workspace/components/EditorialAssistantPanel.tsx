@@ -20,7 +20,7 @@ function AssistantMark() {
 
 
 function CollapseMark() {
-    return <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    return <svg aria-hidden="true" className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
     </svg>;
 }

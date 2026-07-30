@@ -25,6 +25,7 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 - Keep the desktop Editorial Workspace at the viewport height. The Article Workspace, Article Library Panel, and Editorial Assistant Panel stretch to that height; scroll only their designated internal content regions, never the page shell.
 - The Article Status Bar is always visible at the bottom of the Article Workspace. Keep it a compact fixed 24px row; it must not absorb spare vertical space or be pushed beneath the viewport.
 - The writing surface is a white (`bg-surface-raised`) worksheet within the subtly tinted workspace canvas. Constrain its document column and keep long drafts scrolling inside the editor rather than changing the shell height.
+- The Workspace View owns the Article Editor's vertical scrolling so its scrollbar sits flush with the Assistant Panel divider, never inset beside the constrained document column. Keep it quiet: a slim `w-2` track with no arrow buttons, a transparent track, and a rounded `bg-border-strong` thumb.
 - Make actionable UI controls functional. Route existing actions through the established application state; do not leave dead buttons.
 - Use the current UI font for product identity text. Do not switch font families between expanded and collapsed representations of the same label.
 
