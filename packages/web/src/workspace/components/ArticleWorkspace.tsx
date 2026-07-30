@@ -5,20 +5,20 @@ import { ArticleStatusBar } from "./ArticleStatusBar.js";
 import { WorkspaceTabBar } from "./WorkspaceTabBar.js";
 import { WorkspaceViewRouter } from "./WorkspaceViewRouter.js";
 
-export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, openCreate }: {
+export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, createBlank }: {
     workspace: ArticleWorkspaceState;
     layout: WorkspaceLayoutState;
     editorial: EditorialProposalState;
     revisions: ArticleRevisionsState;
     corpus: StyleCorpusState;
     publishing: PublishingState;
-    openCreate: () => void
+    createBlank: () => Promise<unknown>
 }) {
     const article = workspace.selectedArticle;
 
     if (!article)
         return <EmptyState title="No articles yet" className="pt-40">
-            <Button onClick={openCreate}>Create</Button>
+            <Button onClick={() => void createBlank()}>Create</Button>
         </EmptyState>;
 
     return <>

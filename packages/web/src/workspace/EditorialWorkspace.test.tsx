@@ -22,18 +22,16 @@ function fakeClient(): EditorialWorkspaceClient {
 
 
 describe("Editorial Workspace", () => {
-    it("selects an Article and creates a new Article from the Article Library", async () => {
+    it("selects an Article and creates a blank Article from the Article Library", async () => {
         const user = userEvent.setup();
         render(<App client={fakeClient()} />);
         expect(await screen.findByRole("heading", { name: "First Article" })).toBeTruthy();
         await user.click(screen.getByRole("button", { name: "New article" }));
-        await user.type(screen.getByRole("textbox", { name: "Article title" }), "New Article");
-        await user.click(screen.getByRole("button", { name: "Create Article" }));
         expect(await screen.findByRole("heading", { name: "New Article" })).toBeTruthy();
     });
 
 
-    it("opens the create dialog from the empty Article workspace", async () => {
+    it("creates a blank Article from the empty Article workspace", async () => {
         const client = fakeClient();
         client.listArticles = vi.fn().mockResolvedValue([]);
         const user = userEvent.setup();
@@ -42,6 +40,9 @@ describe("Editorial Workspace", () => {
 
         await user.click(await screen.findByRole("button", { name: "Create" }));
 
-        expect(screen.getByRole("heading", { name: "Create Article" })).toBeTruthy();
+        expect(client.createArticle).toHaveBeenCalledWith({
+            title: "Untitled article",
+            content: ""
+        });
     });
 });

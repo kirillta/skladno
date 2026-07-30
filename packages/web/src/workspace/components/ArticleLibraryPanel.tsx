@@ -34,13 +34,13 @@ function languageCode(language: string | undefined): string {
 }
 
 
-export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, openCreate, openStyleProfile, language, saveState }: {
+export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, language, saveState }: {
     articles: Article[];
     selectedArticleId: string | undefined;
     selectArticle: (articleId: string) => void;
     collapsed: boolean;
     setCollapsed: (value: boolean) => void;
-    openCreate: () => void;
+    createBlank: () => Promise<unknown>;
     openStyleProfile: () => void;
     language: string | undefined;
     saveState: "saved" | "saving" | "error"
@@ -80,7 +80,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     Skladno
                 </span>
                 <div className="flex items-center gap-1">
-                    <IconButton label="New article" onClick={openCreate}>&#43;</IconButton>
+                    <IconButton label="New article" onClick={() => void createBlank()}>&#43;</IconButton>
                     <IconButton label="Collapse Article Library Panel" onClick={() => setCollapsed(true)}>&#8249;</IconButton>
                 </div>
             </header>
