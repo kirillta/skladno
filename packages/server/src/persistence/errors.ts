@@ -1,7 +1,7 @@
-import type { Document } from "@skladno/shared";
+import type { Article } from "@skladno/shared";
 
-export class DocumentConflictError extends Error {
-    constructor(public readonly document: Document) {
-        super("Document has a newer version.");
+export class ArticleRevisionConflictError extends Error {
+    constructor(public readonly article: Article) {
+        super("Article has a newer revision.");
     }
 }

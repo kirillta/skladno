@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skladno UI Guardrails"
+  short_description: "Keep Skladno UI decisions consistent"
+  default_prompt: "Use $skladno-ui-guardrails to implement this Skladno UI change."

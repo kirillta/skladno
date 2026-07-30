@@ -1,0 +1,159 @@
+import { useState } from "react";
+import type { Article } from "@skladno/shared";
+import { Button, Dialog, Field, IconButton } from "../../ui/primitives.js";
+
+
+function formatUpdatedAt(updatedAt: string): string {
+    const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(updatedAt).getTime()) / 60_000));
+
+    if (elapsedMinutes < 1)
+        return "Updated just now";
+
+    if (elapsedMinutes < 60)
+        return `Updated ${elapsedMinutes} min ago`;
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+
+    if (elapsedHours < 24)
+        return `Updated ${elapsedHours} hr ago`;
+
+    const elapsedDays = Math.floor(elapsedHours / 24);
+
+    return `Updated ${elapsedDays} day${elapsedDays === 1 ? "" : "s"} ago`;
+}
+
+
+function languageCode(language: string | undefined): string {
+    const codes: Record<string, string> = {
+        English: "EN",
+        Spanish: "ES",
+        Portuguese: "PT",
+    };
+
+    return language ? codes[language] ?? language.slice(0, 2).toUpperCase() : "EN";
+}
+
+
+export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, language, saveState }: {
+    articles: Article[];
+    selectedArticleId: string | undefined;
+    selectArticle: (articleId: string) => void;
+    collapsed: boolean;
+    setCollapsed: (value: boolean) => void;
+    createBlank: () => Promise<unknown>;
+    openStyleProfile: () => void;
+    language: string | undefined;
+    saveState: "saved" | "saving" | "error"
+}) {
+    const [query, setQuery] = useState("");
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const visibleArticles = articles.filter((article) => article.title.toLowerCase().includes(query.toLowerCase()));
+    const saveLabel = saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving" : "Save failed";
+    const saveTone = saveState === "saved" ? "text-success" : saveState === "saving" ? "text-warning" : "text-danger";
+
+    return <aside className={collapsed ? "flex h-full w-10 flex-col border-r border-border bg-surface px-0.5 py-2" : "flex h-full w-52 flex-col border-r border-border bg-surface"} aria-label="Article Library Panel">
+        {collapsed ? <>
+            <header className="flex min-h-18 items-center justify-center">
+                <IconButton className="text-base font-semibold text-brand" label="Expand Article Library Panel" onClick={() => setCollapsed(false)}>S</IconButton>
+            </header>
+            <footer className="mt-auto flex flex-col items-center gap-1 border-t border-border px-0.5 py-2">
+                <IconButton label="Style Profile" onClick={openStyleProfile}>
+                    <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="12" cy="8" r="3" />
+                        <path d="M5.5 20c.6-3.3 3.1-5 6.5-5s5.9 1.7 6.5 5" />
+                    </svg>
+                </IconButton>
+                <IconButton label="Settings" onClick={() => setSettingsOpen(true)}>
+                    <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="12" cy="12" r="3.25" />
+                        <path d="M12 2.75v2.5M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5M18.54 5.46l-1.77 1.77M7.23 16.77l-1.77 1.77M18.54 18.54l-1.77-1.77M7.23 7.23 5.46 5.46" />
+                    </svg>
+                </IconButton>
+                <span aria-label={saveLabel} className={`mt-1 inline-flex h-4 items-center text-xs ${saveTone}`} role="status" title={saveLabel}>
+                    <span aria-hidden="true">&#9679;</span>
+                </span>
+            </footer>
+        </> : <>
+            <header className="flex min-h-18 items-center justify-between border-b border-border px-4">
+                <span className="flex items-center gap-2 text-base font-semibold text-brand">
+                    <span aria-hidden="true" className="text-lg leading-none">&#10022;</span>
+                    Skladno
+                </span>
+                <div className="flex items-center gap-1">
+                    <IconButton label="New article" onClick={() => void createBlank()}>&#43;</IconButton>
+                    <IconButton label="Collapse Article Library Panel" onClick={() => setCollapsed(true)}>&#8249;</IconButton>
+                </div>
+            </header>
+
+            <div className="border-b border-border px-3 py-3">
+                <div className="relative">
+                    <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="11" cy="11" r="5.5" />
+                        <path d="m15.25 15.25 4 4" />
+                    </svg>
+                    <Field className="min-h-9 py-1.5 pl-8 pr-2" aria-label="Search articles" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search..." />
+                </div>
+            </div>
+
+            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4" aria-label="Article library">
+                {articles.length > 0 && <>
+                    <p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">Recent</p>
+                    <div className="mt-2 space-y-1">
+                        {visibleArticles.map((article) => {
+                            const isSelected = article.id === selectedArticleId;
+                            const detail = article.language ?? formatUpdatedAt(article.updatedAt);
+
+                            return <button key={article.id} onClick={() => selectArticle(article.id)} className={`w-full rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-brand" : "text-ink hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
+                                <span className="flex gap-2">
+                                    <svg aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                        <path d="M6.5 3.5h7l4 4v13h-11z" />
+                                        <path d="M13.5 3.5v4h4M8.5 12h7M8.5 15.5h7" />
+                                    </svg>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-medium leading-5">{article.title}</span>
+                                        <span className="mt-0.5 block text-xs leading-4 text-muted">{detail}</span>
+                                    </span>
+                                </span>
+                            </button>;
+                        })}
+                    </div>
+
+                    {visibleArticles.length === 0 && <p className="px-2 py-5 text-sm text-muted">No articles match your search.</p>}
+                </>}
+            </nav>
+
+            <footer className="border-t border-border px-2 py-2">
+                <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openStyleProfile}>
+                    <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="12" cy="8" r="3" />
+                        <path d="M5.5 20c.6-3.3 3.1-5 6.5-5s5.9 1.7 6.5 5" />
+                    </svg>
+                    <span className="ml-2">Style Profile</span>
+                </Button>
+                <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={() => setSettingsOpen(true)}>
+                    <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="12" cy="12" r="3.25" />
+                        <path d="M12 2.75v2.5M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5M18.54 5.46l-1.77 1.77M7.23 16.77l-1.77 1.77M18.54 18.54l-1.77-1.77M7.23 7.23 5.46 5.46" />
+                    </svg>
+                    <span className="ml-2">Settings</span>
+                </Button>
+                <div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted">
+                    <span>{languageCode(language)} &middot; Local</span>
+                    <span className={`inline-flex items-center gap-1 ${saveTone}`} role="status">
+                        <span aria-hidden="true">&#9679;</span>
+                        {saveLabel}
+                    </span>
+                </div>
+            </footer>
+        </>}
+        {settingsOpen && <Dialog open aria-labelledby="workspace-settings-title">
+            <div className="grid max-w-sm gap-3">
+                <div>
+                    <h2 id="workspace-settings-title" className="font-semibold">Workspace settings</h2>
+                    <p className="mt-1 text-sm leading-5 text-muted">This is a local-first workspace. Article content and style materials remain on this device unless you explicitly run an editorial operation.</p>
+                </div>
+                <Button onClick={() => setSettingsOpen(false)}>Close</Button>
+            </div>
+        </Dialog>}
+    </aside>;
+}

@@ -19,12 +19,12 @@ function writeEditorialEvent(response: ServerResponse, event: EditorialEvent): v
 
 
 export async function handleEditorialRoute(request: IncomingMessage, response: ServerResponse, pathname: string, config: ServerConfig, repositories: Repositories, engine: EditorialEngine | undefined): Promise<boolean> {
-    const match = /^\/api\/documents\/([^/]+)\/editorial$/.exec(pathname);
+    const match = /^\/api\/articles\/([^/]+)\/editorial$/.exec(pathname);
     if (request.method !== HTTP_METHOD.POST || !match)
         return false;
 
-    const documentId = decodeURIComponent(match[1]);
-    const document = repositories.getDocument(documentId);
+    const articleId = decodeURIComponent(match[1]);
+    const article = repositories.getArticle(articleId);
     const body = object(await readJson(request));
     const requestId = string(body.requestId, "requestId");
     const operation = string(body.operation, "operation");
@@ -33,7 +33,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
 
     response.writeHead(HTTP_STATUS.OK, { "cache-control": "no-cache, no-transform", connection: "keep-alive", "content-type": "text/event-stream; charset=utf-8" });
 
-    if (!document) {
+    if (!article) {
         writeEditorialEvent(response, errorEvent(requestId, "provider", "Article not found. Select an existing article and try again.", false));
         response.end();
 
@@ -73,9 +73,9 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
     const signal = controller.signal;
     const isFactCheck = operation === EDITORIAL_OPERATION.FACT_CHECK;
     const isTranslation = operation === EDITORIAL_OPERATION.TRANSLATION;
-    const session = !isFactCheck && !isTranslation && config.openAiStoreResponses ? repositories.getEditorialSession(documentId) : undefined;
+    const session = !isFactCheck && !isTranslation && config.openAiStoreResponses ? repositories.getEditorialSession(articleId) : undefined;
     if (!config.openAiStoreResponses)
-        repositories.removeEditorialSession(documentId);
+        repositories.removeEditorialSession(articleId);
 
     const styleProfile = operation === EDITORIAL_OPERATION.STYLE_REVIEW ? repositories.getStyleCorpus().profile : undefined;
     if (operation === EDITORIAL_OPERATION.STYLE_REVIEW && !styleProfile) {
@@ -90,7 +90,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
     try {
         for await (const event of engine.stream({
             operation,
-            article: document.currentVersion.content,
+            article: article.currentRevision.content,
             authorContext,
             ...(styleProfile ? { styleProfile } : {}),
             ...(targetLanguage ? { targetLanguage } : {}),
@@ -99,11 +99,11 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
             if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
                 completed = true;
                 if (!isFactCheck && !isTranslation && config.openAiStoreResponses)
-                    repositories.saveEditorialSession(documentId, event.responseId);
+                    repositories.saveEditorialSession(articleId, event.responseId);
 
                 const artifactInput = {
-                    documentId,
-                    versionId: document.currentVersionId,
+                    articleId,
+                    revisionId: article.currentRevisionId,
                     kind: isFactCheck ? "fact-check" : operation === EDITORIAL_OPERATION.STYLE_REVIEW ? "style-review" : "editorial-proposal",
                     content: JSON.stringify({
                         requestId,
@@ -125,8 +125,8 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
                                 uncertainty: `${source.quality}${source.publishedAt ? `; published ${source.publishedAt}` : ""}; ${finding.uncertainty}`,
                             }))) ?? [];
                 isFactCheck
-                    ? repositories.createWorkflowArtifactWithCitations(artifactInput, citations)
-                    : repositories.createWorkflowArtifact(artifactInput);
+                    ? repositories.createEditorialArtifactWithCitations(artifactInput, citations)
+                    : repositories.createEditorialArtifact(artifactInput);
                 writeEditorialEvent(response, { ...event, requestId });
 
                 continue;
@@ -141,7 +141,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
     } catch (error) {
         if (!signal.aborted) {
             if (error instanceof EditorialEngineError && error.code === "session_expired")
-                repositories.removeEditorialSession(documentId);
+                repositories.removeEditorialSession(articleId);
 
             const message = error instanceof Error ? error.message : "The editorial request failed. Retry it in a moment.";
             const code = error instanceof EditorialEngineError

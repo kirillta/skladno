@@ -6,7 +6,51 @@ This file contains repository-wide instructions for coding agents and contributo
 
 Skladno is a local-first AI editorial workspace for authors of technical articles. It helps turn theses into a coherent draft, improve flow, verify facts, preserve the author's voice, translate the result, and prepare platform-ready text.
 
-The product is an editor with an assistant, not an autonomous publishing bot. The author must remain in control of the document at every step.
+The product is an editor with an assistant, not an autonomous publishing bot. The author must remain in control of the article at every step.
+
+## Ubiquitous language
+
+Use the following terms consistently in product copy, UI labels, domain code, tests, and documentation. Prefer responsibility-based names over positional names so they remain accurate when the layout adapts.
+
+- **Article**: the author's independently recoverable editorial work. Use this as the canonical product and domain term; reserve `document` only for DOM-standard browser APIs.
+- **Article library**: the author's local collection of articles. An **article list** is a presentation of that collection; the **current article** is the article open in the workspace.
+- **Revision**: an immutable saved snapshot of an article.
+- **Draft**: the article text currently being edited and not yet saved as a revision.
+- **Proposal**: AI-generated candidate content or changes that require the author's explicit approval.
+- **Proposal base revision**: the saved revision reviewed to produce a proposal. A proposal becomes **stale** when the current article revision no longer matches its base revision.
+- **Change selection**: the subset of a proposal's changes that the author has selected to accept. Accepting a selection creates a new revision.
+- **Finding**: advisory output, such as a fact-check or style-review result, that does not change an article.
+- **Editorial operation**: an author-requested assistant activity, such as smoothing, fact-checking, style review, or translation.
+- **Editorial request**: one invocation of an editorial operation. An **editorial session** is the interaction sequence and activity history for those requests.
+- **Editorial guidance**: author-entered instruction or context supplied with an editorial request.
+- **Source article** and **translation article**: independently recoverable linked articles. A translation is never a revision of its source article.
+- **Style corpus**: author-provided local writing samples; a **style profile** is their compact derived representation.
+- **Publishing profile**: configurable platform guidance; a **publishing preview** is derived copy prepared for review or copying.
+- **Workflow stage**: optional author-selected progress guidance. It is advisory and never runs AI or changes article content.
+
+The desktop **Editorial Workspace** is composed as follows:
+
+```text
+Editorial Workspace
+├── Article Library Panel
+├── Article Workspace
+│   ├── Article Header
+│   ├── Workspace Tab Bar
+│   ├── Workspace View
+│   │   ├── Article Editor
+│   │   ├── Proposal Review
+│   │   ├── Revision History
+│   │   ├── Fact Check
+│   │   ├── Style Profile
+│   │   ├── Translations
+│   │   └── Publishing Preview
+│   └── Article Status Bar
+└── Editorial Assistant Panel
+```
+
+The **Workspace Shell** is the layout container for the Editorial Workspace. The Article Library Panel contains article search, the article list, and workspace-level entry points. A collapsed Article Library Panel is a **Navigation Rail**; a temporary small-screen form is a **Navigation Drawer** or **Assistant Drawer**. The Editorial Assistant Panel contains editorial guidance, editorial actions, request status, and assistant activity. It may be shortened to “assistant panel” in conversation, but do not call it a generic “right panel” in code or documentation.
+
+An **Article Header** identifies the current article and holds article-level controls. The **Workspace Tab Bar** selects the active **Workspace View**; its tabs are not views themselves. The **Article Editor** is the writing view and its principal area is the **writing surface**. **Proposal Review**, **Revision History**, **Fact Check**, **Style Profile**, **Translations**, and **Publishing Preview** are supporting workspace views. The **Article Status Bar** shows article persistence and revision status.
 
 ## Sources of truth
 
@@ -107,6 +151,13 @@ Preserve the established spacious, vertically organized formatting across the wo
 - Write CSS as expanded blocks: one selector per line when grouped, one declaration per line, a blank line between rules, and fully expanded media-query contents.
 - Preserve the surrounding style when editing an existing file; do not introduce compact one-line formatting into expanded code.
 
+## Web UI foundation
+
+- Use Tailwind utility classes for web UI component styling. Do not introduce a parallel plain-CSS component layer.
+- Keep `packages/web/src/styles.css` limited to Tailwind imports, semantic design tokens, and truly global base behavior such as focus visibility and reduced motion.
+- Follow [`packages/web/src/ui/design-system.md`](packages/web/src/ui/design-system.md) when building or changing UI primitives and feature controls. It defines the available primitives, their state variants, accessibility baseline, and the non-color status and diff conventions.
+- Consume the semantic tokens exposed through Tailwind rather than introducing raw palette, radius, focus, or elevation values in feature code.
+
 ## Testing expectations
 
 Use the narrowest effective layer:
@@ -129,6 +180,8 @@ AI-facing tests should prefer deterministic fixtures or mocked provider response
 - Core workflows must be keyboard accessible.
 
 ## Repository commands
+
+The MVP Article refactor has one intentional schema transition: at startup, detect the legacy Documents schema, delete its `skladno.sqlite` file and SQLite sidecars once, and recreate the Article schema in the same location. Preserve the resulting Article database on future starts. If cleanup fails, stop startup with a clear error.
 
 The project skeleton and canonical commands have not been created yet. When the foundation issue defines them, document the exact install, development, type-check, test, lint, and migration commands here and in the README.
 

@@ -1,30 +1,39 @@
-import type { CreateSourceCitationInput, CreateWorkflowArtifactInput, SourceCitation, WorkflowArtifact } from "@skladno/shared";
+import type { CreateSourceCitationInput, CreateEditorialArtifactInput, SourceCitation, EditorialArtifact } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { createId, now, required, type Row } from "./repository-utils.js";
 
 
-export class WorkflowArtifactsRepository {
+export class EditorialArtifactsRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
 
-    create(input: CreateWorkflowArtifactInput): WorkflowArtifact {
+    create(input: CreateEditorialArtifactInput): EditorialArtifact {
         const id = input.id ?? createId();
         const createdAt = now();
         required(input.kind, "Artifact kind");
-        this.database.prepare("INSERT INTO workflow_artifacts (id, document_id, version_id, kind, content, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-            .run(id, input.documentId, input.versionId, input.kind, input.content, createdAt);
+        if (!this.database.prepare("SELECT 1 FROM article_revisions WHERE id = ? AND article_id = ?").get(input.revisionId, input.articleId))
+            throw new Error("Revision does not belong to this Article.");
 
-        return { id, documentId: input.documentId, versionId: input.versionId, kind: input.kind, content: input.content, createdAt };
+        this.database.prepare("INSERT INTO editorial_artifacts (id, article_id, revision_id, kind, content, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+            .run(id, input.articleId, input.revisionId, input.kind, input.content, createdAt);
+
+        return { id, 
+            articleId: input.articleId, 
+            revisionId: input.revisionId, 
+            kind: input.kind, 
+            content: input.content, 
+            createdAt 
+        };
     }
 
 
-    list(documentId: string): WorkflowArtifact[] {
-        return (this.database.prepare("SELECT * FROM workflow_artifacts WHERE document_id = ? ORDER BY created_at ASC, id ASC").all(documentId) as Row[])
+    list(articleId: string): EditorialArtifact[] {
+        return (this.database.prepare("SELECT * FROM editorial_artifacts WHERE article_id = ? ORDER BY created_at ASC, id ASC").all(articleId) as Row[])
             .map((row) => ({ 
                 id: String(row.id), 
-                documentId: String(row.document_id), 
-                versionId: String(row.version_id), 
+                articleId: String(row.article_id), 
+                revisionId: String(row.revision_id), 
                 kind: String(row.kind), 
                 content: String(row.content), 
                 createdAt: String(row.created_at) 
@@ -35,13 +44,15 @@ export class WorkflowArtifactsRepository {
     createCitation(input: CreateSourceCitationInput): SourceCitation {
         const id = input.id ?? createId();
         const createdAt = now();
+        const editorialArtifactId = input.editorialArtifactId;
         required(input.url, "Citation URL");
-        this.database.prepare("INSERT INTO source_citations (id, artifact_id, url, title, excerpt, uncertainty, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-            .run(id, input.artifactId, input.url, input.title ?? null, input.excerpt ?? null, input.uncertainty ?? null, createdAt);
+        required(editorialArtifactId ?? "", "Editorial Artifact id");
+        this.database.prepare("INSERT INTO source_citations (id, editorial_artifact_id, url, title, excerpt, uncertainty, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .run(id, editorialArtifactId!, input.url, input.title ?? null, input.excerpt ?? null, input.uncertainty ?? null, createdAt);
         
         return { 
             id, 
-            artifactId: input.artifactId, 
+            editorialArtifactId: editorialArtifactId!, 
             url: input.url, 
             ...(input.title ? { title: input.title } : {}), 
             ...(input.excerpt ? { excerpt: input.excerpt } : {}), 
@@ -51,12 +62,12 @@ export class WorkflowArtifactsRepository {
     }
 
 
-    createWithCitations(input: CreateWorkflowArtifactInput, citations: Omit<CreateSourceCitationInput, "artifactId">[]): WorkflowArtifact {
+    createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact {
         this.database.exec("BEGIN IMMEDIATE;");
         try {
             const artifact = this.create(input);
             for (const citation of citations)
-                this.createCitation({ ...citation, artifactId: artifact.id });
+                this.createCitation({ ...citation, editorialArtifactId: artifact.id });
 
             this.database.exec("COMMIT;");
 
@@ -68,11 +79,11 @@ export class WorkflowArtifactsRepository {
     }
 
 
-    listCitations(artifactId: string): SourceCitation[] {
-        return (this.database.prepare("SELECT * FROM source_citations WHERE artifact_id = ? ORDER BY created_at ASC, id ASC").all(artifactId) as Row[])
+    listCitations(editorialArtifactId: string): SourceCitation[] {
+        return (this.database.prepare("SELECT * FROM source_citations WHERE editorial_artifact_id = ? ORDER BY created_at ASC, id ASC").all(editorialArtifactId) as Row[])
             .map((row) => ({ 
                 id: String(row.id), 
-                artifactId: String(row.artifact_id), 
+                editorialArtifactId: String(row.editorial_artifact_id), 
                 url: String(row.url), 
                 ...(row.title ? { title: String(row.title) } : {}), 
                 ...(row.excerpt ? { excerpt: String(row.excerpt) } : {}), 

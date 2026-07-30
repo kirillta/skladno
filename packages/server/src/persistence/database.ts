@@ -1,36 +1,37 @@
 import { DatabaseSync } from "node:sqlite";
+import { existsSync, unlinkSync } from "node:fs";
 
 const migrations = [
     {
         version: 1,
-        name: "initial_author_data",
+        name: "article_workspace",
         sql: `
-        CREATE TABLE materials (
+        CREATE TABLE author_materials (
             id TEXT PRIMARY KEY, name TEXT NOT NULL, content TEXT NOT NULL,
             created_at TEXT NOT NULL, updated_at TEXT NOT NULL
         );
-        CREATE TABLE documents (
+        CREATE TABLE articles (
             id TEXT PRIMARY KEY, title TEXT NOT NULL,
-            current_version_id TEXT,
+            current_revision_id TEXT,
             created_at TEXT NOT NULL, updated_at TEXT NOT NULL
         );
-        CREATE TABLE document_versions (
-            id TEXT PRIMARY KEY, document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+        CREATE TABLE article_revisions (
+            id TEXT PRIMARY KEY, article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
             content TEXT NOT NULL, provenance_json TEXT NOT NULL,
-            restored_from_version_id TEXT REFERENCES document_versions(id), created_at TEXT NOT NULL
+            restored_from_revision_id TEXT REFERENCES article_revisions(id), created_at TEXT NOT NULL
         );
-        CREATE INDEX document_versions_document_created ON document_versions(document_id, created_at, id);
-        CREATE TABLE workflow_artifacts (
-            id TEXT PRIMARY KEY, document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-            version_id TEXT NOT NULL REFERENCES document_versions(id) ON DELETE RESTRICT,
+        CREATE INDEX article_revisions_article_created ON article_revisions(article_id, created_at, id);
+        CREATE TABLE editorial_artifacts (
+            id TEXT PRIMARY KEY, article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            revision_id TEXT NOT NULL REFERENCES article_revisions(id) ON DELETE RESTRICT,
             kind TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL
         );
-        CREATE INDEX workflow_artifacts_document_created ON workflow_artifacts(document_id, created_at, id);
+        CREATE INDEX editorial_artifacts_article_created ON editorial_artifacts(article_id, created_at, id);
         CREATE TABLE source_citations (
-            id TEXT PRIMARY KEY, artifact_id TEXT NOT NULL REFERENCES workflow_artifacts(id) ON DELETE CASCADE,
+            id TEXT PRIMARY KEY, editorial_artifact_id TEXT NOT NULL REFERENCES editorial_artifacts(id) ON DELETE CASCADE,
             url TEXT NOT NULL, title TEXT, excerpt TEXT, uncertainty TEXT, created_at TEXT NOT NULL
         );
-        CREATE INDEX source_citations_artifact_created ON source_citations(artifact_id, created_at, id);
+        CREATE INDEX source_citations_editorial_artifact_created ON source_citations(editorial_artifact_id, created_at, id);
         CREATE TABLE app_settings (
             key TEXT PRIMARY KEY, value_json TEXT NOT NULL, updated_at TEXT NOT NULL
         );
@@ -38,10 +39,10 @@ const migrations = [
     },
     {
         version: 2,
-        name: "editorial_sessions",
+        name: "editorial_sessions_article",
         sql: `
         CREATE TABLE editorial_sessions (
-            document_id TEXT PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+            article_id TEXT PRIMARY KEY REFERENCES articles(id) ON DELETE CASCADE,
             previous_response_id TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -52,7 +53,7 @@ const migrations = [
         name: "style_corpus_profiles",
         sql: `
         CREATE TABLE style_corpus_items (
-            material_id TEXT PRIMARY KEY REFERENCES materials(id) ON DELETE CASCADE,
+            author_material_id TEXT PRIMARY KEY REFERENCES author_materials(id) ON DELETE CASCADE,
             created_at TEXT NOT NULL
         );
         CREATE TABLE style_profiles (
@@ -63,18 +64,62 @@ const migrations = [
     },
     {
         version: 4,
-        name: "translation_document_links",
+        name: "translation_article_links",
         sql: `
-        ALTER TABLE documents ADD COLUMN language TEXT;
-        ALTER TABLE documents ADD COLUMN source_document_id TEXT REFERENCES documents(id) ON DELETE SET NULL;
-        CREATE INDEX documents_source_document ON documents(source_document_id);
+        ALTER TABLE articles ADD COLUMN language TEXT;
+        ALTER TABLE articles ADD COLUMN source_article_id TEXT REFERENCES articles(id) ON DELETE SET NULL;
+        ALTER TABLE articles ADD COLUMN source_revision_id TEXT REFERENCES article_revisions(id) ON DELETE SET NULL;
+        CREATE INDEX articles_source_article ON articles(source_article_id);
+        `,
+    },
+    {
+        version: 5,
+        name: "article_creation_metadata",
+        sql: `
+        ALTER TABLE articles ADD COLUMN audience TEXT;
+        ALTER TABLE articles ADD COLUMN publishing_profile_id TEXT;
         `,
     },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;
 
+
+function isLegacyDatabase(filename: string): boolean {
+    if (!existsSync(filename))
+        return false;
+
+    const database = new DatabaseSync(filename);
+    try {
+        const rows = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('documents', 'schema_migrations')").all() as Array<{ name: string }>;
+        if (rows.some((row) => row.name === "documents"))
+            return true;
+
+        return rows.some((row) => row.name === "schema_migrations") && Boolean(database.prepare("SELECT 1 FROM schema_migrations WHERE name IN ('initial_author_data', 'translation_document_links', 'document_creation_metadata') LIMIT 1").get());
+    } finally {
+        database.close();
+    }
+}
+
+
+function removeLegacyDatabase(filename: string): void {
+    for (const path of [filename, `${filename}-wal`, `${filename}-shm`, `${filename}-journal`]) {
+        if (!existsSync(path))
+            continue;
+
+        try {
+            unlinkSync(path);
+        } catch (error) {
+            const detail = error instanceof Error ? error.message : "unknown error";
+            throw new Error(`Could not remove legacy Skladno database at ${path}: ${detail}`);
+        }
+    }
+}
+
 export function openDatabase(filename: string): SqliteDatabase {
+    if (isLegacyDatabase(filename))
+        removeLegacyDatabase(filename);
+
     const database = new DatabaseSync(filename);
     database.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;");
     database.exec(`

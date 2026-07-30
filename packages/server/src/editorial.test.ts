@@ -54,8 +54,8 @@ test("editorial endpoint streams a typed proposal and saves context only after c
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const document = repositories.createDocument({ title: "Draft", content: "Original article" });
-        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-1", operation: EDITORIAL_OPERATION.FLOW_REVISION, authorContext: "Keep the direct tone." }),
@@ -64,12 +64,12 @@ test("editorial endpoint streams a typed proposal and saves context only after c
 
         assert.match(body, /"type":"text_delta","delta":"A "/);
         assert.match(body, /"type":"completed","responseId":"resp-1","text":"A proposal"/);
-        assert.equal(repositories.getEditorialSession(document.id)?.previousResponseId, "resp-1");
-        assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
+        assert.equal(repositories.getEditorialSession(article.id)?.previousResponseId, "resp-1");
+        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");
         assert.equal(engine.requests[0]?.article, "Original article");
         assert.equal(engine.requests[0]?.operation, EDITORIAL_OPERATION.FLOW_REVISION);
         assert.equal(engine.requests[0]?.authorContext, "Keep the direct tone.");
-        assert.deepEqual(JSON.parse(repositories.listWorkflowArtifacts(document.id)[0]!.content), {
+        assert.deepEqual(JSON.parse(repositories.listEditorialArtifacts(article.id)[0]!.content), {
             requestId: "request-1",
             operation: EDITORIAL_OPERATION.FLOW_REVISION,
             authorContext: "Keep the direct tone.",
@@ -80,12 +80,12 @@ test("editorial endpoint streams a typed proposal and saves context only after c
 });
 
 
-test("failed or incomplete editorial streams leave document and session unchanged", async () => {
+test("failed or incomplete editorial streams leave the Article and session unchanged", async () => {
     const engine = new FixtureEngine([{ type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial" }]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const document = repositories.createDocument({ title: "Draft", content: "Original article" });
-        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-2", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
@@ -94,9 +94,9 @@ test("failed or incomplete editorial streams leave document and session unchange
 
         assert.match(body, /"type":"text_delta"/);
         assert.match(body, /"type":"error","requestId":"request-2","code":"malformed_stream"/);
-        assert.equal(repositories.getEditorialSession(document.id), undefined);
-        assert.deepEqual(repositories.listWorkflowArtifacts(document.id), []);
-        assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
+        assert.equal(repositories.getEditorialSession(article.id), undefined);
+        assert.deepEqual(repositories.listEditorialArtifacts(article.id), []);
+        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");
     });
 });
 
@@ -107,17 +107,17 @@ test("storage-disabled editorial requests clear hidden session continuation", as
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const document = repositories.createDocument({ title: "Draft", content: "Original article" });
-        repositories.saveEditorialSession(document.id, "resp-old");
+        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        repositories.saveEditorialSession(article.id, "resp-old");
 
-        await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+        await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-stateless", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
         });
 
         assert.equal(engine.requests[0]?.previousResponseId, undefined);
-        assert.equal(repositories.getEditorialSession(document.id), undefined);
+        assert.equal(repositories.getEditorialSession(article.id), undefined);
     }, false);
 });
 
@@ -130,16 +130,16 @@ test("expired provider session is cleared and can be retried as a fresh session"
     };
 
     await withService(engine, async (baseUrl, repositories) => {
-        const document = repositories.createDocument({ title: "Draft", content: "Original article" });
-        repositories.saveEditorialSession(document.id, "resp-expired");
-        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        repositories.saveEditorialSession(article.id, "resp-expired");
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-expired", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
         });
 
         assert.match(await response.text(), /"code":"session_expired"/);
-        assert.equal(repositories.getEditorialSession(document.id), undefined);
+        assert.equal(repositories.getEditorialSession(article.id), undefined);
     });
 });
 
@@ -152,8 +152,8 @@ test("provider errors are actionable and leave the article unchanged", async () 
     };
 
     await withService(engine, async (baseUrl, repositories) => {
-        const document = repositories.createDocument({ title: "Draft", content: "Original article" });
-        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-provider-error", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
@@ -162,9 +162,9 @@ test("provider errors are actionable and leave the article unchanged", async () 
 
         assert.match(body, /"type":"error","requestId":"request-provider-error","code":"network"/);
         assert.match(body, /Check your connection and API settings, then retry/);
-        assert.equal(repositories.getEditorialSession(document.id), undefined);
-        assert.deepEqual(repositories.listWorkflowArtifacts(document.id), []);
-        assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
+        assert.equal(repositories.getEditorialSession(article.id), undefined);
+        assert.deepEqual(repositories.listEditorialArtifacts(article.id), []);
+        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");
     });
 });
 
@@ -178,9 +178,9 @@ test("cancelling an editorial stream does not change the article or session", as
     };
 
     await withService(engine, async (baseUrl, repositories) => {
-        const document = repositories.createDocument({ title: "Draft", content: "Original article" });
+        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
         const controller = new AbortController();
-        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "request-3", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
@@ -192,9 +192,9 @@ test("cancelling an editorial stream does not change the article or session", as
         controller.abort();
 
         await new Promise((resolve) => setTimeout(resolve, 10));
-        assert.equal(repositories.getEditorialSession(document.id), undefined);
-        assert.deepEqual(repositories.listWorkflowArtifacts(document.id), []);
-        assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "Original article");
+        assert.equal(repositories.getEditorialSession(article.id), undefined);
+        assert.deepEqual(repositories.listEditorialArtifacts(article.id), []);
+        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");
     });
 });
 
@@ -217,14 +217,14 @@ test("style review uses a compact local profile and saves cited findings as a pr
 
     await withService(engine, async (baseUrl, repositories) => {
         repositories.addStyleCorpusItem({ name: "Published sample", content: "I write short sentences.\n\nI keep paragraphs brief." });
-        const document = repositories.createDocument({ title: "Draft", content: "A long draft" });
-        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+        const article = repositories.createArticle({ title: "Draft", content: "A long draft" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "style-request", operation: EDITORIAL_OPERATION.STYLE_REVIEW }),
         });
         const body = await response.text();
-        const artifact = repositories.listWorkflowArtifacts(document.id)[0]!;
+        const artifact = repositories.listEditorialArtifacts(article.id)[0]!;
 
         assert.match(body, /"text":"A concise proposal."/);
         assert.match(body, /"traitIds":\["paragraphing"\]/);
@@ -234,7 +234,7 @@ test("style review uses a compact local profile and saves cited findings as a pr
             suggestion: "Split the opening paragraph.",
             traitIds: ["paragraphing"],
         }]);
-        assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "A long draft");
+        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "A long draft");
     });
 });
 
@@ -251,37 +251,38 @@ test("translation carries its target language, preserves the source, and records
     }]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const source = repositories.createDocument({ title: "Source", content: "Run `npm test` at https://example.com." });
-        const response = await fetch(`${baseUrl}/api/documents/${source.id}/editorial`, {
+        const source = repositories.createArticle({ title: "Source", content: "Run `npm test` at https://example.com." });
+        const response = await fetch(`${baseUrl}/api/articles/${source.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "translation-request", operation: EDITORIAL_OPERATION.TRANSLATION, targetLanguage: "Spanish" }),
         });
         const body = await response.text();
-        const artifact = repositories.listWorkflowArtifacts(source.id)[0]!;
-        const translated = repositories.createDocument({
+        const artifact = repositories.listEditorialArtifacts(source.id)[0]!;
+        const translated = repositories.createArticle({
             title: "Source — Spanish",
             content: "Ejecuta `npm test` en https://example.com.",
             language: "Spanish",
-            sourceDocumentId: source.id,
+            sourceArticleId: source.id,
+            sourceRevisionId: source.currentRevisionId,
             provenance: { kind: "accepted-translation", targetLanguage: "Spanish" },
         });
 
         assert.match(body, /"targetLanguage":"Spanish"/);
         assert.equal(engine.requests[0]?.targetLanguage, "Spanish");
-        assert.equal(repositories.getDocument(source.id)?.currentVersion.content, "Run `npm test` at https://example.com.");
+        assert.equal(repositories.getArticle(source.id)?.currentRevision.content, "Run `npm test` at https://example.com.");
         assert.deepEqual(JSON.parse(artifact.content).translation, {
             targetLanguage: "Spanish",
             protectedSpans: ["`npm test`", "https://example.com"],
         });
         assert.equal(translated.language, "Spanish");
-        assert.equal(translated.sourceDocumentId, source.id);
-        assert.equal(repositories.restoreVersion(translated.id, translated.currentVersionId).content, translated.currentVersion.content);
+        assert.equal(translated.sourceArticleId, source.id);
+        assert.equal(repositories.restoreRevision(translated.id, translated.currentRevisionId).content, translated.currentRevision.content);
     });
 });
 
 
-test("fact checks persist completed findings and citations against the reviewed version", async () => {
+test("fact checks persist completed findings and citations against the reviewed Revision", async () => {
     const engine = new FixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "started" },
         {
@@ -310,20 +311,20 @@ test("fact checks persist completed findings and citations against the reviewed 
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const document = repositories.createDocument({ title: "Draft", content: "An article" });
-        const response = await fetch(`${baseUrl}/api/documents/${document.id}/editorial`, {
+        const article = repositories.createArticle({ title: "Draft", content: "An article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "fact-request", operation: EDITORIAL_OPERATION.FACT_CHECK }),
         });
         const body = await response.text();
-        const artifact = repositories.listWorkflowArtifacts(document.id)[0]!;
+        const artifact = repositories.listEditorialArtifacts(article.id)[0]!;
 
         assert.match(body, /"type":"tool_status","tool":"claim_extraction"/);
         assert.match(body, /"status":"unverifiable"/);
         assert.equal(artifact.kind, "fact-check");
-        assert.equal(artifact.versionId, document.currentVersionId);
+        assert.equal(artifact.revisionId, article.currentRevisionId);
         assert.equal(repositories.listSourceCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
-        assert.equal(repositories.getDocument(document.id)?.currentVersion.content, "An article");
+        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "An article");
     });
 });

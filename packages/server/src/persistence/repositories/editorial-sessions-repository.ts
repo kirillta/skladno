@@ -5,32 +5,32 @@ import { now, type Row } from "./repository-utils.js";
 
 
 export class EditorialSessionsRepository {
-    constructor(private readonly database: SqliteDatabase, private readonly documentExists: (documentId: string) => boolean) { }
+    constructor(private readonly database: SqliteDatabase, private readonly articleExists: (articleId: string) => boolean) { }
 
 
-    get(documentId: string): EditorialSession | undefined {
+    get(articleId: string): EditorialSession | undefined {
         const row = this.database
-            .prepare("SELECT document_id, previous_response_id, updated_at FROM editorial_sessions WHERE document_id = ?")
-            .get(documentId) as Row | undefined;
+            .prepare("SELECT article_id, previous_response_id, updated_at FROM editorial_sessions WHERE article_id = ?")
+            .get(articleId) as Row | undefined;
         
-        return row && { documentId: String(row.document_id), previousResponseId: String(row.previous_response_id), updatedAt: String(row.updated_at) };
+        return row && { articleId: String(row.article_id), previousResponseId: String(row.previous_response_id), updatedAt: String(row.updated_at) };
     }
 
     
-    save(documentId: string, previousResponseId: string): EditorialSession {
-        if (!this.documentExists(documentId))
-            throw new Error("Document not found.");
+    save(articleId: string, previousResponseId: string): EditorialSession {
+        if (!this.articleExists(articleId))
+            throw new Error("Article not found.");
         
         const updatedAt = now();
-        this.database.prepare("INSERT INTO editorial_sessions (document_id, previous_response_id, updated_at) VALUES (?, ?, ?) ON CONFLICT(document_id) DO UPDATE SET previous_response_id = excluded.previous_response_id, updated_at = excluded.updated_at")
-            .run(documentId, previousResponseId, updatedAt);
+        this.database.prepare("INSERT INTO editorial_sessions (article_id, previous_response_id, updated_at) VALUES (?, ?, ?) ON CONFLICT(article_id) DO UPDATE SET previous_response_id = excluded.previous_response_id, updated_at = excluded.updated_at")
+            .run(articleId, previousResponseId, updatedAt);
         
-        return { documentId, previousResponseId, updatedAt };
+        return { articleId, previousResponseId, updatedAt };
     }
 
 
-    remove(documentId: string): void {
-        this.database.prepare("DELETE FROM editorial_sessions WHERE document_id = ?")
-            .run(documentId);
+    remove(articleId: string): void {
+        this.database.prepare("DELETE FROM editorial_sessions WHERE article_id = ?")
+            .run(articleId);
     }
 }

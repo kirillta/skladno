@@ -49,7 +49,8 @@ export class StyleCorpusRepository {
 
     
     get(): StyleCorpus {
-        const rows = this.database.prepare(`SELECT materials.* FROM style_corpus_items JOIN materials ON materials.id = style_corpus_items.material_id ORDER BY style_corpus_items.created_at, materials.id`).all() as Row[];
+        const rows = this.database.prepare(`SELECT author_materials.* FROM style_corpus_items JOIN author_materials ON author_materials.id = style_corpus_items.author_material_id ORDER BY style_corpus_items.created_at, author_materials.id`)
+            .all() as Row[];
         const profile = profileFor(rows.map((row) => ({ content: String(row.content) })));
         const updatedAt = now();
 
@@ -78,9 +79,9 @@ export class StyleCorpusRepository {
         const timestamp = now();
         const materialId = createId();
         
-        this.database.prepare("INSERT INTO materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+        this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
             .run(materialId, required(input.name, "Corpus item name"), input.content, timestamp, timestamp);
-        this.database.prepare("INSERT INTO style_corpus_items (material_id, created_at) VALUES (?, ?)")
+        this.database.prepare("INSERT INTO style_corpus_items (author_material_id, created_at) VALUES (?, ?)")
             .run(materialId, timestamp);
         
         return this.get();
@@ -88,11 +89,11 @@ export class StyleCorpusRepository {
 
 
     remove(materialId: string): void {
-        const result = this.database.prepare("DELETE FROM style_corpus_items WHERE material_id = ?").run(materialId);
+        const result = this.database.prepare("DELETE FROM style_corpus_items WHERE author_material_id = ?").run(materialId);
         if (result.changes === 0)
             throw new Error("Style corpus item not found.");
 
-        this.database.prepare("DELETE FROM materials WHERE id = ?")
+        this.database.prepare("DELETE FROM author_materials WHERE id = ?")
             .run(materialId);
         this.get();
     }
