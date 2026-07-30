@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { Article, ArticleRevision } from "@skladno/shared";
+import { publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
 
 import { App } from "../App.js";
 import type { EditorialWorkspaceClient } from "../application-client.js";
@@ -103,12 +103,25 @@ describe("Editorial Workspace", () => {
     });
 
 
-    it("shows the current revision and character count in the Article Status Bar", () => {
-        const statusBar = render(<ArticleStatusBar revisionId="08c8217d-full-revision-id" characterCount={1234} />);
+    it("shows a sequential revision number and character count in the Article Status Bar", () => {
+        const statusBar = render(<ArticleStatusBar revisionNumber={2} characterCount={1234} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
-        expect(statusBarScope.getByText("Revision 08c8217d")).toBeTruthy();
-        expect(statusBarScope.getByText(/characters/)).toBeTruthy();
+        expect(statusBarScope.getByText("v2")).toBeTruthy();
+        expect(statusBarScope.getByRole("button", { name: /Character count: .* of .* characters/ })).toBeTruthy();
         expect(statusBarScope.queryByText("Saved")).toBeNull();
+    });
+
+
+    it("selects a publishing character limit from the Article Status Bar", async () => {
+        const user = userEvent.setup();
+        const setProfile = vi.fn().mockResolvedValue(undefined);
+        const statusBar = render(<ArticleStatusBar revisionNumber={1} characterCount={0} profile={publishLimitProfiles[1]!} setProfile={setProfile} />);
+        const statusBarScope = within(statusBar.container);
+
+        await user.click(statusBarScope.getByRole("button", { name: /Character count: 0 of .* characters/ }));
+        await user.click(statusBarScope.getByRole("menuitemradio", { name: /LinkedIn short post/ }));
+
+        expect(setProfile).toHaveBeenCalledWith("linkedin-short");
     });
 });
