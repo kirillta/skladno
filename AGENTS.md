@@ -12,7 +12,7 @@ The product is an editor with an assistant, not an autonomous publishing bot. Th
 
 Use the following terms consistently in product copy, UI labels, domain code, tests, and documentation. Prefer responsibility-based names over positional names so they remain accurate when the layout adapts.
 
-- **Article**: the author's independently recoverable editorial work. Use this as the canonical product and domain term; reserve `document` for unavoidable legacy, storage, or transport compatibility.
+- **Article**: the author's independently recoverable editorial work. Use this as the canonical product and domain term; reserve `document` only for DOM-standard browser APIs.
 - **Article library**: the author's local collection of articles. An **article list** is a presentation of that collection; the **current article** is the article open in the workspace.
 - **Revision**: an immutable saved snapshot of an article.
 - **Draft**: the article text currently being edited and not yet saved as a revision.
@@ -180,6 +180,8 @@ AI-facing tests should prefer deterministic fixtures or mocked provider response
 - Core workflows must be keyboard accessible.
 
 ## Repository commands
+
+The MVP Article refactor has one intentional schema transition: at startup, detect the legacy Documents schema, delete its `skladno.sqlite` file and SQLite sidecars once, and recreate the Article schema in the same location. Preserve the resulting Article database on future starts. If cleanup fails, stop startup with a clear error.
 
 The project skeleton and canonical commands have not been created yet. When the foundation issue defines them, document the exact install, development, type-check, test, lint, and migration commands here and in the README.
 

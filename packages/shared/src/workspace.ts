@@ -1,20 +1,20 @@
-import type { CreateDocumentInput, Document, DocumentVersion, SaveDocumentDraftInput } from "./persistence/documents.js";
+import type { CreateArticleInput, Article, ArticleRevision, SaveArticleRevisionInput } from "./persistence/articles.js";
 import type { RevisionClient } from "./revisions.js";
 
-export const documentsPath = "/api/documents";
+export const articlesPath = "/api/articles";
 
 /** The transport-neutral operations required by the author workspace. */
-export interface WorkspaceClient extends RevisionClient {
-    listDocuments(): Promise<Document[]>;
-    createDocument(input: CreateDocumentInput): Promise<Document>;
-    renameDocument(documentId: string, title: string): Promise<Document>;
-    deleteDocument(documentId: string): Promise<void>;
-    saveDraft(documentId: string, input: SaveDocumentDraftInput): Promise<DocumentVersion>;
+export interface ArticleLibraryClient extends RevisionClient {
+    listArticles(): Promise<Article[]>;
+    createArticle(input: CreateArticleInput): Promise<Article>;
+    renameArticle(articleId: string, title: string): Promise<Article>;
+    deleteArticle(articleId: string): Promise<void>;
+    saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): Promise<ArticleRevision>;
 }
 
-export class DocumentConflictError extends Error {
-    constructor(public readonly document: Document) {
+export class ArticleRevisionConflictError extends Error {
+    constructor(public readonly article: Article) {
         super("This article was changed by another save. Reload it and try again.");
-        this.name = "DocumentConflictError";
+        this.name = "ArticleRevisionConflictError";
     }
 }

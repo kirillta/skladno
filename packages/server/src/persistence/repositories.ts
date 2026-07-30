@@ -2,47 +2,47 @@ import type {
     AcceptedChange,
     AcceptProposalInput,
     AppSetting,
-    CreateDocumentInput,
+    CreateArticleInput,
     CreateMaterialInput,
     CreateSourceCitationInput,
-    CreateWorkflowArtifactInput,
-    Document,
-    DocumentVersion,
+    CreateEditorialArtifactInput,
+    Article,
+    ArticleRevision,
     EditorialSession,
     Material,
-    SaveDocumentDraftInput,
+    SaveArticleRevisionInput,
     SourceCitation,
     UpdateMaterialInput,
-    WorkflowArtifact,
+    EditorialArtifact,
     CreateStyleCorpusItemInput,
     StyleCorpus,
 } from "@skladno/shared";
 
 import type { SqliteDatabase } from "./database.js";
-import { DocumentsRepository } from "./repositories/documents-repository.js";
+import { ArticlesRepository } from "./repositories/articles-repository.js";
 import { EditorialSessionsRepository } from "./repositories/editorial-sessions-repository.js";
 import { MaterialsRepository } from "./repositories/materials-repository.js";
 import { SettingsRepository } from "./repositories/settings-repository.js";
-import { WorkflowArtifactsRepository } from "./repositories/workflow-artifacts-repository.js";
+import { EditorialArtifactsRepository } from "./repositories/workflow-artifacts-repository.js";
 import { StyleCorpusRepository } from "./repositories/style-corpus-repository.js";
 
 
 /** Compatibility facade for current application services. Domain repositories remain independently usable. */
 export class Repositories {
-    readonly documents: DocumentsRepository;
+    readonly articles: ArticlesRepository;
     readonly materials: MaterialsRepository;
-    readonly workflowArtifacts: WorkflowArtifactsRepository;
+    readonly editorialArtifacts: EditorialArtifactsRepository;
     readonly settings: SettingsRepository;
     readonly editorialSessions: EditorialSessionsRepository;
     readonly styleCorpus: StyleCorpusRepository;
 
 
     constructor(database: SqliteDatabase) {
-        this.documents = new DocumentsRepository(database);
+        this.articles = new ArticlesRepository(database);
         this.materials = new MaterialsRepository(database);
-        this.workflowArtifacts = new WorkflowArtifactsRepository(database);
+        this.editorialArtifacts = new EditorialArtifactsRepository(database);
         this.settings = new SettingsRepository(database);
-        this.editorialSessions = new EditorialSessionsRepository(database, (documentId) => Boolean(this.documents.get(documentId)));
+        this.editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(this.articles.get(articleId)));
         this.styleCorpus = new StyleCorpusRepository(database);
     }
 
@@ -62,78 +62,78 @@ export class Repositories {
     }
 
 
-    createDocument(input: CreateDocumentInput): Document { 
-        return this.documents.create(input); 
+    createArticle(input: CreateArticleInput): Article { 
+        return this.articles.create(input); 
     }
 
 
-    listDocuments(): Document[] { 
-        return this.documents.list(); 
+    listArticles(): Article[] { 
+        return this.articles.list(); 
     }
 
 
-    getDocument(documentId: string): Document | undefined { 
-        return this.documents.get(documentId); 
+    getArticle(articleId: string): Article | undefined { 
+        return this.articles.get(articleId); 
     }
 
 
-    renameDocument(documentId: string, title: string): Document { 
-        return this.documents.rename(documentId, title); 
+    renameArticle(articleId: string, title: string): Article { 
+        return this.articles.rename(articleId, title); 
     }
 
 
-    deleteDocument(documentId: string): void { 
-        this.documents.delete(documentId); 
+    deleteArticle(articleId: string): void { 
+        this.articles.delete(articleId); 
     }
 
 
-    listVersions(documentId: string): DocumentVersion[] { 
-        return this.documents.listVersions(documentId); 
+    listArticleRevisions(articleId: string): ArticleRevision[] { 
+        return this.articles.listRevisions(articleId); 
     }
 
 
-    acceptChange(documentId: string, change: AcceptedChange): DocumentVersion { 
-        return this.documents.acceptChange(documentId, change); 
+    acceptChange(articleId: string, change: AcceptedChange): ArticleRevision { 
+        return this.articles.acceptChange(articleId, change); 
     }
 
 
-    acceptProposal(documentId: string, input: AcceptProposalInput): DocumentVersion {
-        return this.documents.acceptProposal(documentId, input);
+    acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision {
+        return this.articles.acceptProposal(articleId, input);
     }
 
 
-    saveDraft(documentId: string, input: SaveDocumentDraftInput): DocumentVersion { 
-        return this.documents.saveDraft(documentId, input); 
+    saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision { 
+        return this.articles.saveRevision(articleId, input); 
     }
 
 
-    restoreVersion(documentId: string, versionId: string): DocumentVersion { 
-        return this.documents.restoreVersion(documentId, versionId); 
+    restoreRevision(articleId: string, revisionId: string): ArticleRevision { 
+        return this.articles.restoreRevision(articleId, revisionId); 
     }
 
 
-    createWorkflowArtifact(input: CreateWorkflowArtifactInput): WorkflowArtifact { 
-        return this.workflowArtifacts.create(input); 
+    createEditorialArtifact(input: CreateEditorialArtifactInput): EditorialArtifact { 
+        return this.editorialArtifacts.create(input); 
     }
 
 
-    createWorkflowArtifactWithCitations(input: CreateWorkflowArtifactInput, citations: Omit<CreateSourceCitationInput, "artifactId">[]): WorkflowArtifact {
-        return this.workflowArtifacts.createWithCitations(input, citations);
+    createEditorialArtifactWithCitations(input: CreateEditorialArtifactInput, citations: Omit<CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact {
+        return this.editorialArtifacts.createWithCitations(input, citations);
     }
 
 
-    listWorkflowArtifacts(documentId: string): WorkflowArtifact[] { 
-        return this.workflowArtifacts.list(documentId); 
+    listEditorialArtifacts(articleId: string): EditorialArtifact[] { 
+        return this.editorialArtifacts.list(articleId); 
     }
 
 
     createSourceCitation(input: CreateSourceCitationInput): SourceCitation { 
-        return this.workflowArtifacts.createCitation(input); 
+        return this.editorialArtifacts.createCitation(input); 
     }
 
 
-    listSourceCitations(artifactId: string): SourceCitation[] { 
-        return this.workflowArtifacts.listCitations(artifactId); 
+    listSourceCitations(editorialArtifactId: string): SourceCitation[] { 
+        return this.editorialArtifacts.listCitations(editorialArtifactId); 
     }
 
 
@@ -147,24 +147,26 @@ export class Repositories {
     }
 
 
-    getEditorialSession(documentId: string): EditorialSession | undefined { 
-        return this.editorialSessions.get(documentId); 
+    getEditorialSession(articleId: string): EditorialSession | undefined { 
+        return this.editorialSessions.get(articleId); 
     }
 
 
-    saveEditorialSession(documentId: string, responseId: string): EditorialSession { 
-        return this.editorialSessions.save(documentId, responseId); 
+    saveEditorialSession(articleId: string, responseId: string): EditorialSession { 
+        return this.editorialSessions.save(articleId, responseId); 
     }
 
 
-    removeEditorialSession(documentId: string): void {
-        this.editorialSessions.remove(documentId);
+    removeEditorialSession(articleId: string): void {
+        this.editorialSessions.remove(articleId);
     }
 
 
     getStyleCorpus(): StyleCorpus {
         return this.styleCorpus.get();
     }
+
+
 
 
     addStyleCorpusItem(input: CreateStyleCorpusItemInput): StyleCorpus {

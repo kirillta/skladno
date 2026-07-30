@@ -39,8 +39,8 @@ export {
     acceptProposalPath,
     applyProposalChanges,
     createTextProposal,
-    documentVersionsPath,
-    restoreVersionPath,
+    articleRevisionsPath,
+    restoreRevisionPath,
     type AcceptProposalInput,
     type ProposalChange,
     type RevisionClient,
@@ -49,19 +49,19 @@ export {
 export type {
     AcceptedChange,
     AppSetting,
-    CreateDocumentInput,
+    CreateArticleInput,
     CreateMaterialInput,
     CreateSourceCitationInput,
-    CreateWorkflowArtifactInput,
-    Document,
-    DocumentVersion,
+    CreateEditorialArtifactInput,
+    Article,
+    ArticleRevision,
     Material,
     SourceCitation,
     UpdateMaterialInput,
-    SaveDocumentDraftInput,
-    WorkflowArtifact,
+    SaveArticleRevisionInput,
+    EditorialArtifact,
 } from "./persistence/index.js";
-export { documentsPath, DocumentConflictError, type WorkspaceClient } from "./workspace.js";
+export { articlesPath, ArticleRevisionConflictError, type ArticleLibraryClient } from "./workspace.js";
 export {
     countPublishingCharacters,
     defaultPublishLimitProfileId,

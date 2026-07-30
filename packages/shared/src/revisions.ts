@@ -1,4 +1,4 @@
-import type { DocumentVersion } from "./persistence/documents.js";
+import type { ArticleRevision } from "./persistence/articles.js";
 
 
 export interface ProposalChange {
@@ -18,15 +18,15 @@ export interface TextProposal {
 
 
 export interface AcceptProposalInput {
-    baseVersionId: string;
+    baseRevisionId: string;
     content: string;
     provenance: Record<string, unknown>;
 }
 
 
-export const documentVersionsPath = (documentId: string) => `/api/documents/${encodeURIComponent(documentId)}/versions`;
-export const acceptProposalPath = (documentId: string) => `/api/documents/${encodeURIComponent(documentId)}/proposal`;
-export const restoreVersionPath = (documentId: string, versionId: string) => `${documentVersionsPath(documentId)}/${encodeURIComponent(versionId)}/restore`;
+export const articleRevisionsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/revisions`;
+export const acceptProposalPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/proposal-acceptances`;
+export const restoreRevisionPath = (articleId: string, revisionId: string) => `${articleRevisionsPath(articleId)}/${encodeURIComponent(revisionId)}/restorations`;
 
 
 function lines(content: string): string[] {
@@ -116,7 +116,7 @@ export function applyProposalChanges(proposal: TextProposal, selectedChangeIds: 
 
 
 export interface RevisionClient {
-    listVersions(documentId: string): Promise<DocumentVersion[]>;
-    acceptProposal(documentId: string, input: AcceptProposalInput): Promise<DocumentVersion>;
-    restoreVersion(documentId: string, versionId: string): Promise<DocumentVersion>;
+    listArticleRevisions(articleId: string): Promise<ArticleRevision[]>;
+    acceptProposal(articleId: string, input: AcceptProposalInput): Promise<ArticleRevision>;
+    restoreRevision(articleId: string, revisionId: string): Promise<ArticleRevision>;
 }

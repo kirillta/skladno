@@ -1,10 +1,10 @@
 export type {
     AcceptedChange,
-    CreateDocumentInput,
-    Document,
-    DocumentVersion,
-    SaveDocumentDraftInput,
-} from "./documents.js";
+    CreateArticleInput,
+    Article,
+    ArticleRevision,
+    SaveArticleRevisionInput,
+} from "./articles.js";
 
 
 export type {
@@ -15,9 +15,9 @@ export type {
 
 
 export type {
-    CreateWorkflowArtifactInput,
-    WorkflowArtifact,
-} from "./workflow-artifacts.js";
+    CreateEditorialArtifactInput,
+    EditorialArtifact,
+} from "./editorial-artifacts.js";
 
 
 export type {

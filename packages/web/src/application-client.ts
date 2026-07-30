@@ -1,25 +1,25 @@
 import {
-    DocumentConflictError,
+    ArticleRevisionConflictError,
     acceptProposalPath,
-    documentsPath,
-    documentVersionsPath,
+    articlesPath,
+    articleRevisionsPath,
     editorialPath,
     healthPath,
     HTTP_METHOD,
     HTTP_STATUS,
     parseHealthResponse,
     type ApplicationClient,
-    type CreateDocumentInput,
-    type Document,
+    type CreateArticleInput,
+    type Article,
     type HealthResponse,
-    type SaveDocumentDraftInput,
+    type SaveArticleRevisionInput,
     type AcceptProposalInput,
-    type DocumentVersion,
-    type WorkspaceClient,
+    type ArticleRevision,
+    type ArticleLibraryClient,
     type EditorialClient,
     type EditorialEvent,
     type StartEditorialRequest,
-    restoreVersionPath,
+    restoreRevisionPath,
     styleCorpusPath,
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
@@ -30,7 +30,10 @@ import {
 } from "@skladno/shared";
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
-export class HttpApplicationClient implements ApplicationClient, WorkspaceClient, EditorialClient, StyleCorpusClient, PublishingClient {
+export interface EditorialWorkspaceClient extends ApplicationClient, ArticleLibraryClient, EditorialClient, StyleCorpusClient, PublishingClient { }
+
+
+export class HttpApplicationClient implements EditorialWorkspaceClient {
     constructor(private readonly serviceUrl = "http://127.0.0.1:8787") { }
 
     async getHealth(): Promise<HealthResponse> {
@@ -43,43 +46,43 @@ export class HttpApplicationClient implements ApplicationClient, WorkspaceClient
     }
 
 
-    async listDocuments(): Promise<Document[]> {
-        return this.request<Document[]>(documentsPath);
+    async listArticles(): Promise<Article[]> {
+        return this.request<Article[]>(articlesPath);
     }
 
 
-    async createDocument(input: CreateDocumentInput): Promise<Document> {
-        return this.request<Document>(documentsPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+    async createArticle(input: CreateArticleInput): Promise<Article> {
+        return this.request<Article>(articlesPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 
-    async renameDocument(documentId: string, title: string): Promise<Document> {
-        return this.request<Document>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: HTTP_METHOD.PATCH, body: JSON.stringify({ title }) });
+    async renameArticle(articleId: string, title: string): Promise<Article> {
+        return this.request<Article>(`${articlesPath}/${encodeURIComponent(articleId)}`, { method: HTTP_METHOD.PATCH, body: JSON.stringify({ title }) });
     }
 
 
-    async deleteDocument(documentId: string): Promise<void> {
-        await this.request<void>(`${documentsPath}/${encodeURIComponent(documentId)}`, { method: HTTP_METHOD.DELETE });
+    async deleteArticle(articleId: string): Promise<void> {
+        await this.request<void>(`${articlesPath}/${encodeURIComponent(articleId)}`, { method: HTTP_METHOD.DELETE });
     }
 
 
-    async saveDraft(documentId: string, input: SaveDocumentDraftInput): Promise<DocumentVersion> {
-        return this.request<DocumentVersion>(`${documentsPath}/${encodeURIComponent(documentId)}/draft`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    async saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): Promise<ArticleRevision> {
+        return this.request<ArticleRevision>(articleRevisionsPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 
-    async listVersions(documentId: string): Promise<DocumentVersion[]> {
-        return this.request<DocumentVersion[]>(documentVersionsPath(documentId));
+    async listArticleRevisions(articleId: string): Promise<ArticleRevision[]> {
+        return this.request<ArticleRevision[]>(articleRevisionsPath(articleId));
     }
 
 
-    async acceptProposal(documentId: string, input: AcceptProposalInput): Promise<DocumentVersion> {
-        return this.request<DocumentVersion>(acceptProposalPath(documentId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+    async acceptProposal(articleId: string, input: AcceptProposalInput): Promise<ArticleRevision> {
+        return this.request<ArticleRevision>(acceptProposalPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 
-    async restoreVersion(documentId: string, versionId: string): Promise<DocumentVersion> {
-        return this.request<DocumentVersion>(restoreVersionPath(documentId, versionId), { method: HTTP_METHOD.POST });
+    async restoreRevision(articleId: string, revisionId: string): Promise<ArticleRevision> {
+        return this.request<ArticleRevision>(restoreRevisionPath(articleId, revisionId), { method: HTTP_METHOD.POST });
     }
 
 
@@ -113,8 +116,8 @@ export class HttpApplicationClient implements ApplicationClient, WorkspaceClient
     }
 
 
-    async streamEditorial(documentId: string, input: StartEditorialRequest, onEvent: (event: EditorialEvent) => void, signal?: AbortSignal): Promise<void> {
-        const response = await fetch(`${this.serviceUrl}${editorialPath(documentId)}`, {
+    async streamEditorial(articleId: string, input: StartEditorialRequest, onEvent: (event: EditorialEvent) => void, signal?: AbortSignal): Promise<void> {
+        const response = await fetch(`${this.serviceUrl}${editorialPath(articleId)}`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
@@ -155,8 +158,8 @@ export class HttpApplicationClient implements ApplicationClient, WorkspaceClient
             return undefined as T;
 
         const body: unknown = await response.json().catch(() => ({}));
-        if (response.status === HTTP_STATUS.CONFLICT && typeof body === "object" && body !== null && "document" in body) {
-            throw new DocumentConflictError((body as { document: Document }).document);
+        if (response.status === HTTP_STATUS.CONFLICT && typeof body === "object" && body !== null && "article" in body) {
+            throw new ArticleRevisionConflictError((body as { article: Article }).article);
         }
 
         if (!response.ok) {

@@ -1,28 +1,29 @@
-export interface DocumentVersion {
+export interface ArticleRevision {
     id: string;
-    documentId: string;
+    articleId: string;
     content: string;
     createdAt: string;
     provenance: Record<string, unknown>;
-    restoredFromVersionId?: string;
+    restoredFromRevisionId?: string;
 }
 
 
-export interface Document {
+export interface Article {
     id: string;
     title: string;
     createdAt: string;
     updatedAt: string;
-    currentVersionId: string;
-    currentVersion: DocumentVersion;
+    currentRevisionId: string;
+    currentRevision: ArticleRevision;
     language?: string;
     audience?: string;
     publishingProfileId?: string;
-    sourceDocumentId?: string;
+    sourceArticleId?: string;
+    sourceRevisionId?: string;
 }
 
 
-export interface CreateDocumentInput {
+export interface CreateArticleInput {
     id?: string;
     title: string;
     content: string;
@@ -30,14 +31,15 @@ export interface CreateDocumentInput {
     language?: string;
     audience?: string;
     publishingProfileId?: string;
-    sourceDocumentId?: string;
+    sourceArticleId?: string;
+    sourceRevisionId?: string;
 }
 
 
 /** A compare-and-swap draft write. A conflict means another writer saved first. */
-export interface SaveDocumentDraftInput {
+export interface SaveArticleRevisionInput {
     content: string;
-    baseVersionId: string;
+    baseRevisionId: string;
 }
 
 

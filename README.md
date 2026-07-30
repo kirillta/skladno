@@ -29,7 +29,7 @@ Skladno is designed around three visible parts:
 - a plain-text article editor;
 - a conversational editorial assistant.
 
-AI output is always a proposal. The author reviews a diff and explicitly accepts or rejects it. Accepted changes create immutable versions, and any earlier version can be restored later.
+AI output is always a proposal. The author reviews a diff and explicitly accepts or rejects it. Accepted changes create immutable Revisions, and restoring an earlier Revision creates a new Revision.
 
 ## MVP
 
@@ -41,10 +41,10 @@ The first release is a personal, single-user application running locally. It inc
 - streamed editorial conversations;
 - thesis-to-draft composition and flow revision;
 - reviewable diffs with full or partial acceptance;
-- immutable version history and restoration;
+- immutable Revision history and restoration;
 - an author-style corpus and style review;
 - fact-checking with linked sources and stated uncertainty;
-- reviewable translation into a separate language version;
+- reviewable translation into a separate linked Article;
 - LinkedIn-oriented plain-text preview and clipboard export;
 - configurable publishing-limit profiles;
 - privacy-conscious diagnostics, backup guidance, and failure recovery.
@@ -84,7 +84,7 @@ shared packages
     └── transport-neutral contracts
 ```
 
-This boundary keeps credentials and privileged operations out of the browser renderer. A future Electron main/preload layer can implement the same application-client contract without rewriting the React interface or domain logic.
+This boundary keeps credentials and privileged operations out of the browser renderer. The workspace depends on a transport-neutral `EditorialWorkspaceClient`; a future Electron main/preload layer can implement that same client without rewriting the React interface or domain logic.
 
 The exact workspace layout, package manager, framework configuration, and development commands will be established by [issue #1](https://github.com/kirillta/skladno/issues/1).
 
@@ -105,6 +105,12 @@ current revision
 Cancellation, network failure, malformed output, or an incomplete stream must leave the current article unchanged.
 
 Fact-check findings and style findings are attached to the exact revision that was reviewed. Translations and derived formats remain separate from their source article.
+
+## Article API and database reset
+
+The local service exposes Article-only routes under `/api/articles`: Article CRUD, `/revisions`, `/proposal-acceptances`, revision `/restorations`, and `/editorial`. There are no legacy Documents API aliases.
+
+This MVP replaces the pre-Article local schema. On its first start, Skladno detects the legacy schema, removes `~/.skladno/skladno.sqlite` and its SQLite sidecars, then creates the new Article schema in the same path. New Article databases are preserved on later starts. Back up any legacy MVP data before starting this version.
 
 ## Roadmap
 

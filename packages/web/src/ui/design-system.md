@@ -22,13 +22,13 @@ Check contrast again whenever a token changes, especially for citations and stat
 
 ## Application workspace
 
-The desktop shell has a compact document-navigation panel, a central writing surface, and an assistant panel. Treat the article as the visual and keyboard-order center. Navigation and assistant panels may collapse independently; focus mode collapses both. Persist only panel and layout preferences locally, never in document history.
+The desktop shell has an Article Library Panel, an Article Workspace with a central writing surface, and an Editorial Assistant Panel. Treat the Article as the visual and keyboard-order center. Navigation and assistant panels may collapse independently; focus mode collapses both. Persist only panel and layout preferences locally, never in Article Revision history.
 
 At 1440 × 1024 and 1280 × 800, preserve a comfortable editorial line length before showing secondary content. Use tabs, collapse, or drawers for supporting work rather than permanently narrowing the editor.
 
 ## Workspace tabs
 
-Use accessible tabs for Editor, Diff, Version History, Fact Check, Style Profile, Translations, and Publish. Set `aria-selected` on the active tab and make keyboard focus visible. Use compact badges only for actionable or stale content; the badge text must name the condition.
+Use accessible tabs for Write, Proposal Review, Revisions, Fact Check, Style Profile, Translations, and Publish. Each tab requires a stable ID, `aria-controls`, matching tab panel, and Arrow/Home/End keyboard navigation. Use compact badges only for actionable or stale content; the badge text must name the condition.
 
 ## Editorial operations
 
@@ -48,8 +48,8 @@ Fact-check and style-review output is advisory. Tie fact-check findings to the r
 
 Style Profile views identify only local samples and the compact traits derived from them. Keep raw corpus content local. Explain when no profile is available, and route any proposed correction or style revision through the normal proposal review flow.
 
-## Derived documents and publishing
+## Derived Articles and publishing
 
-Translations are independent linked documents with their own histories. Show source language, source revision, protected-span validation notes, and a stale-source warning when the source has changed; never synchronize or alter translation text automatically.
+Translations are independent linked Articles with their own Revisions. Show source language, source Revision, protected-span validation notes, and a stale-source warning when the source has changed; never synchronize or alter translation text automatically.
 
 Publishing previews are deterministic plain text. Profiles provide configurable guidance, not a hard block: show count, remaining or overflow, and the exact text that Copy plain text transfers. State that copying is explicit and destination formatting may differ. Publishing preview remains available when AI features are unavailable.

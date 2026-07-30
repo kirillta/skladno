@@ -1,4 +1,4 @@
-export const editorialPath = (documentId: string) => `/api/documents/${encodeURIComponent(documentId)}/editorial`;
+export const editorialPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/editorial`;
 
 
 export const EDITORIAL_OPERATION = {
@@ -22,7 +22,7 @@ export interface StartEditorialRequest {
 
 
 export interface EditorialSession {
-    documentId: string;
+    articleId: string;
     previousResponseId?: string;
     updatedAt: string;
 }
@@ -121,7 +121,7 @@ export type EditorialEvent =
 /** A proposal-only stream. Consumers must explicitly accept text through a separate revision operation. */
 export interface EditorialClient {
     streamEditorial(
-        documentId: string,
+        articleId: string,
         input: StartEditorialRequest,
         onEvent: (event: EditorialEvent) => void,
         signal?: AbortSignal,

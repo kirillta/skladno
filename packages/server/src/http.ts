@@ -4,13 +4,13 @@ import { HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 import type { ServerConfig } from "./config.js";
 import { LangChainEditorialEngine } from "./editorial/langchain-editorial-engine.js";
 import type { EditorialEngine } from "./editorial/editorial-engine.js";
-import { handleDocumentsRoute } from "./http/routes/documents-route.js";
+import { handleArticlesRoute } from "./http/routes/articles-route.js";
 import { handleEditorialRoute } from "./http/routes/editorial-route.js";
 import { handleHealthRoute } from "./http/routes/health-route.js";
 import { handlePublishSettingsRoute } from "./http/routes/publish-settings-route.js";
 import { handleStyleCorpusRoute } from "./http/routes/style-corpus-route.js";
 import { writeJson } from "./http/json.js";
-import { DocumentConflictError, Repositories } from "./persistence/index.js";
+import { ArticleRevisionConflictError, Repositories } from "./persistence/index.js";
 
 
 function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): boolean {
@@ -57,15 +57,15 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
             if (await handlePublishSettingsRoute(request, response, pathname, repositories))
                 return;
 
-            if (await handleDocumentsRoute(request, response, pathname, repositories))
+            if (await handleArticlesRoute(request, response, pathname, repositories))
                 return;
         } catch (error) {
-            if (error instanceof DocumentConflictError) {
-                writeJson(response, HTTP_STATUS.CONFLICT, { error: error.message, document: error.document });
+            if (error instanceof ArticleRevisionConflictError) {
+                writeJson(response, HTTP_STATUS.CONFLICT, { error: error.message, article: error.article });
                 return;
             }
             const message = error instanceof Error ? error.message : "Invalid request.";
-            writeJson(response, message === "Document not found." ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.BAD_REQUEST, { error: message });
+            writeJson(response, message === "Article not found." ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.BAD_REQUEST, { error: message });
             
             return;
         }

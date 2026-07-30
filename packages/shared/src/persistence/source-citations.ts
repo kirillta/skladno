@@ -1,6 +1,6 @@
 export interface SourceCitation {
     id: string;
-    artifactId: string;
+    editorialArtifactId?: string;
     url: string;
     title?: string;
     excerpt?: string;
@@ -11,7 +11,7 @@ export interface SourceCitation {
 
 export interface CreateSourceCitationInput {
     id?: string;
-    artifactId: string;
+    editorialArtifactId?: string;
     url: string;
     title?: string;
     excerpt?: string;
