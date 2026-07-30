@@ -40,7 +40,7 @@ describe("Editorial Workspace", () => {
 
         render(<App client={client} />);
 
-        await user.click(await screen.findByRole("button", { name: "Create an article from the Article Library." }));
+        await user.click(await screen.findByRole("button", { name: "Create" }));
 
         expect(screen.getByRole("heading", { name: "Create Article" })).toBeTruthy();
     });

@@ -21,6 +21,7 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 - Preserve alignment across expanded and collapsed states. Match header and footer heights, baseline positions, padding rhythms, and control rows.
 - Use actual UI icons or inline SVGs with accessible labels; do not substitute unrelated glyphs or emojis.
 - Keep intentional empty areas quiet. Do not add duplicate hints, section headings, or controls when there is no content to organize.
+- Empty-state titles use regular-weight muted hint text, never strong or heading styling. Add extra top space only where the surrounding workspace needs it; for the empty Article Workspace, keep the create action comfortably below the workspace top rather than changing every empty state's vertical rhythm.
 - Make actionable UI controls functional. Route existing actions through the established application state; do not leave dead buttons.
 - Use the current UI font for product identity text. Do not switch font families between expanded and collapsed representations of the same label.
 

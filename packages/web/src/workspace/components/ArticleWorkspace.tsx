@@ -17,8 +17,8 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     const article = workspace.selectedArticle;
 
     if (!article)
-        return <EmptyState title="No articles yet">
-            <Button onClick={openCreate}>Create an article from the Article Library.</Button>
+        return <EmptyState title="No articles yet" className="pt-40">
+            <Button onClick={openCreate}>Create</Button>
         </EmptyState>;
 
     return <>

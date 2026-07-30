@@ -105,8 +105,8 @@ export function Skeleton({ className, label = "Loading" }: { className?: string;
 }
 
 
-export function EmptyState({ title, children }: PropsWithChildren<{ title: string }>) {
-    return <div className="grid min-h-48 place-items-center gap-2 p-6 text-center text-muted"><strong>{title}</strong>{children}</div>;
+export function EmptyState({ title, children, className }: PropsWithChildren<{ title: string; className?: string }>) {
+    return <div className={joinClassNames("grid min-h-48 place-items-center gap-2 p-6 text-center text-muted", className)}><p>{title}</p>{children}</div>;
 }
 
 
