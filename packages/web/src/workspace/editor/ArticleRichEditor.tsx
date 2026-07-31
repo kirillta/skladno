@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -9,17 +9,32 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { $isLinkNode, LinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $createCodeNode, CodeNode } from "@lexical/code";
-import { ListItemNode, ListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list";
+import { $insertList, $isListNode, $removeList, ListItemNode, ListNode, type ListType } from "@lexical/list";
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode, HeadingNode, QuoteNode } from "@lexical/rich-text";
-import { $createParagraphNode, $getSelection, $isRangeSelection, CLEAR_HISTORY_COMMAND, FORMAT_TEXT_COMMAND, type ElementNode, type LexicalEditor } from "lexical";
+import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection, $setSelection, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_CRITICAL, PASTE_COMMAND, type BaseSelection, type EditorThemeClasses, type ElementNode, type LexicalEditor, type TextFormatType } from "lexical";
 import { Button, Dialog, Field } from "../../ui/primitives.js";
-import { $generateNodesFromMarkdownString } from "@lexical/markdown";
-import { exportArticleMarkdown, importArticleMarkdown, articleMarkdownTransformers } from "./markdown.js";
-import { sanitizeRichPaste } from "./paste.js";
+import { $generateNodesFromDOM } from "@lexical/html";
+import { exportArticleMarkdown, importArticleMarkdown } from "./markdown.js";
+import { sanitizeRichPasteDocument } from "./paste.js";
 import { BoldIcon, CodeIcon, ItalicIcon, LinkIcon, ListIcon, NumberedListIcon, StrikeIcon } from "./icons.js";
 
 type BlockType = "paragraph" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "quote" | "code";
 const validUrl = (value: string) => /^(https?:|mailto:)/i.test(value.trim());
+
+
+const articleEditorTheme: EditorThemeClasses = {
+    text: {
+        bold: "font-bold",
+        code: "rounded-control bg-surface px-1 font-mono text-base",
+        italic: "italic",
+        strikethrough: "line-through",
+    },
+    list: {
+        listitem: "my-1",
+        ol: "list-decimal pl-7",
+        ul: "list-disc pl-7",
+    },
+};
 
 
 function EditorErrorBoundary({ children }: { children: ReactNode }) {
@@ -66,19 +81,29 @@ function $setBlockType(type: BlockType) {
     if (!$isRangeSelection(selection))
         return;
 
-    const block = selection.anchor.getNode().getTopLevelElementOrThrow();
-    let replacement: ElementNode = $createParagraphNode();
+    const blocks = new Map<string, ElementNode>();
+    for (const node of selection.getNodes()) {
+        const block = node.getTopLevelElementOrThrow();
+        if (!$isElementNode(block))
+            continue;
 
-    if (type.startsWith("h"))
-        replacement = $createHeadingNode(type as "h1");
+        blocks.set(block.getKey(), block);
+    }
 
-    if (type === "quote")
-        replacement = $createQuoteNode();
+    for (const block of blocks.values()) {
+        let replacement: ElementNode = $createParagraphNode();
 
-    if (type === "code")
-        replacement = $createCodeNode();
+        if (type.startsWith("h"))
+            replacement = $createHeadingNode(type as "h1");
 
-    block.replace(replacement, true);
+        if (type === "quote")
+            replacement = $createQuoteNode();
+
+        if (type === "code")
+            replacement = $createCodeNode();
+
+        block.replace(replacement, true);
+    }
 }
 
 
@@ -102,9 +127,29 @@ function currentBlock(editor: LexicalEditor): BlockType {
 }
 
 
+function currentListType(editor: LexicalEditor): ListType | undefined {
+    let value: ListType | undefined;
+    editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection))
+            return;
+
+        const node = selection.anchor.getNode();
+        const list = $isListNode(node)
+            ? node
+            : node.getParents().find($isListNode);
+        value = list?.getListType();
+    });
+
+    return value;
+}
+
+
 function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => void }) {
     const [block, setBlock] = useState<BlockType>("paragraph");
     const [formats, setFormats] = useState<Set<string>>(new Set());
+    const [listType, setListType] = useState<ListType>();
+    const savedBlockSelection = useRef<BaseSelection | null>(null);
 
     useEffect(() => editor.registerUpdateListener(() => editor.getEditorState().read(() => {
         const selection = $getSelection();
@@ -112,12 +157,62 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
             setFormats(new Set(["bold", "italic", "strikethrough", "code"].filter((format) => selection.hasFormat(format as "bold"))));
 
         setBlock(currentBlock(editor));
+        setListType(currentListType(editor));
     })), [editor]);
 
     const activate = (action: () => void) => {
         action();
         editor.focus();
     };
+
+    function rememberBlockSelection() {
+        editor.getEditorState().read(() => {
+            const selection = $getSelection();
+            savedBlockSelection.current = selection?.clone() ?? null;
+        });
+    }
+
+    function applyBlockType(type: BlockType) {
+        editor.update(() => {
+            if (savedBlockSelection.current)
+                $setSelection(savedBlockSelection.current.clone());
+
+            $setBlockType(type);
+        });
+
+        savedBlockSelection.current = null;
+        editor.focus();
+    }
+
+    function applyTextFormat(format: TextFormatType) {
+        editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection))
+                selection.formatText(format);
+        });
+
+        editor.focus();
+    }
+
+    function applyList(type: ListType) {
+        editor.update(() => {
+            const selection = $getSelection();
+            if (!$isRangeSelection(selection))
+                return;
+
+            const node = selection.anchor.getNode();
+            const list = $isListNode(node)
+                ? node
+                : node.getParents().find($isListNode);
+
+            if (list?.getListType() === type)
+                $removeList();
+            else
+                $insertList(type);
+        });
+
+        editor.focus();
+    }
 
     const keyNav = (event: KeyboardEvent<HTMLDivElement>) => {
         const items = [...event.currentTarget.querySelectorAll<HTMLElement>("button,select")];
@@ -143,11 +238,17 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
         ["Bold", BoldIcon, "bold"], ["Italic", ItalicIcon, "italic"], ["Strikethrough", StrikeIcon, "strikethrough"], ["Inline code", CodeIcon, "code"],
     ] as const;
 
+    const formatButtonClass = (active: boolean) => [
+        "grid size-9 place-items-center rounded-control border text-brand transition-colors",
+        active ? "border-brand bg-brand-soft shadow-raised" : "border-transparent hover:bg-brand-soft",
+    ].join(" ");
+
     return <div className="shrink-0 overflow-x-auto border-b border-border bg-surface-raised px-4 py-1 [scrollbar-width:thin]">
         <div role="toolbar" aria-label="Article formatting" onKeyDown={keyNav} className="flex w-max min-w-full items-center gap-1">
             <select aria-label="Block style"
                 value={block}
-                onChange={(event) => activate(() => editor.update(() => $setBlockType(event.target.value as BlockType)))}
+                onMouseDown={rememberBlockSelection}
+                onChange={(event) => applyBlockType(event.target.value as BlockType)}
                 className="min-h-9 rounded-control border border-border bg-surface-raised px-2 text-xs text-ink">
                 <option value="paragraph">Paragraph</option>
                 <option value="h1">Heading 1</option>
@@ -159,7 +260,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
                 <option value="quote">Block quote</option>
                 <option value="code">Code block</option>
             </select>
-            {controls.map(([label, Icon, format]) => <button key={format} type="button" aria-label={label} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => activate(() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, format))} className="grid size-9 place-items-center rounded-control text-brand hover:bg-brand-soft"><Icon /></button>)}
+            {controls.map(([label, Icon, format]) => <button key={format} type="button" aria-label={label} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextFormat(format)} className={formatButtonClass(formats.has(format))}><Icon /></button>)}
             <button type="button"
                 aria-label="Link"
                 onMouseDown={(event) => event.preventDefault()}
@@ -169,18 +270,18 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
             </button>
             <button type="button"
                 aria-label="Bulleted list"
-                aria-pressed={false}
+                aria-pressed={listType === "bullet"}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => activate(() => editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined))}
-                className="grid size-9 place-items-center rounded-control text-brand hover:bg-brand-soft">
+                onClick={() => applyList("bullet")}
+                className={formatButtonClass(listType === "bullet")}>
                 <ListIcon />
             </button>
             <button type="button"
                 aria-label="Numbered list"
-                aria-pressed={false}
+                aria-pressed={listType === "number"}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => activate(() => editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined))}
-                className="grid size-9 place-items-center rounded-control text-brand hover:bg-brand-soft">
+                onClick={() => applyList("number")}
+                className={formatButtonClass(listType === "number")}>
                 <NumberedListIcon />
             </button>
         </div>
@@ -295,30 +396,53 @@ function LinkControl({ editor }: { editor: LexicalEditor }) {
 }
 
 
-function EditorContents({ content, onChange }: { content: string; onChange: (value: string) => void }) {
-    const [editor, setEditor] = useState<LexicalEditor>();
-    function paste(event: ClipboardEvent<HTMLDivElement>) {
-        const html = event.clipboardData.getData("text/html");
-        if (!html || !editor)
-            return;
+function SupportedPastePlugin() {
+    const [editor] = useLexicalComposerContext();
+
+    useEffect(() => editor.registerCommand(PASTE_COMMAND, (event) => {
+        const clipboard = event instanceof ClipboardEvent
+            ? event.clipboardData
+            : null;
+        const html = clipboard?.getData("text/html") ?? "";
+        if (!clipboard || !html)
+            return false;
 
         event.preventDefault();
-        const markdown = sanitizeRichPaste(html);
+        const plainText = clipboard.getData("text/plain");
+        const usePlainText = html.length > 250_000;
+
         editor.update(() => {
             const selection = $getSelection();
-            if ($isRangeSelection(selection))
-                selection.insertNodes($generateNodesFromMarkdownString(markdown, articleMarkdownTransformers, true));
-        });
-    }
+            if (!$isRangeSelection(selection))
+                return;
 
+            if (usePlainText) {
+                selection.insertText(plainText);
+                return;
+            }
+
+            const document = sanitizeRichPasteDocument(html);
+            selection.insertNodes($generateNodesFromDOM(editor, document));
+        });
+
+        return true;
+    }, COMMAND_PRIORITY_CRITICAL), [editor]);
+
+    return null;
+}
+
+
+function EditorContents({ content, onChange }: { content: string; onChange: (value: string) => void }) {
+    const [editor, setEditor] = useState<LexicalEditor>();
     return <>{editor && <LinkControl editor={editor} />}
         <div className="min-h-0 flex-1 overflow-y-auto bg-surface-raised [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             <div className="min-h-full px-8 py-7">
                 <div className="relative mx-auto w-full max-w-3xl">
-                    <RichTextPlugin contentEditable={<ContentEditable aria-label="Article draft" onPaste={paste} className="min-h-[calc(100vh-16rem)] whitespace-pre-wrap font-editor text-xl leading-8 text-ink outline-none [&_a]:text-brand [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border-strong [&_blockquote]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded-control [&_pre]:bg-surface [&_pre]:p-4 [&_pre]:font-mono [&_h1]:text-4xl [&_h2]:text-3xl [&_h3]:text-2xl" />} placeholder={<p className="pointer-events-none absolute top-0 text-xl text-muted">Write your article...</p>} ErrorBoundary={EditorErrorBoundary} />
+                    <RichTextPlugin contentEditable={<ContentEditable aria-label="Article draft" className="min-h-[calc(100vh-16rem)] whitespace-pre-wrap font-editor text-xl leading-8 text-ink outline-none [&_a]:text-brand [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border-strong [&_blockquote]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded-control [&_pre]:bg-surface [&_pre]:p-4 [&_pre]:font-mono [&_h1]:text-4xl [&_h2]:text-3xl [&_h3]:text-2xl [&_h4]:text-xl [&_h4]:font-bold [&_h4]:leading-7 [&_h5]:text-lg [&_h5]:font-bold [&_h5]:leading-7 [&_h6]:text-base [&_h6]:font-bold [&_h6]:uppercase [&_h6]:tracking-wide [&_h6]:leading-6" />} placeholder={<p className="pointer-events-none absolute top-0 text-xl text-muted">Write your article...</p>} ErrorBoundary={EditorErrorBoundary} />
                     <HistoryPlugin />
                     <ListPlugin />
                     <LinkPlugin />
+                    <SupportedPastePlugin />
                     <EditorBridge content={content} onChange={onChange} onReady={setEditor} />
                 </div>
             </div>
@@ -331,11 +455,12 @@ export function ArticleRichEditor({ articleId, content, setContent }: { articleI
     const config = useMemo(() => ({
         namespace: `skladno-article-${articleId}`,
         nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode],
+        theme: articleEditorTheme,
         onError: (error: Error) => {
             throw error;
         }
     }),
-    [articleId]
+        [articleId]
     );
 
     return <LexicalComposer key={articleId} initialConfig={config}>
