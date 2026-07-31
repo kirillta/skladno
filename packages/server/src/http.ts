@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage } from "node:http";
-import { HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
+import { HTTP_METHOD, HTTP_STATUS, type EditorialOperation, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 
 import type { ServerConfig } from "./config.js";
 import { LangChainEditorialEngine } from "./editorial/langchain-editorial-engine.js";
@@ -19,11 +19,22 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 }
 
 
-export function createLocalService(config: ServerConfig, repositories: Repositories, engine: EditorialEngine | undefined = config.openAiApiKey ? new LangChainEditorialEngine({
-    apiKey: config.openAiApiKey,
-    model: config.openAiModel,
-    storeResponses: config.openAiStoreResponses,
-}) : undefined) {
+export function createLocalService(config: ServerConfig, repositories: Repositories, engine?: EditorialEngine) {
+    function resolveEngine(operation: EditorialOperation): EditorialEngine | undefined {
+        if (engine)
+            return engine;
+
+        const savedConnections = repositories.getSetting("application-ai-connections")?.value as { connections?: OpenAiConnection[]; activeConnectionId?: string } | undefined;
+        const active = savedConnections?.connections?.find((connection) => connection.id === savedConnections.activeConnectionId);
+        const apiKey = active ? process.env[active.environmentVariableName] : config.openAiApiKey;
+        if (!apiKey)
+            return undefined;
+
+        const preferences = repositories.getSetting("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
+        const model = preferences?.operationOverrides?.[operation] || preferences?.defaultModel || config.openAiModel;
+        return new LangChainEditorialEngine({ apiKey, model, storeResponses: config.openAiStoreResponses });
+    }
+
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {
             writeJson(response, HTTP_STATUS.FORBIDDEN, { error: "Origin is not permitted." });
@@ -49,7 +60,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
 
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         try {
-            if (await handleEditorialRoute(request, response, pathname, config, repositories, engine))
+            if (await handleEditorialRoute(request, response, pathname, config, repositories, resolveEngine))
                 return;
 
             if (await handleStyleCorpusRoute(request, response, pathname, repositories))

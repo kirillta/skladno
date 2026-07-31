@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skladno Settings"
+  short_description: "Build and verify Skladno application settings."
+  default_prompt: "Use $skladno-settings to implement or review a Skladno Application Settings change."

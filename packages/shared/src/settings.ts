@@ -1,6 +1,9 @@
 import type { EditorialOperation } from "./editorial.js";
 
 export const applicationSettingsPath = "/api/settings";
+export const aiConnectionsPath = `${applicationSettingsPath}/ai/connections`;
+export const aiModelsPath = `${applicationSettingsPath}/ai/models`;
+export const aiModelPreferencesPath = `${applicationSettingsPath}/ai/model-preferences`;
 
 export type ApplicationScreen = "editorial-workspace" | "application-settings";
 export type ThemePreference = "system" | "light" | "dark";
@@ -62,4 +65,11 @@ export interface ApplicationSettingsClient {
     getApplicationSettings(): Promise<ApplicationSettingsSnapshot>;
     updateGeneralSettings(input: GeneralSettings): Promise<GeneralSettings>;
     updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy>;
+    addOpenAiConnection(input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection>;
+    updateOpenAiConnection(connectionId: string, input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection>;
+    removeOpenAiConnection(connectionId: string): Promise<void>;
+    setActiveOpenAiConnection(connectionId: string): Promise<void>;
+    testOpenAiConnection(connectionId: string): Promise<OpenAiConnection>;
+    refreshOpenAiModels(): Promise<string[]>;
+    updateModelPreferences(input: ModelPreferences): Promise<ModelPreferences>;
 }

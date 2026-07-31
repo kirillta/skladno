@@ -32,6 +32,11 @@ import {
     type ApplicationSettingsSnapshot,
     type BackupPolicy,
     type GeneralSettings,
+    aiConnectionsPath,
+    aiModelsPath,
+    aiModelPreferencesPath,
+    type ModelPreferences,
+    type OpenAiConnection,
 } from "@skladno/shared";
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
@@ -59,6 +64,34 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy> {
         return this.request<BackupPolicy>(`${applicationSettingsPath}/backup-policy`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+    async addOpenAiConnection(input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection> {
+        return this.request<OpenAiConnection>(aiConnectionsPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+    }
+
+    async updateOpenAiConnection(connectionId: string, input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection> {
+        return this.request<OpenAiConnection>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+    async removeOpenAiConnection(connectionId: string): Promise<void> {
+        await this.request<void>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}`, { method: HTTP_METHOD.DELETE });
+    }
+
+    async setActiveOpenAiConnection(connectionId: string): Promise<void> {
+        await this.request<void>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}/active`, { method: HTTP_METHOD.PUT });
+    }
+
+    async testOpenAiConnection(connectionId: string): Promise<OpenAiConnection> {
+        return this.request<OpenAiConnection>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}/test`, { method: HTTP_METHOD.POST });
+    }
+
+    async refreshOpenAiModels(): Promise<string[]> {
+        return this.request<string[]>(aiModelsPath, { method: HTTP_METHOD.POST });
+    }
+
+    async updateModelPreferences(input: ModelPreferences): Promise<ModelPreferences> {
+        return this.request<ModelPreferences>(aiModelPreferencesPath, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
 
 

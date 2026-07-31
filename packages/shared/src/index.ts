@@ -8,6 +8,9 @@ export {
 export { HTTP_METHOD, HTTP_STATUS } from "./http.js";
 export {
     applicationSettingsPath,
+    aiConnectionsPath,
+    aiModelsPath,
+    aiModelPreferencesPath,
     defaultGeneralSettings,
     type ApplicationScreen,
     type ApplicationSettingsClient,
