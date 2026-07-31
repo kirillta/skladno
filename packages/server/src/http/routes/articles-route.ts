@@ -1,8 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { articlesPath, HTTP_METHOD, HTTP_STATUS, isPublishLimitProfileId, type AcceptProposalInput, type CreateArticleInput, type SaveArticleRevisionInput } from "@skladno/shared";
+import { APPLICATION_ERROR, articlesPath, HTTP_METHOD, HTTP_STATUS, isPublishLimitProfileId, type AcceptProposalInput, type CreateArticleInput, type SaveArticleRevisionInput } from "@skladno/shared";
 
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, string, writeJson } from "../json.js";
+import { ApplicationServiceError } from "../application-error.js";
 
 
 export async function handleArticlesRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
@@ -15,7 +16,7 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
         const body = object(await readJson(request));
         const publishingProfileId = body.publishingProfileId === undefined ? undefined : string(body.publishingProfileId, "publishingProfileId");
         if (publishingProfileId !== undefined && !isPublishLimitProfileId(publishingProfileId))
-            throw new Error("publishingProfileId is not supported.");
+            throw new ApplicationServiceError(APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE, HTTP_STATUS.BAD_REQUEST);
 
         const input: CreateArticleInput = {
             title: string(body.title, "title"),
@@ -36,6 +37,9 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
         return false;
 
     const articleId = decodeURIComponent(match[1]);
+    if (!repositories.getArticle(articleId))
+        throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+
     if (request.method === HTTP_METHOD.DELETE && !match[2]) {
         repositories.deleteArticle(articleId);
         response.writeHead(HTTP_STATUS.NO_CONTENT);
@@ -68,7 +72,7 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
         const body = object(await readJson(request));
         const provenance = body.provenance;
         if (typeof provenance !== "object" || provenance === null || Array.isArray(provenance))
-            throw new Error("provenance must be an object.");
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
         const input: AcceptProposalInput = {
             baseRevisionId: string(body.baseRevisionId, "baseRevisionId"),

@@ -1,4 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
+import { ApplicationServiceError } from "./application-error.js";
 
 
 export function writeJson(response: ServerResponse, status: number, body: unknown): void {
@@ -12,28 +14,30 @@ export async function readJson(request: IncomingMessage): Promise<unknown> {
     for await (const chunk of request) {
         body += String(chunk);
         if (body.length > 1_000_000)
-            throw new Error("Request body is too large.");
+            throw new ApplicationServiceError(APPLICATION_ERROR.REQUEST_TOO_LARGE, HTTP_STATUS.BAD_REQUEST);
     }
 
     try {
         return JSON.parse(body);
     } catch {
-        throw new Error("Request body must be valid JSON.");
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_JSON, HTTP_STATUS.BAD_REQUEST);
     }
 }
 
 
 export function object(value: unknown): Record<string, unknown> {
     if (!value || typeof value !== "object" || Array.isArray(value))
-        throw new Error("Request body must be an object.");
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
     return value as Record<string, unknown>;
 }
 
 
-export function string(value: unknown, field: string): string {
+export function string(value: unknown, _field: string): string {
+    void _field;
+
     if (typeof value !== "string")
-        throw new Error(`${field} must be a string.`);
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
     return value;
 }

@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage } from "node:http";
-import { HTTP_METHOD, HTTP_STATUS, type EditorialOperation, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, HTTP_METHOD, HTTP_STATUS, type EditorialOperation, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 
 import type { ServerConfig } from "./config.js";
 import { LangChainEditorialEngine } from "./editorial/langchain-editorial-engine.js";
@@ -11,6 +11,7 @@ import { handlePublishSettingsRoute } from "./http/routes/publish-settings-route
 import { handleStyleCorpusRoute } from "./http/routes/style-corpus-route.js";
 import { handleSettingsRoute } from "./http/routes/settings-route.js";
 import { writeJson } from "./http/json.js";
+import { ApplicationServiceError } from "./http/application-error.js";
 import { ArticleRevisionConflictError, Repositories } from "./persistence/index.js";
 
 
@@ -37,7 +38,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
 
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {
-            writeJson(response, HTTP_STATUS.FORBIDDEN, { error: "Origin is not permitted." });
+            writeJson(response, HTTP_STATUS.FORBIDDEN, { error: { code: APPLICATION_ERROR.ORIGIN_NOT_PERMITTED } });
             return;
         }
 
@@ -76,16 +77,20 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
                 return;
         } catch (error) {
             if (error instanceof ArticleRevisionConflictError) {
-                writeJson(response, HTTP_STATUS.CONFLICT, { error: error.message, article: error.article });
+                writeJson(response, HTTP_STATUS.CONFLICT, { error: { code: APPLICATION_ERROR.REVISION_CONFLICT }, article: error.article });
                 return;
             }
 
-            const message = error instanceof Error ? error.message : "Invalid request.";
-            writeJson(response, message === "Article not found." ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.BAD_REQUEST, { error: message });
+            if (error instanceof ApplicationServiceError) {
+                writeJson(response, error.status, { error: { code: error.code, ...(error.parameters ? { parameters: error.parameters } : {}) } });
+                return;
+            }
+
+            writeJson(response, HTTP_STATUS.INTERNAL_SERVER_ERROR, { error: { code: APPLICATION_ERROR.EDITORIAL_REQUEST_FAILED } });
 
             return;
         }
 
-        writeJson(response, HTTP_STATUS.NOT_FOUND, { error: "Not found." });
+        writeJson(response, HTTP_STATUS.NOT_FOUND, { error: { code: APPLICATION_ERROR.RESOURCE_NOT_FOUND } });
     });
 }

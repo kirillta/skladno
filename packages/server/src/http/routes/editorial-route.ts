@@ -1,15 +1,15 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { EDITORIAL_OPERATION, HTTP_METHOD, HTTP_STATUS, type EditorialEvent, type EditorialOperation } from "@skladno/shared";
+import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, HTTP_METHOD, HTTP_STATUS, type ApplicationErrorCode, type EditorialEvent, type EditorialOperation } from "@skladno/shared";
 
 import type { ServerConfig } from "../../config.js";
-import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine } from "../../editorial/editorial-engine.js";
+import { EDITORIAL_ENGINE_ERROR, EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine } from "../../editorial/editorial-engine.js";
 import { isEditorialOperation } from "../../editorial/workflow-prompt.js";
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, string } from "../json.js";
 
 
-function errorEvent(requestId: string, code: Extract<EditorialEvent, { type: "error" }>["code"], message: string, retryable: boolean): EditorialEvent {
-    return { type: "error", requestId, code, message, retryable };
+function errorEvent(requestId: string, code: Extract<EditorialEvent, { type: "error" }>["code"], errorCode: ApplicationErrorCode, retryable: boolean, parameters?: Record<string, string | number>): EditorialEvent {
+    return { type: "error", requestId, code, errorCode, retryable, ...(parameters ? { parameters } : {}) };
 }
 
 
@@ -34,21 +34,21 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
     response.writeHead(HTTP_STATUS.OK, { "cache-control": "no-cache, no-transform", connection: "keep-alive", "content-type": "text/event-stream; charset=utf-8" });
 
     if (!article) {
-        writeEditorialEvent(response, errorEvent(requestId, "provider", "Article not found. Select an existing article and try again.", false));
+        writeEditorialEvent(response, errorEvent(requestId, EDITORIAL_ERROR_CATEGORY.PROVIDER, APPLICATION_ERROR.ARTICLE_NOT_FOUND, false));
         response.end();
 
         return true;
     }
 
     if (!isEditorialOperation(operation)) {
-        writeEditorialEvent(response, errorEvent(requestId, "provider", "Choose an available editorial workflow.", false));
+        writeEditorialEvent(response, errorEvent(requestId, EDITORIAL_ERROR_CATEGORY.PROVIDER, APPLICATION_ERROR.EDITORIAL_OPERATION_UNSUPPORTED, false));
         response.end();
 
         return true;
     }
 
     if (operation === EDITORIAL_OPERATION.TRANSLATION && !targetLanguage?.trim()) {
-        writeEditorialEvent(response, errorEvent(requestId, "invalid_output", "Choose a target language before requesting a translation.", false));
+        writeEditorialEvent(response, errorEvent(requestId, EDITORIAL_ERROR_CATEGORY.INVALID_OUTPUT, APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, false));
         response.end();
 
         return true;
@@ -56,7 +56,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
 
     const engine = resolveEngine(operation as EditorialOperation);
     if (!engine) {
-        writeEditorialEvent(response, errorEvent(requestId, "configuration", "Add OPENAI_API_KEY to the local service environment, then retry.", false));
+        writeEditorialEvent(response, errorEvent(requestId, EDITORIAL_ERROR_CATEGORY.CONFIGURATION, APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, false));
         response.end();
 
         return true;
@@ -80,7 +80,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
 
     const styleProfile = operation === EDITORIAL_OPERATION.STYLE_REVIEW ? repositories.getStyleCorpus().profile : undefined;
     if (operation === EDITORIAL_OPERATION.STYLE_REVIEW && !styleProfile) {
-        writeEditorialEvent(response, errorEvent(requestId, "provider", "Add at least one style corpus item before checking style.", false));
+        writeEditorialEvent(response, errorEvent(requestId, EDITORIAL_ERROR_CATEGORY.PROVIDER, APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, false));
         response.end();
 
         return true;
@@ -140,24 +140,28 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         }
 
         if (!completed && !signal.aborted)
-            writeEditorialEvent(response, errorEvent(requestId, "malformed_stream", "OpenAI ended before completing the proposal. Retry the request.", true));
+            writeEditorialEvent(response, errorEvent(requestId, EDITORIAL_ERROR_CATEGORY.MALFORMED_STREAM, APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE, true));
     } catch (error) {
         if (!signal.aborted) {
-            if (error instanceof EditorialEngineError && error.code === "session_expired")
+            if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
                 repositories.removeEditorialSession(articleId);
 
-            const message = error instanceof Error ? error.message : "The editorial request failed. Retry it in a moment.";
             const code = error instanceof EditorialEngineError
                 ? ({
-                    invalid_output: "invalid_output",
-                    incomplete_stream: "malformed_stream",
-                    network: "network",
-                    provider: "provider",
-                    session_expired: "session_expired",
+                    [EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT]: EDITORIAL_ERROR_CATEGORY.INVALID_OUTPUT,
+                    [EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM]: EDITORIAL_ERROR_CATEGORY.MALFORMED_STREAM,
+                    [EDITORIAL_ENGINE_ERROR.NETWORK]: EDITORIAL_ERROR_CATEGORY.NETWORK,
+                    [EDITORIAL_ENGINE_ERROR.PROVIDER]: EDITORIAL_ERROR_CATEGORY.PROVIDER,
+                    [EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED]: EDITORIAL_ERROR_CATEGORY.SESSION_EXPIRED,
                 } as const)[error.code]
-                : "network";
+                : EDITORIAL_ERROR_CATEGORY.NETWORK;
 
-            writeEditorialEvent(response, errorEvent(requestId, code, message, true));
+            const errorCode = error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
+                ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
+                : error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT
+                    ? APPLICATION_ERROR.EDITORIAL_REQUEST_FAILED
+                    : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;
+            writeEditorialEvent(response, errorEvent(requestId, code, errorCode, true));
         }
     }
 

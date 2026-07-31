@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
     countPublishingCharacters,
@@ -16,6 +17,7 @@ import {
     type StyleReview,
     type TranslationMetadata,
 } from "@skladno/shared";
+import { ApplicationClientError } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Banner } from "../ui/primitives.js";
 import { EditorialAssistantPanel as ExtractedEditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
@@ -24,6 +26,7 @@ import { ArticleWorkspace as ExtractedArticleWorkspace } from "./components/Arti
 import { RestoreRevisionDialog as ExtractedRestoreRevisionDialog } from "./components/RestoreRevisionDialog.js";
 import { WorkspaceShell as ExtractedWorkspaceShell } from "./components/WorkspaceShell.js";
 import { ApplicationSettings } from "../settings/ApplicationSettings.js";
+import { errorMessageId } from "../i18n/errors.js";
 
 export type WorkspaceView = "write" | "proposal" | "revisions" | "fact-check" | "style-profile" | "translations" | "publish";
 type SaveState = "saved" | "saving" | "error";
@@ -175,6 +178,7 @@ function useArticleRevisions(client: EditorialWorkspaceClient, article: Article 
 
 
 function useEditorialProposal(client: EditorialWorkspaceClient, workspace: ReturnType<typeof useArticleWorkspace>) {
+    const intl = useIntl();
     const [proposal, setProposal] = useState("");
     const [base, setBase] = useState<{ content: string; revisionId: string }>();
     const [selectedChanges, setSelectedChanges] = useState<Set<string>>(new Set());
@@ -220,13 +224,16 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
 
                 if (event.type === "error") {
                     setState("error");
-                    setMessage(event.message);
+                    setMessage(intl.formatMessage({ id: errorMessageId(event.errorCode) }, event.parameters));
                 }
             }, controller.current.signal);
         } catch (error) {
             if ((error as DOMException).name !== "AbortError") {
                 setState("error");
-                setMessage(error instanceof Error ? error.message : "The editorial request failed.");
+                if (error instanceof ApplicationClientError)
+                    setMessage(intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters));
+                else
+                    setMessage(intl.formatMessage({ id: "errors.editorialRequestFailed" }));
             }
         }
     }

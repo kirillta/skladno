@@ -14,6 +14,8 @@ Use `TabList` and `Tab` for tab selection, `Progress` for streaming work, `Skele
 
 ## Accessibility baseline
 
+Application-owned visible and accessible copy resolves through the typed ICU catalog. Use semantic message IDs, complete accessible-label messages, named parameters, and shared number/date formatting; never use translated text as logic, selectors, or persisted values.
+
 - `--color-ink` on canvas and surface, white on brand, and all semantic status foreground/background pairs are selected for WCAG AA normal-text contrast.
 - All focusable controls have a persistent two-pixel focus indicator plus a three-pixel focus halo.
 - Controls have a minimum 36px target; use 44px for sparse icon-only actions where space allows.

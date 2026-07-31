@@ -2,6 +2,9 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import { defaultPublishLimitProfileId, defaultGeneralSettings, publishLimitProfiles, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type ModelPreferences, type PublishLimitProfileId } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Button, Field, Select } from "../ui/primitives.js";
+import { catalogByLocale, installedLocaleCatalogs } from "../i18n/catalogs.js";
+import { formatDateTime } from "../i18n/formatting.js";
+import { useIntl } from "react-intl";
 
 type Section = "general" | "ai" | "publishing" | "backups";
 
@@ -42,20 +45,11 @@ function Control({ label, hint, children }: { label: string; hint: string; child
 }
 
 function formatExample(general: GeneralSettings): string {
-    const value = new Date("2026-07-31T15:45:00Z");
-    const dateOptions = general.dateFormat === "day-first"
-        ? { day: "2-digit", month: "2-digit", year: "numeric" } as const
-        : general.dateFormat === "month-first"
-            ? { month: "2-digit", day: "2-digit", year: "numeric" } as const
-            : general.dateFormat === "iso"
-                ? { year: "numeric", month: "2-digit", day: "2-digit" } as const
-                : { dateStyle: "medium" } as const;
-    const timeOptions = { hour: "numeric", minute: "2-digit", hour12: general.timeFormat === "12-hour" ? true : general.timeFormat === "24-hour" ? false : undefined } as const;
-
-    return `${new Intl.DateTimeFormat("en", dateOptions).format(value)}, ${new Intl.DateTimeFormat("en", timeOptions).format(value)}`;
+    return formatDateTime("2026-07-31T15:45:00Z", general.interfaceLocale, general.dateFormat, general.timeFormat);
 }
 
 export function ApplicationSettings({ client, back }: { client: EditorialWorkspaceClient; back: () => void }) {
+    const intl = useIntl();
     const [section, setSection] = useState<Section>("general");
     const [settings, setSettings] = useState<ApplicationSettingsSnapshot>();
     const [general, setGeneral] = useState(defaultGeneralSettings);
@@ -122,7 +116,7 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
                 <h1 className="text-2xl font-semibold">{sections.find((item) => item.id === section)?.label}</h1>
                 {!settings ? null : section === "general" ? <>
                     <SettingRow label="Preferred appearance" hint="Choose the appearance you want Skladno to use. Your preference will be remembered, but visual themes will be enabled in a later update."><Select value={general.theme} onChange={(event) => void saveGeneral({ ...general, theme: event.target.value as GeneralSettings["theme"] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></Select></SettingRow>
-                    <SettingRow label="Interface language" hint="Changes the language of Skladno’s controls and messages. English is the only complete interface language for now."><Select value="en" disabled><option>English</option></Select></SettingRow>
+                    <SettingRow label="Interface language" hint="Changes the language of Skladno’s controls and messages. English is the only complete interface language for now."><Select value={catalogByLocale.has(general.interfaceLocale) ? general.interfaceLocale : "en"} disabled={installedLocaleCatalogs.length === 1} onChange={(event) => void saveGeneral({ ...general, interfaceLocale: event.target.value as GeneralSettings["interfaceLocale"] })}>{installedLocaleCatalogs.map((catalog) => <option key={catalog.code} value={catalog.code}>{intl.formatMessage({ id: catalog.nameMessageId })}</option>)}</Select></SettingRow>
                     <SettingRow label="Date format" hint="Changes how dates are shown in Skladno. It does not change saved dates or revision history."><Select value={general.dateFormat} onChange={(event) => void saveGeneral({ ...general, dateFormat: event.target.value as GeneralSettings["dateFormat"] })}><option value="system">System</option><option value="day-first">Day first</option><option value="month-first">Month first</option><option value="iso">ISO</option></Select></SettingRow>
                     <SettingRow label="Time format" hint="Changes how times are shown in Skladno. It does not change saved dates or revision history." status={`Example: ${formatExample(general)}`}><Select value={general.timeFormat} onChange={(event) => void saveGeneral({ ...general, timeFormat: event.target.value as GeneralSettings["timeFormat"] })}><option value="system">System</option><option value="12-hour">12-hour</option><option value="24-hour">24-hour</option></Select></SettingRow>
                     <SettingRow label="Default Article language" hint="Used for new Articles when you do not choose a language yourself. Existing Articles are not changed."><Select value={general.defaultArticleLanguage} onChange={(event) => void saveGeneral({ ...general, defaultArticleLanguage: event.target.value })}>{[["en", "English"], ["es", "Spanish"], ["pt", "Portuguese"], ["ru", "Russian"], ["fr", "French"], ["de", "German"], ["it", "Italian"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></SettingRow>

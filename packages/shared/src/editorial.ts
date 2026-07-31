@@ -102,11 +102,22 @@ export interface FactCheck {
 }
 
 
+export const EDITORIAL_ERROR_CATEGORY = {
+    CONFIGURATION: "configuration",
+    NETWORK: "network",
+    PROVIDER: "provider",
+    MALFORMED_STREAM: "malformed_stream",
+    INVALID_OUTPUT: "invalid_output",
+    SESSION_EXPIRED: "session_expired",
+    CANCELLED: "cancelled",
+} as const;
+
 export interface EditorialErrorEvent {
     type: "error";
     requestId: string;
-    code: "configuration" | "network" | "provider" | "malformed_stream" | "invalid_output" | "session_expired" | "cancelled";
-    message: string;
+    code: typeof EDITORIAL_ERROR_CATEGORY[keyof typeof EDITORIAL_ERROR_CATEGORY];
+    errorCode: import("./errors.js").ApplicationErrorCode;
+    parameters?: Record<string, string | number>;
     retryable: boolean;
 }
 

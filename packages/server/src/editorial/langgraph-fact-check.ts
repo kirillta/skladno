@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding } from "@skladno/shared";
 
-import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngineEvent } from "./editorial-engine.js";
+import { EDITORIAL_ENGINE_ERROR, EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngineEvent } from "./editorial-engine.js";
 
 
 const claimSchema = z.object({
@@ -62,9 +62,9 @@ function providerError(error: unknown): EditorialEngineError {
         throw error;
 
     if (/network|fetch|connect|timeout|ECONN|ENOTFOUND/i.test(message))
-        return new EditorialEngineError("network", "OpenAI could not be reached. Check your connection and API settings, then retry.");
+        return new EditorialEngineError(EDITORIAL_ENGINE_ERROR.NETWORK, "OpenAI could not be reached. Check your connection and API settings, then retry.");
 
-    return new EditorialEngineError("provider", message);
+    return new EditorialEngineError(EDITORIAL_ENGINE_ERROR.PROVIDER, message);
 }
 
 

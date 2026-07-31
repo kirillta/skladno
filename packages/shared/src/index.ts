@@ -12,6 +12,8 @@ export {
     aiModelsPath,
     aiModelPreferencesPath,
     defaultGeneralSettings,
+    defaultInterfaceLocale,
+    INTERFACE_LOCALE,
     type ApplicationScreen,
     type ApplicationSettingsClient,
     type ApplicationSettingsSnapshot,
@@ -19,13 +21,16 @@ export {
     type DateFormatPreference,
     type DirectorySelectionClient,
     type GeneralSettings,
+    type InterfaceLocale,
     type ModelPreferences,
     type OpenAiConnection,
     type ThemePreference,
     type TimeFormatPreference,
 } from "./settings.js";
+export { APPLICATION_ERROR, ApplicationClientError, type ApplicationErrorCode, type ApplicationErrorPayload } from "./errors.js";
 export {
     EDITORIAL_OPERATION,
+    EDITORIAL_ERROR_CATEGORY,
     FACT_CHECK_STATUS,
     editorialPath,
     type EditorialClient,
