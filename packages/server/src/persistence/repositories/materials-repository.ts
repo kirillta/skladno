@@ -48,7 +48,7 @@ export class MaterialsRepository {
         const existing = this.get(materialId);
         if (!existing)
             throw new Error("Material not found.");
-        
+
         if (input.name === undefined && input.content === undefined)
             return existing;
 

@@ -58,6 +58,7 @@ export class ArticlesRepository {
             this.database.exec("ROLLBACK;");
             throw error;
         }
+
         return this.get(articleId)!;
     }
 
@@ -79,7 +80,7 @@ export class ArticlesRepository {
 
         this.database.prepare("UPDATE articles SET title = ?, updated_at = ? WHERE id = ?")
             .run(required(title, "Article title"), now(), articleId);
-       
+
         return this.get(articleId)!;
     }
 
@@ -147,10 +148,10 @@ export class ArticlesRepository {
         try {
             this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, restored_from_revision_id, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                 .run(revisionId, articleId, content, JSON.stringify(provenance), restoredFromRevisionId ?? null, timestamp);
-            
+
             this.database.prepare("UPDATE articles SET current_revision_id = ?, updated_at = ? WHERE id = ?")
                 .run(revisionId, timestamp, articleId);
-            
+
             this.database.exec("COMMIT;");
         } catch (error) {
             this.database.exec("ROLLBACK;");

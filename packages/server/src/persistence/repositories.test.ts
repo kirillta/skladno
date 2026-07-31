@@ -10,7 +10,12 @@ import { Repositories } from "./repositories.js";
 function withRepository(run: (repositories: Repositories, close: () => void) => void): void {
     const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
-    try { run(new Repositories(database), () => database.close()); } finally { database.close(); rmSync(directory, { recursive: true, force: true }); }
+    try {
+        run(new Repositories(database), () => database.close());
+    } finally {
+        database.close();
+        rmSync(directory, { recursive: true, force: true });
+    }
 }
 
 
@@ -48,37 +53,38 @@ test("proposal acceptance requires the reviewed Revision to still be current", (
 test("materials, settings, artifacts and citations persist through reopening", () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
     const filename = join(directory, "skladno.sqlite");
-    const firstDatabase = openDatabase(filename); 
-    
+    const firstDatabase = openDatabase(filename);
+
     const first = new Repositories(firstDatabase);
     const material = first.createMaterial({ name: "Voice sample", content: "Original." });
     first.updateMaterial(material.id, { content: "Edited." });
-    
+
     const article = first.createArticle({ title: "Article", content: "Draft" });
     const artifact = first.createEditorialArtifact({ articleId: article.id, revisionId: article.currentRevisionId, kind: "fact-check", content: "Finding" });
     first.createSourceCitation({ editorialArtifactId: artifact.id, url: "https://example.test/source", uncertainty: "medium" });
-    first.setSetting("publishingLimits", { characters: 3000 }); firstDatabase.close();
-    
-    const secondDatabase = openDatabase(filename); 
+    first.setSetting("publishingLimits", { characters: 3000 });
+    firstDatabase.close();
+
+    const secondDatabase = openDatabase(filename);
     const second = new Repositories(secondDatabase);
-    
+
     assert.equal(second.getMaterial(material.id)?.content, "Edited.");
     assert.deepEqual(second.getSetting("publishingLimits")?.value, { characters: 3000 });
     assert.equal(second.getArticle(article.id)?.currentRevision.content, "Draft");
     assert.equal(second.listEditorialArtifacts(article.id).length, 1);
     assert.equal(second.listSourceCitations(artifact.id)[0]?.uncertainty, "medium");
 
-    secondDatabase.close(); 
+    secondDatabase.close();
     rmSync(directory, { recursive: true, force: true });
 });
 
 
 test("foreign keys and Article ownership reject invalid writes", () => withRepository((repositories) => {
     assert.throws(() => repositories.createEditorialArtifact({ articleId: "missing", revisionId: "missing", kind: "style", content: "x" }));
-    
+
     const one = repositories.createArticle({ title: "One", content: "one" });
     const two = repositories.createArticle({ title: "Two", content: "two" });
-    
+
     assert.throws(() => repositories.restoreRevision(one.id, two.currentRevisionId), /Revision not found/);
     assert.throws(() => repositories.createMaterial({ name: " ", content: "x" }), /must not be empty/);
 }));

@@ -15,7 +15,7 @@ export function ArticleStatusBar({ revisionNumber, characterCount, profile, setP
     }
 
     return <footer className="flex h-6 shrink-0 items-center justify-between border-t border-border px-5 text-xs text-muted" aria-label="Article status">
-        <span>rev {revisionNumber}</span>
+        <span>v{revisionNumber}</span>
         <div className="relative">
             <button
                 className="inline-flex h-6 items-center gap-1 rounded-control px-1.5 font-semibold hover:bg-brand-soft hover:text-brand focus:outline-none"

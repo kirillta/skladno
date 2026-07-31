@@ -18,10 +18,10 @@ export class SettingsRepository {
 
     get(key: string): AppSetting | undefined {
         const row = this.database.prepare("SELECT * FROM app_settings WHERE key = ?").get(key) as Row | undefined;
-        return row && { 
-            key: String(row.key), 
-            value: JSON.parse(String(row.value_json)), 
-            updatedAt: String(row.updated_at) 
+        return row && {
+            key: String(row.key),
+            value: JSON.parse(String(row.value_json)),
+            updatedAt: String(row.updated_at)
         };
     }
 }

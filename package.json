@@ -7,13 +7,22 @@
     ],
     "scripts": {
         "dev": "concurrently -n server,web -c blue,green \"npm run dev --workspace @skladno/server\" \"npm run dev --workspace @skladno/web\"",
+        "lint": "eslint . --max-warnings 0",
+        "lint:fix": "eslint . --fix --max-warnings 0",
         "typecheck": "tsc -b",
         "build": "npm run build --workspaces --if-present",
+        "postbuild": "npm run lint",
         "test": "npm run test --workspaces --if-present"
     },
     "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@stylistic/eslint-plugin": "^5.10.0",
         "@types/node": "^22.10.2",
         "concurrently": "^9.1.0",
+        "eslint": "^10.8.0",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "globals": "^17.3.0",
+        "typescript-eslint": "^8.65.0",
         "typescript": "^5.7.2"
     }
 }

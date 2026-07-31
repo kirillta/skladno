@@ -20,7 +20,13 @@ export function StyleProfileView({ corpus, findings, add, remove }: {
         </div>
         <Field className="mt-3" placeholder="Sample name" value={name} onChange={(event) => setName(event.target.value)} />
         <TextareaField className="mt-2" placeholder="Writing sample" value={content} onChange={(event) => setContent(event.target.value)} />
-        <Button className="mt-2" onClick={() => { if (name.trim() && content.trim()) void add(name, content).then(() => { setName(""); setContent(""); }); }}>Add to corpus</Button>
+        <Button className="mt-2" onClick={() => {
+            if (name.trim() && content.trim())
+                void add(name, content).then(() => {
+                    setName("");
+                    setContent("");
+                });
+        }}>Add to corpus</Button>
         {findings?.findings.map((finding) => <p key={finding.divergence} className="mt-3">{finding.divergence}: {finding.suggestion}</p>)}
     </div>;
 }

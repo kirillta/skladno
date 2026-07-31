@@ -28,7 +28,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
             writeJson(response, HTTP_STATUS.FORBIDDEN, { error: "Origin is not permitted." });
             return;
         }
-        
+
         if (request.headers.origin === config.webOrigin) {
             response.setHeader("access-control-allow-origin", config.webOrigin);
             response.setHeader("vary", "Origin");
@@ -39,7 +39,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
             response.setHeader("access-control-allow-headers", "content-type");
             response.writeHead(HTTP_STATUS.NO_CONTENT);
             response.end();
-        
+
             return;
         }
 
@@ -64,12 +64,13 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
                 writeJson(response, HTTP_STATUS.CONFLICT, { error: error.message, article: error.article });
                 return;
             }
+
             const message = error instanceof Error ? error.message : "Invalid request.";
             writeJson(response, message === "Article not found." ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.BAD_REQUEST, { error: message });
-            
+
             return;
         }
-        
+
         writeJson(response, HTTP_STATUS.NOT_FOUND, { error: "Not found." });
     });
 }

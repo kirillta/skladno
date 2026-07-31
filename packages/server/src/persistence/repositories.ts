@@ -47,53 +47,53 @@ export class Repositories {
     }
 
 
-    createMaterial(input: CreateMaterialInput): Material { 
-        return this.materials.create(input); 
+    createMaterial(input: CreateMaterialInput): Material {
+        return this.materials.create(input);
     }
 
 
-    getMaterial(materialId: string): Material | undefined { 
-        return this.materials.get(materialId); 
+    getMaterial(materialId: string): Material | undefined {
+        return this.materials.get(materialId);
     }
 
 
-    updateMaterial(materialId: string, input: UpdateMaterialInput): Material { 
-        return this.materials.update(materialId, input); 
+    updateMaterial(materialId: string, input: UpdateMaterialInput): Material {
+        return this.materials.update(materialId, input);
     }
 
 
-    createArticle(input: CreateArticleInput): Article { 
-        return this.articles.create(input); 
+    createArticle(input: CreateArticleInput): Article {
+        return this.articles.create(input);
     }
 
 
-    listArticles(): Article[] { 
-        return this.articles.list(); 
+    listArticles(): Article[] {
+        return this.articles.list();
     }
 
 
-    getArticle(articleId: string): Article | undefined { 
-        return this.articles.get(articleId); 
+    getArticle(articleId: string): Article | undefined {
+        return this.articles.get(articleId);
     }
 
 
-    renameArticle(articleId: string, title: string): Article { 
-        return this.articles.rename(articleId, title); 
+    renameArticle(articleId: string, title: string): Article {
+        return this.articles.rename(articleId, title);
     }
 
 
-    deleteArticle(articleId: string): void { 
-        this.articles.delete(articleId); 
+    deleteArticle(articleId: string): void {
+        this.articles.delete(articleId);
     }
 
 
-    listArticleRevisions(articleId: string): ArticleRevision[] { 
-        return this.articles.listRevisions(articleId); 
+    listArticleRevisions(articleId: string): ArticleRevision[] {
+        return this.articles.listRevisions(articleId);
     }
 
 
-    acceptChange(articleId: string, change: AcceptedChange): ArticleRevision { 
-        return this.articles.acceptChange(articleId, change); 
+    acceptChange(articleId: string, change: AcceptedChange): ArticleRevision {
+        return this.articles.acceptChange(articleId, change);
     }
 
 
@@ -102,18 +102,18 @@ export class Repositories {
     }
 
 
-    saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision { 
-        return this.articles.saveRevision(articleId, input); 
+    saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision {
+        return this.articles.saveRevision(articleId, input);
     }
 
 
-    restoreRevision(articleId: string, revisionId: string): ArticleRevision { 
-        return this.articles.restoreRevision(articleId, revisionId); 
+    restoreRevision(articleId: string, revisionId: string): ArticleRevision {
+        return this.articles.restoreRevision(articleId, revisionId);
     }
 
 
-    createEditorialArtifact(input: CreateEditorialArtifactInput): EditorialArtifact { 
-        return this.editorialArtifacts.create(input); 
+    createEditorialArtifact(input: CreateEditorialArtifactInput): EditorialArtifact {
+        return this.editorialArtifacts.create(input);
     }
 
 
@@ -122,38 +122,38 @@ export class Repositories {
     }
 
 
-    listEditorialArtifacts(articleId: string): EditorialArtifact[] { 
-        return this.editorialArtifacts.list(articleId); 
+    listEditorialArtifacts(articleId: string): EditorialArtifact[] {
+        return this.editorialArtifacts.list(articleId);
     }
 
 
-    createSourceCitation(input: CreateSourceCitationInput): SourceCitation { 
-        return this.editorialArtifacts.createCitation(input); 
+    createSourceCitation(input: CreateSourceCitationInput): SourceCitation {
+        return this.editorialArtifacts.createCitation(input);
     }
 
 
-    listSourceCitations(editorialArtifactId: string): SourceCitation[] { 
-        return this.editorialArtifacts.listCitations(editorialArtifactId); 
+    listSourceCitations(editorialArtifactId: string): SourceCitation[] {
+        return this.editorialArtifacts.listCitations(editorialArtifactId);
     }
 
 
-    setSetting(key: string, value: unknown): AppSetting { 
-        return this.settings.set(key, value); 
+    setSetting(key: string, value: unknown): AppSetting {
+        return this.settings.set(key, value);
     }
 
 
-    getSetting(key: string): AppSetting | undefined { 
-        return this.settings.get(key); 
+    getSetting(key: string): AppSetting | undefined {
+        return this.settings.get(key);
     }
 
 
-    getEditorialSession(articleId: string): EditorialSession | undefined { 
-        return this.editorialSessions.get(articleId); 
+    getEditorialSession(articleId: string): EditorialSession | undefined {
+        return this.editorialSessions.get(articleId);
     }
 
 
-    saveEditorialSession(articleId: string, responseId: string): EditorialSession { 
-        return this.editorialSessions.save(articleId, responseId); 
+    saveEditorialSession(articleId: string, responseId: string): EditorialSession {
+        return this.editorialSessions.save(articleId, responseId);
     }
 
 

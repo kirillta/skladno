@@ -42,6 +42,10 @@ The collapsed Navigation Rail uses `w-10`, keeps Style Profile and Settings as l
 
 Use accessible tabs for Write, Proposal Review, Revisions, Fact Check, Style Profile, Translations, and Publish. Each tab requires a stable ID, `aria-controls`, matching tab panel, and Arrow/Home/End keyboard navigation. Use compact badges only for actionable or stale content; the badge text must name the condition.
 
+## Article formatting
+
+The Write view uses a WYSIWYG Markdown editor. Article content is persisted as the supported Markdown subset, never HTML or editor JSON. Keep its compact formatting toolbar directly beneath the Workspace Tab Bar and above the scrolling writing surface; it has the accessible name “Article formatting”, keyboard Arrow/Home/End navigation, and visible pressed states. It may scroll horizontally at constrained widths. The supported subset is paragraphs, headings, bold, italic, strikethrough, links, quotes, nested lists, inline and fenced code, and line breaks. Images, media, attachments, embeds, tables, task lists, raw HTML, and Word-only styles remain excluded.
+
 ## Editorial operations
 
 Before a network operation, show the saved revision being reviewed and describe the minimum author context that will be sent. Streaming progress must be announced through a polite live region without moving focus. Provide explicit stop and retry controls.

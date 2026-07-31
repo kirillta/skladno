@@ -147,15 +147,18 @@ function useArticleRevisions(client: EditorialWorkspaceClient, article: Article 
     const [revisions, setRevisions] = useState<ArticleRevision[]>([]);
     const [candidate, setCandidate] = useState<ArticleRevision>();
     const [message, setMessage] = useState("");
+    const articleId = article?.id;
+    const currentRevisionId = article?.currentRevisionId;
 
     useEffect(() => {
-        if (!article) {
+        if (!articleId) {
             setRevisions([]);
             return;
         }
 
-        client.listArticleRevisions(article.id).then(setRevisions).catch(() => setMessage("Couldn’t load revision history."));
-    }, [article?.id, article?.currentRevisionId, client]);
+        client.listArticleRevisions(articleId).then(setRevisions).catch(() => setMessage("Couldn’t load revision history."));
+    }, [articleId, currentRevisionId, client]);
+
     async function restore() {
         if (!article || !candidate)
             return;
@@ -208,7 +211,9 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
 
                 if (event.type === "completed") {
                     setProposal(event.text);
-                    setFactCheck(event.factCheck); setStyleReview(event.styleReview); setTranslation(event.translation);
+                    setFactCheck(event.factCheck);
+                    setStyleReview(event.styleReview);
+                    setTranslation(event.translation);
                     setState("idle");
                 }
 
@@ -235,7 +240,10 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
         const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: "accepted-proposal" } });
 
         workspace.updateRevision(article.id, revision);
-        workspace.setContent(content); setProposal(""); setBase(undefined); setSelectedChanges(new Set());
+        workspace.setContent(content);
+        setProposal("");
+        setBase(undefined);
+        setSelectedChanges(new Set());
     }
 
 
@@ -267,8 +275,12 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
         translation,
         request,
         accept,
-        reject: () => { setProposal(""); setBase(undefined); },
-        cancel: () => controller.current?.abort(), createTranslation
+        reject: () => {
+            setProposal("");
+            setBase(undefined);
+        },
+        cancel: () => controller.current?.abort(),
+        createTranslation
     };
 }
 
@@ -276,12 +288,17 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
 function useStyleCorpus(client: EditorialWorkspaceClient) {
     const [corpus, setCorpus] = useState<StyleCorpus>();
 
-    useEffect(() => { client.getStyleCorpus().then(setCorpus).catch(() => undefined); }, [client]);
+    useEffect(() => {
+        client.getStyleCorpus().then(setCorpus).catch(() => undefined);
+    }, [client]);
 
     return {
         corpus,
         add: async (name: string, content: string) => setCorpus(await client.addStyleCorpusItem({ name, content })),
-        remove: async (id: string) => { await client.removeStyleCorpusItem(id); setCorpus(await client.getStyleCorpus()); }
+        remove: async (id: string) => {
+            await client.removeStyleCorpusItem(id);
+            setCorpus(await client.getStyleCorpus());
+        }
     };
 }
 
@@ -305,7 +322,9 @@ function usePublishing(client: EditorialWorkspaceClient, content: string) {
         profile: getPublishLimitProfile(profileId),
         message: message.text,
         messageTone: message.tone,
-        setProfile: async (id: PublishLimitProfileId) => { setProfileId(await client.setPublishLimitProfile(id)); },
+        setProfile: async (id: PublishLimitProfileId) => {
+            setProfileId(await client.setPublishLimitProfile(id));
+        },
         copy: async () => {
             try {
                 await navigator.clipboard.writeText(text);

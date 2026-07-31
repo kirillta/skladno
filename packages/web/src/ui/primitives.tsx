@@ -5,7 +5,7 @@ export type ControlState = "default" | "loading" | "success" | "warning" | "erro
 export type Tone = "info" | "success" | "warning" | "error";
 
 
-function joinClassNames(...names: Array<string | undefined>): string {
+function joinClassNames(...names: (string | undefined)[]): string {
     return names.filter(Boolean).join(" ");
 }
 

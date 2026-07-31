@@ -23,7 +23,7 @@ export function ArticleHeader({ article, rename, save, remove, focusMode, setFoc
         setEditingTitle(false);
         pendingTitle.current = undefined;
         clearTimeout(renameTimer.current);
-    }, [article.id]);
+    }, [article.id, article.title]);
 
 
     useEffect(() => () => clearTimeout(renameTimer.current), []);
