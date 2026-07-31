@@ -161,7 +161,7 @@ test("provider errors are actionable and leave the article unchanged", async () 
         const body = await response.text();
 
         assert.match(body, /"type":"error","requestId":"request-provider-error","code":"network"/);
-        assert.match(body, /Check your connection and API settings, then retry/);
+        assert.match(body, /"errorCode":"editorial_provider_failed"/);
         assert.equal(repositories.getEditorialSession(article.id), undefined);
         assert.deepEqual(repositories.listEditorialArtifacts(article.id), []);
         assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");

@@ -6,13 +6,19 @@ export const aiModelsPath = `${applicationSettingsPath}/ai/models`;
 export const aiModelPreferencesPath = `${applicationSettingsPath}/ai/model-preferences`;
 
 export type ApplicationScreen = "editorial-workspace" | "application-settings";
+export const INTERFACE_LOCALE = {
+    EN: "en",
+} as const;
+
+export type InterfaceLocale = typeof INTERFACE_LOCALE[keyof typeof INTERFACE_LOCALE];
+export const defaultInterfaceLocale: InterfaceLocale = INTERFACE_LOCALE.EN;
 export type ThemePreference = "system" | "light" | "dark";
 export type DateFormatPreference = "system" | "day-first" | "month-first" | "iso";
 export type TimeFormatPreference = "system" | "12-hour" | "24-hour";
 
 export interface GeneralSettings {
     theme: ThemePreference;
-    interfaceLocale: "en";
+    interfaceLocale: InterfaceLocale;
     dateFormat: DateFormatPreference;
     timeFormat: TimeFormatPreference;
     defaultArticleLanguage: string;
@@ -50,7 +56,7 @@ export interface ApplicationSettingsSnapshot {
 
 export const defaultGeneralSettings: GeneralSettings = {
     theme: "system",
-    interfaceLocale: "en",
+    interfaceLocale: defaultInterfaceLocale,
     dateFormat: "system",
     timeFormat: "system",
     defaultArticleLanguage: "en",

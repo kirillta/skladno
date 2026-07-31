@@ -13,6 +13,7 @@ import { $insertList, $isListNode, $removeList, ListItemNode, ListNode, type Lis
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode, HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection, $setSelection, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_CRITICAL, PASTE_COMMAND, type BaseSelection, type EditorThemeClasses, type ElementNode, type LexicalEditor, type TextFormatType } from "lexical";
 import { Button, Dialog, Field } from "../../ui/primitives.js";
+import { useIntl } from "react-intl";
 import { $generateNodesFromDOM } from "@lexical/html";
 import { exportArticleMarkdown, importArticleMarkdown } from "./markdown.js";
 import { isSupportedArticleLink } from "./paste-constants.js";
@@ -144,6 +145,7 @@ function currentListType(editor: LexicalEditor): ListType | undefined {
 
 
 function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => void }) {
+    const intl = useIntl();
     const [block, setBlock] = useState<BlockType>("paragraph");
     const [formats, setFormats] = useState<Set<string>>(new Set());
     const [listType, setListType] = useState<ListType>();
@@ -248,7 +250,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
     };
 
     const controls = [
-        ["Bold", BoldIcon, "bold"], ["Italic", ItalicIcon, "italic"], ["Strikethrough", StrikeIcon, "strikethrough"], ["Inline code", CodeIcon, "code"],
+        ["editor.bold", BoldIcon, "bold"], ["editor.italic", ItalicIcon, "italic"], ["editor.strikethrough", StrikeIcon, "strikethrough"], ["editor.codeBlock", CodeIcon, "code"],
     ] as const;
 
     const formatButtonClass = (active: boolean) => [
@@ -257,34 +259,29 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
     ].join(" ");
 
     return <div className="shrink-0 overflow-x-auto border-b border-border bg-surface-raised px-4 py-1 [scrollbar-width:thin]">
-        <div role="toolbar" aria-label="Article formatting" onKeyDown={keyNav} className="flex w-max min-w-full items-center gap-1">
-            <select aria-label="Block style"
+        <div role="toolbar" aria-label={intl.formatMessage({ id: "editor.formatting" })} onKeyDown={keyNav} className="flex w-max min-w-full items-center gap-1">
+            <select aria-label={intl.formatMessage({ id: "editor.blockStyle" })}
                 value={block}
                 onMouseDown={rememberBlockSelection}
                 onChange={(event) => applyBlockType(event.target.value as BlockType)}
                 className="min-h-9 rounded-control border border-border bg-surface-raised px-2 text-xs text-ink">
-                <option value="paragraph">Paragraph</option>
-                <option value="h1">Heading 1</option>
-                <option value="h2">Heading 2</option>
-                <option value="h3">Heading 3</option>
-                <option value="h4">Heading 4</option>
-                <option value="h5">Heading 5</option>
-                <option value="h6">Heading 6</option>
-                <option value="quote">Block quote</option>
-                <option value="code">Code block</option>
+                <option value="paragraph">{intl.formatMessage({ id: "editor.paragraph" })}</option>
+                {[1, 2, 3, 4, 5, 6].map((level) => <option key={level} value={`h${level}`}>{intl.formatMessage({ id: "editor.heading" }, { level })}</option>)}
+                <option value="quote">{intl.formatMessage({ id: "editor.blockQuote" })}</option>
+                <option value="code">{intl.formatMessage({ id: "editor.codeBlock" })}</option>
             </select>
-            {controls.map(([label, Icon, format]) => <button key={format} type="button" aria-label={label} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextFormat(format)} className={formatButtonClass(formats.has(format))}><Icon /></button>)}
+            {controls.map(([label, Icon, format]) => <button key={format} type="button" aria-label={intl.formatMessage({ id: label as "editor.bold" | "editor.italic" | "editor.strikethrough" | "editor.codeBlock" })} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextFormat(format)} className={formatButtonClass(formats.has(format))}><Icon /></button>)}
             <button type="button"
-                aria-label="Link"
+                aria-label={intl.formatMessage({ id: "editor.link" })}
                 aria-pressed={linkActive}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => activate(openLink)}
                 className={formatButtonClass(linkActive)}>
                 <LinkIcon />
             </button>
-            {linkUrl && <a href={linkUrl} target="_blank" rel="noreferrer" aria-label={`Open link: ${linkUrl}`} className="inline-flex min-h-9 max-w-32 items-center truncate rounded-control px-2 text-xs font-semibold text-brand underline underline-offset-2 hover:bg-brand-soft">{linkUrl}</a>}
+            {linkUrl && <a href={linkUrl} target="_blank" rel="noreferrer" aria-label={intl.formatMessage({ id: "editor.openLink" }, { url: linkUrl })} className="inline-flex min-h-9 max-w-32 items-center truncate rounded-control px-2 text-xs font-semibold text-brand underline underline-offset-2 hover:bg-brand-soft">{linkUrl}</a>}
             <button type="button"
-                aria-label="Bulleted list"
+                aria-label={intl.formatMessage({ id: "editor.bulletedList" })}
                 aria-pressed={listType === "bullet"}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => applyList("bullet")}
@@ -292,7 +289,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
                 <ListIcon />
             </button>
             <button type="button"
-                aria-label="Numbered list"
+                aria-label={intl.formatMessage({ id: "editor.numberedList" })}
                 aria-pressed={listType === "number"}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => applyList("number")}
@@ -305,6 +302,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
 
 
 function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => void }) {
+    const intl = useIntl();
     const [text, setText] = useState("");
     const [url, setUrl] = useState("");
     const [editing, setEditing] = useState(false);
@@ -348,21 +346,21 @@ function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => voi
     }
 
     return <Dialog open aria-labelledby="link-dialog-title" className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl">
-        <h2 id="link-dialog-title" className="text-base font-semibold">{editing ? "Edit link" : "Add link"}</h2>
-        <label className="mt-4 block text-xs font-semibold">Link text<Field value={text} onChange={(event) => setText(event.target.value)} /></label>
-        <label className="mt-3 block text-xs font-semibold">URL<Field value={url} onChange={(event) => setUrl(event.target.value)} /></label>
+        <h2 id="link-dialog-title" className="text-base font-semibold">{editing ? intl.formatMessage({ id: "editor.link" }) : intl.formatMessage({ id: "editor.link" })}</h2>
+        <label className="mt-4 block text-xs font-semibold">{intl.formatMessage({ id: "editor.linkText" })}<Field value={text} onChange={(event) => setText(event.target.value)} /></label>
+        <label className="mt-3 block text-xs font-semibold">{intl.formatMessage({ id: "editor.url" })}<Field value={url} onChange={(event) => setUrl(event.target.value)} /></label>
         {error && <p className="mt-2 text-xs text-danger" role="alert">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
             <Button variant="quiet" onClick={() => {
                 close();
                 editor.focus();
-            }}>Cancel</Button>
+            }}>{intl.formatMessage({ id: "editor.cancel" })}</Button>
             {editing && <Button variant="danger" onClick={() => {
                 editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
                 close();
                 editor.focus();
-            }}>Remove link</Button>}
-            <Button onClick={apply}>Apply</Button>
+            }}>{intl.formatMessage({ id: "editor.removeLink" })}</Button>}
+            <Button onClick={apply}>{intl.formatMessage({ id: "editor.apply" })}</Button>
         </div>
     </Dialog>;
 }
@@ -459,12 +457,13 @@ function SupportedPastePlugin() {
 
 
 function EditorContents({ content, onChange }: { content: string; onChange: (value: string) => void }) {
+    const intl = useIntl();
     const [editor, setEditor] = useState<LexicalEditor>();
     return <>{editor && <LinkControl editor={editor} />}
         <div className="min-h-0 flex-1 overflow-y-auto bg-surface-raised [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             <div className="min-h-full px-8 py-7">
                 <div className="relative mx-auto w-full max-w-3xl">
-                    <RichTextPlugin contentEditable={<ContentEditable aria-label="Article draft" className="min-h-[calc(100vh-16rem)] whitespace-pre-wrap font-editor text-xl leading-8 text-ink outline-none [&_a]:text-brand [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border-strong [&_blockquote]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded-control [&_pre]:bg-surface [&_pre]:p-4 [&_pre]:font-mono [&_h1]:text-4xl [&_h2]:text-3xl [&_h3]:text-2xl [&_h4]:text-xl [&_h4]:font-bold [&_h4]:leading-7 [&_h5]:text-lg [&_h5]:font-bold [&_h5]:leading-7 [&_h6]:text-base [&_h6]:font-bold [&_h6]:uppercase [&_h6]:tracking-wide [&_h6]:leading-6" />} placeholder={<p className="pointer-events-none absolute top-0 text-xl text-muted">Write your article...</p>} ErrorBoundary={EditorErrorBoundary} />
+                    <RichTextPlugin contentEditable={<ContentEditable aria-label={intl.formatMessage({ id: "editor.articleDraft" })} className="min-h-[calc(100vh-16rem)] whitespace-pre-wrap font-editor text-xl leading-8 text-ink outline-none [&_a]:text-brand [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border-strong [&_blockquote]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded-control [&_pre]:bg-surface [&_pre]:p-4 [&_pre]:font-mono [&_h1]:text-4xl [&_h2]:text-3xl [&_h3]:text-2xl [&_h4]:text-xl [&_h4]:font-bold [&_h4]:leading-7 [&_h5]:text-lg [&_h5]:font-bold [&_h5]:leading-7 [&_h6]:text-base [&_h6]:font-bold [&_h6]:uppercase [&_h6]:tracking-wide [&_h6]:leading-6" />} placeholder={<p className="pointer-events-none absolute top-0 text-xl text-muted">{intl.formatMessage({ id: "editor.placeholder" })}</p>} ErrorBoundary={EditorErrorBoundary} />
                     <HistoryPlugin />
                     <ListPlugin />
                     <LinkPlugin />

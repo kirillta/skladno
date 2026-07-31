@@ -4,6 +4,8 @@
 
 Skladno is a local-first AI editorial workspace for technical authors. It supports the full path from rough theses to a polished, fact-checked, voice-consistent article while keeping every meaningful edit under the author's control.
 
+See [internationalization guidance](docs/internationalization.md) for the interface locale and catalog conventions.
+
 The project is currently in its planning and foundation stage. The product backlog is tracked in [GitHub Issues](https://github.com/kirillta/skladno/issues).
 
 ## What Skladno is for

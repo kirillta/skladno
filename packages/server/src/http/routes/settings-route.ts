@@ -1,8 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, type BackupPolicy, type GeneralSettings, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, type BackupPolicy, type GeneralSettings, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, writeJson } from "../json.js";
+import { ApplicationServiceError } from "../application-error.js";
 
 const generalKey = "application-general";
 const backupKey = "application-backup-policy";
@@ -14,6 +15,7 @@ function general(value: unknown): GeneralSettings {
     return {
         ...defaultGeneralSettings,
         ...candidate,
+        interfaceLocale: candidate.interfaceLocale === INTERFACE_LOCALE.EN ? candidate.interfaceLocale : defaultInterfaceLocale,
         defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages)
             ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))]
             : [],
@@ -33,7 +35,7 @@ function backup(value: unknown): BackupPolicy {
 
 function environmentVariableName(value: unknown): string {
     if (typeof value !== "string" || !/^[A-Z_][A-Z0-9_]*$/.test(value))
-        throw new Error("Enter an environment-variable name using capital letters, numbers, and underscores.");
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_ENVIRONMENT_VARIABLE_NAME, HTTP_STATUS.BAD_REQUEST);
 
     return value;
 }
@@ -56,11 +58,11 @@ function modelPreferences(value: unknown): ModelPreferences {
 async function listModels(environmentVariable: string): Promise<string[]> {
     const apiKey = process.env[environmentVariable];
     if (!apiKey)
-        throw new Error(`The ${environmentVariable} variable is not available to the local service.`);
+        throw new ApplicationServiceError(APPLICATION_ERROR.ENVIRONMENT_VARIABLE_UNAVAILABLE, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: environmentVariable });
 
     const response = await fetch("https://api.openai.com/v1/models", { headers: { authorization: `Bearer ${apiKey}` } });
     if (!response.ok)
-        throw new Error("OpenAI could not verify this connection. Check the variable and its key, then try again.");
+        throw new ApplicationServiceError(APPLICATION_ERROR.OPENAI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
 
     const body = await response.json() as { data?: { id?: unknown }[] };
     return (body.data ?? []).map((model) => model.id).filter((id): id is string => typeof id === "string" && !/(embedding|moderation|image|audio|transcri|speech|realtime)/i.test(id)).sort();
@@ -111,7 +113,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
         const saved = connections(repositories.getSetting(aiConnectionsKey)?.value);
         const index = saved.connections.findIndex((connection) => connection.id === connectionId);
         if (index < 0)
-            throw new Error("AI connection not found.");
+            throw new ApplicationServiceError(APPLICATION_ERROR.OPENAI_CONNECTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
         if (action === "active" && request.method === HTTP_METHOD.PUT) {
             repositories.setSetting(aiConnectionsKey, { ...saved, activeConnectionId: connectionId });
@@ -146,7 +148,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
 
         if (!action && request.method === HTTP_METHOD.DELETE) {
             if (saved.activeConnectionId === connectionId && saved.connections.length > 1)
-                throw new Error("Choose another active AI connection before removing this one.");
+                throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REMOVAL_BLOCKED, HTTP_STATUS.BAD_REQUEST);
 
             saved.connections.splice(index, 1);
             repositories.setSetting(aiConnectionsKey, { connections: saved.connections, ...(saved.connections[0] ? { activeConnectionId: saved.connections[0].id } : {}) });
@@ -160,7 +162,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
         const saved = connections(repositories.getSetting(aiConnectionsKey)?.value);
         const active = saved.connections.find((connection) => connection.id === saved.activeConnectionId);
         if (!active)
-            throw new Error("Add and select an OpenAI connection first.");
+            throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
         writeJson(response, HTTP_STATUS.OK, await listModels(active.environmentVariableName));
         return true;

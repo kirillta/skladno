@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, DialogHTMLAttributes, HTMLAttributes, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { useIntl } from "react-intl";
 
 
 export type ControlState = "default" | "loading" | "success" | "warning" | "error" | "outdated" | "conflicted";
@@ -105,8 +106,9 @@ export function Progress({ value, label }: { value?: number; label: string }) {
 }
 
 
-export function Skeleton({ className, label = "Loading" }: { className?: string; label?: string }) {
-    return <div className={joinClassNames("animate-pulse rounded-control bg-surface motion-reduce:animate-none", className)} role="status" aria-label={label} />;
+export function Skeleton({ className, label }: { className?: string; label?: string }) {
+    const intl = useIntl();
+    return <div className={joinClassNames("animate-pulse rounded-control bg-surface motion-reduce:animate-none", className)} role="status" aria-label={label ?? intl.formatMessage({ id: "ui.loading" })} />;
 }
 
 
@@ -121,24 +123,25 @@ export function Tooltip({ children, content }: { children: ReactNode; content: s
 
 
 export function Diff({ removed, added, layout = "stacked" }: { removed?: ReactNode; added?: ReactNode; layout?: "stacked" | "columns" }) {
-    const removedContent = removed ?? <span className="italic text-muted">No original text</span>;
-    const addedContent = added ?? <span className="italic text-muted">No proposed text</span>;
+    const intl = useIntl();
+    const removedContent = removed ?? <span className="italic text-muted">{intl.formatMessage({ id: "ui.noOriginal" })}</span>;
+    const addedContent = added ?? <span className="italic text-muted">{intl.formatMessage({ id: "ui.noProposed" })}</span>;
 
     if (layout === "columns")
         return (
-            <div className="grid overflow-hidden rounded-panel border border-border md:grid-cols-2" aria-label="Proposed text change">
+            <div className="grid overflow-hidden rounded-panel border border-border md:grid-cols-2" aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>
                 <del className="block min-w-0 whitespace-pre-wrap border-b-4 border-danger bg-diff-removed p-4 decoration-danger md:border-b-0 md:border-r md:border-r-border md:border-l-4">
-                    <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-danger">Original</strong>
+                    <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-danger">{intl.formatMessage({ id: "ui.original" })}</strong>
                     {removedContent}
                 </del>
                 <ins className="block min-w-0 whitespace-pre-wrap border-b-4 border-success bg-diff-added p-4 decoration-success md:border-b-0 md:border-l-4">
-                    <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">Proposed</strong>
+                    <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">{intl.formatMessage({ id: "ui.proposed" })}</strong>
                     {addedContent}
                 </ins>
             </div>
         );
 
-    return <div className="overflow-hidden rounded-panel border border-border" aria-label="Proposed text change">{removed && <del className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,var(--color-diff-removed-stripe)_6px,var(--color-diff-removed-stripe)_12px)] p-2 decoration-danger"><strong>Removed: </strong>{removed}</del>}{added && <ins className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,var(--color-diff-added-stripe)_6px,var(--color-diff-added-stripe)_12px)] p-2 decoration-success"><strong>Added: </strong>{added}</ins>}</div>;
+    return <div className="overflow-hidden rounded-panel border border-border" aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>{removed && <del className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,var(--color-diff-removed-stripe)_6px,var(--color-diff-removed-stripe)_12px)] p-2 decoration-danger"><strong>{intl.formatMessage({ id: "ui.removed" })}</strong>{removed}</del>}{added && <ins className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,var(--color-diff-added-stripe)_6px,var(--color-diff-added-stripe)_12px)] p-2 decoration-success"><strong>{intl.formatMessage({ id: "ui.added" })}</strong>{added}</ins>}</div>;
 }
 
 

@@ -1,14 +1,16 @@
 import { useState } from "react";
+import { IntlProvider, useIntl } from "react-intl";
+import { messages } from "../../i18n/messages.js";
 import { EDITORIAL_OPERATION, type EditorialOperation } from "@skladno/shared";
 import { Banner, Button, Status, TextareaField } from "../../ui/primitives.js";
 
 
-const editorialOperationLabels: Record<EditorialOperation, string> = {
-    [EDITORIAL_OPERATION.THESIS_TO_NARRATIVE]: "Thesis to narrative",
-    [EDITORIAL_OPERATION.FLOW_REVISION]: "Flow revision",
-    [EDITORIAL_OPERATION.FACT_CHECK]: "Fact check",
-    [EDITORIAL_OPERATION.STYLE_REVIEW]: "Style review",
-    [EDITORIAL_OPERATION.TRANSLATION]: "Translation",
+const editorialOperationLabels: Record<EditorialOperation, "operations.thesisToNarrative" | "operations.flowRevision" | "operations.factCheck" | "operations.styleReview" | "operations.translation"> = {
+    [EDITORIAL_OPERATION.THESIS_TO_NARRATIVE]: "operations.thesisToNarrative",
+    [EDITORIAL_OPERATION.FLOW_REVISION]: "operations.flowRevision",
+    [EDITORIAL_OPERATION.FACT_CHECK]: "operations.factCheck",
+    [EDITORIAL_OPERATION.STYLE_REVIEW]: "operations.styleReview",
+    [EDITORIAL_OPERATION.TRANSLATION]: "operations.translation",
 };
 
 
@@ -41,7 +43,7 @@ function SendMark() {
 }
 
 
-export function EditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language }: {
+export function EditorialAssistantPanel(props: {
     state: "idle" | "streaming" | "error";
     message: string;
     onRequest: (operation: EditorialOperation, guidance: string, language?: string) => Promise<void>;
@@ -50,6 +52,21 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
     setCollapsed: (value: boolean) => void;
     language: string;
 }) {
+    return <IntlProvider locale="en" messages={messages}>
+        <LocalizedEditorialAssistantPanel {...props} />
+    </IntlProvider>;
+}
+
+function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language }: {
+    state: "idle" | "streaming" | "error";
+    message: string;
+    onRequest: (operation: EditorialOperation, guidance: string, language?: string) => Promise<void>;
+    onCancel: () => void;
+    collapsed: boolean;
+    setCollapsed: (value: boolean) => void;
+    language: string;
+}) {
+    const intl = useIntl();
     const [guidance, setGuidance] = useState("");
     const [quickActionsOpen, setQuickActionsOpen] = useState(false);
     const [selectedOperation, setSelectedOperation] = useState<EditorialOperation>();
@@ -67,9 +84,9 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
     }
 
     if (collapsed)
-        return <aside className="flex h-full w-12 flex-col border-l border-border bg-surface-supporting p-1" aria-label="Editorial Assistant Panel">
+        return <aside className="flex h-full w-12 flex-col border-l border-border bg-surface-supporting p-1" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
             <header className="flex min-h-18 w-full items-center justify-center">
-                <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label="Expand Editorial Assistant Panel" onClick={() => setCollapsed(false)}>
+                <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.expand" })} onClick={() => setCollapsed(false)}>
                     <span className="grid size-full place-items-center">
                         <AssistantMark />
                     </span>
@@ -77,36 +94,36 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
             </header>
         </aside>;
 
-    return <aside className="flex h-full min-h-0 w-96 flex-col border-l border-border bg-surface-supporting" aria-label="Editorial Assistant Panel">
+    return <aside className="flex h-full min-h-0 w-96 flex-col border-l border-border bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
         <header className="flex min-h-18 items-center border-b border-border px-5">
             <AssistantMark />
-            <h2 className="ml-3 text-base font-semibold">Editorial Assistant</h2>
-            <Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" aria-label="Collapse Editorial Assistant Panel" onClick={() => setCollapsed(true)}>
+            <h2 className="ml-3 text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2>
+            <Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}>
                 <CollapseMark />
             </Button>
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-8">
-            <p className="max-w-sm text-base leading-8 text-muted">Ask for a focused editorial operation when you are ready. Suggestions stay separate from your Article until you accept them.</p>
-            {state === "streaming" && <Status label="Preparing your proposal…" tone="info" />}
+            <p className="max-w-sm text-base leading-8 text-muted">{intl.formatMessage({ id: "assistant.intro" })}</p>
+            {state === "streaming" && <Status label={intl.formatMessage({ id: "assistant.preparing" })} tone="info" />}
             {message && <Banner className="mt-5" tone="error" role="alert">{message}</Banner>}
         </div>
         <div className="shrink-0 border-t border-border px-5 py-7">
             <div className="relative mt-auto py-3">
                 {quickActionsOpen && <div className="absolute bottom-full left-0 z-10 mb-2 w-52 rounded-panel border border-border bg-surface-raised p-1 shadow-raised">
-                    {Object.values(EDITORIAL_OPERATION).map((operation) => <Button className="flex w-full justify-start text-xs" key={operation} disabled={state === "streaming"} variant="quiet" onClick={() => selectOperation(operation)}>{editorialOperationLabels[operation]}</Button>)}
+                    {Object.values(EDITORIAL_OPERATION).map((operation) => <Button className="flex w-full justify-start text-xs" key={operation} disabled={state === "streaming"} variant="quiet" onClick={() => selectOperation(operation)}>{intl.formatMessage({ id: editorialOperationLabels[operation] })}</Button>)}
                 </div>}
-                <Button className="flex items-center gap-2" variant="secondary" aria-expanded={quickActionsOpen} aria-label={selectedOperation ? `Quick actions: ${editorialOperationLabels[selectedOperation]} selected` : "Quick actions"} onClick={() => setQuickActionsOpen((open) => !open)}>
-                    {selectedOperation ? `Quick actions: ${editorialOperationLabels[selectedOperation]}` : "Quick actions"}
+                <Button className="flex items-center gap-2" variant="secondary" aria-expanded={quickActionsOpen} aria-label={selectedOperation ? intl.formatMessage({ id: "assistant.quickActionSelected" }, { operation: intl.formatMessage({ id: editorialOperationLabels[selectedOperation] }) }) : intl.formatMessage({ id: "assistant.quickActions" })} onClick={() => setQuickActionsOpen((open) => !open)}>
+                    {selectedOperation ? `${intl.formatMessage({ id: "assistant.quickActions" })}: ${intl.formatMessage({ id: editorialOperationLabels[selectedOperation] })}` : intl.formatMessage({ id: "assistant.quickActions" })}
                     <DisclosureMark open={quickActionsOpen} />
                 </Button>
             </div>
             <div className="relative">
-                <TextareaField className="min-h-25 resize-y pr-12" aria-label="Editorial guidance" value={guidance} onChange={(event) => setGuidance(event.target.value)} placeholder="Ask or instruct..." />
-                <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center p-1" variant="quiet" aria-label="Send editorial request" disabled={state === "streaming" || !selectedOperation || !guidance.trim()} onClick={send}>
+                <TextareaField className="min-h-25 resize-y pr-12" aria-label={intl.formatMessage({ id: "assistant.guidance" })} value={guidance} onChange={(event) => setGuidance(event.target.value)} placeholder={intl.formatMessage({ id: "assistant.guidancePlaceholder" })} />
+                <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center p-1" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={state === "streaming" || !selectedOperation || !guidance.trim()} onClick={send}>
                     <SendMark />
                 </Button>
             </div>
-            {state === "streaming" && <Button className="mt-3" variant="danger" onClick={onCancel}>Stop request</Button>}
+            {state === "streaming" && <Button className="mt-3" variant="danger" onClick={onCancel}>{intl.formatMessage({ id: "assistant.stop" })}</Button>}
         </div>
     </aside>;
 }

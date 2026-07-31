@@ -1,4 +1,5 @@
 import { Button, EmptyState } from "../../ui/primitives.js";
+import { useIntl } from "react-intl";
 import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState, WorkspaceLayoutState } from "../EditorialWorkspace.js";
 import { ArticleHeader } from "./ArticleHeader.js";
 import { ArticleStatusBar } from "./ArticleStatusBar.js";
@@ -14,11 +15,12 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     publishing: PublishingState;
     createBlank: () => Promise<unknown>
 }) {
+    const intl = useIntl();
     const article = workspace.selectedArticle;
 
     if (!article)
-        return <EmptyState title="No articles yet" className="pt-40">
-            <Button onClick={() => void createBlank()}>Create</Button>
+        return <EmptyState title={intl.formatMessage({ id: "navigation.noArticlesYet" })} className="pt-40">
+            <Button onClick={() => void createBlank()}>{intl.formatMessage({ id: "articleWorkspace.create" })}</Button>
         </EmptyState>;
 
     const revisionIndex = revisions.revisions.findIndex((revision) => revision.id === article.currentRevisionId);

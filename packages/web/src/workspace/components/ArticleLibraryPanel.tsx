@@ -1,25 +1,26 @@
 import { useState } from "react";
 import type { Article } from "@skladno/shared";
 import { Button, Field, IconButton } from "../../ui/primitives.js";
+import { useIntl } from "react-intl";
 
 
-function formatUpdatedAt(updatedAt: string): string {
+function formatUpdatedAt(updatedAt: string, formatMessage: ReturnType<typeof useIntl>["formatMessage"]): string {
     const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(updatedAt).getTime()) / 60_000));
 
     if (elapsedMinutes < 1)
-        return "Updated just now";
+        return formatMessage({ id: "navigation.updatedJustNow" });
 
     if (elapsedMinutes < 60)
-        return `Updated ${elapsedMinutes} min ago`;
+        return formatMessage({ id: "navigation.updatedMinutes" }, { count: elapsedMinutes });
 
     const elapsedHours = Math.floor(elapsedMinutes / 60);
 
     if (elapsedHours < 24)
-        return `Updated ${elapsedHours} hr ago`;
+        return formatMessage({ id: "navigation.updatedHours" }, { count: elapsedHours });
 
     const elapsedDays = Math.floor(elapsedHours / 24);
 
-    return `Updated ${elapsedDays} day${elapsedDays === 1 ? "" : "s"} ago`;
+    return formatMessage({ id: "navigation.updatedDays" }, { count: elapsedDays });
 }
 
 
@@ -46,24 +47,25 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     language: string | undefined;
     saveState: "saved" | "saving" | "error"
 }) {
+    const intl = useIntl();
     const [query, setQuery] = useState("");
     const visibleArticles = articles.filter((article) => article.title.toLowerCase().includes(query.toLowerCase()));
-    const saveLabel = saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving" : "Save failed";
+    const saveLabel = saveState === "saved" ? intl.formatMessage({ id: "navigation.saved" }) : saveState === "saving" ? intl.formatMessage({ id: "navigation.saving" }) : intl.formatMessage({ id: "navigation.saveFailed" });
     const saveTone = saveState === "saved" ? "text-success" : saveState === "saving" ? "text-warning" : "text-danger";
 
-    return <aside className={collapsed ? "flex h-full w-10 flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-52 flex-col border-r border-border bg-surface-supporting"} aria-label="Article Library Panel">
+    return <aside className={collapsed ? "flex h-full w-10 flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-52 flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
         {collapsed ? <>
             <header className="flex min-h-18 items-center justify-center">
-                <IconButton className="text-base font-semibold text-brand" label="Expand Article Library Panel" onClick={() => setCollapsed(false)}>S</IconButton>
+                <IconButton className="text-base font-semibold text-brand" label={intl.formatMessage({ id: "navigation.expandArticleLibrary" })} onClick={() => setCollapsed(false)}>S</IconButton>
             </header>
             <footer className="mt-auto flex flex-col items-center gap-1 border-t border-border px-0.5 py-2">
-                <IconButton label="Style Profile" onClick={openStyleProfile}>
+                <IconButton label={intl.formatMessage({ id: "navigation.styleProfile" })} onClick={openStyleProfile}>
                     <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <circle cx="12" cy="8" r="3" />
                         <path d="M5.5 20c.6-3.3 3.1-5 6.5-5s5.9 1.7 6.5 5" />
                     </svg>
                 </IconButton>
-                <IconButton label="Settings" onClick={openSettings}>
+                <IconButton label={intl.formatMessage({ id: "navigation.settings" })} onClick={openSettings}>
                     <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <circle cx="12" cy="12" r="3.25" />
                         <path d="M12 2.75v2.5M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5M18.54 5.46l-1.77 1.77M7.23 16.77l-1.77 1.77M18.54 18.54l-1.77-1.77M7.23 7.23 5.46 5.46" />
@@ -80,8 +82,8 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     Skladno
                 </span>
                 <div className="flex items-center gap-1">
-                    <IconButton label="New article" onClick={() => void createBlank()}>&#43;</IconButton>
-                    <IconButton label="Collapse Article Library Panel" onClick={() => setCollapsed(true)}>&#8249;</IconButton>
+                    <IconButton label={intl.formatMessage({ id: "navigation.newArticle" })} onClick={() => void createBlank()}>&#43;</IconButton>
+                    <IconButton label={intl.formatMessage({ id: "navigation.collapseArticleLibrary" })} onClick={() => setCollapsed(true)}>&#8249;</IconButton>
                 </div>
             </header>
 
@@ -91,17 +93,17 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                         <circle cx="11" cy="11" r="5.5" />
                         <path d="m15.25 15.25 4 4" />
                     </svg>
-                    <Field className="min-h-9 py-1.5 pl-8 pr-2" aria-label="Search articles" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search..." />
+                    <Field className="min-h-9 py-1.5 pl-8 pr-2" aria-label={intl.formatMessage({ id: "navigation.searchArticles" })} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={intl.formatMessage({ id: "navigation.searchArticles" })} />
                 </div>
             </div>
 
-            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4" aria-label="Article library">
+            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4" aria-label={intl.formatMessage({ id: "navigation.articleLibraryNav" })}>
                 {articles.length > 0 && <>
-                    <p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">Recent</p>
+                    <p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "navigation.recent" })}</p>
                     <div className="mt-2 space-y-1">
                         {visibleArticles.map((article) => {
                             const isSelected = article.id === selectedArticleId;
-                            const detail = article.language ?? formatUpdatedAt(article.updatedAt);
+                            const detail = article.language ?? formatUpdatedAt(article.updatedAt, intl.formatMessage);
 
                             return <button key={article.id} onClick={() => selectArticle(article.id)} className={`w-full rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-brand" : "text-ink hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
                                 <span className="flex gap-2">
@@ -118,7 +120,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                         })}
                     </div>
 
-                    {visibleArticles.length === 0 && <p className="px-2 py-5 text-sm text-muted">No articles match your search.</p>}
+                    {visibleArticles.length === 0 && <p className="px-2 py-5 text-sm text-muted">{intl.formatMessage({ id: "navigation.noArticlesMatch" })}</p>}
                 </>}
             </nav>
 
@@ -128,17 +130,17 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                         <circle cx="12" cy="8" r="3" />
                         <path d="M5.5 20c.6-3.3 3.1-5 6.5-5s5.9 1.7 6.5 5" />
                     </svg>
-                    <span className="ml-2">Style Profile</span>
+                    <span className="ml-2">{intl.formatMessage({ id: "navigation.styleProfile" })}</span>
                 </Button>
                 <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openSettings}>
                     <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <circle cx="12" cy="12" r="3.25" />
                         <path d="M12 2.75v2.5M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5M18.54 5.46l-1.77 1.77M7.23 16.77l-1.77 1.77M18.54 18.54l-1.77-1.77M7.23 7.23 5.46 5.46" />
                     </svg>
-                    <span className="ml-2">Settings</span>
+                    <span className="ml-2">{intl.formatMessage({ id: "navigation.settings" })}</span>
                 </Button>
                 <div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted">
-                    <span>{languageCode(language)} &middot; Local</span>
+                    <span>{languageCode(language)} &middot; {intl.formatMessage({ id: "navigation.local" })}</span>
                     <span className={`inline-flex items-center gap-1 ${saveTone}`} role="status">
                         <span aria-hidden="true">&#9679;</span>
                         {saveLabel}

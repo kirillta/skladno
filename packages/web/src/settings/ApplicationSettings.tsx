@@ -2,22 +2,26 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import { defaultPublishLimitProfileId, defaultGeneralSettings, publishLimitProfiles, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type ModelPreferences, type PublishLimitProfileId } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Button, Field, Select } from "../ui/primitives.js";
+import { catalogByLocale, installedLocaleCatalogs } from "../i18n/catalogs.js";
+import { formatDateTime } from "../i18n/formatting.js";
+import { useIntl } from "react-intl";
+import { publishingProfileMessageId } from "../i18n/publishing.js";
 
 type Section = "general" | "ai" | "publishing" | "backups";
 
-const sections: { id: Section; label: string }[] = [
-    { id: "general", label: "General" },
-    { id: "ai", label: "AI" },
-    { id: "publishing", label: "Publishing profiles" },
-    { id: "backups", label: "Data & backups" },
+const sections: { id: Section; label: "settings.general" | "settings.ai" | "settings.publishingProfiles" | "settings.dataBackups" }[] = [
+    { id: "general", label: "settings.general" },
+    { id: "ai", label: "settings.ai" },
+    { id: "publishing", label: "settings.publishingProfiles" },
+    { id: "backups", label: "settings.dataBackups" },
 ];
 
 const operations = [
-    ["thesis_to_narrative", "Thesis to narrative"],
-    ["flow_revision", "Flow revision"],
-    ["fact_check", "Fact check"],
-    ["style_review", "Style review"],
-    ["translation", "Translation"],
+    ["thesis_to_narrative", "operations.thesisToNarrative"],
+    ["flow_revision", "operations.flowRevision"],
+    ["fact_check", "operations.factCheck"],
+    ["style_review", "operations.styleReview"],
+    ["translation", "operations.translation"],
 ] as const;
 
 function SettingRow({ label, hint, children, status }: { label: string; hint: string; children: ReactNode; status?: ReactNode }) {
@@ -42,20 +46,11 @@ function Control({ label, hint, children }: { label: string; hint: string; child
 }
 
 function formatExample(general: GeneralSettings): string {
-    const value = new Date("2026-07-31T15:45:00Z");
-    const dateOptions = general.dateFormat === "day-first"
-        ? { day: "2-digit", month: "2-digit", year: "numeric" } as const
-        : general.dateFormat === "month-first"
-            ? { month: "2-digit", day: "2-digit", year: "numeric" } as const
-            : general.dateFormat === "iso"
-                ? { year: "numeric", month: "2-digit", day: "2-digit" } as const
-                : { dateStyle: "medium" } as const;
-    const timeOptions = { hour: "numeric", minute: "2-digit", hour12: general.timeFormat === "12-hour" ? true : general.timeFormat === "24-hour" ? false : undefined } as const;
-
-    return `${new Intl.DateTimeFormat("en", dateOptions).format(value)}, ${new Intl.DateTimeFormat("en", timeOptions).format(value)}`;
+    return formatDateTime("2026-07-31T15:45:00Z", general.interfaceLocale, general.dateFormat, general.timeFormat);
 }
 
 export function ApplicationSettings({ client, back }: { client: EditorialWorkspaceClient; back: () => void }) {
+    const intl = useIntl();
     const [section, setSection] = useState<Section>("general");
     const [settings, setSettings] = useState<ApplicationSettingsSnapshot>();
     const [general, setGeneral] = useState(defaultGeneralSettings);
@@ -65,7 +60,7 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
     const [models, setModels] = useState<string[]>([]);
     const [connectionName, setConnectionName] = useState("");
     const [environmentName, setEnvironmentName] = useState("");
-    const [status, setStatus] = useState("Loading settings…");
+    const [status, setStatus] = useState(() => intl.formatMessage({ id: "settings.loading" }));
 
     useEffect(() => {
         void client.getApplicationSettings().then((loaded) => {
@@ -73,68 +68,68 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
             setGeneral(loaded.general);
             setPreferences(loaded.modelPreferences);
             setBackupPolicy(loaded.backupPolicy);
-            setStatus("Saved");
-        }).catch(() => setStatus("Couldn’t load settings."));
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
+        }).catch(() => setStatus(intl.formatMessage({ id: "settings.loadingFailed" })));
         void client.getPublishLimitProfile().then(setPublishingProfileId).catch(() => undefined);
-    }, [client]);
+    }, [client, intl]);
 
     async function saveGeneral(next: GeneralSettings) {
         setGeneral(next);
-        setStatus("Saving…");
+        setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
             await client.updateGeneralSettings(next);
-            setStatus("Saved");
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch {
-            setStatus("Couldn’t save your changes.");
+            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
         }
     }
 
     async function savePreferences(next: ModelPreferences) {
         setPreferences(next);
-        setStatus("Saving…");
+        setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
             await client.updateModelPreferences(next);
-            setStatus("Saved");
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch {
-            setStatus("Couldn’t save model preferences.");
+            setStatus(intl.formatMessage({ id: "settings.modelSaveFailed" }));
         }
     }
 
     async function saveBackupPolicy(next: BackupPolicy) {
         setBackupPolicy(next);
-        setStatus("Saving…");
+        setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
             await client.updateBackupPolicy(next);
-            setStatus("Saved");
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch {
-            setStatus("Couldn’t save backup settings.");
+            setStatus(intl.formatMessage({ id: "settings.backupSaveFailed" }));
         }
     }
 
     return <main className="flex h-dvh overflow-hidden bg-surface text-ink">
-        <aside className="hidden w-52 shrink-0 border-r border-border bg-surface-supporting md:flex md:flex-col" aria-label="Settings Navigation">
-            <header className="flex min-h-18 items-center border-b border-border px-3"><Button variant="quiet" onClick={back}>Back to workspace</Button></header>
-            <nav className="p-2">{sections.map((item) => <button key={item.id} className={`min-h-10 w-full rounded-control px-3 text-left text-sm ${section === item.id ? "bg-brand-soft font-semibold text-brand" : "text-muted hover:bg-surface"}`} onClick={() => setSection(item.id)}>{item.label}</button>)}</nav>
+        <aside className="hidden w-52 shrink-0 border-r border-border bg-surface-supporting md:flex md:flex-col" aria-label={intl.formatMessage({ id: "settings.navigation" })}>
+            <header className="flex min-h-18 items-center border-b border-border px-3"><Button variant="quiet" onClick={back}>{intl.formatMessage({ id: "settings.backToWorkspace" })}</Button></header>
+            <nav className="p-2">{sections.map((item) => <button key={item.id} className={`min-h-10 w-full rounded-control px-3 text-left text-sm ${section === item.id ? "bg-brand-soft font-semibold text-brand" : "text-muted hover:bg-surface"}`} onClick={() => setSection(item.id)}>{intl.formatMessage({ id: item.label })}</button>)}</nav>
             <footer className="mt-auto border-t border-border px-4 py-3 text-micro text-muted" role="status"><span aria-hidden="true">&#9679;</span> {status}</footer>
         </aside>
         <section className="min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             <div className="mx-auto w-full max-w-3xl px-5 py-8">
-                <h1 className="text-2xl font-semibold">{sections.find((item) => item.id === section)?.label}</h1>
+                <h1 className="text-2xl font-semibold">{intl.formatMessage({ id: sections.find((item) => item.id === section)?.label ?? "settings.general" })}</h1>
                 {!settings ? null : section === "general" ? <>
-                    <SettingRow label="Preferred appearance" hint="Choose the appearance you want Skladno to use. Your preference will be remembered, but visual themes will be enabled in a later update."><Select value={general.theme} onChange={(event) => void saveGeneral({ ...general, theme: event.target.value as GeneralSettings["theme"] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></Select></SettingRow>
-                    <SettingRow label="Interface language" hint="Changes the language of Skladno’s controls and messages. English is the only complete interface language for now."><Select value="en" disabled><option>English</option></Select></SettingRow>
-                    <SettingRow label="Date format" hint="Changes how dates are shown in Skladno. It does not change saved dates or revision history."><Select value={general.dateFormat} onChange={(event) => void saveGeneral({ ...general, dateFormat: event.target.value as GeneralSettings["dateFormat"] })}><option value="system">System</option><option value="day-first">Day first</option><option value="month-first">Month first</option><option value="iso">ISO</option></Select></SettingRow>
-                    <SettingRow label="Time format" hint="Changes how times are shown in Skladno. It does not change saved dates or revision history." status={`Example: ${formatExample(general)}`}><Select value={general.timeFormat} onChange={(event) => void saveGeneral({ ...general, timeFormat: event.target.value as GeneralSettings["timeFormat"] })}><option value="system">System</option><option value="12-hour">12-hour</option><option value="24-hour">24-hour</option></Select></SettingRow>
-                    <SettingRow label="Default Article language" hint="Used for new Articles when you do not choose a language yourself. Existing Articles are not changed."><Select value={general.defaultArticleLanguage} onChange={(event) => void saveGeneral({ ...general, defaultArticleLanguage: event.target.value })}>{[["en", "English"], ["es", "Spanish"], ["pt", "Portuguese"], ["ru", "Russian"], ["fr", "French"], ["de", "German"], ["it", "Italian"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.preferredAppearance" })} hint={intl.formatMessage({ id: "settings.appearanceHint" })}><Select value={general.theme} onChange={(event) => void saveGeneral({ ...general, theme: event.target.value as GeneralSettings["theme"] })}><option value="system">{intl.formatMessage({ id: "settings.system" })}</option><option value="light">{intl.formatMessage({ id: "settings.light" })}</option><option value="dark">{intl.formatMessage({ id: "settings.dark" })}</option></Select></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.interfaceLanguage" })} hint={intl.formatMessage({ id: "settings.interfaceLanguageHint" })}><Select value={catalogByLocale.has(general.interfaceLocale) ? general.interfaceLocale : "en"} disabled={installedLocaleCatalogs.length === 1} onChange={(event) => void saveGeneral({ ...general, interfaceLocale: event.target.value as GeneralSettings["interfaceLocale"] })}>{installedLocaleCatalogs.map((catalog) => <option key={catalog.code} value={catalog.code}>{intl.formatMessage({ id: catalog.nameMessageId })}</option>)}</Select></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.dateFormat" })} hint={intl.formatMessage({ id: "settings.dateFormatHint" })}><Select value={general.dateFormat} onChange={(event) => void saveGeneral({ ...general, dateFormat: event.target.value as GeneralSettings["dateFormat"] })}><option value="system">{intl.formatMessage({ id: "settings.system" })}</option><option value="day-first">{intl.formatMessage({ id: "settings.dayFirst" })}</option><option value="month-first">{intl.formatMessage({ id: "settings.monthFirst" })}</option><option value="iso">{intl.formatMessage({ id: "settings.iso" })}</option></Select></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.timeFormat" })} hint={intl.formatMessage({ id: "settings.timeFormatHint" })} status={intl.formatMessage({ id: "settings.example" }, { value: formatExample(general) })}><Select value={general.timeFormat} onChange={(event) => void saveGeneral({ ...general, timeFormat: event.target.value as GeneralSettings["timeFormat"] })}><option value="system">{intl.formatMessage({ id: "settings.system" })}</option><option value="12-hour">{intl.formatMessage({ id: "settings.twelveHour" })}</option><option value="24-hour">{intl.formatMessage({ id: "settings.twentyFourHour" })}</option></Select></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} hint={intl.formatMessage({ id: "settings.defaultArticleLanguageHint" })}><Select value={general.defaultArticleLanguage} onChange={(event) => void saveGeneral({ ...general, defaultArticleLanguage: event.target.value })}>{[["en", "languages.english"], ["es", "languages.spanish"], ["pt", "languages.portuguese"], ["ru", "languages.russian"], ["fr", "languages.french"], ["de", "languages.german"], ["it", "languages.italian"]].map(([value, label]) => <option key={value} value={value}>{intl.formatMessage({ id: label as "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" })}</option>)}</Select></SettingRow>
                 </> : section === "ai" ? <>
-                    <SettingRow label="Add an OpenAI connection" hint="Your OpenAI key stays private on this computer. Skladno stores only the name of where it is kept."><div className="grid gap-4"><Control label="Connection name" hint="Use a familiar name, such as Personal OpenAI."><Field value={connectionName} placeholder="For example, Personal OpenAI" onChange={(event) => setConnectionName(event.target.value)} /></Control><Control label="Environment-variable name" hint="The name used when your local service starts. Your key is never displayed."><Field value={environmentName} placeholder="For example, OPENAI_API_KEY" onChange={(event) => setEnvironmentName(event.target.value)} /></Control><Button className="w-fit" variant="secondary" onClick={() => void client.addOpenAiConnection({ label: connectionName, environmentVariableName: environmentName })}>Add connection</Button></div></SettingRow>
-                    <SettingRow label="Default model" hint="Used for AI work unless a task has its own model choice."><Control label="Model" hint="Check a connection, then refresh its available models before choosing one."><Select value={preferences.defaultModel} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, defaultModel: event.target.value })}><option value="">{models.length === 0 ? "No available models yet" : "Choose a model"}</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control><Button className="mt-3 w-fit" variant="secondary" onClick={() => void client.refreshOpenAiModels().then(setModels)}>Refresh available models</Button></SettingRow>
-                    <SettingRow label="Models for specific tasks" hint="Choose a model for a task, or use the default model. This affects future AI requests only."><div className="grid gap-4">{operations.map(([operation, label]) => <Control key={operation} label={label} hint="Leave this on Use default model unless this task needs a different model."><Select value={preferences.operationOverrides[operation] ?? ""} onChange={(event) => void savePreferences({ ...preferences, operationOverrides: { ...preferences.operationOverrides, [operation]: event.target.value } })}><option value="">Use default model</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control>)}</div></SettingRow>
-                </> : section === "publishing" ? <SettingRow label="Character-limit profile" hint="Shows when publishing text approaches this length. The limit is guidance and never prevents copying."><Select value={publishingProfileId} onChange={(event) => {
+                    <SettingRow label={intl.formatMessage({ id: "settings.addConnection" })} hint={intl.formatMessage({ id: "settings.connectionHint" })}><div className="grid gap-4"><Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}><Field value={connectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setConnectionName(event.target.value)} /></Control><Control label={intl.formatMessage({ id: "settings.environmentName" })} hint={intl.formatMessage({ id: "settings.environmentNameHint" })}><Field value={environmentName} placeholder={intl.formatMessage({ id: "settings.environmentNamePlaceholder" })} onChange={(event) => setEnvironmentName(event.target.value)} /></Control><Button className="w-fit" variant="secondary" onClick={() => void client.addOpenAiConnection({ label: connectionName, environmentVariableName: environmentName })}>{intl.formatMessage({ id: "settings.addConnectionButton" })}</Button></div></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}><Control label={intl.formatMessage({ id: "settings.model" })} hint={intl.formatMessage({ id: "settings.modelHint" })}><Select value={preferences.defaultModel} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, defaultModel: event.target.value })}><option value="">{models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" })}</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control><Button className="mt-3 w-fit" variant="secondary" onClick={() => void client.refreshOpenAiModels().then(setModels)}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.specificModels" })} hint={intl.formatMessage({ id: "settings.specificModelsHint" })}><div className="grid gap-4">{operations.map(([operation, label]) => <Control key={operation} label={intl.formatMessage({ id: label as "operations.thesisToNarrative" | "operations.flowRevision" | "operations.factCheck" | "operations.styleReview" | "operations.translation" })} hint={intl.formatMessage({ id: "settings.specificModelHint" })}><Select value={preferences.operationOverrides[operation] ?? ""} onChange={(event) => void savePreferences({ ...preferences, operationOverrides: { ...preferences.operationOverrides, [operation]: event.target.value } })}><option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control>)}</div></SettingRow>
+                </> : section === "publishing" ? <SettingRow label={intl.formatMessage({ id: "settings.publishingProfile" })} hint={intl.formatMessage({ id: "settings.publishingProfileHint" })}><Select value={publishingProfileId} onChange={(event) => {
                     const profileId = event.target.value as PublishLimitProfileId;
                     setPublishingProfileId(profileId);
                     void client.setPublishLimitProfile(profileId);
-                }}>{publishLimitProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.label} — {profile.characterLimit.toLocaleString()} characters</option>)}</Select><p className="mt-2 text-xs text-muted">This profile is used by the Article Status Bar and Publishing Preview. Editable custom profiles will build on these basics.</p></SettingRow> : <><SettingRow label="Active data location" hint="Your data is local. SKLADNO_DATA_DIR is set when Skladno starts; safe relocation belongs to a future Electron update."><Field value="Local Skladno data directory" readOnly /></SettingRow><SettingRow label="Backup destination" hint="Skladno writes backup copies to this folder. You can use a folder already synchronized by Dropbox, OneDrive, or another storage application."><Field value={backupPolicy.destinationPath ?? ""} placeholder="For example, C:\\Skladno backups" onChange={(event) => setBackupPolicy({ ...backupPolicy, destinationPath: event.target.value })} onBlur={() => void saveBackupPolicy(backupPolicy)} /></SettingRow><SettingRow label="Automatic backups" hint="Controls daily backup copies. Manual backups are never removed automatically."><Select value={backupPolicy.schedule} onChange={(event) => void saveBackupPolicy({ ...backupPolicy, schedule: event.target.value as BackupPolicy["schedule"] })}><option value="off">Off</option><option value="daily">Daily</option></Select></SettingRow><SettingRow label="Automatic backup retention" hint="Controls how many automatic backups Skladno keeps. Manual backups are never removed automatically."><Select value={backupPolicy.retention.mode === "unlimited" ? "unlimited" : String(backupPolicy.retention.count)} onChange={(event) => void saveBackupPolicy({ ...backupPolicy, retention: event.target.value === "unlimited" ? { mode: "unlimited" } : { mode: "count", count: Number(event.target.value) } })}><option value="7">Keep 7 backups</option><option value="30">Keep 30 backups</option><option value="90">Keep 90 backups</option><option value="unlimited">Keep all backups</option></Select></SettingRow></>}
+                }}>{publishLimitProfiles.map((profile) => <option key={profile.id} value={profile.id}>{intl.formatMessage({ id: "settings.profileCharacters" }, { label: intl.formatMessage({ id: publishingProfileMessageId(profile.id) }), count: intl.formatNumber(profile.characterLimit) })}</option>)}</Select><p className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "settings.publishingProfileNote" })}</p></SettingRow> : <><SettingRow label={intl.formatMessage({ id: "settings.activeDataLocation" })} hint={intl.formatMessage({ id: "settings.activeDataHint" })}><Field value={intl.formatMessage({ id: "settings.localDataDirectory" })} readOnly /></SettingRow><SettingRow label={intl.formatMessage({ id: "settings.backupDestination" })} hint={intl.formatMessage({ id: "settings.backupDestinationHint" })}><Field value={backupPolicy.destinationPath ?? ""} placeholder={intl.formatMessage({ id: "settings.backupPlaceholder" })} onChange={(event) => setBackupPolicy({ ...backupPolicy, destinationPath: event.target.value })} onBlur={() => void saveBackupPolicy(backupPolicy)} /></SettingRow><SettingRow label={intl.formatMessage({ id: "settings.automaticBackups" })} hint={intl.formatMessage({ id: "settings.automaticBackupsHint" })}><Select value={backupPolicy.schedule} onChange={(event) => void saveBackupPolicy({ ...backupPolicy, schedule: event.target.value as BackupPolicy["schedule"] })}><option value="off">{intl.formatMessage({ id: "settings.off" })}</option><option value="daily">{intl.formatMessage({ id: "settings.daily" })}</option></Select></SettingRow><SettingRow label={intl.formatMessage({ id: "settings.retention" })} hint={intl.formatMessage({ id: "settings.retentionHint" })}><Select value={backupPolicy.retention.mode === "unlimited" ? "unlimited" : String(backupPolicy.retention.count)} onChange={(event) => void saveBackupPolicy({ ...backupPolicy, retention: event.target.value === "unlimited" ? { mode: "unlimited" } : { mode: "count", count: Number(event.target.value) } })}><option value="7">{intl.formatMessage({ id: "settings.keepBackups" }, { count: 7 })}</option><option value="30">{intl.formatMessage({ id: "settings.keepBackups" }, { count: 30 })}</option><option value="90">{intl.formatMessage({ id: "settings.keepBackups" }, { count: 90 })}</option><option value="unlimited">{intl.formatMessage({ id: "settings.keepAllBackups" })}</option></Select></SettingRow></>}
             </div>
         </section>
     </main>;

@@ -1,5 +1,7 @@
 import {
     ArticleRevisionConflictError,
+    ApplicationClientError,
+    type ApplicationErrorPayload,
     acceptProposalPath,
     articlesPath,
     articleRevisionsPath,
@@ -49,7 +51,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     async getHealth(): Promise<HealthResponse> {
         const response = await fetch(`${this.serviceUrl}${healthPath}`);
         if (!response.ok)
-            throw new Error(`The local service could not be reached (${response.status}).`);
+            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
 
         return parseHealthResponse(await response.json());
     }
@@ -174,7 +176,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
         });
 
         if (!response.ok || !response.body)
-            throw new Error(`The editorial service could not be reached (${response.status}).`);
+            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -211,11 +213,15 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             throw new ArticleRevisionConflictError((body as { article: Article }).article);
 
         if (!response.ok) {
-            const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
-                ? body.error
-                : `The local service could not be reached (${response.status}).`;
+            const payload = typeof body === "object" && body !== null && "error" in body
+                ? (body as { error: unknown }).error
+                : undefined;
+            if (payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string") {
+                const error = payload as ApplicationErrorPayload;
+                throw new ApplicationClientError(error.code, error.parameters, response.status);
+            }
 
-            throw new Error(message);
+            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
         }
 
         return body as T;

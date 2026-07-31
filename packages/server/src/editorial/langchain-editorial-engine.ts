@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { StyleProfile, StyleReview } from "@skladno/shared";
 
 import { EDITORIAL_OPERATION } from "@skladno/shared";
-import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine, type EditorialEngineEvent, type EditorialEngineRequest } from "./editorial-engine.js";
+import { EDITORIAL_ENGINE_ERROR, EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine, type EditorialEngineEvent, type EditorialEngineRequest } from "./editorial-engine.js";
 import { createEditorialMessages } from "./workflow-prompt.js";
 import { LangGraphFactCheck } from "./langgraph-fact-check.js";
 import { protectArticleSpans, restoreProtectedSpans } from "./translation.js";
@@ -70,7 +70,7 @@ function responseId(value: unknown): string | undefined {
 function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StyleProfile): StyleReview {
     const availableTraits = new Set(profile.traits.map((trait) => trait.id));
     if (value.findings.some((finding) => finding.traitIds.some((traitId) => !availableTraits.has(traitId))))
-        throw new EditorialEngineError("invalid_output", "Style review cited a trait that is not in the supplied local profile. Retry the request.");
+        throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "Style review cited a trait that is not in the supplied local profile. Retry the request.");
 
     return { findings: value.findings };
 }
@@ -79,12 +79,12 @@ function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StylePro
 function providerError(error: unknown, hadPreviousResponseId: boolean): EditorialEngineError {
     const message = error instanceof Error ? error.message : "OpenAI could not complete this request. Retry it in a moment.";
     if (hadPreviousResponseId && /previous[_ ]response|response.*not found|not found/i.test(message))
-        return new EditorialEngineError("session_expired", "The saved editorial session is no longer available. Retry to start a fresh session.");
+        return new EditorialEngineError(EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED, "The saved editorial session is no longer available. Retry to start a fresh session.");
 
     if (/network|fetch|connect|timeout|ECONN|ENOTFOUND/i.test(message))
-        return new EditorialEngineError("network", "OpenAI could not be reached. Check your connection and API settings, then retry.");
+        return new EditorialEngineError(EDITORIAL_ENGINE_ERROR.NETWORK, "OpenAI could not be reached. Check your connection and API settings, then retry.");
 
-    return new EditorialEngineError("provider", message);
+    return new EditorialEngineError(EDITORIAL_ENGINE_ERROR.PROVIDER, message);
 }
 
 
@@ -145,7 +145,7 @@ export class LangChainEditorialEngine implements EditorialEngine {
     private async *streamTranslation(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
         const targetLanguage = request.targetLanguage?.trim();
         if (!targetLanguage)
-            throw new EditorialEngineError("invalid_output", "Choose a target language before requesting a translation.");
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "Choose a target language before requesting a translation.");
 
         const protectedArticle = protectArticleSpans(boundedArticleContext(request.article));
         const messages = await createEditorialMessages({
@@ -164,11 +164,11 @@ export class LangChainEditorialEngine implements EditorialEngine {
         const completedResponseId = responseId(output.raw);
 
         if (!parsed || !completedResponseId || parsed.targetLanguage.trim() !== targetLanguage)
-            throw new EditorialEngineError("invalid_output", "OpenAI returned incomplete translation metadata. Retry the translation.");
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "OpenAI returned incomplete translation metadata. Retry the translation.");
 
         const text = restoreProtectedSpans(parsed.translation, protectedArticle.protectedSpans);
         if (!text)
-            throw new EditorialEngineError("invalid_output", "The translation changed protected code, links, or technical names. Review the proposal and retry if you want an alternative.");
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "The translation changed protected code, links, or technical names. Review the proposal and retry if you want an alternative.");
 
         yield {
             type: EDITORIAL_ENGINE_EVENT.COMPLETED,
@@ -202,7 +202,7 @@ export class LangChainEditorialEngine implements EditorialEngine {
 
     private async *streamStyleReview(request: EditorialEngineRequest, prepared: PreparedEditorialRequest): AsyncIterable<EditorialEngineEvent> {
         if (!request.styleProfile)
-            throw new EditorialEngineError("invalid_output", "Add at least one style corpus item before checking style.");
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "Add at least one style corpus item before checking style.");
 
         const structuredModel = this.model.withStructuredOutput(styleReviewSchema, {
             name: "style_review",
@@ -214,7 +214,7 @@ export class LangChainEditorialEngine implements EditorialEngine {
         const rawResponseId = responseId(output.raw);
 
         if (!parsed || !rawResponseId)
-            throw new EditorialEngineError("invalid_output", "OpenAI returned an incomplete style review. Retry the request.");
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "OpenAI returned an incomplete style review. Retry the request.");
 
         yield {
             type: EDITORIAL_ENGINE_EVENT.COMPLETED,
@@ -240,7 +240,7 @@ export class LangChainEditorialEngine implements EditorialEngine {
 
         const completedResponseId = responseId(completeMessage);
         if (!completedResponseId || !text)
-            throw new EditorialEngineError("incomplete_stream", "OpenAI ended before completing the proposal. Retry the request.");
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, "OpenAI ended before completing the proposal. Retry the request.");
 
         yield {
             type: EDITORIAL_ENGINE_EVENT.COMPLETED,

@@ -24,7 +24,15 @@ export type EditorialEngineEvent =
     | { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED; responseId: string; text: string; styleReview?: StyleReview; factCheck?: FactCheck; translation?: TranslationMetadata };
 
 
-export type EditorialEngineErrorCode = "provider" | "network" | "invalid_output" | "incomplete_stream" | "session_expired";
+export const EDITORIAL_ENGINE_ERROR = {
+    PROVIDER: "provider",
+    NETWORK: "network",
+    INVALID_OUTPUT: "invalid_output",
+    INCOMPLETE_STREAM: "incomplete_stream",
+    SESSION_EXPIRED: "session_expired",
+} as const;
+
+export type EditorialEngineErrorCode = typeof EDITORIAL_ENGINE_ERROR[keyof typeof EDITORIAL_ENGINE_ERROR];
 
 
 export class EditorialEngineError extends Error {
