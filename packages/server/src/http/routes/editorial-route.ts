@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { EDITORIAL_OPERATION, HTTP_METHOD, HTTP_STATUS, type EditorialEvent } from "@skladno/shared";
+import { EDITORIAL_OPERATION, HTTP_METHOD, HTTP_STATUS, type EditorialEvent, type EditorialOperation } from "@skladno/shared";
 
 import type { ServerConfig } from "../../config.js";
 import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine } from "../../editorial/editorial-engine.js";
@@ -18,7 +18,7 @@ function writeEditorialEvent(response: ServerResponse, event: EditorialEvent): v
 }
 
 
-export async function handleEditorialRoute(request: IncomingMessage, response: ServerResponse, pathname: string, config: ServerConfig, repositories: Repositories, engine: EditorialEngine | undefined): Promise<boolean> {
+export async function handleEditorialRoute(request: IncomingMessage, response: ServerResponse, pathname: string, config: ServerConfig, repositories: Repositories, resolveEngine: (operation: EditorialOperation) => EditorialEngine | undefined): Promise<boolean> {
     const match = /^\/api\/articles\/([^/]+)\/editorial$/.exec(pathname);
     if (request.method !== HTTP_METHOD.POST || !match)
         return false;
@@ -54,6 +54,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         return true;
     }
 
+    const engine = resolveEngine(operation as EditorialOperation);
     if (!engine) {
         writeEditorialEvent(response, errorEvent(requestId, "configuration", "Add OPENAI_API_KEY to the local service environment, then retry.", false));
         response.end();

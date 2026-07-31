@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Article } from "@skladno/shared";
-import { Button, Dialog, Field, IconButton } from "../../ui/primitives.js";
+import { Button, Field, IconButton } from "../../ui/primitives.js";
 
 
 function formatUpdatedAt(updatedAt: string): string {
@@ -34,7 +34,7 @@ function languageCode(language: string | undefined): string {
 }
 
 
-export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, language, saveState }: {
+export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, openSettings, language, saveState }: {
     articles: Article[];
     selectedArticleId: string | undefined;
     selectArticle: (articleId: string) => void;
@@ -42,16 +42,16 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     setCollapsed: (value: boolean) => void;
     createBlank: () => Promise<unknown>;
     openStyleProfile: () => void;
+    openSettings: () => void;
     language: string | undefined;
     saveState: "saved" | "saving" | "error"
 }) {
     const [query, setQuery] = useState("");
-    const [settingsOpen, setSettingsOpen] = useState(false);
     const visibleArticles = articles.filter((article) => article.title.toLowerCase().includes(query.toLowerCase()));
     const saveLabel = saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving" : "Save failed";
     const saveTone = saveState === "saved" ? "text-success" : saveState === "saving" ? "text-warning" : "text-danger";
 
-    return <aside className={collapsed ? "flex h-full w-10 flex-col border-r border-border bg-surface px-0.5 py-2" : "flex h-full w-52 flex-col border-r border-border bg-surface"} aria-label="Article Library Panel">
+    return <aside className={collapsed ? "flex h-full w-10 flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-52 flex-col border-r border-border bg-surface-supporting"} aria-label="Article Library Panel">
         {collapsed ? <>
             <header className="flex min-h-18 items-center justify-center">
                 <IconButton className="text-base font-semibold text-brand" label="Expand Article Library Panel" onClick={() => setCollapsed(false)}>S</IconButton>
@@ -63,7 +63,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                         <path d="M5.5 20c.6-3.3 3.1-5 6.5-5s5.9 1.7 6.5 5" />
                     </svg>
                 </IconButton>
-                <IconButton label="Settings" onClick={() => setSettingsOpen(true)}>
+                <IconButton label="Settings" onClick={openSettings}>
                     <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <circle cx="12" cy="12" r="3.25" />
                         <path d="M12 2.75v2.5M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5M18.54 5.46l-1.77 1.77M7.23 16.77l-1.77 1.77M18.54 18.54l-1.77-1.77M7.23 7.23 5.46 5.46" />
@@ -130,7 +130,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     </svg>
                     <span className="ml-2">Style Profile</span>
                 </Button>
-                <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={() => setSettingsOpen(true)}>
+                <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openSettings}>
                     <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <circle cx="12" cy="12" r="3.25" />
                         <path d="M12 2.75v2.5M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5M18.54 5.46l-1.77 1.77M7.23 16.77l-1.77 1.77M18.54 18.54l-1.77-1.77M7.23 7.23 5.46 5.46" />
@@ -146,14 +146,5 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                 </div>
             </footer>
         </>}
-        {settingsOpen && <Dialog open aria-labelledby="workspace-settings-title">
-            <div className="grid max-w-sm gap-3">
-                <div>
-                    <h2 id="workspace-settings-title" className="font-semibold">Workspace settings</h2>
-                    <p className="mt-1 text-sm leading-5 text-muted">This is a local-first workspace. Article content and style materials remain on this device unless you explicitly run an editorial operation.</p>
-                </div>
-                <Button onClick={() => setSettingsOpen(false)}>Close</Button>
-            </div>
-        </Dialog>}
     </aside>;
 }

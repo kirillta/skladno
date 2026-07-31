@@ -25,7 +25,27 @@ Use the following terms consistently in product copy, UI labels, domain code, te
 - **Editorial guidance**: author-entered instruction or context supplied with an editorial request.
 - **Source article** and **translation article**: independently recoverable linked articles. A translation is never a revision of its source article.
 - **Style corpus**: author-provided local writing samples; a **style profile** is their compact derived representation.
-- **Publishing profile**: configurable platform guidance; a **publishing preview** is derived copy prepared for review or copying.
+- **Publishing profile**: configurable platform guidance; its initial configurable guidance is a character limit, and its default applies only to new Articles. A **publishing preview** is derived copy prepared for review or copying.
+- **Application Settings**: the workspace-level screen for application preferences, AI configuration, Publishing profiles, and local data management. It is not a Workspace View and never belongs to Article Revision history.
+- **Settings Navigation**: navigation among Settings Sections. A **Settings Section** is one coherent group of related application settings.
+- **AI connection**: a named server-side AI-provider configuration. Initially it identifies OpenAI and references an environment-variable name without exposing its value. The **active AI connection** is used for new Editorial Requests.
+- **Model preference**: a default model identifier or an Editorial Operation-specific override.
+- **Interface locale**: the language used for application UI, distinct from Article and translation languages. **Default Article language** applies to newly created Articles when no language is supplied. **Default translation languages** are ordered choices offered first for translation requests and never start translations automatically.
+- **Backup destination**: a local directory, possibly managed by a file-sync application, where Skladno writes Backup Snapshots. A **Backup snapshot** is a consistent point-in-time local data copy, separate from the active database and excluding credentials.
+
+Application Settings is composed as follows:
+
+```text
+Application Settings
+├── Settings Header
+│   └── Back to workspace
+├── Settings Navigation
+└── Settings Section
+    ├── General
+    ├── AI
+    ├── Publishing profiles
+    └── Data & backups
+```
 - **Workflow stage**: optional author-selected progress guidance. It is advisory and never runs AI or changes article content.
 
 The desktop **Editorial Workspace** is composed as follows:

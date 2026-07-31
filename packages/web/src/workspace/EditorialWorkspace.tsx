@@ -23,6 +23,7 @@ import { ArticleLibraryPanel as ExtractedArticleLibraryPanel } from "./component
 import { ArticleWorkspace as ExtractedArticleWorkspace } from "./components/ArticleWorkspace.js";
 import { RestoreRevisionDialog as ExtractedRestoreRevisionDialog } from "./components/RestoreRevisionDialog.js";
 import { WorkspaceShell as ExtractedWorkspaceShell } from "./components/WorkspaceShell.js";
+import { ApplicationSettings } from "../settings/ApplicationSettings.js";
 
 export type WorkspaceView = "write" | "proposal" | "revisions" | "fact-check" | "style-profile" | "translations" | "publish";
 type SaveState = "saved" | "saving" | "error";
@@ -359,7 +360,7 @@ export type PublishingState = ReturnType<typeof usePublishing>;
 export type WorkspaceLayoutState = ReturnType<typeof useWorkspaceLayout>;
 
 
-export function EditorialWorkspaceProvider({ client }: { client: EditorialWorkspaceClient }) {
+export function EditorialWorkspaceProvider({ client, screen, openSettings, backToWorkspace }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; openSettings: () => void; backToWorkspace: () => void }) {
     const workspace = useArticleWorkspace(client);
     const layout = useWorkspaceLayout();
     const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision);
@@ -384,7 +385,10 @@ export function EditorialWorkspaceProvider({ client }: { client: EditorialWorksp
             <Banner tone="error" role="alert">{workspace.message}</Banner>
         </main>;
 
-    return <ExtractedWorkspaceShell focusMode={layout.focusMode} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.setSelectedArticleId} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>
+    if (screen === "application-settings")
+        return <ApplicationSettings client={client} back={backToWorkspace} />;
+
+    return <ExtractedWorkspaceShell focusMode={layout.focusMode} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.setSelectedArticleId} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={openSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>
         <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} createBlank={createBlank} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
     </ExtractedWorkspaceShell>;

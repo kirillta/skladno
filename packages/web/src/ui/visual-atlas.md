@@ -66,6 +66,7 @@ Avoid opacity-derived text colors except for placeholders, where `text-ink/45` i
 | --- | --- | --- | --- |
 | `canvas` | `#fbfaf8` | `bg-canvas` | Outermost application canvas |
 | `surface` | `#f4f2ee` | `bg-surface` | Supporting panels and quiet workspace regions |
+| `surface-supporting` | `#ebe8e2` | `bg-surface-supporting` | Elevated supporting panels: Article Library Panel, Editorial Assistant Panel, and Settings Navigation |
 | `surface-raised` | `#ffffff` | `bg-surface-raised` | Writing surface, fields, menus, dialogs, and raised cards |
 | `border` | `#e7e4de` | `border-border` | Default separators and component outlines |
 | `border-strong` | `#c7c3ba` | `border-border-strong` | Stronger separation when the default border is insufficient |
