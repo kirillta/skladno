@@ -1,11 +1,11 @@
 import type { Article, TranslationMetadata } from "@skladno/shared";
 import { Banner, Button, EmptyState } from "../../ui/primitives.js";
 
-export function TranslationsView({ article, translation, stale, create }: { 
-    article: Article; 
-    translation: TranslationMetadata | undefined; 
-    stale: boolean; 
-    create: () => Promise<void> 
+export function TranslationsView({ article, translation, stale, create }: {
+    article: Article;
+    translation: TranslationMetadata | undefined;
+    stale: boolean;
+    create: () => Promise<void>
 }) {
     return <div>
         <h2 className="font-semibold">Translations</h2>

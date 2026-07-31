@@ -18,7 +18,16 @@ export function ProposalReviewView({ review, stale, selectedChanges, setSelected
         {review.changes.map((change) => <label key={change.id} className="mt-3 block">
             <input type="checkbox"
                 checked={selectedChanges.has(change.id)}
-                onChange={() => setSelectedChanges((current) => { const next = new Set(current); next.has(change.id) ? next.delete(change.id) : next.add(change.id); return next; })} />
+                onChange={() => setSelectedChanges((current) => {
+                    const next = new Set(current);
+
+                    if (next.has(change.id))
+                        next.delete(change.id);
+                    else
+                        next.add(change.id);
+
+                    return next;
+                })} />
             <span className="ml-2">Select change</span>
             <Diff removed={change.baseLines.join("\n")} added={change.proposalLines.join("\n")} />
         </label>)}

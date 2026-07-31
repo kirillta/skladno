@@ -38,9 +38,8 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async getHealth(): Promise<HealthResponse> {
         const response = await fetch(`${this.serviceUrl}${healthPath}`);
-        if (!response.ok) {
+        if (!response.ok)
             throw new Error(`The local service could not be reached (${response.status}).`);
-        }
 
         return parseHealthResponse(await response.json());
     }
@@ -134,7 +133,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
         while (true) {
             const { done, value } = await reader.read();
             buffer += decoder.decode(value, { stream: !done });
-            
+
             const messages = buffer.split("\n\n");
             buffer = messages.pop() ?? "";
 
@@ -154,22 +153,21 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     private async request<T>(path: string, init?: RequestInit): Promise<T> {
         const response = await fetch(`${this.serviceUrl}${path}`, { ...init, headers: { "content-type": "application/json", ...init?.headers } });
-        if (response.status === HTTP_STATUS.NO_CONTENT) 
+        if (response.status === HTTP_STATUS.NO_CONTENT)
             return undefined as T;
 
         const body: unknown = await response.json().catch(() => ({}));
-        if (response.status === HTTP_STATUS.CONFLICT && typeof body === "object" && body !== null && "article" in body) {
+        if (response.status === HTTP_STATUS.CONFLICT && typeof body === "object" && body !== null && "article" in body)
             throw new ArticleRevisionConflictError((body as { article: Article }).article);
-        }
 
         if (!response.ok) {
-            const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string" 
-                ? body.error 
+            const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+                ? body.error
                 : `The local service could not be reached (${response.status}).`;
-            
+
             throw new Error(message);
         }
-        
+
         return body as T;
     }
 }

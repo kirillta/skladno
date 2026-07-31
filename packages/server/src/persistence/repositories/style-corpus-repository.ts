@@ -4,7 +4,7 @@ import type { SqliteDatabase } from "../database.js";
 import { createId, now, required, type Row } from "./repository-utils.js";
 
 
-function profileFor(items: Array<{ content: string }>): StyleProfile | undefined {
+function profileFor(items: { content: string }[]): StyleProfile | undefined {
     if (items.length === 0)
         return undefined;
 
@@ -47,9 +47,9 @@ function profileFor(items: Array<{ content: string }>): StyleProfile | undefined
 export class StyleCorpusRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
-    
+
     get(): StyleCorpus {
-        const rows = this.database.prepare(`SELECT author_materials.* FROM style_corpus_items JOIN author_materials ON author_materials.id = style_corpus_items.author_material_id ORDER BY style_corpus_items.created_at, author_materials.id`)
+        const rows = this.database.prepare("SELECT author_materials.* FROM style_corpus_items JOIN author_materials ON author_materials.id = style_corpus_items.author_material_id ORDER BY style_corpus_items.created_at, author_materials.id")
             .all() as Row[];
         const profile = profileFor(rows.map((row) => ({ content: String(row.content) })));
         const updatedAt = now();
@@ -63,12 +63,12 @@ export class StyleCorpusRepository {
         }
 
         return {
-            items: rows.map((row): StyleCorpusItem => ({ 
-                id: String(row.id), 
-                name: String(row.name), 
-                characterCount: String(row.content).length, 
-                createdAt: String(row.created_at), 
-                updatedAt: String(row.updated_at) 
+            items: rows.map((row): StyleCorpusItem => ({
+                id: String(row.id),
+                name: String(row.name),
+                characterCount: String(row.content).length,
+                createdAt: String(row.created_at),
+                updatedAt: String(row.updated_at)
             })),
             profile,
         };
@@ -78,12 +78,12 @@ export class StyleCorpusRepository {
     add(input: CreateStyleCorpusItemInput): StyleCorpus {
         const timestamp = now();
         const materialId = createId();
-        
+
         this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
             .run(materialId, required(input.name, "Corpus item name"), input.content, timestamp, timestamp);
         this.database.prepare("INSERT INTO style_corpus_items (author_material_id, created_at) VALUES (?, ?)")
             .run(materialId, timestamp);
-        
+
         return this.get();
     }
 

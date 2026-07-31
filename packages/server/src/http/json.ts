@@ -14,6 +14,7 @@ export async function readJson(request: IncomingMessage): Promise<unknown> {
         if (body.length > 1_000_000)
             throw new Error("Request body is too large.");
     }
+
     try {
         return JSON.parse(body);
     } catch {

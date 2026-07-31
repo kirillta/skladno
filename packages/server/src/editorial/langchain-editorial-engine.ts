@@ -100,7 +100,7 @@ export class LangChainEditorialEngine implements EditorialEngine {
             useResponsesApi: true,
             zdrEnabled: !options.storeResponses,
         });
-        
+
         this.factCheck = new LangGraphFactCheck(options);
     }
 
@@ -227,7 +227,7 @@ export class LangChainEditorialEngine implements EditorialEngine {
 
     private async *streamTextProposal(prepared: PreparedEditorialRequest): AsyncIterable<EditorialEngineEvent> {
         const stream = await this.model.stream(prepared.messages, prepared.callOptions);
-        
+
         let completeMessage: Awaited<ReturnType<typeof this.model.invoke>> | undefined;
         let text = "";
 

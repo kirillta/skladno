@@ -30,17 +30,16 @@ function EditorErrorBoundary({ children }: { children: ReactNode }) {
 function EditorBridge({ content, onChange, onReady }: { content: string; onChange: (value: string) => void; onReady: (editor: LexicalEditor) => void }) {
     const [editor] = useLexicalComposerContext();
     const emitted = useRef(content);
+    const initialContent = useRef(content);
 
     useEffect(() => {
         onReady(editor);
-        editor.update(() => importArticleMarkdown(content), { tag: "article-initial" });
+        editor.update(() => importArticleMarkdown(initialContent.current), { tag: "article-initial" });
     }, [editor, onReady]);
 
     useEffect(() => {
         if (content === emitted.current)
-        {
             return;
-        }
 
         emitted.current = content;
         editor.update(() => importArticleMarkdown(content), { tag: "article-external" });
@@ -49,9 +48,7 @@ function EditorBridge({ content, onChange, onReady }: { content: string; onChang
 
     return <OnChangePlugin ignoreSelectionChange onChange={(state, changedEditor, tags) => {
         if (tags.has("article-initial") || tags.has("article-external"))
-        {
             return;
-        }
 
         state.read(() => {
             const markdown = exportArticleMarkdown();
@@ -67,27 +64,19 @@ function EditorBridge({ content, onChange, onReady }: { content: string; onChang
 function $setBlockType(type: BlockType) {
     const selection = $getSelection();
     if (!$isRangeSelection(selection))
-    {
         return;
-    }
 
     const block = selection.anchor.getNode().getTopLevelElementOrThrow();
     let replacement: ElementNode = $createParagraphNode();
 
     if (type.startsWith("h"))
-    {
         replacement = $createHeadingNode(type as "h1");
-    }
 
     if (type === "quote")
-    {
         replacement = $createQuoteNode();
-    }
 
     if (type === "code")
-    {
         replacement = $createCodeNode();
-    }
 
     block.replace(replacement, true);
 }
@@ -98,23 +87,15 @@ function currentBlock(editor: LexicalEditor): BlockType {
     editor.getEditorState().read(() => {
         const selection = $getSelection();
         if (!$isRangeSelection(selection))
-        {
             return;
-        }
 
         const node = selection.anchor.getNode().getTopLevelElementOrThrow();
         if ($isHeadingNode(node))
-        {
             value = node.getTag() as BlockType;
-        }
         else if ($isQuoteNode(node))
-        {
             value = "quote";
-        }
         else if (node instanceof CodeNode)
-        {
             value = "code";
-        }
     });
 
     return value;
@@ -128,9 +109,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
     useEffect(() => editor.registerUpdateListener(() => editor.getEditorState().read(() => {
         const selection = $getSelection();
         if ($isRangeSelection(selection))
-        {
             setFormats(new Set(["bold", "italic", "strikethrough", "code"].filter((format) => selection.hasFormat(format as "bold"))));
-        }
 
         setBlock(currentBlock(editor));
     })), [editor]);
@@ -144,20 +123,17 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
         const items = [...event.currentTarget.querySelectorAll<HTMLElement>("button,select")];
         const index = items.indexOf(document.activeElement as HTMLElement);
 
-        if (event.key === "Home")
-        {
+        if (event.key === "Home") {
             event.preventDefault();
             items[0]?.focus();
         }
 
-        if (event.key === "End")
-        {
+        if (event.key === "End") {
             event.preventDefault();
             items.at(-1)?.focus();
         }
 
-        if (event.key === "ArrowRight" || event.key === "ArrowLeft")
-        {
+        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
             event.preventDefault();
             items[(index + (event.key === "ArrowRight" ? 1 : items.length - 1)) % items.length]?.focus();
         }
@@ -221,27 +197,21 @@ function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => voi
     useEffect(() => editor.getEditorState().read(() => {
         const selection = $getSelection();
         if (!$isRangeSelection(selection))
-        {
             return;
-        }
 
         const link = selection.anchor.getNode().getParents().find($isLinkNode);
-        if (link)
-        {
+        if (link) {
             setEditing(true);
             setText(link.getTextContent());
             setUrl(link.getURL());
-        }
-        else
-        {
+        } else {
             setText(selection.getTextContent());
         }
     }), [editor]
     );
 
     function apply() {
-        if (!validUrl(url))
-        {
+        if (!validUrl(url)) {
             setError("Use an http:, https:, or mailto: URL.");
             return;
         }
@@ -249,14 +219,10 @@ function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => voi
         editor.update(() => {
             const selection = $getSelection();
             if (!$isRangeSelection(selection))
-            {
                 return;
-            }
 
             if (selection.isCollapsed())
-            {
                 selection.insertText(text || url.trim());
-            }
 
             editor.dispatchCommand(TOGGLE_LINK_COMMAND, url.trim());
         });
@@ -304,8 +270,7 @@ function LinkControl({ editor }: { editor: LexicalEditor }) {
             selected = $isRangeSelection(selection) && !selection.isCollapsed();
         });
 
-        if (!validUrl(clipboard))
-        {
+        if (!validUrl(clipboard)) {
             setOpen(true);
             return;
         }
@@ -313,14 +278,10 @@ function LinkControl({ editor }: { editor: LexicalEditor }) {
         editor.update(() => {
             const selection = $getSelection();
             if (!$isRangeSelection(selection))
-            {
                 return;
-            }
 
             if (!selected)
-            {
                 selection.insertText(clipboard.trim());
-            }
 
             editor.dispatchCommand(TOGGLE_LINK_COMMAND, clipboard.trim());
         });
@@ -339,18 +300,14 @@ function EditorContents({ content, onChange }: { content: string; onChange: (val
     function paste(event: ClipboardEvent<HTMLDivElement>) {
         const html = event.clipboardData.getData("text/html");
         if (!html || !editor)
-        {
             return;
-        }
 
         event.preventDefault();
         const markdown = sanitizeRichPaste(html);
         editor.update(() => {
             const selection = $getSelection();
             if ($isRangeSelection(selection))
-            {
                 selection.insertNodes($generateNodesFromMarkdownString(markdown, articleMarkdownTransformers, true));
-            }
         });
     }
 
@@ -374,9 +331,11 @@ export function ArticleRichEditor({ articleId, content, setContent }: { articleI
     const config = useMemo(() => ({
         namespace: `skladno-article-${articleId}`,
         nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode],
-        onError: (error: Error) => { throw error; }
+        onError: (error: Error) => {
+            throw error;
+        }
     }),
-        [articleId]
+    [articleId]
     );
 
     return <LexicalComposer key={articleId} initialConfig={config}>

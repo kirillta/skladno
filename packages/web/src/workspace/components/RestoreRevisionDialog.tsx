@@ -1,10 +1,10 @@
 import type { ArticleRevision } from "@skladno/shared";
 import { Button, Dialog } from "../../ui/primitives.js";
 
-export function RestoreRevisionDialog({ candidate, close, restore }: { 
-    candidate: ArticleRevision | undefined; 
-    close: () => void; 
-    restore: () => Promise<void> 
+export function RestoreRevisionDialog({ candidate, close, restore }: {
+    candidate: ArticleRevision | undefined;
+    close: () => void;
+    restore: () => Promise<void>
 }) {
     if (!candidate)
         return null;

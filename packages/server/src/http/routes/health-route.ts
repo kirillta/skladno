@@ -13,7 +13,7 @@ export function handleHealthRoute(request: IncomingMessage, response: ServerResp
         service: "skladno-local-service",
         timestamp: new Date().toISOString(),
     };
-    
+
     writeJson(response, HTTP_STATUS.OK, body);
     return true;
 }

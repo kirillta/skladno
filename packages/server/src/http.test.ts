@@ -12,18 +12,18 @@ import { openDatabase, Repositories } from "./persistence/index.js";
 test("article API supports CRUD and revision-aware saves", async () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-http-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
-    const service = createLocalService({ 
-        host: "127.0.0.1", 
-        port: 0, 
-        webOrigin: "http://localhost:5173", 
-        databasePath: "unused", 
+    const service = createLocalService({
+        host: "127.0.0.1",
+        port: 0,
+        webOrigin: "http://localhost:5173",
+        databasePath: "unused",
         openAiModel: "gpt-5",
         openAiStoreResponses: false,
     }, new Repositories(database));
-    
+
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
-    
+
     const address = service.address();
     assert.ok(address && typeof address !== "string");
     const baseUrl = `http://127.0.0.1:${address.port}/api/articles`;

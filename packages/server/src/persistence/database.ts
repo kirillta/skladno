@@ -91,7 +91,7 @@ function isLegacyDatabase(filename: string): boolean {
 
     const database = new DatabaseSync(filename);
     try {
-        const rows = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('documents', 'schema_migrations')").all() as Array<{ name: string }>;
+        const rows = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('documents', 'schema_migrations')").all() as { name: string }[];
         if (rows.some((row) => row.name === "documents"))
             return true;
 
@@ -111,7 +111,9 @@ function removeLegacyDatabase(filename: string): void {
             unlinkSync(path);
         } catch (error) {
             const detail = error instanceof Error ? error.message : "unknown error";
-            throw new Error(`Could not remove legacy Skladno database at ${path}: ${detail}`);
+            throw new Error(`Could not remove legacy Skladno database at ${path}: ${detail}`, {
+                cause: error,
+            });
         }
     }
 }
@@ -135,7 +137,7 @@ export function openDatabase(filename: string): SqliteDatabase {
     );
 
     for (const migration of migrations) {
-        if (applied.has(migration.version)) 
+        if (applied.has(migration.version))
             continue;
 
         database.exec("BEGIN IMMEDIATE;");
@@ -150,6 +152,6 @@ export function openDatabase(filename: string): SqliteDatabase {
             throw error;
         }
     }
-    
+
     return database;
 }

@@ -1,11 +1,11 @@
 import type { ArticleRevision } from "@skladno/shared";
 import { Badge, Banner, Button } from "../../ui/primitives.js";
 
-export function RevisionHistoryView({ revisions, currentRevisionId, select, message }: { 
-    revisions: ArticleRevision[]; 
-    currentRevisionId: string; 
-    select: (item: ArticleRevision) => void; 
-    message: string 
+export function RevisionHistoryView({ revisions, currentRevisionId, select, message }: {
+    revisions: ArticleRevision[];
+    currentRevisionId: string;
+    select: (item: ArticleRevision) => void;
+    message: string
 }) {
     return <div>
         <h2 className="font-semibold">Revision History</h2>

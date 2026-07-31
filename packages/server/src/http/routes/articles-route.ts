@@ -46,7 +46,7 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
 
     if (request.method === HTTP_METHOD.PATCH && !match[2]) {
         const body = object(await readJson(request));
-        
+
         writeJson(response, HTTP_STATUS.OK, repositories.renameArticle(articleId, string(body.title, "title")));
         return true;
     }
@@ -54,7 +54,7 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
     if (request.method === HTTP_METHOD.POST && match[2] === "revisions") {
         const body = object(await readJson(request));
         const input: SaveArticleRevisionInput = { content: string(body.content, "content"), baseRevisionId: string(body.baseRevisionId, "baseRevisionId") };
-        
+
         writeJson(response, HTTP_STATUS.CREATED, repositories.saveArticleRevision(articleId, input));
         return true;
     }
@@ -75,7 +75,7 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
             content: string(body.content, "content"),
             provenance: provenance as Record<string, unknown>,
         };
-        
+
         writeJson(response, HTTP_STATUS.CREATED, repositories.acceptProposal(articleId, input));
         return true;
     }
@@ -85,6 +85,6 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
         writeJson(response, HTTP_STATUS.CREATED, repositories.restoreRevision(articleId, decodeURIComponent(restore[1])));
         return true;
     }
-    
+
     return false;
 }

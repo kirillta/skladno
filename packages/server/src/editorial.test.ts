@@ -27,11 +27,11 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, repos
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
-    
+
     const service = createLocalService({ host: "127.0.0.1", port: 0, webOrigin: "http://localhost:5173", databasePath: "unused", openAiModel: "gpt-5", openAiStoreResponses: storeResponses }, repositories, engine);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
-    
+
     const address = service.address();
     assert.ok(address && typeof address !== "string");
 
@@ -186,7 +186,7 @@ test("cancelling an editorial stream does not change the article or session", as
             body: JSON.stringify({ requestId: "request-3", operation: EDITORIAL_OPERATION.FLOW_REVISION }),
             signal: controller.signal,
         });
-        
+
         const reader = response.body!.getReader();
         await reader.read();
         controller.abort();

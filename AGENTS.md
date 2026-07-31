@@ -138,12 +138,11 @@ Before handing off:
 
 Preserve the established spacious, vertically organized formatting across the workspace.
 
-- Use four spaces for indentation in TypeScript, TSX, JavaScript, JSON, CSS, and nested HTML content. Do not use tabs.
-- Keep opening braces on the same line as their declaration or control statement.
-- Put a single-statement conditional body on the following indented line and omit braces. Use braces when a branch contains multiple statements.
-- Put a blank line after each control-flow statement and its body before the next independent statement, including consecutive guard clauses.
-- Do not pack independent statements onto one line. Give declarations, side effects, and returns their own lines.
-- Separate top-level declarations and class methods with two blank lines. Within a function, use a blank line to separate logical phases such as validation, setup, persistence, and return.
+- ESLint is the source of truth for mechanically enforceable JavaScript and TypeScript formatting, including indentation, brace placement, conditional formatting, statement separation, whitespace, quotes, and semicolons. Run `npm run lint`; the root build also runs it automatically.
+- Keep single-statement conditional bodies unbraced on the following indented line. Use braces when a branch contains multiple statements, and brace every branch consistently when one branch requires them.
+- Use four spaces and no tabs in JSON, CSS, and nested HTML content, which ESLint does not inspect.
+- Never combine multiple logical actions or side effects on one line, even when they form a single syntactic statement.
+- Separate top-level declarations with two blank lines. Within a function, use blank lines to separate logical phases such as validation, setup, persistence, and return.
 - Expand non-trivial object literals so each property is on its own line. Apply the same structure to nested objects and arrays in JSON configuration.
 - Format fluent call chains vertically, with each chained operation on its own indented line when the chain would otherwise be dense.
 - Keep multiline boolean expressions vertically aligned beneath the opening parenthesis.
@@ -183,7 +182,17 @@ AI-facing tests should prefer deterministic fixtures or mocked provider response
 
 The MVP Article refactor has one intentional schema transition: at startup, detect the legacy Documents schema, delete its `skladno.sqlite` file and SQLite sidecars once, and recreate the Article schema in the same location. Preserve the resulting Article database on future starts. If cleanup fails, stop startup with a clear error.
 
-The project skeleton and canonical commands have not been created yet. When the foundation issue defines them, document the exact install, development, type-check, test, lint, and migration commands here and in the README.
+Use npm from the repository root:
+
+- `npm install` installs workspace dependencies.
+- `npm run dev` starts the server and web development processes.
+- `npm run lint` checks JavaScript and TypeScript source formatting and correctness.
+- `npm run lint:fix` applies safe automatic lint fixes.
+- `npm run typecheck` checks the TypeScript project references.
+- `npm test` runs the workspace test suites.
+- `npm run build` creates production builds for workspaces that define a build script, then runs the project linter through the root `postbuild` hook.
+
+No standalone migration command is defined; database migrations run through the server’s documented startup and repository flows.
 
 Do not invent substitute commands or introduce a second package manager.
 

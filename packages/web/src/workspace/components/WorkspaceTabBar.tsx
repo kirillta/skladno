@@ -2,7 +2,7 @@ import type { KeyboardEvent } from "react";
 import { Tab, TabList } from "../../ui/primitives.js";
 import type { WorkspaceView } from "../EditorialWorkspace.js";
 
-const views: Array<{ id: WorkspaceView; label: string }> = [
+const views: { id: WorkspaceView; label: string }[] = [
     { id: "write", label: "Write" },
     { id: "proposal", label: "Proposal Review" },
     { id: "revisions", label: "Revisions" },
@@ -13,13 +13,13 @@ const views: Array<{ id: WorkspaceView; label: string }> = [
 ];
 
 
-export function WorkspaceTabBar({ view, setView }: { 
-    view: WorkspaceView; 
-    setView: (view: WorkspaceView) => void 
+export function WorkspaceTabBar({ view, setView }: {
+    view: WorkspaceView;
+    setView: (view: WorkspaceView) => void
 }) {
     function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
         const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=tab]");
-        let next = index;
+        let next: number;
 
         if (event.key === "ArrowRight")
             next = (index + 1) % views.length;

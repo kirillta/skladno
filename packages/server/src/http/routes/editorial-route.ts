@@ -67,7 +67,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         if (!request.complete)
             controller.abort();
     });
-    
+
     response.once("close", () => controller.abort());
 
     const signal = controller.signal;
@@ -119,14 +119,16 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
                     }),
                 };
                 const citations = event.factCheck?.findings.flatMap((finding) => finding.sources.map((source) => ({
-                                url: source.url,
-                                title: source.title,
-                                excerpt: source.excerpt,
-                                uncertainty: `${source.quality}${source.publishedAt ? `; published ${source.publishedAt}` : ""}; ${finding.uncertainty}`,
-                            }))) ?? [];
-                isFactCheck
-                    ? repositories.createEditorialArtifactWithCitations(artifactInput, citations)
-                    : repositories.createEditorialArtifact(artifactInput);
+                    url: source.url,
+                    title: source.title,
+                    excerpt: source.excerpt,
+                    uncertainty: `${source.quality}${source.publishedAt ? `; published ${source.publishedAt}` : ""}; ${finding.uncertainty}`,
+                }))) ?? [];
+                if (isFactCheck)
+                    repositories.createEditorialArtifactWithCitations(artifactInput, citations);
+                else
+                    repositories.createEditorialArtifact(artifactInput);
+
                 writeEditorialEvent(response, { ...event, requestId });
 
                 continue;
@@ -153,11 +155,11 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
                     session_expired: "session_expired",
                 } as const)[error.code]
                 : "network";
-            
+
             writeEditorialEvent(response, errorEvent(requestId, code, message, true));
         }
     }
-    
+
     response.end();
     return true;
 }

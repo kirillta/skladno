@@ -40,8 +40,8 @@ export function sanitizeRichPaste(html: string): string {
 
         if (tag === "a") {
             const href = node.getAttribute("href")?.trim() ?? "";
-            return /^(https?:|mailto:)/i.test(href) 
-                ? `[${content}](${href})` 
+            return /^(https?:|mailto:)/i.test(href)
+                ? `[${content}](${href})`
                 : content;
         }
 

@@ -1,16 +1,16 @@
 import { publishLimitProfiles, type PublishLimitProfileId } from "@skladno/shared";
 import { Banner, Select, TextareaField } from "../../ui/primitives.js";
 
-export function PublishingPreviewView({ publishing }: { 
-    publishing: { 
-        text: string; 
-        count: number; 
-        profileId: PublishLimitProfileId; 
-        profile: { characterLimit: number }; 
-        message: string; 
+export function PublishingPreviewView({ publishing }: {
+    publishing: {
+        text: string;
+        count: number;
+        profileId: PublishLimitProfileId;
+        profile: { characterLimit: number };
+        message: string;
         messageTone: "info" | "success" | "error";
-        setProfile: (id: PublishLimitProfileId) => Promise<void> 
-    } 
+        setProfile: (id: PublishLimitProfileId) => Promise<void>
+    }
 }) {
     return <div>
         <h2 className="font-semibold">Publishing Preview</h2>

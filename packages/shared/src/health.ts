@@ -19,7 +19,7 @@ export interface ApplicationClient {
 
 
 export function isHealthResponse(value: unknown): value is HealthResponse {
-    if (typeof value !== "object" || value === null) 
+    if (typeof value !== "object" || value === null)
         return false;
 
     const candidate = value as Record<string, unknown>;
@@ -32,7 +32,7 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
 }
 
 export function parseHealthResponse(value: unknown): HealthResponse {
-    if (!isHealthResponse(value)) 
+    if (!isHealthResponse(value))
         throw new TypeError("The local service returned an invalid health response.");
 
     return value;
