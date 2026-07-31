@@ -15,13 +15,11 @@ import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection,
 import { Button, Dialog, Field } from "../../ui/primitives.js";
 import { $generateNodesFromDOM } from "@lexical/html";
 import { exportArticleMarkdown, importArticleMarkdown } from "./markdown.js";
+import { isSupportedArticleLink } from "./paste-constants.js";
 import { sanitizeRichPasteDocument } from "./paste.js";
 import { BoldIcon, CodeIcon, ItalicIcon, LinkIcon, ListIcon, NumberedListIcon, StrikeIcon } from "./icons.js";
 
 type BlockType = "paragraph" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "quote" | "code";
-const validUrl = (value: string) => /^(https?:|mailto:)/i.test(value.trim());
-
-
 const articleEditorTheme: EditorThemeClasses = {
     text: {
         bold: "font-bold",
@@ -312,7 +310,7 @@ function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => voi
     );
 
     function apply() {
-        if (!validUrl(url)) {
+        if (!isSupportedArticleLink(url)) {
             setError("Use an http:, https:, or mailto: URL.");
             return;
         }
@@ -371,7 +369,7 @@ function LinkControl({ editor }: { editor: LexicalEditor }) {
             selected = $isRangeSelection(selection) && !selection.isCollapsed();
         });
 
-        if (!validUrl(clipboard)) {
+        if (!isSupportedArticleLink(clipboard)) {
             setOpen(true);
             return;
         }
@@ -460,7 +458,7 @@ export function ArticleRichEditor({ articleId, content, setContent }: { articleI
             throw error;
         }
     }),
-        [articleId]
+    [articleId]
     );
 
     return <LexicalComposer key={articleId} initialConfig={config}>
