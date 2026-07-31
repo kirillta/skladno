@@ -50,6 +50,17 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("opens Application Settings without replacing the workspace with an empty view", async () => {
+        const user = userEvent.setup();
+        render(<App client={fakeClient()} />);
+
+        await user.click((await screen.findAllByRole("button", { name: "Settings" })).at(-1)!);
+
+        expect(screen.getByRole("heading", { name: "General" })).toBeTruthy();
+        expect(screen.getByText("Preferred appearance")).toBeTruthy();
+    });
+
+
     it("offers focused editorial operations without applying a proposal", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);

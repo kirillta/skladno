@@ -11,8 +11,8 @@ function general(value: unknown): GeneralSettings {
     return {
         ...defaultGeneralSettings,
         ...candidate,
-        defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages) 
-            ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))] 
+        defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages)
+            ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))]
             : [],
     };
 }
@@ -22,8 +22,8 @@ function backup(value: unknown): BackupPolicy {
     return {
         destinationPath: typeof candidate.destinationPath === "string" ? candidate.destinationPath : undefined,
         schedule: candidate.schedule === "daily" ? "daily" : "off",
-        retention: candidate.retention?.mode === "unlimited" 
-            ? { mode: "unlimited" } 
+        retention: candidate.retention?.mode === "unlimited"
+            ? { mode: "unlimited" }
             : { mode: "count", count: Math.min(365, Math.max(1, candidate.retention?.mode === "count" ? candidate.retention.count : 7)) },
     };
 }

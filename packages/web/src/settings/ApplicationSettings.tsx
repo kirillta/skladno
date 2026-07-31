@@ -22,14 +22,21 @@ function SettingRow({ label, hint, children, status }: { label: string; hint: st
 }
 
 function dateExample(general: GeneralSettings): string {
-    return new Intl.DateTimeFormat("en", {
-        dateStyle: general.dateFormat === "iso" ? undefined : "medium",
-        year: general.dateFormat === "iso" ? "numeric" : undefined,
-        month: general.dateFormat === "iso" ? "2-digit" : undefined,
-        day: general.dateFormat === "iso" ? "2-digit" : undefined,
-        hour: "numeric", minute: "2-digit",
-        hour12: general.timeFormat === "12-hour" ? true : general.timeFormat === "24-hour" ? false : undefined
-    }).format(new Date("2026-07-31T15:45:00Z"));
+    const date = new Date("2026-07-31T15:45:00Z");
+    const dateOptions = general.dateFormat === "iso"
+        ? { year: "numeric", month: "2-digit", day: "2-digit" } as const
+        : general.dateFormat === "day-first"
+            ? { day: "2-digit", month: "2-digit", year: "numeric" } as const
+            : general.dateFormat === "month-first"
+                ? { month: "2-digit", day: "2-digit", year: "numeric" } as const
+                : { dateStyle: "medium" } as const;
+    const timeOptions = {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: general.timeFormat === "12-hour" ? true : general.timeFormat === "24-hour" ? false : undefined,
+    } as const;
+
+    return `${new Intl.DateTimeFormat("en", dateOptions).format(date)}, ${new Intl.DateTimeFormat("en", timeOptions).format(date)}`;
 }
 
 export function ApplicationSettings({ client, back }: { client: EditorialWorkspaceClient; back: () => void }) {
