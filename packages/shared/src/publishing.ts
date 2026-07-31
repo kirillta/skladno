@@ -49,12 +49,16 @@ export function preparePlainTextForPublishing(content: string): string {
         .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, "$1")
         .replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, "")
         .replace(/^[ \t]{0,3}>[ \t]?/gm, "")
+        .replace(/^[ \t]*(?:[-+*]|\d+[.)])[ \t]+/gm, "")
         .replace(/^[ \t]{0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/gm, "")
         .replace(/^[ \t]*```[^\n]*\n?/gm, "")
         .replace(/`([^`]+)`/g, "$1")
+        .replace(/```/g, "")
+        .replace(/\\\n/g, "\n")
         .replace(/(\*\*|__)(.+?)\1/g, "$2")
         .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "$1")
         .replace(/(?<!_)_([^_\n]+)_(?!_)/g, "$1")
+        .replace(/~~(.+?)~~/g, "$1")
         .replace(/\n{3,}/g, "\n\n")
         .trim();
 }

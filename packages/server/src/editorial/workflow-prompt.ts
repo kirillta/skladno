@@ -11,7 +11,7 @@ interface EditorialPromptInput {
 }
 
 
-const commonGuardrails = "Preserve the author's claims, numbers, URLs, code, technical terms, requested tone, and intent. Do not invent facts, examples, or sources. Return only a proposed full-text article. This is a proposal for author review; never say that you saved or changed the article.";
+const commonGuardrails = "Preserve the author's claims, numbers, URLs, code, technical terms, requested tone, intent, and existing Markdown formatting. Do not invent facts, examples, or sources. Return only a valid Markdown proposed full-text article. This is a proposal for author review; never say that you saved or changed the article.";
 
 
 const thesisTemplate = ChatPromptTemplate.fromMessages([
@@ -33,7 +33,7 @@ const styleTemplate = ChatPromptTemplate.fromMessages([
 
 
 const translationTemplate = ChatPromptTemplate.fromMessages([
-    ["system", "You are a technical translator. Translate faithfully without changing claims, numbers, or intended voice. Tokens in the form [[SKLADNO_PROTECTED_N]] are protected code, URLs, or technical names: copy every token exactly once and do not translate it. This is a proposal for author review; never say that you saved or changed the article."],
+    ["system", "You are a technical translator. Translate faithfully without changing claims, numbers, intended voice, or Markdown formatting. Return valid Markdown. Tokens in the form [[SKLADNO_PROTECTED_N]] are protected code, URLs, or technical names: copy every token exactly once and do not translate it. This is a proposal for author review; never say that you saved or changed the article."],
     ["human", "Workflow: translation. Translate the complete article into {targetLanguage}. Return the translation and metadata through the requested structured response.\n\nCurrent article:\n{article}\n\nAuthor guidance:\n{authorContext}"],
 ]);
 
