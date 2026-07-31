@@ -2,6 +2,7 @@ import { useState } from "react";
 import { IntlProvider, useIntl } from "react-intl";
 import { publishLimitProfiles, type PublishLimitProfile, type PublishLimitProfileId } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
+import { publishingProfileMessageId } from "../../i18n/publishing.js";
 
 export function ArticleStatusBar(props: {
     revisionNumber: number;
@@ -55,7 +56,7 @@ function LocalizedArticleStatusBar({ revisionNumber, characterCount, profile, se
                     aria-checked={preset.id === profile.id}
                     onClick={() => void selectProfile(preset.id)}
                 >
-                    <span>{preset.label}</span>
+                    <span>{intl.formatMessage({ id: publishingProfileMessageId(preset.id) })}</span>
                     <span className="text-muted">{intl.formatNumber(preset.characterLimit)}</span>
                 </button>)}
             </div>}
