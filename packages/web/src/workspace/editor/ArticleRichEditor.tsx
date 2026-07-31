@@ -330,7 +330,7 @@ function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => voi
         editor.focus();
     }
 
-    return <Dialog open aria-labelledby="link-dialog-title">
+    return <Dialog open aria-labelledby="link-dialog-title" className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl">
         <h2 id="link-dialog-title" className="text-base font-semibold">{editing ? "Edit link" : "Add link"}</h2>
         <label className="mt-4 block text-xs font-semibold">Link text<Field value={text} onChange={(event) => setText(event.target.value)} /></label>
         <label className="mt-3 block text-xs font-semibold">URL<Field value={url} onChange={(event) => setUrl(event.target.value)} /></label>
