@@ -147,12 +147,27 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
     const [block, setBlock] = useState<BlockType>("paragraph");
     const [formats, setFormats] = useState<Set<string>>(new Set());
     const [listType, setListType] = useState<ListType>();
+    const [linkActive, setLinkActive] = useState(false);
+    const [linkUrl, setLinkUrl] = useState("");
     const savedBlockSelection = useRef<BaseSelection | null>(null);
 
     useEffect(() => editor.registerUpdateListener(() => editor.getEditorState().read(() => {
         const selection = $getSelection();
-        if ($isRangeSelection(selection))
+        if ($isRangeSelection(selection)) {
             setFormats(new Set(["bold", "italic", "strikethrough", "code"].filter((format) => selection.hasFormat(format as "bold"))));
+
+            const node = selection.anchor.getNode();
+            const link = $isLinkNode(node)
+                ? node
+                : node.getParents().find($isLinkNode);
+            const url = link?.getURL() ?? "";
+
+            setLinkActive(Boolean(link));
+            setLinkUrl(isSupportedArticleLink(url) ? url : "");
+        } else {
+            setLinkActive(false);
+            setLinkUrl("");
+        }
 
         setBlock(currentBlock(editor));
         setListType(currentListType(editor));
@@ -213,7 +228,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
     }
 
     const keyNav = (event: KeyboardEvent<HTMLDivElement>) => {
-        const items = [...event.currentTarget.querySelectorAll<HTMLElement>("button,select")];
+        const items = [...event.currentTarget.querySelectorAll<HTMLElement>("a,button,select")];
         const index = items.indexOf(document.activeElement as HTMLElement);
 
         if (event.key === "Home") {
@@ -261,11 +276,13 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
             {controls.map(([label, Icon, format]) => <button key={format} type="button" aria-label={label} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextFormat(format)} className={formatButtonClass(formats.has(format))}><Icon /></button>)}
             <button type="button"
                 aria-label="Link"
+                aria-pressed={linkActive}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => activate(openLink)}
-                className="grid size-9 place-items-center rounded-control text-brand hover:bg-brand-soft">
+                className={formatButtonClass(linkActive)}>
                 <LinkIcon />
             </button>
+            {linkUrl && <a href={linkUrl} target="_blank" rel="noreferrer" aria-label={`Open link: ${linkUrl}`} className="inline-flex min-h-9 max-w-32 items-center truncate rounded-control px-2 text-xs font-semibold text-brand underline underline-offset-2 hover:bg-brand-soft">{linkUrl}</a>}
             <button type="button"
                 aria-label="Bulleted list"
                 aria-pressed={listType === "bullet"}
@@ -354,6 +371,23 @@ function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => voi
 function LinkControl({ editor }: { editor: LexicalEditor }) {
     const [open, setOpen] = useState(false);
     const openLink = useCallback(async () => {
+        let selected = false;
+        let editing = false;
+        editor.getEditorState().read(() => {
+            const selection = $getSelection();
+            if (!$isRangeSelection(selection))
+                return;
+
+            selected = !selection.isCollapsed();
+            const node = selection.anchor.getNode();
+            editing = $isLinkNode(node) || node.getParents().some($isLinkNode);
+        });
+
+        if (editing) {
+            setOpen(true);
+            return;
+        }
+
         let clipboard = "";
 
         try {
@@ -362,12 +396,6 @@ function LinkControl({ editor }: { editor: LexicalEditor }) {
             setOpen(true);
             return;
         }
-
-        let selected = false;
-        editor.getEditorState().read(() => {
-            const selection = $getSelection();
-            selected = $isRangeSelection(selection) && !selection.isCollapsed();
-        });
 
         if (!isSupportedArticleLink(clipboard)) {
             setOpen(true);
