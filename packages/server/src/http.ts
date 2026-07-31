@@ -9,6 +9,7 @@ import { handleEditorialRoute } from "./http/routes/editorial-route.js";
 import { handleHealthRoute } from "./http/routes/health-route.js";
 import { handlePublishSettingsRoute } from "./http/routes/publish-settings-route.js";
 import { handleStyleCorpusRoute } from "./http/routes/style-corpus-route.js";
+import { handleSettingsRoute } from "./http/routes/settings-route.js";
 import { writeJson } from "./http/json.js";
 import { ArticleRevisionConflictError, Repositories } from "./persistence/index.js";
 
@@ -52,6 +53,9 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
                 return;
 
             if (await handleStyleCorpusRoute(request, response, pathname, repositories))
+                return;
+
+            if (await handleSettingsRoute(request, response, pathname, repositories))
                 return;
 
             if (await handlePublishSettingsRoute(request, response, pathname, repositories))

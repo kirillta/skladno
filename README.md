@@ -110,6 +110,8 @@ Fact-check findings and style findings are attached to the exact revision that w
 
 The local service exposes Article-only routes under `/api/articles`: Article CRUD, `/revisions`, `/proposal-acceptances`, revision `/restorations`, and `/editorial`. There are no legacy Documents API aliases.
 
+Application Settings are local-service backed under `/api/settings`. The web UI stores only preferences and references to server-side configuration; it never receives API-key values. Backup destinations are typed local paths in the web UI. Native folder selection, restoring snapshots, and relocating active data are deferred to the Electron follow-up.
+
 This MVP replaces the pre-Article local schema. On its first start, Skladno detects the legacy schema, removes `~/.skladno/skladno.sqlite` and its SQLite sidecars, then creates the new Article schema in the same path. New Article databases are preserved on later starts. Back up any legacy MVP data before starting this version.
 
 ## Roadmap

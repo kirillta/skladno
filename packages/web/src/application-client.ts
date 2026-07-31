@@ -27,10 +27,15 @@ import {
     publishSettingsPath,
     type PublishLimitProfileId,
     type PublishingClient,
+    applicationSettingsPath,
+    type ApplicationSettingsClient,
+    type ApplicationSettingsSnapshot,
+    type BackupPolicy,
+    type GeneralSettings,
 } from "@skladno/shared";
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
-export interface EditorialWorkspaceClient extends ApplicationClient, ArticleLibraryClient, EditorialClient, StyleCorpusClient, PublishingClient { }
+export interface EditorialWorkspaceClient extends ApplicationClient, ArticleLibraryClient, EditorialClient, StyleCorpusClient, PublishingClient, ApplicationSettingsClient { }
 
 
 export class HttpApplicationClient implements EditorialWorkspaceClient {
@@ -42,6 +47,18 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             throw new Error(`The local service could not be reached (${response.status}).`);
 
         return parseHealthResponse(await response.json());
+    }
+
+    async getApplicationSettings(): Promise<ApplicationSettingsSnapshot> {
+        return this.request<ApplicationSettingsSnapshot>(applicationSettingsPath);
+    }
+
+    async updateGeneralSettings(input: GeneralSettings): Promise<GeneralSettings> {
+        return this.request<GeneralSettings>(`${applicationSettingsPath}/general`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+    async updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy> {
+        return this.request<BackupPolicy>(`${applicationSettingsPath}/backup-policy`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
 
 
