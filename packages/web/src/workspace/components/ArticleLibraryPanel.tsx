@@ -51,7 +51,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     const saveLabel = saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving" : "Save failed";
     const saveTone = saveState === "saved" ? "text-success" : saveState === "saving" ? "text-warning" : "text-danger";
 
-    return <aside className={collapsed ? "flex h-full w-10 flex-col border-r border-border bg-surface px-0.5 py-2" : "flex h-full w-52 flex-col border-r border-border bg-surface"} aria-label="Article Library Panel">
+    return <aside className={collapsed ? "flex h-full w-10 flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-52 flex-col border-r border-border bg-surface-supporting"} aria-label="Article Library Panel">
         {collapsed ? <>
             <header className="flex min-h-18 items-center justify-center">
                 <IconButton className="text-base font-semibold text-brand" label="Expand Article Library Panel" onClick={() => setCollapsed(false)}>S</IconButton>

@@ -32,6 +32,8 @@ At 1440 × 1024 and 1280 × 800, preserve a comfortable editorial line length be
 
 Application Settings is a separate application screen, never a Workspace View or Workspace Tab Bar item. Its desktop navigation is a `w-52` supporting surface with a Back to workspace action; the central settings content is constrained to `max-w-3xl` and is the only scrolling area. Do not show the Editorial Assistant Panel there. Narrow layouts use an accessible section selector and compact Back action.
 
+Use `bg-surface-supporting` for Settings Navigation, the Article Library Panel, and the Editorial Assistant Panel. This slightly darker shared surface elevates the supporting areas above the main workspace without changing their borders or control states.
+
 Each setting needs a visible label, persistent author-centered hint, control, and save or validation status. Connect each control to its help with `aria-describedby`; essential explanation never belongs only in a tooltip. Appearance selection persists without changing visual tokens until the dedicated theme work lands.
 
 ## Article Library Panel and Navigation Rail

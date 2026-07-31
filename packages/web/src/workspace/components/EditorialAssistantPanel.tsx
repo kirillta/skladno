@@ -67,7 +67,7 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
     }
 
     if (collapsed)
-        return <aside className="flex h-full w-12 flex-col border-l border-border bg-surface p-1" aria-label="Editorial Assistant Panel">
+        return <aside className="flex h-full w-12 flex-col border-l border-border bg-surface-supporting p-1" aria-label="Editorial Assistant Panel">
             <header className="flex min-h-18 w-full items-center justify-center">
                 <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label="Expand Editorial Assistant Panel" onClick={() => setCollapsed(false)}>
                     <span className="grid size-full place-items-center">
@@ -77,7 +77,7 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
             </header>
         </aside>;
 
-    return <aside className="flex h-full min-h-0 w-96 flex-col border-l border-border bg-surface" aria-label="Editorial Assistant Panel">
+    return <aside className="flex h-full min-h-0 w-96 flex-col border-l border-border bg-surface-supporting" aria-label="Editorial Assistant Panel">
         <header className="flex min-h-18 items-center border-b border-border px-5">
             <AssistantMark />
             <h2 className="ml-3 text-base font-semibold">Editorial Assistant</h2>

@@ -11,6 +11,16 @@ const sections: { id: Section; label: string }[] = [
     { id: "backups", label: "Data & backups" }
 ];
 
+function statusClassName(status: string): string {
+    if (status.startsWith("Couldn"))
+        return "text-danger";
+
+    if (status === "Saving…" || status === "Loading settings…")
+        return "text-warning";
+
+    return "text-success";
+}
+
 function SettingRow({ label, hint, children, status }: { label: string; hint: string; children: ReactNode; status?: string }) {
     const hintId = useId();
     return <div className="border-b border-border py-5 last:border-b-0">
@@ -74,9 +84,15 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
     }
 
     return <main className="flex h-dvh overflow-hidden bg-surface text-ink">
-        <aside className="hidden w-52 shrink-0 border-r border-border bg-surface-raised md:flex md:flex-col" aria-label="Settings Navigation">
+        <aside className="hidden w-52 shrink-0 border-r border-border bg-surface-supporting md:flex md:flex-col" aria-label="Settings Navigation">
             <header className="flex min-h-18 items-center border-b border-border px-3"><Button variant="quiet" onClick={back}>Back to workspace</Button></header>
             <nav className="p-2">{sections.map((item) => <button key={item.id} className={`min-h-10 w-full rounded-control px-3 text-left text-sm ${section === item.id ? "bg-brand-soft font-semibold text-brand" : "text-muted hover:bg-surface"}`} onClick={() => setSection(item.id)}>{item.label}</button>)}</nav>
+            <footer className="mt-auto border-t border-border px-4 py-3">
+                <span className={`inline-flex items-center gap-1 text-micro font-medium ${statusClassName(status)}`} role="status">
+                    <span aria-hidden="true">&#9679;</span>
+                    {status}
+                </span>
+            </footer>
         </aside>
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <header className="flex min-h-18 items-center justify-between border-b border-border px-4 md:hidden">
@@ -85,12 +101,11 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
                     <option key={item.id} value={item.id}>{item.label}</option>)}
                 </Select>
             </header>
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
                 <div className="mx-auto w-full max-w-3xl px-5 py-8 md:px-8">
                     <header className="mb-7">
                         <p className="text-micro font-semibold uppercase tracking-overline text-brand">Application Settings</p>
                         <h1 className="mt-2 text-2xl font-semibold">{sections.find((item) => item.id === section)?.label}</h1>
-                        <p className="mt-2 text-sm text-muted">{status}</p>
                     </header>
                     {!snapshot && status.startsWith("Loading") ? null : section === "general" ? <>
                         <SettingRow label="Preferred appearance" hint="Choose the appearance you want Skladno to use. Your preference will be remembered, but visual themes will be enabled in a later update."><Select value={general.theme} onChange={(event) => saveGeneral({ ...general, theme: event.target.value as GeneralSettings["theme"] }, true)}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></Select></SettingRow>
