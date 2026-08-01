@@ -18,7 +18,7 @@ import {
     type StyleReview,
     type TranslationMetadata,
 } from "@skladno/shared";
-import { ApplicationClientError } from "@skladno/shared";
+import { ApplicationClientError, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleDraft } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Banner } from "../ui/primitives.js";
 import { EditorialAssistantPanel as ExtractedEditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
@@ -27,12 +27,18 @@ import { ArticleWorkspace as ExtractedArticleWorkspace } from "./components/Arti
 import { RestoreRevisionDialog as ExtractedRestoreRevisionDialog } from "./components/RestoreRevisionDialog.js";
 import { WorkspaceShell as ExtractedWorkspaceShell } from "./components/WorkspaceShell.js";
 import { ApplicationSettings } from "../settings/ApplicationSettings.js";
+import { DraftConflictDialog } from "./components/DraftConflictDialog.js";
 import { errorMessageId } from "../i18n/errors.js";
 import { useNotifications } from "../notifications/NotificationProvider.js";
 
 export type WorkspaceView = "write" | "proposal" | "revisions" | "fact-check" | "style-profile" | "translations" | "publish";
-type SaveState = "saved" | "saving" | "error";
+export type SaveState = "saved" | "unsaved" | "saving" | "draft-saved" | "error" | "conflict";
 type ProposalState = "idle" | "streaming" | "error";
+export interface DraftConflict {
+    article: Article;
+    draft?: ArticleDraft;
+    localContent: string;
+}
 
 
 function withoutDraft(article: Article): Omit<Article, "draft"> {
@@ -49,26 +55,58 @@ export function articleContentForWorkspace(article: Article): string {
 }
 
 
+
 function useArticleWorkspace(client: EditorialWorkspaceClient) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [articles, setArticles] = useState<Article[]>([]);
     const [selectedArticleId, setSelectedArticleId] = useState<string>();
     const [drafts, setDrafts] = useState<Record<string, string>>({});
+    const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
+    const [conflicts, setConflicts] = useState<Record<string, DraftConflict | undefined>>({});
+    const [comparisonArticleId, setComparisonArticleId] = useState<string>();
     const [state, setState] = useState<"loading" | "ready" | "error">("loading");
     const [message, setMessage] = useState(() => intl.formatMessage({ id: "workspace.loadingArticles" }));
-    const [saveState, setSaveState] = useState<SaveState>("saved");
+    const articlesRef = useRef<Article[]>([]);
+    const draftsRef = useRef<Record<string, string>>({});
     const revisions = useRef(new Map<string, string>());
-    const draftVersions = useRef(new Map<string, number>());
-    const saveQueue = useRef(Promise.resolve());
+    const versions = useRef(new Map<string, number>());
+    const queues = useRef(new Map<string, Promise<void>>());
+    const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+    const generations = useRef(new Map<string, number>());
+    const checkpointRef = useRef<(articleId: string) => Promise<void>>(() => Promise.resolve());
+
+
+    function replaceArticles(update: (items: Article[]) => Article[]) {
+        setArticles((items) => {
+            const next = update(items);
+            articlesRef.current = next;
+
+            return next;
+        });
+    }
+
+
+    function replaceDraft(articleId: string, content: string) {
+        draftsRef.current = { ...draftsRef.current, [articleId]: content };
+        setDrafts(draftsRef.current);
+    }
+
+
+    function setSaveState(articleId: string, value: SaveState) {
+        setSaveStates((items) => ({ ...items, [articleId]: value }));
+    }
 
 
     useEffect(() => {
         client.listArticles().then((loaded) => {
+            articlesRef.current = loaded;
+            draftsRef.current = Object.fromEntries(loaded.map((article) => [article.id, articleContentForWorkspace(article)]));
             setArticles(loaded);
-            setDrafts(Object.fromEntries(loaded.map((article) => [article.id, articleContentForWorkspace(article)])));
+            setDrafts(draftsRef.current);
+            setSaveStates(Object.fromEntries(loaded.map((article) => [article.id, article.draft ? "draft-saved" : "saved"])));
             revisions.current = new Map(loaded.map((article) => [article.id, article.currentRevisionId]));
-            draftVersions.current = new Map(loaded.flatMap((article) => article.draft ? [[article.id, article.draft.version]] : []));
+            versions.current = new Map(loaded.flatMap((article) => article.draft ? [[article.id, article.draft.version]] : []));
             setSelectedArticleId(loaded[0]?.id);
             setState("ready");
         }).catch(() => {
@@ -78,42 +116,34 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
     }, [client, intl]);
 
 
-    const selectedArticle = articles.find((article) => article.id === selectedArticleId);
-    const content = selectedArticleId ? drafts[selectedArticleId] ?? "" : "";
-
-
-    function updateRevision(articleId: string, revision: ArticleRevision) {
-        revisions.current.set(articleId, revision.id);
-        draftVersions.current.delete(articleId);
-        setDrafts((items) => ({ ...items, [articleId]: revision.content }));
-        setArticles((items) => items.map((article) => article.id === articleId ? {
-            ...withoutDraft(article),
-            updatedAt: revision.createdAt,
-            currentRevisionId: revision.id,
-            currentRevision: revision,
-        } : article));
+    function recordConflict(articleId: string, error: ArticleDraftConflictError | ArticleRevisionConflictError, localContent: string) {
+        const persistedDraft = error instanceof ArticleDraftConflictError ? error.draft : error.article.draft;
+        setConflicts((items) => ({ ...items, [articleId]: { article: error.article, draft: persistedDraft, localContent } }));
+        setSaveState(articleId, "conflict");
     }
 
 
-    function checkpoint(articleId: string, content: string): Promise<void> {
-        const task = saveQueue.current.then(async () => {
-            const current = articles.find((article) => article.id === articleId);
+    function checkpoint(articleId: string, content = draftsRef.current[articleId] ?? ""): Promise<void> {
+        clearTimeout(timers.current.get(articleId));
+        const generation = generations.current.get(articleId) ?? 0;
+        const preceding = queues.current.get(articleId) ?? Promise.resolve();
+        const task = preceding.then(async () => {
+            const current = articlesRef.current.find((article) => article.id === articleId);
             const baseRevisionId = revisions.current.get(articleId);
             if (!current || !baseRevisionId)
                 return;
 
-            const expectedDraftVersion = draftVersions.current.get(articleId);
+            setSaveState(articleId, "saving");
+            const expectedDraftVersion = versions.current.get(articleId);
             if (content === current.currentRevision.content) {
                 if (expectedDraftVersion !== undefined) {
                     await client.discardArticleDraft(articleId, expectedDraftVersion);
-                    draftVersions.current.delete(articleId);
-                    setArticles((items) => items.map((article) => {
-                        if (article.id !== articleId)
-                            return article;
-
-                        return withoutDraft(article);
-                    }));
+                    versions.current.delete(articleId);
+                    replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
                 }
+
+                if (generations.current.get(articleId) === generation)
+                    setSaveState(articleId, "saved");
 
                 return;
             }
@@ -123,15 +153,56 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
                 baseRevisionId,
                 ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion }),
             });
-            draftVersions.current.set(articleId, savedDraft.version);
-            setArticles((items) => items.map((article) => article.id === articleId ? {
-                ...article,
-                draft: savedDraft,
-            } : article));
-        });
-        saveQueue.current = task.then(() => undefined, () => undefined);
+            versions.current.set(articleId, savedDraft.version);
+            replaceArticles((items) => items.map((article) => article.id === articleId ? { ...article, draft: savedDraft } : article));
+            if (generations.current.get(articleId) === generation)
+                setSaveState(articleId, "draft-saved");
+        }).catch((error: unknown) => {
+            if (error instanceof ArticleDraftConflictError || error instanceof ArticleRevisionConflictError)
+                recordConflict(articleId, error, draftsRef.current[articleId] ?? content);
+            else
+                setSaveState(articleId, "error");
 
+            throw error;
+        });
+        queues.current.set(articleId, task.then(() => undefined, () => undefined));
         return task;
+    }
+
+
+    function scheduleCheckpoint(articleId: string, content: string) {
+        clearTimeout(timers.current.get(articleId));
+        timers.current.set(articleId, setTimeout(() => void checkpoint(articleId, content).catch(() => undefined), 750));
+    }
+
+    checkpointRef.current = checkpoint;
+
+
+    useEffect(() => {
+        function saveWhenHidden() {
+            if (document.visibilityState === "hidden" && selectedArticleId)
+                void checkpointRef.current(selectedArticleId).catch(() => undefined);
+        }
+        
+        document.addEventListener("visibilitychange", saveWhenHidden);
+        return () => document.removeEventListener("visibilitychange", saveWhenHidden);
+    }, [selectedArticleId]);
+
+
+    useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+
+    function updateRevision(articleId: string, revision: ArticleRevision) {
+        revisions.current.set(articleId, revision.id);
+        versions.current.delete(articleId);
+        replaceDraft(articleId, revision.content);
+        replaceArticles((items) => items.map((article) => article.id === articleId ? {
+            ...withoutDraft(article),
+            updatedAt: revision.createdAt,
+            currentRevisionId: revision.id,
+            currentRevision: revision,
+        } : article));
+        setSaveState(articleId, "saved");
     }
 
 
@@ -139,31 +210,72 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
         if (!articleId)
             return undefined;
 
-        const draft = drafts[articleId] ?? "";
-        const current = articles.find((article) => article.id === articleId);
+        const content = draftsRef.current[articleId] ?? "";
+        const current = articlesRef.current.find((article) => article.id === articleId);
         const baseRevisionId = revisions.current.get(articleId);
-        if (!current || !baseRevisionId || current.currentRevision.content === draft && draftVersions.current.get(articleId) === undefined)
+        if (!current || !baseRevisionId || current.currentRevision.content === content && versions.current.get(articleId) === undefined)
             return undefined;
 
-        setSaveState("saving");
-        const task = saveQueue.current.then(async () => {
-            const expectedDraftVersion = draftVersions.current.get(articleId);
+        try {
+            await checkpoint(articleId, content);
+            const expectedDraftVersion = versions.current.get(articleId);
             if (expectedDraftVersion === undefined)
                 return undefined;
 
-            const revision = await client.saveArticleRevision(articleId, { content: draft, baseRevisionId, expectedDraftVersion });
+            setSaveState(articleId, "saving");
+            const revision = await client.saveArticleRevision(articleId, { content, baseRevisionId, expectedDraftVersion });
             updateRevision(articleId, revision);
-            setSaveState("saved");
             return revision;
-        });
-        saveQueue.current = task.then(() => undefined, () => undefined);
+        } catch (error) {
+            if (!(error instanceof ArticleDraftConflictError) && !(error instanceof ArticleRevisionConflictError))
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
+
+            throw error;
+        }
+    }
+
+
+    async function resolveConflict(mode: "keep" | "draft" | "revision") {
+        if (!comparisonArticleId)
+            return;
+
+        const conflict = conflicts[comparisonArticleId];
+        if (!conflict)
+            return;
 
         try {
-            return await task;
+            if (mode === "keep") {
+                revisions.current.set(comparisonArticleId, conflict.article.currentRevisionId);
+                if (conflict.draft)
+                    versions.current.set(comparisonArticleId, conflict.draft.version);
+                else
+                    versions.current.delete(comparisonArticleId);
+
+                await checkpoint(comparisonArticleId, conflict.localContent);
+            } else if (mode === "draft" && conflict.draft) {
+                revisions.current.set(comparisonArticleId, conflict.article.currentRevisionId);
+                versions.current.set(comparisonArticleId, conflict.draft.version);
+                replaceDraft(comparisonArticleId, conflict.draft.content);
+                replaceArticles((items) => items.map((article) => article.id === comparisonArticleId ? conflict.article : article));
+                setSaveState(comparisonArticleId, "draft-saved");
+            } else if (mode === "revision") {
+                if (conflict.draft)
+                    await client.discardArticleDraft(comparisonArticleId, conflict.draft.version);
+
+                revisions.current.set(comparisonArticleId, conflict.article.currentRevisionId);
+                versions.current.delete(comparisonArticleId);
+                replaceDraft(comparisonArticleId, conflict.article.currentRevision.content);
+                replaceArticles((items) => items.map((article) => article.id === comparisonArticleId ? withoutDraft(conflict.article) : article));
+                setSaveState(comparisonArticleId, "saved");
+            }
+
+            setConflicts((items) => ({ ...items, [comparisonArticleId]: undefined }));
+            setComparisonArticleId(undefined);
         } catch (error) {
-            setSaveState("error");
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
-            throw error;
+            if (error instanceof ArticleDraftConflictError || error instanceof ArticleRevisionConflictError)
+                recordConflict(comparisonArticleId, error, conflict.localContent);
+            else
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
         }
     }
 
@@ -171,23 +283,23 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
     async function create(input: { title: string; content: string; language?: string; audience?: string; sourceArticleId?: string; sourceRevisionId?: string }) {
         const article = await client.createArticle(input);
         revisions.current.set(article.id, article.currentRevisionId);
-        setArticles((items) => [article, ...items]);
-        setDrafts((items) => ({ ...items, [article.id]: article.currentRevision.content }));
+        replaceArticles((items) => [article, ...items]);
+        replaceDraft(article.id, article.currentRevision.content);
+        setSaveState(article.id, "saved");
         setSelectedArticleId(article.id);
-
         return article;
     }
 
 
     async function updateArticle(articleId: string, input: import("@skladno/shared").UpdateArticleInput) {
         const article = await client.updateArticle(articleId, input);
-        setArticles((items) => items.map((item) => item.id === articleId ? article : item));
+        replaceArticles((items) => items.map((item) => item.id === articleId ? article : item));
     }
 
 
     async function remove(articleId: string) {
         await client.deleteArticle(articleId);
-        setArticles((items) => {
+        replaceArticles((items) => {
             const next = items.filter((item) => item.id !== articleId);
             if (selectedArticleId === articleId)
                 setSelectedArticleId(next[0]?.id);
@@ -197,53 +309,62 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
     }
 
 
-    async function discardDraft(articleId = selectedArticleId): Promise<void> {
+    async function discardDraft(articleId = selectedArticleId) {
         if (!articleId)
             return;
 
-        const task = saveQueue.current.then(async () => {
-            const expectedDraftVersion = draftVersions.current.get(articleId);
-            if (expectedDraftVersion !== undefined)
-                await client.discardArticleDraft(articleId, expectedDraftVersion);
+        const expectedDraftVersion = versions.current.get(articleId);
+        if (expectedDraftVersion !== undefined)
+            await client.discardArticleDraft(articleId, expectedDraftVersion);
 
-            draftVersions.current.delete(articleId);
-            setArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
-            setDrafts((items) => {
-                const current = articles.find((article) => article.id === articleId);
-                return current ? { ...items, [articleId]: current.currentRevision.content } : items;
-            });
-        });
-        saveQueue.current = task.then(() => undefined, () => undefined);
-
-        await task;
+        versions.current.delete(articleId);
+        const current = articlesRef.current.find((article) => article.id === articleId);
+        if (current) {
+            replaceDraft(articleId, current.currentRevision.content);
+            replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
+        }
     }
 
+
+    const selectedArticle = articles.find((article) => article.id === selectedArticleId);
+    const content = selectedArticleId ? drafts[selectedArticleId] ?? "" : "";
     return {
         articles,
         selectedArticle,
         selectedArticleId,
-        setSelectedArticleId,
+        selectArticle: (articleId: string) => {
+            if (selectedArticleId && selectedArticleId !== articleId)
+                void checkpoint(selectedArticleId).catch(() => undefined);
+
+            setSelectedArticleId(articleId);
+        },
         content,
         setContent: (value: string) => {
             if (!selectedArticleId)
                 return;
 
-            setDrafts((items) => ({ ...items, [selectedArticleId]: value }));
-            void checkpoint(selectedArticleId, value).catch((error) => {
-                setSaveState("error");
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
-            });
+            replaceDraft(selectedArticleId, value);
+            generations.current.set(selectedArticleId, (generations.current.get(selectedArticleId) ?? 0) + 1);
+            setSaveState(selectedArticleId, "unsaved");
+            scheduleCheckpoint(selectedArticleId, value);
         },
         state,
         message,
-        saveState,
+        saveState: selectedArticleId ? saveStates[selectedArticleId] ?? "saved" : "saved",
         save,
+        retry: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(),
+        flushSelected: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(),
         discardDraft,
         hasUncommittedChanges: Boolean(selectedArticle && content !== selectedArticle.currentRevision.content),
+        conflict: selectedArticleId ? conflicts[selectedArticleId] : undefined,
+        comparisonArticleId,
+        openComparison: () => selectedArticleId && setComparisonArticleId(selectedArticleId),
+        closeComparison: () => setComparisonArticleId(undefined),
+        resolveConflict,
         create,
         updateArticle,
         remove,
-        updateRevision
+        updateRevision,
     };
 }
 
@@ -587,8 +708,14 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     if (screen === "application-settings")
         return <ApplicationSettings client={client} back={backToWorkspace} />;
 
-    return <ExtractedWorkspaceShell focusMode={layout.focusMode} libraryCollapsed={layout.libraryCollapsed} setLibraryCollapsed={layout.setLibraryCollapsed} assistantCollapsed={layout.assistantCollapsed} setAssistantCollapsed={layout.setAssistantCollapsed} libraryWidth={layout.libraryWidth} setLibraryWidth={layout.setLibraryWidth} assistantWidth={layout.assistantWidth} setAssistantWidth={layout.setAssistantWidth} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.setSelectedArticleId} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={openSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>
+    function enterSettings() {
+        void workspace.flushSelected().catch(() => undefined);
+        openSettings();
+    }
+
+    return <ExtractedWorkspaceShell focusMode={layout.focusMode} libraryCollapsed={layout.libraryCollapsed} setLibraryCollapsed={layout.setLibraryCollapsed} assistantCollapsed={layout.assistantCollapsed} setAssistantCollapsed={layout.setAssistantCollapsed} libraryWidth={layout.libraryWidth} setLibraryWidth={layout.setLibraryWidth} assistantWidth={layout.assistantWidth} setAssistantWidth={layout.setAssistantWidth} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.selectArticle} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={enterSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>
         <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} createBlank={createBlank} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
+        <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
     </ExtractedWorkspaceShell>;
 }

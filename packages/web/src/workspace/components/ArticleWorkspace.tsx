@@ -1,4 +1,4 @@
-import { Button, EmptyState } from "../../ui/primitives.js";
+import { Banner, Button, EmptyState } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState, WorkspaceLayoutState } from "../EditorialWorkspace.js";
 import { ArticleHeader } from "./ArticleHeader.js";
@@ -39,6 +39,14 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             setLanguage={layout.setTargetLanguage}
             notifyError={notifyError}
         />
+        {workspace.conflict && <Banner className="m-3" tone="error" role="alert">
+            <span>{intl.formatMessage({ id: "draftConflict.banner" })}</span>
+            <Button className="ml-auto" variant="secondary" onClick={workspace.openComparison}>{intl.formatMessage({ id: "draftConflict.compare" })}</Button>
+        </Banner>}
+        {workspace.saveState === "error" && <Banner className="m-3" tone="warning" role="alert">
+            <span>{intl.formatMessage({ id: "draftSave.failure" })}</span>
+            <Button className="ml-auto" variant="secondary" onClick={() => void workspace.retry()}>{intl.formatMessage({ id: "draftSave.retry" })}</Button>
+        </Banner>}
         <WorkspaceTabBar view={layout.view} setView={layout.setView} />
         <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} />
         <ArticleStatusBar revisionNumber={revisionNumber} characterCount={publishing.count} profile={publishing.profile} setProfile={publishing.setProfile} />
