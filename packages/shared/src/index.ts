@@ -11,6 +11,7 @@ export {
     aiConnectionsPath,
     aiModelsPath,
     aiModelPreferencesPath,
+    keyBindingsPath,
     defaultGeneralSettings,
     defaultInterfaceLocale,
     INTERFACE_LOCALE,
@@ -27,6 +28,22 @@ export {
     type ThemePreference,
     type TimeFormatPreference,
 } from "./settings.js";
+export {
+    KEY_BINDING_COMMAND,
+    findKeyBindingConflict,
+    formatKeyBinding,
+    isKeyBindingCommandId,
+    keyBindingCommands,
+    keyBindingsEqual,
+    normalizeKeyBinding,
+    resolveKeyBindings,
+    type KeyBinding,
+    type KeyBindingCategory,
+    type KeyBindingCommand,
+    type KeyBindingCommandId,
+    type KeyBindingOverrides,
+    type KeyBindingScope,
+} from "./key-bindings.js";
 export { APPLICATION_ERROR, ApplicationClientError, type ApplicationErrorCode, type ApplicationErrorPayload } from "./errors.js";
 export {
     EDITORIAL_OPERATION,

@@ -1,9 +1,11 @@
 import type { EditorialOperation } from "./editorial.js";
+import type { KeyBindingOverrides } from "./key-bindings.js";
 
 export const applicationSettingsPath = "/api/settings";
 export const aiConnectionsPath = `${applicationSettingsPath}/ai/connections`;
 export const aiModelsPath = `${applicationSettingsPath}/ai/models`;
 export const aiModelPreferencesPath = `${applicationSettingsPath}/ai/model-preferences`;
+export const keyBindingsPath = `${applicationSettingsPath}/key-bindings`;
 
 export type ApplicationScreen = "editorial-workspace" | "application-settings";
 export const INTERFACE_LOCALE = {
@@ -52,6 +54,7 @@ export interface ApplicationSettingsSnapshot {
     activeConnectionId?: string;
     modelPreferences: ModelPreferences;
     backupPolicy: BackupPolicy;
+    keyBindingOverrides: KeyBindingOverrides;
 }
 
 export const defaultGeneralSettings: GeneralSettings = {
@@ -71,6 +74,7 @@ export interface ApplicationSettingsClient {
     getApplicationSettings(): Promise<ApplicationSettingsSnapshot>;
     updateGeneralSettings(input: GeneralSettings): Promise<GeneralSettings>;
     updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy>;
+    updateKeyBindingOverrides(input: KeyBindingOverrides): Promise<KeyBindingOverrides>;
     addOpenAiConnection(input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection>;
     updateOpenAiConnection(connectionId: string, input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection>;
     removeOpenAiConnection(connectionId: string): Promise<void>;

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, type BackupPolicy, type GeneralSettings, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, isKeyBindingCommandId, keyBindingsPath, normalizeKeyBinding, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, writeJson } from "../json.js";
 import { ApplicationServiceError } from "../application-error.js";
@@ -9,6 +9,7 @@ const generalKey = "application-general";
 const backupKey = "application-backup-policy";
 const aiConnectionsKey = "application-ai-connections";
 const modelPreferencesKey = "application-model-preferences";
+const keyBindingsKey = "application-key-bindings";
 
 function general(value: unknown): GeneralSettings {
     const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
@@ -55,6 +56,56 @@ function modelPreferences(value: unknown): ModelPreferences {
     return { defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "", operationOverrides };
 }
 
+function keyBindingOverrides(value: unknown): KeyBindingOverrides {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return {};
+
+    const overrides: KeyBindingOverrides = {};
+    for (const [commandId, binding] of Object.entries(value)) {
+        if (!isKeyBindingCommandId(commandId))
+            continue;
+
+        if (binding === null) {
+            overrides[commandId] = null;
+            continue;
+        }
+
+        const normalized = normalizeKeyBinding(binding);
+        if (normalized)
+            overrides[commandId] = normalized;
+    }
+
+    return overrides;
+}
+
+function requestedKeyBindingOverrides(value: unknown): KeyBindingOverrides {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+
+    const overrides: KeyBindingOverrides = {};
+    for (const [commandId, binding] of Object.entries(value)) {
+        if (!isKeyBindingCommandId(commandId))
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+
+        if (binding === null) {
+            overrides[commandId] = null;
+            continue;
+        }
+
+        const normalized = normalizeKeyBinding(binding);
+        if (!normalized)
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+
+        overrides[commandId] = normalized;
+    }
+
+    const conflict = findKeyBindingConflict(resolveKeyBindings(overrides));
+    if (conflict)
+        throw new ApplicationServiceError(APPLICATION_ERROR.KEY_BINDING_CONFLICT, HTTP_STATUS.BAD_REQUEST, { firstCommandId: conflict[0], secondCommandId: conflict[1] });
+
+    return overrides;
+}
+
 async function listModels(environmentVariable: string): Promise<string[]> {
     const apiKey = process.env[environmentVariable];
     if (!apiKey)
@@ -75,6 +126,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
             ...connections(repositories.getSetting(aiConnectionsKey)?.value),
             modelPreferences: modelPreferences(repositories.getSetting(modelPreferencesKey)?.value),
             backupPolicy: backup(repositories.getSetting(backupKey)?.value),
+            keyBindingOverrides: keyBindingOverrides(repositories.getSetting(keyBindingsKey)?.value),
         });
 
         return true;
@@ -91,6 +143,14 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
     if (pathname === `${applicationSettingsPath}/backup-policy` && request.method === HTTP_METHOD.PUT) {
         const value = backup(object(await readJson(request)));
         repositories.setSetting(backupKey, value);
+
+        writeJson(response, HTTP_STATUS.OK, value);
+        return true;
+    }
+
+    if (pathname === keyBindingsPath && request.method === HTTP_METHOD.PUT) {
+        const value = requestedKeyBindingOverrides(object(await readJson(request)));
+        repositories.setSetting(keyBindingsKey, value);
 
         writeJson(response, HTTP_STATUS.OK, value);
         return true;

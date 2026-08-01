@@ -1,21 +1,103 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
-import { defaultPublishLimitProfileId, defaultGeneralSettings, publishLimitProfiles, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type ModelPreferences, type PublishLimitProfileId } from "@skladno/shared";
+import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { defaultPublishLimitProfileId, defaultGeneralSettings, findKeyBindingConflict, formatKeyBinding, keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, publishLimitProfiles, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingCommandId, type KeyBindingOverrides, type ModelPreferences, type PublishLimitProfileId } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
-import { Button, Field, Select } from "../ui/primitives.js";
+import { Banner, Button, Field, Select } from "../ui/primitives.js";
 import { catalogByLocale, installedLocaleCatalogs } from "../i18n/catalogs.js";
 import { formatDateTime } from "../i18n/formatting.js";
 import { useIntl } from "react-intl";
 import { publishingProfileMessageId } from "../i18n/publishing.js";
 import { useNotifications } from "../notifications/NotificationProvider.js";
 
-type Section = "general" | "ai" | "publishing" | "backups";
+type Section = "general" | "keyBindings" | "ai" | "publishing" | "backups";
 
-const sections: { id: Section; label: "settings.general" | "settings.ai" | "settings.publishingProfiles" | "settings.dataBackups" }[] = [
+const sections: { id: Section; label: "settings.general" | "settings.keyBindings" | "settings.ai" | "settings.publishingProfiles" | "settings.dataBackups" }[] = [
     { id: "general", label: "settings.general" },
+    { id: "keyBindings", label: "settings.keyBindings" },
     { id: "ai", label: "settings.ai" },
     { id: "publishing", label: "settings.publishingProfiles" },
     { id: "backups", label: "settings.dataBackups" },
 ];
+
+function KeyBindingSettings({ overrides, save }: { overrides: KeyBindingOverrides; save: (next: KeyBindingOverrides) => Promise<void> }) {
+    const intl = useIntl();
+    const [recording, setRecording] = useState<KeyBindingCommandId>();
+    const [error, setError] = useState<{ commandId: KeyBindingCommandId; assignedCommand: string }>();
+    const platform = typeof navigator === "undefined" ? "" : navigator.platform;
+    const effective = resolveKeyBindings(overrides);
+
+    async function record(commandId: KeyBindingCommandId, event: KeyboardEvent<HTMLButtonElement>) {
+        if (recording !== commandId)
+            return;
+
+        event.preventDefault();
+        if (event.key === "Escape" && commandId !== "stop_editorial_request") {
+            setRecording(undefined);
+            return;
+        }
+
+        const binding = normalizeKeyBinding({ primary: event.ctrlKey || event.metaKey, shift: event.shiftKey, alt: event.altKey, key: event.key });
+        if (!binding)
+            return;
+
+        const next = { ...overrides, [commandId]: binding };
+        const conflict = findKeyBindingConflict(resolveKeyBindings(next));
+        if (conflict) {
+            const other = conflict.find((id) => id !== commandId) ?? commandId;
+            const command = keyBindingCommands.find((item) => item.id === other)!;
+            setError({
+                commandId,
+                assignedCommand: intl.formatMessage({ id: command.labelMessageId }),
+            });
+
+            return;
+        }
+
+        setError(undefined);
+        setRecording(undefined);
+        await save(next);
+    }
+
+    return <>
+        <p className="mt-3 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.keyBindingsIntro" })}</p>
+        {(["general", "workspace", "assistant"] as const).map((category) => <section key={category} className="border-b border-border py-5 last:border-b-0">
+            <h2 className="text-sm font-semibold">{intl.formatMessage({ id: `settings.keyBindingCategory.${category}` })}</h2>
+            <div className="mt-3 grid gap-3">{keyBindingCommands.filter((command) => command.category === category).map((command) => {
+                const override = overrides[command.id];
+                const isOverridden = Object.prototype.hasOwnProperty.call(overrides, command.id)
+                    && (override === null || (override !== undefined && !keyBindingsEqual(override, command.defaultBinding)));
+                const listening = recording === command.id;
+                return <div key={command.id} className="rounded-control border border-border p-3">
+                    <p className="text-sm font-medium">{intl.formatMessage({ id: command.labelMessageId })}</p>
+                    <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: command.hintMessageId })}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Button variant={listening ? "secondary" : "quiet"} aria-label={intl.formatMessage({ id: "settings.recordKeyBinding" }, { command: intl.formatMessage({ id: command.labelMessageId }) })} aria-describedby={error?.commandId === command.id ? `key-binding-error-${command.id}` : undefined} onBlur={() => {
+                            if (recording === command.id) {
+                                setRecording(undefined);
+                                setError((current) => current?.commandId === command.id ? undefined : current);
+                            }
+                        }} onClick={() => {
+                            setError(undefined);
+                            setRecording(command.id);
+                        }} onKeyDown={(event) => void record(command.id, event)}>{listening ? intl.formatMessage({ id: "settings.recordingKeyBinding" }) : formatKeyBinding(effective[command.id], platform)}</Button>
+                        <Button variant="quiet" onClick={() => {
+                            setError(undefined);
+                            void save({ ...overrides, [command.id]: null });
+                        }}>{intl.formatMessage({ id: "settings.clearKeyBinding" })}</Button>
+                        {isOverridden && <Button variant="quiet" onClick={() => {
+                            const next = { ...overrides };
+                            delete next[command.id];
+                            setError(undefined);
+                            void save(next);
+                        }}>{intl.formatMessage({ id: "settings.resetKeyBinding" })}</Button>}
+                    </div>
+                    {error?.commandId === command.id && <div id={`key-binding-error-${command.id}`} className="mt-3" role="alert">
+                        <Banner tone="warning" role="alert"><span>{intl.formatMessage({ id: "settings.keyBindingConflictTitle" })} <strong>{error.assignedCommand}</strong>. {intl.formatMessage({ id: "settings.keyBindingConflict" })}</span></Banner>
+                    </div>}
+                </div>;
+            })}</div>
+        </section>)}
+    </>;
+}
 
 const operations = [
     ["thesis_to_narrative", "operations.thesisToNarrative"],
@@ -50,7 +132,7 @@ function formatExample(general: GeneralSettings): string {
     return formatDateTime("2026-07-31T15:45:00Z", general.interfaceLocale, general.dateFormat, general.timeFormat);
 }
 
-export function ApplicationSettings({ client, back }: { client: EditorialWorkspaceClient; back: () => void }) {
+export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { client: EditorialWorkspaceClient; back: () => void; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void }) {
     const intl = useIntl();
     const { notify, notifyError } = useNotifications();
     const [section, setSection] = useState<Section>("general");
@@ -58,6 +140,7 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
     const [general, setGeneral] = useState(defaultGeneralSettings);
     const [preferences, setPreferences] = useState<ModelPreferences>({ defaultModel: "", operationOverrides: {} });
     const [backupPolicy, setBackupPolicy] = useState<BackupPolicy>({ schedule: "off", retention: { mode: "count", count: 7 } });
+    const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>({});
     const [publishingProfileId, setPublishingProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
     const [models, setModels] = useState<string[]>([]);
     const [connectionName, setConnectionName] = useState("");
@@ -70,6 +153,7 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
             setGeneral(loaded.general);
             setPreferences(loaded.modelPreferences);
             setBackupPolicy(loaded.backupPolicy);
+            setKeyBindingOverrides(loaded.keyBindingOverrides);
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         }).catch((error) => {
             setStatus(intl.formatMessage({ id: "settings.loadingFailed" }));
@@ -114,6 +198,20 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
         }
     }
 
+    async function saveKeyBindingOverrides(next: KeyBindingOverrides) {
+        setKeyBindingOverrides(next);
+        setStatus(intl.formatMessage({ id: "settings.saving" }));
+        try {
+            await client.updateKeyBindingOverrides(next);
+            onKeyBindingsUpdated?.(next);
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
+        } catch (error) {
+            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.saveFailed" }) });
+            throw error;
+        }
+    }
+
     async function addConnection() {
         try {
             await client.addOpenAiConnection({ label: connectionName, environmentVariableName: environmentName });
@@ -155,7 +253,7 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
                     <SettingRow label={intl.formatMessage({ id: "settings.dateFormat" })} hint={intl.formatMessage({ id: "settings.dateFormatHint" })}><Select value={general.dateFormat} onChange={(event) => void saveGeneral({ ...general, dateFormat: event.target.value as GeneralSettings["dateFormat"] })}><option value="system">{intl.formatMessage({ id: "settings.system" })}</option><option value="day-first">{intl.formatMessage({ id: "settings.dayFirst" })}</option><option value="month-first">{intl.formatMessage({ id: "settings.monthFirst" })}</option><option value="iso">{intl.formatMessage({ id: "settings.iso" })}</option></Select></SettingRow>
                     <SettingRow label={intl.formatMessage({ id: "settings.timeFormat" })} hint={intl.formatMessage({ id: "settings.timeFormatHint" })} status={intl.formatMessage({ id: "settings.example" }, { value: formatExample(general) })}><Select value={general.timeFormat} onChange={(event) => void saveGeneral({ ...general, timeFormat: event.target.value as GeneralSettings["timeFormat"] })}><option value="system">{intl.formatMessage({ id: "settings.system" })}</option><option value="12-hour">{intl.formatMessage({ id: "settings.twelveHour" })}</option><option value="24-hour">{intl.formatMessage({ id: "settings.twentyFourHour" })}</option></Select></SettingRow>
                     <SettingRow label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} hint={intl.formatMessage({ id: "settings.defaultArticleLanguageHint" })}><Select value={general.defaultArticleLanguage} onChange={(event) => void saveGeneral({ ...general, defaultArticleLanguage: event.target.value })}>{[["en", "languages.english"], ["es", "languages.spanish"], ["pt", "languages.portuguese"], ["ru", "languages.russian"], ["fr", "languages.french"], ["de", "languages.german"], ["it", "languages.italian"]].map(([value, label]) => <option key={value} value={value}>{intl.formatMessage({ id: label as "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" })}</option>)}</Select></SettingRow>
-                </> : section === "ai" ? <>
+                </> : section === "keyBindings" ? <KeyBindingSettings overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <>
                     <SettingRow label={intl.formatMessage({ id: "settings.addConnection" })} hint={intl.formatMessage({ id: "settings.connectionHint" })}><div className="grid gap-4"><Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}><Field value={connectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setConnectionName(event.target.value)} /></Control><Control label={intl.formatMessage({ id: "settings.environmentName" })} hint={intl.formatMessage({ id: "settings.environmentNameHint" })}><Field value={environmentName} placeholder={intl.formatMessage({ id: "settings.environmentNamePlaceholder" })} onChange={(event) => setEnvironmentName(event.target.value)} /></Control><Button className="w-fit" variant="secondary" onClick={() => void addConnection()}>{intl.formatMessage({ id: "settings.addConnectionButton" })}</Button></div></SettingRow>
                     <SettingRow label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}><Control label={intl.formatMessage({ id: "settings.model" })} hint={intl.formatMessage({ id: "settings.modelHint" })}><Select value={preferences.defaultModel} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, defaultModel: event.target.value })}><option value="">{models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" })}</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control><Button className="mt-3 w-fit" variant="secondary" onClick={() => void refreshModels()}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button></SettingRow>
                     <SettingRow label={intl.formatMessage({ id: "settings.specificModels" })} hint={intl.formatMessage({ id: "settings.specificModelsHint" })}><div className="grid gap-4">{operations.map(([operation, label]) => <Control key={operation} label={intl.formatMessage({ id: label as "operations.thesisToNarrative" | "operations.flowRevision" | "operations.factCheck" | "operations.styleReview" | "operations.translation" })} hint={intl.formatMessage({ id: "settings.specificModelHint" })}><Select value={preferences.operationOverrides[operation] ?? ""} onChange={(event) => void savePreferences({ ...preferences, operationOverrides: { ...preferences.operationOverrides, [operation]: event.target.value } })}><option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control>)}</div></SettingRow>

@@ -48,6 +48,8 @@ Use `bg-surface-supporting` for Settings Navigation, the Article Library Panel, 
 
 Each setting needs a visible label, persistent author-centered hint, control, and save or validation status. Connect each control to its help with `aria-describedby`; essential explanation never belongs only in a tooltip. Appearance selection persists without changing visual tokens until the dedicated theme work lands.
 
+Key bindings are local application preferences. Show each command's current platform-aware shortcut with an accessible recording control, clear action, and reset-to-default action. A conflicting shortcut must remain unsaved and identify the command that already owns it. Settings defines bindings and the dispatcher; connecting bindings to workspace actions is a separate task.
+
 ## Article Library Panel and Navigation Rail
 
 The expanded Article Library Panel is a narrow, full-height (`w-52`) supporting surface. Its header and collapsed Navigation Rail header share a `min-h-18` height so product identity and controls remain vertically aligned across modes. Use the Skladno wordmark in the expanded header and an `S` in the same UI font, size, weight, and brand color in the Navigation Rail.

@@ -1,8 +1,10 @@
 import type { KeyboardEvent } from "react";
+import { KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
 import { Tab, TabList } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 import type { MessageId } from "../../i18n/messages.js";
 import type { WorkspaceView } from "../EditorialWorkspace.js";
+import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 
 const views: { id: WorkspaceView; label: MessageId }[] = [
     { id: "write", label: "workspace.tabs.write" },
@@ -15,9 +17,10 @@ const views: { id: WorkspaceView; label: MessageId }[] = [
 ];
 
 
-export function WorkspaceTabBar({ view, setView }: {
+export function WorkspaceTabBar({ view, setView, shortcutOverrides = {} }: {
     view: WorkspaceView;
-    setView: (view: WorkspaceView) => void
+    setView: (view: WorkspaceView) => void;
+    shortcutOverrides?: KeyBindingOverrides;
 }) {
     const intl = useIntl();
     function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -46,6 +49,7 @@ export function WorkspaceTabBar({ view, setView }: {
             aria-controls={`workspace-panel-${item.id}`}
             selected={view === item.id}
             tabIndex={view === item.id ? 0 : -1}
+            title={shortcutHint(intl.formatMessage({ id: item.label }), [KEY_BINDING_COMMAND.VIEW_WRITE, KEY_BINDING_COMMAND.VIEW_PROPOSAL, KEY_BINDING_COMMAND.VIEW_REVISIONS, KEY_BINDING_COMMAND.VIEW_FACT_CHECK, KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, KEY_BINDING_COMMAND.VIEW_PUBLISH][index]!, shortcutOverrides)}
             onClick={() => setView(item.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}>{intl.formatMessage({ id: item.label })}</Tab>)}
     </TabList>;
