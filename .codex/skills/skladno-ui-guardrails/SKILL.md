@@ -10,10 +10,14 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 ## Required workflow
 
 1. Read the repository `AGENTS.md`, `packages/web/src/ui/design-system.md`, relevant UI primitives, and the component being changed.
-2. Inspect the current rendered state before editing. Use the collaborative preview for desktop and collapsed-panel states when present.
-3. Reuse semantic Tailwind tokens and existing primitives. Do not introduce raw colors, radius, focus, elevation, or a parallel CSS layer.
-4. Preserve labels, keyboard access, accessible names, focus treatment, and non-color state cues while changing appearance.
-5. Run the narrowest relevant tests and typecheck. Visually inspect every changed responsive or collapsed state before handoff.
+2. Read every focused reference and preservation inventory relevant to the touched surface. Treat each implemented or partial capability as a requirement, and identify how the planned change preserves, extends, replaces, or intentionally removes it.
+3. Inspect the current rendered state, implementation, tests, and working-tree diff before editing. Use the collaborative preview for desktop and collapsed-panel states when present.
+4. Reuse semantic Tailwind tokens and existing primitives. Do not introduce raw colors, radius, focus, elevation, or a parallel CSS layer.
+5. Preserve existing controls, states, labels, keyboard access, accessible names, focus treatment, persistence behavior, responsive behavior, and non-color state cues while changing appearance.
+6. Do not delete, hide, disable, narrow, or overwrite an existing capability unless the active issue or user explicitly requires it. Silence in the active issue, a redesign, or component replacement is not authorization for feature loss. If authorization is absent, stop and ask.
+7. When removal or narrowing is explicitly authorized, trace affected UI ownership, contracts, state, persistence, tests, accessibility, responsive states, and documentation. Update rather than silently delete the relevant inventory row, record the concrete limitation or status change, and call out the intentional feature loss in the handoff.
+8. Before handoff, compare the final diff and rendered result with the preservation baseline. Verify every affected baseline capability alongside the new behavior; do not downgrade inventory status merely to make an incomplete implementation appear consistent.
+9. Run the narrowest relevant tests and typecheck. Visually inspect every changed responsive or collapsed state before handoff.
 
 Read [references/article-workspace-inventory.md](references/article-workspace-inventory.md) before changing the Article Workspace, Article Header, Workspace Tab Bar, Workspace View, or Article Status Bar. Update the inventory in the same change when an implemented workspace feature or contract changes.
 
