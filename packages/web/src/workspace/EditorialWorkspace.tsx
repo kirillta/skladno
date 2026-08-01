@@ -34,6 +34,21 @@ export type WorkspaceView = "write" | "proposal" | "revisions" | "fact-check" | 
 type SaveState = "saved" | "saving" | "error";
 type ProposalState = "idle" | "streaming" | "error";
 
+
+function withoutDraft(article: Article): Omit<Article, "draft"> {
+    const { draft: _draft, ...result } = article;
+    void _draft;
+    return result;
+}
+
+export function articleContentForWorkspace(article: Article): string {
+    if (article.draft?.baseRevisionId === article.currentRevisionId)
+        return article.draft.content;
+
+    return article.currentRevision.content;
+}
+
+
 function useArticleWorkspace(client: EditorialWorkspaceClient) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
@@ -44,14 +59,16 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
     const [message, setMessage] = useState(() => intl.formatMessage({ id: "workspace.loadingArticles" }));
     const [saveState, setSaveState] = useState<SaveState>("saved");
     const revisions = useRef(new Map<string, string>());
+    const draftVersions = useRef(new Map<string, number>());
     const saveQueue = useRef(Promise.resolve());
 
 
     useEffect(() => {
         client.listArticles().then((loaded) => {
             setArticles(loaded);
-            setDrafts(Object.fromEntries(loaded.map((article) => [article.id, article.currentRevision.content])));
+            setDrafts(Object.fromEntries(loaded.map((article) => [article.id, articleContentForWorkspace(article)])));
             revisions.current = new Map(loaded.map((article) => [article.id, article.currentRevisionId]));
+            draftVersions.current = new Map(loaded.flatMap((article) => article.draft ? [[article.id, article.draft.version]] : []));
             setSelectedArticleId(loaded[0]?.id);
             setState("ready");
         }).catch(() => {
@@ -67,12 +84,54 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
 
     function updateRevision(articleId: string, revision: ArticleRevision) {
         revisions.current.set(articleId, revision.id);
+        draftVersions.current.delete(articleId);
+        setDrafts((items) => ({ ...items, [articleId]: revision.content }));
         setArticles((items) => items.map((article) => article.id === articleId ? {
-            ...article,
+            ...withoutDraft(article),
             updatedAt: revision.createdAt,
             currentRevisionId: revision.id,
             currentRevision: revision,
         } : article));
+    }
+
+
+    function checkpoint(articleId: string, content: string): Promise<void> {
+        const task = saveQueue.current.then(async () => {
+            const current = articles.find((article) => article.id === articleId);
+            const baseRevisionId = revisions.current.get(articleId);
+            if (!current || !baseRevisionId)
+                return;
+
+            const expectedDraftVersion = draftVersions.current.get(articleId);
+            if (content === current.currentRevision.content) {
+                if (expectedDraftVersion !== undefined) {
+                    await client.discardArticleDraft(articleId, expectedDraftVersion);
+                    draftVersions.current.delete(articleId);
+                    setArticles((items) => items.map((article) => {
+                        if (article.id !== articleId)
+                            return article;
+
+                        return withoutDraft(article);
+                    }));
+                }
+
+                return;
+            }
+
+            const savedDraft = await client.saveArticleDraft(articleId, {
+                content,
+                baseRevisionId,
+                ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion }),
+            });
+            draftVersions.current.set(articleId, savedDraft.version);
+            setArticles((items) => items.map((article) => article.id === articleId ? {
+                ...article,
+                draft: savedDraft,
+            } : article));
+        });
+        saveQueue.current = task.then(() => undefined, () => undefined);
+
+        return task;
     }
 
 
@@ -81,13 +140,18 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
             return undefined;
 
         const draft = drafts[articleId] ?? "";
+        const current = articles.find((article) => article.id === articleId);
         const baseRevisionId = revisions.current.get(articleId);
-        if (!baseRevisionId || selectedArticle?.currentRevision.content === draft)
+        if (!current || !baseRevisionId || current.currentRevision.content === draft && draftVersions.current.get(articleId) === undefined)
             return undefined;
 
         setSaveState("saving");
         const task = saveQueue.current.then(async () => {
-            const revision = await client.saveArticleRevision(articleId, { content: draft, baseRevisionId });
+            const expectedDraftVersion = draftVersions.current.get(articleId);
+            if (expectedDraftVersion === undefined)
+                return undefined;
+
+            const revision = await client.saveArticleRevision(articleId, { content: draft, baseRevisionId, expectedDraftVersion });
             updateRevision(articleId, revision);
             setSaveState("saved");
             return revision;
@@ -132,17 +196,50 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
         });
     }
 
+
+    async function discardDraft(articleId = selectedArticleId): Promise<void> {
+        if (!articleId)
+            return;
+
+        const task = saveQueue.current.then(async () => {
+            const expectedDraftVersion = draftVersions.current.get(articleId);
+            if (expectedDraftVersion !== undefined)
+                await client.discardArticleDraft(articleId, expectedDraftVersion);
+
+            draftVersions.current.delete(articleId);
+            setArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
+            setDrafts((items) => {
+                const current = articles.find((article) => article.id === articleId);
+                return current ? { ...items, [articleId]: current.currentRevision.content } : items;
+            });
+        });
+        saveQueue.current = task.then(() => undefined, () => undefined);
+
+        await task;
+    }
+
     return {
         articles,
         selectedArticle,
         selectedArticleId,
         setSelectedArticleId,
         content,
-        setContent: (value: string) => selectedArticleId && setDrafts((items) => ({ ...items, [selectedArticleId]: value })),
+        setContent: (value: string) => {
+            if (!selectedArticleId)
+                return;
+
+            setDrafts((items) => ({ ...items, [selectedArticleId]: value }));
+            void checkpoint(selectedArticleId, value).catch((error) => {
+                setSaveState("error");
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
+            });
+        },
         state,
         message,
         saveState,
         save,
+        discardDraft,
+        hasUncommittedChanges: Boolean(selectedArticle && content !== selectedArticle.currentRevision.content),
         create,
         updateArticle,
         remove,
@@ -151,7 +248,7 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
 }
 
 
-function useArticleRevisions(client: EditorialWorkspaceClient, article: Article | undefined, updateRevision: (articleId: string, revision: ArticleRevision) => void) {
+function useArticleRevisions(client: EditorialWorkspaceClient, article: Article | undefined, updateRevision: (articleId: string, revision: ArticleRevision) => void, saveDraft: (articleId: string) => Promise<unknown>, discardDraft: (articleId: string) => Promise<void>) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [revisions, setRevisions] = useState<ArticleRevision[]>([]);
@@ -168,11 +265,17 @@ function useArticleRevisions(client: EditorialWorkspaceClient, article: Article 
         client.listArticleRevisions(articleId).then(setRevisions).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.revisionHistoryFailed" }) }));
     }, [articleId, currentRevisionId, client, intl, notifyError]);
 
-    async function restore() {
+    async function restore(mode: "keep" | "save" | "discard") {
         if (!article || !candidate)
             return;
 
         try {
+            if (mode === "save")
+                await saveDraft(article.id);
+
+            if (mode === "discard")
+                await discardDraft(article.id);
+
             const revision = await client.restoreRevision(article.id, candidate.id);
             updateRevision(article.id, revision);
             setRevisions((items) => [...items, revision]);
@@ -452,7 +555,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const { notifyError } = useNotifications();
     const workspace = useArticleWorkspace(client);
     const layout = useWorkspaceLayout();
-    const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision);
+    const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
     const editorial = useEditorialProposal(client, workspace);
     const corpus = useStyleCorpus(client);
     const publishing = usePublishing(client, workspace.content);
@@ -486,6 +589,6 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
 
     return <ExtractedWorkspaceShell focusMode={layout.focusMode} libraryCollapsed={layout.libraryCollapsed} setLibraryCollapsed={layout.setLibraryCollapsed} assistantCollapsed={layout.assistantCollapsed} setAssistantCollapsed={layout.setAssistantCollapsed} libraryWidth={layout.libraryWidth} setLibraryWidth={layout.setLibraryWidth} assistantWidth={layout.assistantWidth} setAssistantWidth={layout.setAssistantWidth} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.setSelectedArticleId} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={openSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>
         <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} createBlank={createBlank} />
-        <ExtractedRestoreRevisionDialog candidate={revisions.candidate} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
+        <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
     </ExtractedWorkspaceShell>;
 }

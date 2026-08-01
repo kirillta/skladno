@@ -50,6 +50,78 @@ test("proposal acceptance requires the reviewed Revision to still be current", (
 }));
 
 
+test("Draft checkpoints are versioned, recoverable, and separate from Revisions", () => withRepository((repositories) => {
+    const article = repositories.createArticle({ title: "Checkpoint", content: "first" });
+    const first = repositories.saveArticleDraft(article.id, {
+        content: "changed once",
+        baseRevisionId: article.currentRevisionId,
+    });
+    const second = repositories.saveArticleDraft(article.id, {
+        content: "changed twice",
+        baseRevisionId: article.currentRevisionId,
+        expectedDraftVersion: first.version,
+    });
+
+    assert.equal(first.version, 1);
+    assert.equal(second.version, 2);
+    assert.equal(repositories.getArticle(article.id)?.draft?.content, "changed twice");
+    assert.equal(repositories.listArticleRevisions(article.id).length, 1);
+    assert.throws(() => repositories.saveArticleDraft(article.id, {
+        content: "stale write",
+        baseRevisionId: article.currentRevisionId,
+        expectedDraftVersion: first.version,
+    }), /newer checkpoint/);
+
+    repositories.discardArticleDraft(article.id, second.version);
+    assert.equal(repositories.getArticle(article.id)?.draft, undefined);
+    assert.throws(() => repositories.discardArticleDraft(article.id, second.version), /newer checkpoint/);
+}));
+
+
+test("Draft promotion is atomic and requires matching Revision and Draft versions", () => withRepository((repositories) => {
+    const article = repositories.createArticle({ title: "Promotion", content: "first" });
+    const draft = repositories.saveArticleDraft(article.id, {
+        content: "checkpoint",
+        baseRevisionId: article.currentRevisionId,
+    });
+
+    assert.throws(() => repositories.saveArticleRevision(article.id, {
+        content: "stale draft",
+        baseRevisionId: article.currentRevisionId,
+    }), /newer checkpoint/);
+
+    const saved = repositories.saveArticleRevision(article.id, {
+        content: draft.content,
+        baseRevisionId: article.currentRevisionId,
+        expectedDraftVersion: draft.version,
+    });
+    assert.deepEqual(saved.provenance, { kind: "author-draft", baseRevisionId: article.currentRevisionId });
+    assert.equal(repositories.getArticle(article.id)?.draft, undefined);
+    assert.equal(repositories.listArticleRevisions(article.id).length, 2);
+
+    const conflictedDraft = repositories.saveArticleDraft(article.id, {
+        content: "recover me",
+        baseRevisionId: saved.id,
+    });
+    repositories.acceptChange(article.id, { content: "new current", provenance: { kind: "accepted-proposal" } });
+    assert.throws(() => repositories.saveArticleRevision(article.id, {
+        content: conflictedDraft.content,
+        baseRevisionId: saved.id,
+        expectedDraftVersion: conflictedDraft.version,
+    }), /newer revision/);
+    assert.equal(repositories.getArticle(article.id)?.draft?.content, "recover me");
+}));
+
+
+test("Article deletion cascades to its Draft", () => withRepository((repositories) => {
+    const article = repositories.createArticle({ title: "Cascade", content: "first" });
+    repositories.saveArticleDraft(article.id, { content: "checkpoint", baseRevisionId: article.currentRevisionId });
+    repositories.deleteArticle(article.id);
+
+    assert.equal(repositories.getArticle(article.id), undefined);
+}));
+
+
 test("Article metadata updates preserve the current Revision", () => withRepository((repositories) => {
     const article = repositories.createArticle({ title: "Metadata", content: "Draft", language: "en" });
     const updated = repositories.updateArticle(article.id, {
@@ -80,6 +152,7 @@ test("materials, settings, artifacts and citations persist through reopening", (
     first.updateMaterial(material.id, { content: "Edited." });
 
     const article = first.createArticle({ title: "Article", content: "Draft" });
+    const draft = first.saveArticleDraft(article.id, { content: "Recoverable checkpoint", baseRevisionId: article.currentRevisionId });
     const artifact = first.createEditorialArtifact({ articleId: article.id, revisionId: article.currentRevisionId, kind: "fact-check", content: "Finding" });
     first.createSourceCitation({ editorialArtifactId: artifact.id, url: "https://example.test/source", uncertainty: "medium" });
     first.setSetting("publishingLimits", { characters: 3000 });
@@ -91,6 +164,8 @@ test("materials, settings, artifacts and citations persist through reopening", (
     assert.equal(second.getMaterial(material.id)?.content, "Edited.");
     assert.deepEqual(second.getSetting("publishingLimits")?.value, { characters: 3000 });
     assert.equal(second.getArticle(article.id)?.currentRevision.content, "Draft");
+    assert.equal(second.getArticle(article.id)?.draft?.content, "Recoverable checkpoint");
+    assert.equal(second.getArticle(article.id)?.draft?.version, draft.version);
     assert.equal(second.listEditorialArtifacts(article.id).length, 1);
     assert.equal(second.listSourceCitations(artifact.id)[0]?.uncertainty, "medium");
 

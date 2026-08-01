@@ -8,6 +8,15 @@ export interface ArticleRevision {
 }
 
 
+export interface ArticleDraft {
+    articleId: string;
+    content: string;
+    baseRevisionId: string;
+    version: number;
+    updatedAt: string;
+}
+
+
 export interface Article {
     id: string;
     title: string;
@@ -15,6 +24,7 @@ export interface Article {
     updatedAt: string;
     currentRevisionId: string;
     currentRevision: ArticleRevision;
+    draft?: ArticleDraft;
     workflowStage: WorkflowStage;
     language?: string;
     audience?: string;
@@ -51,6 +61,15 @@ export interface UpdateArticleInput {
 export interface SaveArticleRevisionInput {
     content: string;
     baseRevisionId: string;
+    expectedDraftVersion?: number;
+}
+
+
+/** A compare-and-swap mutable checkpoint. Omit expectedDraftVersion to create the first checkpoint. */
+export interface SaveArticleDraftInput {
+    content: string;
+    baseRevisionId: string;
+    expectedDraftVersion?: number;
 }
 
 

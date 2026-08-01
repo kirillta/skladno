@@ -3,7 +3,9 @@ export type {
     CreateArticleInput,
     UpdateArticleInput,
     Article,
+    ArticleDraft,
     ArticleRevision,
+    SaveArticleDraftInput,
     SaveArticleRevisionInput,
 } from "./articles.js";
 

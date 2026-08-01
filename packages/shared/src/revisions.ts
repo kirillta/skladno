@@ -25,6 +25,7 @@ export interface AcceptProposalInput {
 
 
 export const articleRevisionsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/revisions`;
+export const articleDraftPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/draft`;
 export const acceptProposalPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/proposal-acceptances`;
 export const restoreRevisionPath = (articleId: string, revisionId: string) => `${articleRevisionsPath(articleId)}/${encodeURIComponent(revisionId)}/restorations`;
 

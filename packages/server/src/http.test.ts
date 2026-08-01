@@ -33,9 +33,42 @@ test("article API supports CRUD and revision-aware saves", async () => {
         assert.equal(createdResponse.status, HTTP_STATUS.CREATED);
         const created = await createdResponse.json() as Article;
 
-        const savedResponse = await fetch(`${baseUrl}/${created.id}/revisions`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ content: "two", baseRevisionId: created.currentRevisionId }) });
+        const firstDraftResponse = await fetch(`${baseUrl}/${created.id}/draft`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ content: "checkpoint", baseRevisionId: created.currentRevisionId }),
+        });
+        assert.equal(firstDraftResponse.status, HTTP_STATUS.OK);
+        const firstDraft = await firstDraftResponse.json() as { version: number };
+        assert.equal(firstDraft.version, 1);
+
+        const secondDraftResponse = await fetch(`${baseUrl}/${created.id}/draft`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ content: "newer checkpoint", baseRevisionId: created.currentRevisionId, expectedDraftVersion: firstDraft.version }),
+        });
+        assert.equal(secondDraftResponse.status, HTTP_STATUS.OK);
+        const secondDraft = await secondDraftResponse.json() as { version: number };
+        assert.equal(secondDraft.version, 2);
+
+        const staleDraft = await fetch(`${baseUrl}/${created.id}/draft`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ content: "stale checkpoint", baseRevisionId: created.currentRevisionId, expectedDraftVersion: firstDraft.version }),
+        });
+        assert.equal(staleDraft.status, HTTP_STATUS.CONFLICT);
+        const staleDraftBody = await staleDraft.json() as { error: { code: string }; article: Article; draft: { version: number } };
+        assert.equal(staleDraftBody.error.code, "draft_conflict");
+        assert.equal(staleDraftBody.article.id, created.id);
+        assert.equal(staleDraftBody.article.draft?.version, secondDraft.version);
+        assert.equal(staleDraftBody.draft.version, secondDraft.version);
+
+        const savedResponse = await fetch(`${baseUrl}/${created.id}/revisions`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ content: "newer checkpoint", baseRevisionId: created.currentRevisionId, expectedDraftVersion: secondDraft.version }) });
         assert.equal(savedResponse.status, HTTP_STATUS.CREATED);
         const saved = await savedResponse.json() as { id: string };
+
+        const articleAfterPromotion = (await (await fetch(baseUrl)).json() as Article[]).find((item) => item.id === created.id)!;
+        assert.equal(articleAfterPromotion.draft, undefined);
 
         const proposal = await fetch(`${baseUrl}/${created.id}/proposal-acceptances`, {
             method: HTTP_METHOD.POST,

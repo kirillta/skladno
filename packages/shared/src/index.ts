@@ -63,6 +63,7 @@ export {
     applyProposalChanges,
     createTextProposal,
     articleRevisionsPath,
+    articleDraftPath,
     restoreRevisionPath,
     type AcceptProposalInput,
     type ProposalChange,
@@ -78,14 +79,16 @@ export type {
     CreateSourceCitationInput,
     CreateEditorialArtifactInput,
     Article,
+    ArticleDraft,
     ArticleRevision,
     Material,
     SourceCitation,
     UpdateMaterialInput,
     SaveArticleRevisionInput,
+    SaveArticleDraftInput,
     EditorialArtifact,
 } from "./persistence/index.js";
-export { articlesPath, ArticleRevisionConflictError, type ArticleLibraryClient } from "./workspace.js";
+export { articlesPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./workspace.js";
 export { WORKFLOW_STAGE, isWorkflowStage, workflowStages, type WorkflowStage } from "./workflow-stage.js";
 export { ARTICLE_LANGUAGE, articleLanguages, isArticleLanguage, type ArticleLanguage } from "./languages.js";
 export {

@@ -87,6 +87,19 @@ const migrations = [
         ALTER TABLE articles ADD COLUMN workflow_stage TEXT NOT NULL DEFAULT 'talking_points';
         `,
     },
+    {
+        version: 7,
+        name: "article_drafts",
+        sql: `
+        CREATE TABLE article_drafts (
+            article_id TEXT PRIMARY KEY REFERENCES articles(id) ON DELETE CASCADE,
+            content TEXT NOT NULL,
+            base_revision_id TEXT NOT NULL REFERENCES article_revisions(id) ON DELETE RESTRICT,
+            version INTEGER NOT NULL CHECK (version > 0),
+            updated_at TEXT NOT NULL
+        );
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

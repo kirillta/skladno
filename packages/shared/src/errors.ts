@@ -7,6 +7,7 @@ export const APPLICATION_ERROR = {
     ARTICLE_NOT_FOUND: "article_not_found",
     REVISION_NOT_FOUND: "revision_not_found",
     REVISION_CONFLICT: "revision_conflict",
+    DRAFT_CONFLICT: "draft_conflict",
     UNSUPPORTED_PUBLISHING_PROFILE: "unsupported_publishing_profile",
     INVALID_WORKFLOW_STAGE: "invalid_workflow_stage",
     INVALID_ENVIRONMENT_VARIABLE_NAME: "invalid_environment_variable_name",

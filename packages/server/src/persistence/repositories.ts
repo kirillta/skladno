@@ -8,10 +8,12 @@ import type {
     CreateSourceCitationInput,
     CreateEditorialArtifactInput,
     Article,
+    ArticleDraft,
     ArticleRevision,
     EditorialSession,
     Material,
     SaveArticleRevisionInput,
+    SaveArticleDraftInput,
     SourceCitation,
     UpdateMaterialInput,
     EditorialArtifact,
@@ -85,6 +87,16 @@ export class Repositories {
 
     deleteArticle(articleId: string): void {
         this.articles.delete(articleId);
+    }
+
+
+    saveArticleDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft {
+        return this.articles.saveDraft(articleId, input);
+    }
+
+
+    discardArticleDraft(articleId: string, expectedDraftVersion: number): void {
+        this.articles.discardDraft(articleId, expectedDraftVersion);
     }
 
 
