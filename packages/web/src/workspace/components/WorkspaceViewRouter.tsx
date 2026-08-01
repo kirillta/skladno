@@ -27,7 +27,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
         return panel(<ProposalReviewView review={editorial.review} stale={editorial.stale} selectedChanges={editorial.selectedChanges} setSelectedChanges={editorial.setSelectedChanges} accept={editorial.accept} reject={editorial.reject} />);
 
     if (view === "revisions")
-        return panel(<RevisionHistoryView revisions={revisions.revisions} currentRevisionId={article.currentRevisionId} select={revisions.setCandidate} message={revisions.message} />);
+        return panel(<RevisionHistoryView revisions={revisions.revisions} currentRevisionId={article.currentRevisionId} select={revisions.setCandidate} />);
 
     if (view === "fact-check")
         return panel(<FactCheckView factCheck={editorial.factCheck} />);

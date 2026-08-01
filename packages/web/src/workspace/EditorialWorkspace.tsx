@@ -28,6 +28,7 @@ import { RestoreRevisionDialog as ExtractedRestoreRevisionDialog } from "./compo
 import { WorkspaceShell as ExtractedWorkspaceShell } from "./components/WorkspaceShell.js";
 import { ApplicationSettings } from "../settings/ApplicationSettings.js";
 import { errorMessageId } from "../i18n/errors.js";
+import { useNotifications } from "../notifications/NotificationProvider.js";
 
 export type WorkspaceView = "write" | "proposal" | "revisions" | "fact-check" | "style-profile" | "translations" | "publish";
 type SaveState = "saved" | "saving" | "error";
@@ -35,6 +36,7 @@ type ProposalState = "idle" | "streaming" | "error";
 
 function useArticleWorkspace(client: EditorialWorkspaceClient) {
     const intl = useIntl();
+    const { notifyError } = useNotifications();
     const [articles, setArticles] = useState<Article[]>([]);
     const [selectedArticleId, setSelectedArticleId] = useState<string>();
     const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -96,7 +98,7 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
             return await task;
         } catch (error) {
             setSaveState("error");
-            setMessage(error instanceof ApplicationClientError ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters) : intl.formatMessage({ id: "workspace.saveFailed" }));
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
             throw error;
         }
     }
@@ -151,9 +153,9 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
 
 function useArticleRevisions(client: EditorialWorkspaceClient, article: Article | undefined, updateRevision: (articleId: string, revision: ArticleRevision) => void) {
     const intl = useIntl();
+    const { notifyError } = useNotifications();
     const [revisions, setRevisions] = useState<ArticleRevision[]>([]);
     const [candidate, setCandidate] = useState<ArticleRevision>();
-    const [message, setMessage] = useState("");
     const articleId = article?.id;
     const currentRevisionId = article?.currentRevisionId;
 
@@ -163,25 +165,30 @@ function useArticleRevisions(client: EditorialWorkspaceClient, article: Article 
             return;
         }
 
-        client.listArticleRevisions(articleId).then(setRevisions).catch(() => setMessage(intl.formatMessage({ id: "workspace.revisionHistoryFailed" })));
-    }, [articleId, currentRevisionId, client, intl]);
+        client.listArticleRevisions(articleId).then(setRevisions).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.revisionHistoryFailed" }) }));
+    }, [articleId, currentRevisionId, client, intl, notifyError]);
 
     async function restore() {
         if (!article || !candidate)
             return;
 
-        const revision = await client.restoreRevision(article.id, candidate.id);
-        updateRevision(article.id, revision);
-        setRevisions((items) => [...items, revision]);
-        setCandidate(undefined);
+        try {
+            const revision = await client.restoreRevision(article.id, candidate.id);
+            updateRevision(article.id, revision);
+            setRevisions((items) => [...items, revision]);
+            setCandidate(undefined);
+        } catch (error) {
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        }
     }
 
-    return { revisions, candidate, setCandidate, restore, message };
+    return { revisions, candidate, setCandidate, restore };
 }
 
 
 function useEditorialProposal(client: EditorialWorkspaceClient, workspace: ReturnType<typeof useArticleWorkspace>) {
     const intl = useIntl();
+    const { notifyError } = useNotifications();
     const [proposal, setProposal] = useState("");
     const [base, setBase] = useState<{ content: string; revisionId: string }>();
     const [selectedChanges, setSelectedChanges] = useState<Set<string>>(new Set());
@@ -248,13 +255,17 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
             return;
 
         const content = applyProposalChanges(review, selectedChanges);
-        const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: "accepted-proposal" } });
+        try {
+            const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: "accepted-proposal" } });
 
-        workspace.updateRevision(article.id, revision);
-        workspace.setContent(content);
-        setProposal("");
-        setBase(undefined);
-        setSelectedChanges(new Set());
+            workspace.updateRevision(article.id, revision);
+            workspace.setContent(content);
+            setProposal("");
+            setBase(undefined);
+            setSelectedChanges(new Set());
+        } catch (error) {
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        }
     }
 
 
@@ -263,13 +274,17 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
         if (!article || !translation || !base || stale)
             return;
 
-        await workspace.create({
-            title: `${article.title} — ${translation.targetLanguage}`,
-            content: proposal,
-            language: targetLanguageId(translation.targetLanguage),
-            sourceArticleId: article.id,
-            sourceRevisionId: base.revisionId
-        });
+        try {
+            await workspace.create({
+                title: `${article.title} — ${translation.targetLanguage}`,
+                content: proposal,
+                language: targetLanguageId(translation.targetLanguage),
+                sourceArticleId: article.id,
+                sourceRevisionId: base.revisionId
+            });
+        } catch (error) {
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        }
     }
 
     return {
@@ -302,18 +317,32 @@ function targetLanguageId(language: string): string {
 
 
 function useStyleCorpus(client: EditorialWorkspaceClient) {
+    const intl = useIntl();
+    const { notifyError } = useNotifications();
     const [corpus, setCorpus] = useState<StyleCorpus>();
 
     useEffect(() => {
-        client.getStyleCorpus().then(setCorpus).catch(() => undefined);
-    }, [client]);
+        client.getStyleCorpus().then(setCorpus).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) }));
+    }, [client, intl, notifyError]);
 
     return {
         corpus,
-        add: async (name: string, content: string) => setCorpus(await client.addStyleCorpusItem({ name, content })),
+        add: async (name: string, content: string) => {
+            try {
+                setCorpus(await client.addStyleCorpusItem({ name, content }));
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
         remove: async (id: string) => {
-            await client.removeStyleCorpusItem(id);
-            setCorpus(await client.getStyleCorpus());
+            try {
+                await client.removeStyleCorpusItem(id);
+                setCorpus(await client.getStyleCorpus());
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
         }
     };
 }
@@ -321,14 +350,14 @@ function useStyleCorpus(client: EditorialWorkspaceClient) {
 
 function usePublishing(client: EditorialWorkspaceClient, content: string) {
     const intl = useIntl();
+    const { notify } = useNotifications();
     const [profileId, setProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
-    const [message, setMessage] = useState<{ text: string; tone: "info" | "success" | "error" }>({ text: "", tone: "info" });
 
     useEffect(() => {
         client.getPublishLimitProfile()
             .then(setProfileId)
-            .catch(() => setMessage({ text: intl.formatMessage({ id: "publishing.defaultProfile" }), tone: "info" }));
-    }, [client, intl]);
+            .catch(() => notify({ tone: "info", title: intl.formatMessage({ id: "publishing.defaultProfile" }) }));
+    }, [client, intl, notify]);
 
     const text = preparePlainTextForPublishing(content);
 
@@ -337,17 +366,20 @@ function usePublishing(client: EditorialWorkspaceClient, content: string) {
         count: countPublishingCharacters(text),
         profileId,
         profile: getPublishLimitProfile(profileId),
-        message: message.text,
-        messageTone: message.tone,
         setProfile: async (id: PublishLimitProfileId) => {
-            setProfileId(await client.setPublishLimitProfile(id));
+            try {
+                setProfileId(await client.setPublishLimitProfile(id));
+            } catch (error) {
+                notify({ tone: "error", title: intl.formatMessage({ id: "publishing.profileSaveFailed" }) });
+                throw error;
+            }
         },
         copy: async () => {
             try {
                 await navigator.clipboard.writeText(text);
-                setMessage({ text: intl.formatMessage({ id: "publishing.copied" }), tone: "success" });
+                notify({ tone: "success", title: intl.formatMessage({ id: "publishing.copied" }) });
             } catch {
-                setMessage({ text: intl.formatMessage({ id: "publishing.copyFailed" }), tone: "error" });
+                notify({ tone: "error", title: intl.formatMessage({ id: "publishing.copyFailed" }) });
             }
         }
     };
@@ -416,6 +448,8 @@ export type WorkspaceLayoutState = ReturnType<typeof useWorkspaceLayout>;
 
 
 export function EditorialWorkspaceProvider({ client, screen, openSettings, backToWorkspace }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; openSettings: () => void; backToWorkspace: () => void }) {
+    const intl = useIntl();
+    const { notifyError } = useNotifications();
     const workspace = useArticleWorkspace(client);
     const layout = useWorkspaceLayout();
     const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision);
@@ -424,13 +458,17 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const publishing = usePublishing(client, workspace.content);
 
     async function createBlank() {
-        const settings = await client.getApplicationSettings();
-        const defaultLanguage = settings.general.defaultArticleLanguage;
-        return workspace.create({
-            title: "Untitled article",
-            content: "",
-            language: isArticleLanguage(defaultLanguage) ? defaultLanguage : "en",
-        });
+        try {
+            const settings = await client.getApplicationSettings();
+            const defaultLanguage = settings.general.defaultArticleLanguage;
+            return await workspace.create({
+                title: "Untitled article",
+                content: "",
+                language: isArticleLanguage(defaultLanguage) ? defaultLanguage : "en",
+            });
+        } catch (error) {
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        }
     }
 
     if (workspace.state === "loading")

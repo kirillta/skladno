@@ -229,6 +229,7 @@ export const messages = {
     "publishing.defaultProfile": "Using the default publishing profile.",
     "publishing.copied": "Publishing text copied.",
     "publishing.copyFailed": "Copy failed. Select the publishing text and copy it manually.",
+    "publishing.profileSaveFailed": "Couldn’t save the publishing profile.",
     "publishing.linkedInShort": "LinkedIn short post",
     "publishing.linkedInPost": "LinkedIn post",
     "errors.generic": "The local service could not complete this request. Try again.",

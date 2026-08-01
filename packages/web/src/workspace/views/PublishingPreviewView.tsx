@@ -1,5 +1,5 @@
 import { publishLimitProfiles, type PublishLimitProfileId } from "@skladno/shared";
-import { Banner, Select, TextareaField } from "../../ui/primitives.js";
+import { Select, TextareaField } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
 
@@ -9,8 +9,6 @@ export function PublishingPreviewView({ publishing }: {
         count: number;
         profileId: PublishLimitProfileId;
         profile: { characterLimit: number };
-        message: string;
-        messageTone: "info" | "success" | "error";
         setProfile: (id: PublishLimitProfileId) => Promise<void>
     }
 }) {
@@ -22,6 +20,5 @@ export function PublishingPreviewView({ publishing }: {
         </Select>
         <p className="mt-3 text-sm">{intl.formatMessage({ id: "views.characterCount" }, { count: intl.formatNumber(publishing.count), limit: intl.formatNumber(publishing.profile.characterLimit) })}</p>
         <TextareaField aria-label={intl.formatMessage({ id: "views.plainTextPreview" })} className="mt-3 min-h-72" readOnly value={publishing.text} />
-        {publishing.message && <Banner className="mt-2" tone={publishing.messageTone}>{publishing.message}</Banner>}
     </div>;
 }
