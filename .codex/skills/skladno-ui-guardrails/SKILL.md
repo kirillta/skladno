@@ -15,6 +15,8 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 4. Preserve labels, keyboard access, accessible names, focus treatment, and non-color state cues while changing appearance.
 5. Run the narrowest relevant tests and typecheck. Visually inspect every changed responsive or collapsed state before handoff.
 
+Read [references/article-workspace-inventory.md](references/article-workspace-inventory.md) before changing the Article Workspace, Article Header, Workspace Tab Bar, Workspace View, or Article Status Bar. Update the inventory in the same change when an implemented workspace feature or contract changes.
+
 ## Decision rules
 
 - Keep the Article as the visual center; navigation and assistant areas stay secondary.

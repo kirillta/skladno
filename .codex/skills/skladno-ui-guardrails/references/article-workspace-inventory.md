@@ -1,0 +1,22 @@
+# Skladno Article Workspace inventory
+
+This is the preservation inventory for the desktop Editorial Workspace. Update it whenever an implemented workspace feature, ownership boundary, or persistence behavior changes.
+
+| Area | Implemented feature | Owner | Persistence / contract | Status and preservation constraint |
+|---|---|---|---|---|
+| Workspace Shell | Three-column desktop shell: Article Library Panel, Article Workspace, Editorial Assistant Panel | `WorkspaceShell` | Local `skladno-workspace-layout` preferences | Implemented. Preserve viewport-height shell, independently collapsible panels, keyboard/pointer resize handles, and the Article as the central column. |
+| Focus mode | Hides both supporting panels | `WorkspaceShell`, `useWorkspaceLayout` | Local layout state only | Implemented. It must not change Article content, metadata, or revisions. |
+| Article Library Panel | Create, search, select, recent list, Style Profile, Settings, save state | `ArticleLibraryPanel`, workspace state | Article service; local layout state | Implemented. See `article-library-panel.md` for expanded and Navigation Rail constraints. |
+| Editorial Assistant Panel | Guidance, operation selection, request/send, streaming/error state, cancellation | `EditorialAssistantPanel`, editorial state | Explicit editorial requests only | Implemented. Generated text remains a Proposal until accepted; see `editorial-assistant-panel.md`. |
+| Empty Article Workspace | Quiet empty state with Create action | `ArticleWorkspace` | New Article service request | Implemented. Create uses General Settings' default Article language and must not create a Revision outside Article creation. |
+| Article Header | Title rename, source language, target language, save revision, focus mode, delete | `ArticleHeader` | Article metadata PATCH; local target-language state | Implemented. Title and source language are Article metadata; target language is request guidance only. |
+| Workflow stage | Ordered advisory workflow selection, including backward and repeated changes | `ArticleHeader`, Article metadata | `Article.workflowStage`; `PATCH /api/articles/:articleId` | Implemented. It never triggers an editorial request, changes draft text, or creates a Revision. |
+| Workspace Tab Bar | Write, Proposal Review, Revisions, Fact Check, Style Profile, Translations, Publish | `WorkspaceTabBar` | Local active-view state | Implemented. Preserve tab/tabpanel IDs and Arrow, Home, and End keyboard navigation. |
+| Article Editor | Markdown writing surface and formatting toolbar | `ArticleEditorView`, `ArticleRichEditor` | In-memory Draft until explicit save | Implemented. Preserve the constrained white writing surface and the workspace-owned vertical scroll. |
+| Proposal Review | Select proposal changes, accept, reject, stale warning | `ProposalReviewView`, editorial state | Proposal base revision; acceptance creates Revision | Implemented. Do not apply generated text without explicit acceptance; stale proposals cannot be accepted. |
+| Revision History | Ordered Revision list and restore confirmation | `RevisionHistoryView`, `RestoreRevisionDialog` | Immutable `article_revisions` | Implemented. Restore creates a new Revision and does not rewrite history. |
+| Fact Check | Revision-tied advisory findings and source links | `FactCheckView`, editorial artifacts | Completed editorial finding | Implemented. Findings are advisory; they never modify Article text. |
+| Style Profile | Local style corpus management and advisory findings | `StyleProfileView`, style corpus state | Local materials and derived profile | Implemented. Raw samples stay local; model output remains advisory. |
+| Translations | Source linkage, stale warning, explicit creation of a linked translation Article | `TranslationsView`, editorial state | Independent Article with source Article/Revision linkage | Implemented. Translation Articles remain independently recoverable and do not overwrite their source. |
+| Publishing Preview | Plain-text preview, character count, profile selection, copy feedback | `PublishingPreviewView`, `ArticleStatusBar` | Publishing profile setting | Implemented. Limits are guidance only and direct platform publishing remains out of scope. |
+| Article Status Bar | Current Revision number and character-limit selector | `ArticleStatusBar` | Derived Revision/publishing state | Implemented. Keep it visible as a fixed 24px row at the Article Workspace bottom. |
