@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Article } from "@skladno/shared";
+import type { SaveState } from "../EditorialWorkspace.js";
 import { Button, Field, IconButton } from "../../ui/primitives.js";
 import { ArticleIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";
@@ -46,13 +47,21 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     openStyleProfile: () => void;
     openSettings: () => void;
     language: string | undefined;
-    saveState: "saved" | "saving" | "error"
+    saveState: SaveState
 }) {
     const intl = useIntl();
     const [query, setQuery] = useState("");
     const visibleArticles = articles.filter((article) => article.title.toLowerCase().includes(query.toLowerCase()));
-    const saveLabel = saveState === "saved" ? intl.formatMessage({ id: "navigation.saved" }) : saveState === "saving" ? intl.formatMessage({ id: "navigation.saving" }) : intl.formatMessage({ id: "navigation.saveFailed" });
-    const saveTone = saveState === "saved" ? "text-success" : saveState === "saving" ? "text-warning" : "text-danger";
+    const saveLabels: Record<SaveState, string> = {
+        saved: intl.formatMessage({ id: "navigation.saved" }),
+        unsaved: intl.formatMessage({ id: "navigation.unsaved" }),
+        saving: intl.formatMessage({ id: "navigation.savingDraft" }),
+        "draft-saved": intl.formatMessage({ id: "navigation.draftSaved" }),
+        error: intl.formatMessage({ id: "navigation.saveFailed" }),
+        conflict: intl.formatMessage({ id: "navigation.saveConflict" }),
+    };
+    const saveLabel = saveLabels[saveState];
+    const saveTone = saveState === "saved" || saveState === "draft-saved" ? "text-success" : saveState === "unsaved" || saveState === "saving" ? "text-warning" : "text-danger";
 
     return <aside className={collapsed ? "flex h-full w-full flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-full flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
         {collapsed ? <>
