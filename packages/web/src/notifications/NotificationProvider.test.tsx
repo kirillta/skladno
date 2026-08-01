@@ -80,7 +80,7 @@ describe("NotificationProvider", () => {
         act(() => handles[0].dismiss());
 
         expect(screen.getAllByRole("alert")).toHaveLength(3);
-        expect(screen.getByText("Four")).toBeTruthy();
+        expect(screen.getByText("Four").closest("article")?.className).toContain("notification-enter");
     });
 
 
