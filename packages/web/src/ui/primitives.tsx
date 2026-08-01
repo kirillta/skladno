@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, DialogHTMLAttributes, HTMLAttributes, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useIntl } from "react-intl";
+import { ChevronDownIcon, StatusIcon } from "./icons.js";
 
 
 export type ControlState = "default" | "loading" | "success" | "warning" | "error" | "outdated" | "conflicted";
@@ -53,9 +54,7 @@ export function TextareaField({ className, state = "default", ...props }: Textar
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
     return <span className={joinClassNames("relative block w-full", className)}>
         <select {...props} className={joinClassNames("min-h-10 w-full appearance-none rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink", className)} />
-        <svg aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="m6 9 6 6 6-6" />
-        </svg>
+        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
     </span>;
 }
 
@@ -78,15 +77,14 @@ export function Badge({ children, className, variant = "soft", compact = false, 
 
 
 export function Status({ label, children, tone = "info" }: PropsWithChildren<{ label: string; tone?: Tone }>) {
-    const icon = tone === "error" || tone === "warning" ? "!" : tone === "success" ? "✓" : "i";
     const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
-    return <div className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone])} role="status"><span aria-hidden="true">{icon}</span><span><strong>{label}</strong>{children}</span></div>;
+    return <div className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone])} role="status"><StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" /><span><strong>{label}</strong>{children}</span></div>;
 }
 
 
 export function Banner({ children, tone = "info", className, role = "status", ...props }: PropsWithChildren<HTMLAttributes<HTMLDivElement> & { tone?: Tone }>) {
     const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
-    return <div {...props} className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone], className)} role={role}><span aria-hidden="true">{tone === "error" || tone === "warning" ? "!" : tone === "success" ? "✓" : "i"}</span>{children}</div>;
+    return <div {...props} className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone], className)} role={role}><StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" />{children}</div>;
 }
 
 

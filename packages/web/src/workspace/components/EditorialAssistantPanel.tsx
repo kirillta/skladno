@@ -3,6 +3,7 @@ import { IntlProvider, useIntl } from "react-intl";
 import { messages } from "../../i18n/messages.js";
 import { EDITORIAL_OPERATION, type EditorialOperation } from "@skladno/shared";
 import { Banner, Button, Status, TextareaField } from "../../ui/primitives.js";
+import { AssistantIcon, ChevronDownIcon, ChevronRightIcon, SendIcon } from "../../ui/icons.js";
 
 
 const editorialOperationLabels: Record<EditorialOperation, "operations.thesisToNarrative" | "operations.flowRevision" | "operations.factCheck" | "operations.styleReview" | "operations.translation"> = {
@@ -12,35 +13,6 @@ const editorialOperationLabels: Record<EditorialOperation, "operations.thesisToN
     [EDITORIAL_OPERATION.STYLE_REVIEW]: "operations.styleReview",
     [EDITORIAL_OPERATION.TRANSLATION]: "operations.translation",
 };
-
-
-function AssistantMark() {
-    return <svg aria-hidden="true" className="size-5 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 .9 3.1L16 7l-3.1.9L12 11l-.9-3.1L8 7l3.1-.9L12 3Zm6 8 .6 2.4L21 14l-2.4.6L18 17l-.6-2.4L15 14l2.4-.6L18 11ZM6 13l.9 3.1L10 17l-3.1.9L6 21l-.9-3.1L2 17l3.1-.9L6 13Z" />
-    </svg>;
-}
-
-
-function CollapseMark() {
-    return <svg aria-hidden="true" className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
-    </svg>;
-}
-
-
-function DisclosureMark({ open }: { open: boolean }) {
-    return <svg aria-hidden="true" className={`size-4 transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-    </svg>;
-}
-
-
-function SendMark() {
-    return <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m21 3-7.5 18-3.75-7.5L3 9l18-6Z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 13.5 14.5 9" />
-    </svg>;
-}
 
 
 export function EditorialAssistantPanel(props: {
@@ -88,7 +60,7 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
             <header className="flex min-h-18 w-full items-center justify-center">
                 <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.expand" })} onClick={() => setCollapsed(false)}>
                     <span className="grid size-full place-items-center">
-                        <AssistantMark />
+                        <AssistantIcon className="size-5 shrink-0 text-brand" />
                     </span>
                 </Button>
             </header>
@@ -96,10 +68,10 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
 
     return <aside className="flex h-full min-h-0 w-full flex-col border-l border-border bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
         <header className="flex min-h-18 items-center border-b border-border px-5">
-            <AssistantMark />
+            <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="ml-3 text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2>
             <Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}>
-                <CollapseMark />
+                <ChevronRightIcon className="size-3" />
             </Button>
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-8">
@@ -114,13 +86,13 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
                 </div>}
                 <Button className="flex items-center gap-2" variant="secondary" aria-expanded={quickActionsOpen} aria-label={selectedOperation ? intl.formatMessage({ id: "assistant.quickActionSelected" }, { operation: intl.formatMessage({ id: editorialOperationLabels[selectedOperation] }) }) : intl.formatMessage({ id: "assistant.quickActions" })} onClick={() => setQuickActionsOpen((open) => !open)}>
                     {selectedOperation ? `${intl.formatMessage({ id: "assistant.quickActions" })}: ${intl.formatMessage({ id: editorialOperationLabels[selectedOperation] })}` : intl.formatMessage({ id: "assistant.quickActions" })}
-                    <DisclosureMark open={quickActionsOpen} />
+                    <ChevronDownIcon className={`size-4 transition-transform motion-reduce:transition-none ${quickActionsOpen ? "rotate-180" : ""}`} />
                 </Button>
             </div>
             <div className="relative">
                 <TextareaField className="min-h-25 resize-y pr-12" aria-label={intl.formatMessage({ id: "assistant.guidance" })} value={guidance} onChange={(event) => setGuidance(event.target.value)} placeholder={intl.formatMessage({ id: "assistant.guidancePlaceholder" })} />
                 <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center p-1" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={state === "streaming" || !selectedOperation || !guidance.trim()} onClick={send}>
-                    <SendMark />
+                    <SendIcon className="size-4" />
                 </Button>
             </div>
             {state === "streaming" && <Button className="mt-3" variant="danger" onClick={onCancel}>{intl.formatMessage({ id: "assistant.stop" })}</Button>}

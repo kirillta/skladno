@@ -1,4 +1,5 @@
 import type { FocusEvent, PointerEvent } from "react";
+import { CloseIcon, StatusIcon } from "../ui/icons.js";
 import type { StoredNotification } from "./notifications.js";
 
 
@@ -9,22 +10,6 @@ interface NotificationViewportProps {
     dismiss: (id: string) => void;
     pause: (id: string, reason: "pointer" | "focus") => void;
     resume: (id: string, reason: "pointer" | "focus") => void;
-}
-
-
-function StatusIcon({ tone }: { tone: StoredNotification["tone"] }) {
-    if (tone === "success")
-        return <svg aria-hidden="true" className="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m5 12 4 4L19 6" /></svg>;
-
-    if (tone === "info")
-        return <svg aria-hidden="true" className="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 10v6M12 7h.01" /></svg>;
-
-    return <svg aria-hidden="true" className="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3 2.8 20h18.4L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg>;
-}
-
-
-function CloseIcon() {
-    return <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18" /></svg>;
 }
 
 
@@ -67,7 +52,7 @@ export function NotificationViewport({ notifications, label, dismissLabel, dismi
             onFocusCapture={() => pause(notification.id, "focus")}
             onBlurCapture={(event) => resumeAfterFocus(notification, event)}
         >
-            <StatusIcon tone={notification.tone} />
+            <StatusIcon tone={notification.tone} className="mt-0.5 size-4 shrink-0" />
             <div className="min-w-0 flex-1">
                 <p className="font-semibold">{notification.title}</p>
                 {notification.message && <p className="mt-1">{notification.message}</p>}

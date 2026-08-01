@@ -18,7 +18,7 @@ import { $generateNodesFromDOM } from "@lexical/html";
 import { exportArticleMarkdown, importArticleMarkdown } from "./markdown.js";
 import { isSupportedArticleLink } from "./paste-constants.js";
 import { sanitizeRichPasteDocument } from "./paste.js";
-import { BoldIcon, CodeIcon, ItalicIcon, LinkIcon, ListIcon, NumberedListIcon, StrikeIcon } from "./icons.js";
+import { BoldIcon, CodeIcon, ItalicIcon, LinkIcon, ListIcon, NumberedListIcon, StrikeIcon } from "../../ui/icons.js";
 
 type BlockType = "paragraph" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "quote" | "code";
 const articleEditorTheme: EditorThemeClasses = {
