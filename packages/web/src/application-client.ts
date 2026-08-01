@@ -41,6 +41,8 @@ import {
     aiConnectionsPath,
     aiModelsPath,
     aiModelPreferencesPath,
+    keyBindingsPath,
+    type KeyBindingOverrides,
     type ModelPreferences,
     type OpenAiConnection,
 } from "@skladno/shared";
@@ -70,6 +72,10 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy> {
         return this.request<BackupPolicy>(`${applicationSettingsPath}/backup-policy`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+    async updateKeyBindingOverrides(input: KeyBindingOverrides): Promise<KeyBindingOverrides> {
+        return this.request<KeyBindingOverrides>(keyBindingsPath, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
 
     async addOpenAiConnection(input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection> {

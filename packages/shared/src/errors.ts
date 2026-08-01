@@ -23,6 +23,8 @@ export const APPLICATION_ERROR = {
     EDITORIAL_PROVIDER_FAILED: "editorial_provider_failed",
     EDITORIAL_STREAM_INCOMPLETE: "editorial_stream_incomplete",
     EDITORIAL_REQUEST_FAILED: "editorial_request_failed",
+    INVALID_KEY_BINDING: "invalid_key_binding",
+    KEY_BINDING_CONFLICT: "key_binding_conflict",
 } as const;
 
 export type ApplicationErrorCode = typeof APPLICATION_ERROR[keyof typeof APPLICATION_ERROR];

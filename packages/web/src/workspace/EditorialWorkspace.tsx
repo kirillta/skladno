@@ -183,7 +183,7 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
             if (document.visibilityState === "hidden" && selectedArticleId)
                 void checkpointRef.current(selectedArticleId).catch(() => undefined);
         }
-        
+
         document.addEventListener("visibilitychange", saveWhenHidden);
         return () => document.removeEventListener("visibilitychange", saveWhenHidden);
     }, [selectedArticleId]);
