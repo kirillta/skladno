@@ -38,6 +38,12 @@ import { useNotifications } from "../notifications/NotificationProvider.js";
 export type WorkspaceView = "write" | "proposal" | "revisions" | "fact-check" | "style-profile" | "translations" | "publish";
 export type SaveState = "saved" | "unsaved" | "saving" | "draft-saved" | "error" | "conflict";
 type ProposalState = "idle" | "streaming" | "error";
+interface EditorialResult<T> {
+    articleId: string;
+    baseRevisionId: string;
+    value: T;
+}
+
 export interface DraftConflict {
     article: Article;
     draft?: ArticleDraft;
@@ -418,16 +424,23 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [proposal, setProposal] = useState("");
-    const [base, setBase] = useState<{ content: string; revisionId: string }>();
+    const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string }>();
     const [selectedChanges, setSelectedChanges] = useState<Set<string>>(new Set());
     const [state, setState] = useState<ProposalState>("idle");
     const [message, setMessage] = useState("");
-    const [factCheck, setFactCheck] = useState<FactCheck>();
-    const [styleReview, setStyleReview] = useState<StyleReview>();
-    const [translation, setTranslation] = useState<TranslationMetadata>();
+    const [factCheckResult, setFactCheckResult] = useState<EditorialResult<FactCheck>>();
+    const [styleReviewResult, setStyleReviewResult] = useState<EditorialResult<StyleReview>>();
+    const [translationResult, setTranslationResult] = useState<EditorialResult<{ metadata: TranslationMetadata; content: string }>>();
     const controller = useRef<AbortController>();
-    const review = useMemo(() => base ? createTextProposal(base.content, proposal) : undefined, [base, proposal]);
-    const stale = Boolean(workspace.selectedArticle && base && base.revisionId !== workspace.selectedArticle.currentRevisionId);
+    const review = useMemo(() => base && base.articleId === workspace.selectedArticle?.id ? createTextProposal(base.content, proposal) : undefined, [base, proposal, workspace.selectedArticle?.id]);
+    const stale = Boolean(workspace.selectedArticle && base?.articleId === workspace.selectedArticle.id && base.revisionId !== workspace.selectedArticle.currentRevisionId);
+    const selectedArticleId = workspace.selectedArticle?.id;
+    const factCheck = factCheckResult?.articleId === selectedArticleId ? factCheckResult?.value : undefined;
+    const styleReview = styleReviewResult?.articleId === selectedArticleId ? styleReviewResult?.value : undefined;
+    const translation = translationResult?.articleId === selectedArticleId ? translationResult?.value.metadata : undefined;
+    const factCheckStale = factCheckResult?.articleId === selectedArticleId && factCheckResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
+    const styleReviewStale = styleReviewResult?.articleId === selectedArticleId && styleReviewResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
+    const translationStale = translationResult?.articleId === selectedArticleId && translationResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
 
 
     async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string) {
@@ -440,23 +453,34 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
             const revisionId = saved?.id ?? article.currentRevisionId;
             const content = saved?.content ?? workspace.content;
 
-            setBase({ content, revisionId });
-            setProposal("");
-            setSelectedChanges(new Set());
+            if (operation === "thesis_to_narrative" || operation === "flow_revision") {
+                setBase({ articleId: article.id, content, revisionId });
+                setProposal("");
+                setSelectedChanges(new Set());
+            }
+
             setMessage("");
             setState("streaming");
 
             controller.current = new AbortController();
 
             await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}) }, (event: EditorialEvent) => {
-                if (event.type === "text_delta")
+                if (event.type === "text_delta" && (operation === "thesis_to_narrative" || operation === "flow_revision"))
                     setProposal((value) => value + event.delta);
 
                 if (event.type === "completed") {
-                    setProposal(event.text);
-                    setFactCheck(event.factCheck);
-                    setStyleReview(event.styleReview);
-                    setTranslation(event.translation);
+                    if (operation === "thesis_to_narrative" || operation === "flow_revision")
+                        setProposal(event.text);
+
+                    if (event.factCheck)
+                        setFactCheckResult({ articleId: article.id, baseRevisionId: revisionId, value: event.factCheck });
+
+                    if (event.styleReview)
+                        setStyleReviewResult({ articleId: article.id, baseRevisionId: revisionId, value: event.styleReview });
+
+                    if (event.translation)
+                        setTranslationResult({ articleId: article.id, baseRevisionId: revisionId, value: { metadata: event.translation, content: event.text } });
+
                     setState("idle");
                 }
 
@@ -499,22 +523,24 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
 
     async function createTranslation() {
         const article = workspace.selectedArticle;
-        if (!article || !translation || !base || stale)
+        if (!article || !translationResult || translationResult.articleId !== article.id || translationStale)
             return;
+
+        const translation = translationResult.value.metadata;
 
         try {
             const configuredDefaultProfile = await client.getPublishLimitProfile();
             await workspace.create({
                 title: `${article.title} — ${translation.targetLanguage}`,
-                content: proposal,
-                language: targetLanguageId(translation.targetLanguage),
+                content: translationResult.value.content,
+                language: targetLanguageId(translationResult.value.metadata.targetLanguage),
                 publishingProfileId: isPublishLimitProfileId(article.publishingProfileId)
                     ? article.publishingProfileId
                     : isPublishLimitProfileId(configuredDefaultProfile)
                         ? configuredDefaultProfile
                         : defaultPublishLimitProfileId,
                 sourceArticleId: article.id,
-                sourceRevisionId: base.revisionId
+                sourceRevisionId: translationResult.baseRevisionId
             });
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
@@ -526,13 +552,17 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
         review,
         base,
         stale,
+        proposalStale: stale,
         selectedChanges,
         setSelectedChanges,
         state,
         message,
         factCheck,
+        factCheckStale,
         styleReview,
+        styleReviewStale,
         translation,
+        translationStale,
         request,
         accept,
         reject: () => {
