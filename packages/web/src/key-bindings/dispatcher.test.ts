@@ -40,4 +40,17 @@ describe("KeyBindingDispatcher", () => {
         unregister();
         expect(dispatcher.dispatch(event("k"))).toBe(false);
     });
+
+    it("retains a newer handler when an older registration is cleaned up", () => {
+        const dispatcher = new KeyBindingDispatcher();
+        const oldHandler = vi.fn();
+        const newHandler = vi.fn();
+        const removeOld = dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, oldHandler);
+        dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, newHandler);
+        removeOld();
+
+        expect(dispatcher.dispatch(event("s"))).toBe(true);
+        expect(oldHandler).not.toHaveBeenCalled();
+        expect(newHandler).toHaveBeenCalledOnce();
+    });
 });

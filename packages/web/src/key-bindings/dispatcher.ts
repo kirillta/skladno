@@ -35,7 +35,10 @@ export class KeyBindingDispatcher {
 
     register(commandId: KeyBindingCommandId, handler: KeyBindingHandler): () => void {
         this.handlers.set(commandId, handler);
-        return () => this.handlers.delete(commandId);
+        return () => {
+            if (this.handlers.get(commandId) === handler)
+                this.handlers.delete(commandId);
+        };
     }
 
     dispatch(event: KeyBindingEvent, scope: KeyBindingScope = "application"): boolean {

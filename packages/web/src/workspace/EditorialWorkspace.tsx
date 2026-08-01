@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
@@ -703,28 +703,63 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         openSettings();
     }, [openSettings, workspace]);
 
-    useEffect(() => {
+    const shortcutActions = useRef({
+        createBlank,
+        save: workspace.save,
+        enterSettings,
+        setFocusMode: layout.setFocusMode,
+        libraryCollapsed: layout.libraryCollapsed,
+        setLibraryCollapsed: layout.setLibraryCollapsed,
+        assistantCollapsed: layout.assistantCollapsed,
+        setAssistantCollapsed: layout.setAssistantCollapsed,
+        setView: layout.setView,
+    });
+    shortcutActions.current = {
+        createBlank,
+        save: workspace.save,
+        enterSettings,
+        setFocusMode: layout.setFocusMode,
+        libraryCollapsed: layout.libraryCollapsed,
+        setLibraryCollapsed: layout.setLibraryCollapsed,
+        assistantCollapsed: layout.assistantCollapsed,
+        setAssistantCollapsed: layout.setAssistantCollapsed,
+        setView: layout.setView,
+    };
+
+    useLayoutEffect(() => {
         if (screen !== "editorial-workspace")
             return;
 
+        function toggleFocusMode() {
+            const activeElement = document.activeElement;
+            const focusWillBeLost = !(activeElement instanceof HTMLElement)
+                || activeElement === document.body
+                || Boolean(activeElement.closest('[aria-label="Article Library Panel"], [aria-label="Editorial Assistant Panel"]'));
+
+            if (focusWillBeLost)
+                document.querySelector<HTMLElement>("[data-article-workspace]")?.focus({ preventScroll: true });
+
+            shortcutActions.current.setFocusMode((current) => !current);
+        }
+
         const unregister = [
-            dispatcher.register(KEY_BINDING_COMMAND.NEW_ARTICLE, () => void createBlank()),
-            dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, () => void workspace.save().catch(() => undefined)),
-            dispatcher.register(KEY_BINDING_COMMAND.OPEN_SETTINGS, enterSettings),
-            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, () => layout.setFocusMode(!layout.focusMode)),
-            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, () => layout.setLibraryCollapsed(!layout.libraryCollapsed)),
-            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, () => layout.setAssistantCollapsed(!layout.assistantCollapsed)),
-            dispatcher.register(KEY_BINDING_COMMAND.VIEW_WRITE, () => layout.setView("write")),
-            dispatcher.register(KEY_BINDING_COMMAND.VIEW_PROPOSAL, () => layout.setView("proposal")),
-            dispatcher.register(KEY_BINDING_COMMAND.VIEW_REVISIONS, () => layout.setView("revisions")),
-            dispatcher.register(KEY_BINDING_COMMAND.VIEW_FACT_CHECK, () => layout.setView("fact-check")),
-            dispatcher.register(KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, () => layout.setView("style-profile")),
-            dispatcher.register(KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, () => layout.setView("translations")),
-            dispatcher.register(KEY_BINDING_COMMAND.VIEW_PUBLISH, () => layout.setView("publish")),
+            dispatcher.register(KEY_BINDING_COMMAND.NEW_ARTICLE, () => void shortcutActions.current.createBlank()),
+            dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, () => void shortcutActions.current.save().catch(() => undefined)),
+            dispatcher.register(KEY_BINDING_COMMAND.OPEN_SETTINGS, () => shortcutActions.current.enterSettings()),
+            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, toggleFocusMode),
+            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, () => shortcutActions.current.setLibraryCollapsed(!shortcutActions.current.libraryCollapsed)),
+            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, () => shortcutActions.current.setAssistantCollapsed(!shortcutActions.current.assistantCollapsed)),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_WRITE, () => shortcutActions.current.setView("write")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_PROPOSAL, () => shortcutActions.current.setView("proposal")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_REVISIONS, () => shortcutActions.current.setView("revisions")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_FACT_CHECK, () => shortcutActions.current.setView("fact-check")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, () => shortcutActions.current.setView("style-profile")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, () => shortcutActions.current.setView("translations")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_PUBLISH, () => shortcutActions.current.setView("publish")),
         ];
 
         return () => unregister.forEach((remove) => remove());
-    }, [createBlank, dispatcher, enterSettings, layout, screen, workspace]);
+    }, [dispatcher, screen]);
 
     if (workspace.state === "loading")
         return <main className="grid min-h-screen place-items-center text-muted">

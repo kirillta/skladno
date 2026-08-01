@@ -32,7 +32,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     const revisionIndex = revisions.revisions.findIndex((revision) => revision.id === article.currentRevisionId);
     const revisionNumber = revisionIndex < 0 ? 1 : revisionIndex + 1;
 
-    return <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    return <div className="flex h-full min-h-0 flex-col overflow-hidden" data-article-workspace tabIndex={-1}>
         <ArticleHeader article={article}
             updateArticle={workspace.updateArticle}
             save={workspace.save}
