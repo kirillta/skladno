@@ -1,6 +1,6 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultGeneralSettings, publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
 
 import { App } from "../App.js";
@@ -25,6 +25,76 @@ function fakeClient(): EditorialWorkspaceClient {
 
 
 describe("Editorial Workspace", () => {
+    afterEach(() => {
+        cleanup();
+        localStorage.clear();
+    });
+
+    it("migrates legacy panel choices into the versioned workspace layout preference", async () => {
+        localStorage.clear();
+        localStorage.setItem("skladno-navigation-collapsed", "true");
+        localStorage.setItem("skladno-assistant-collapsed", "false");
+
+        render(<App client={fakeClient()} />);
+        await screen.findByRole("heading", { name: "First Article" });
+
+        expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toEqual({
+            version: 1,
+            libraryWidth: 208,
+            assistantWidth: 384,
+            libraryCollapsed: true,
+            assistantCollapsed: false,
+        });
+        expect(localStorage.getItem("skladno-navigation-collapsed")).toBeNull();
+        expect(localStorage.getItem("skladno-assistant-collapsed")).toBeNull();
+    });
+
+
+    it("keeps the Article Workspace first while resizing panels with accessible separators", async () => {
+        localStorage.clear();
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({
+            version: 1,
+            libraryWidth: 208,
+            assistantWidth: 384,
+            libraryCollapsed: false,
+            assistantCollapsed: false,
+        }));
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+        const user = userEvent.setup();
+        render(<App client={fakeClient()} />);
+
+        await screen.findByRole("heading", { name: "First Article" });
+
+        const libraryResize = screen.getByRole("separator", { name: "Resize Article Library Panel" });
+        const assistantResize = screen.getByRole("separator", { name: "Resize Editorial Assistant Panel" });
+        const main = libraryResize.closest("main")!;
+
+        expect(main.firstElementChild?.tagName).toBe("SECTION");
+
+        expect(libraryResize.getAttribute("aria-valuemin")).toBe("192");
+        expect(libraryResize.getAttribute("aria-valuemax")).toBe("280");
+        await user.click(libraryResize);
+        await user.keyboard("{ArrowRight}");
+        expect(libraryResize.getAttribute("aria-valuenow")).toBe("224");
+
+        fireEvent.keyDown(libraryResize, { key: "End" });
+        expect(libraryResize.getAttribute("aria-valuenow")).toBe("280");
+        fireEvent.keyDown(libraryResize, { key: "Home" });
+        fireEvent.pointerDown(libraryResize, { clientX: 100, pointerId: 1 });
+        fireEvent.pointerMove(window, { clientX: 132, pointerId: 1 });
+        fireEvent.pointerUp(window, { pointerId: 1 });
+        expect(libraryResize.getAttribute("aria-valuenow")).toBe("224");
+        fireEvent.keyDown(assistantResize, { key: "Home" });
+        expect(assistantResize.getAttribute("aria-valuenow")).toBe("320");
+        fireEvent.pointerDown(assistantResize, { clientX: 100, pointerId: 1 });
+        fireEvent.pointerMove(window, { clientX: 68, pointerId: 1 });
+        fireEvent.pointerUp(window, { pointerId: 1 });
+        expect(assistantResize.getAttribute("aria-valuenow")).toBe("352");
+        fireEvent.keyDown(assistantResize, { key: "End" });
+        expect(assistantResize.getAttribute("aria-valuemax")).toBe("576");
+        expect(assistantResize.getAttribute("aria-valuenow")).toBe("576");
+        expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toMatchObject({ libraryWidth: 224, assistantWidth: 576 });
+    });
     it("selects an Article and creates a blank Article from the Article Library", async () => {
         const user = userEvent.setup();
         render(<App client={fakeClient()} />);

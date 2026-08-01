@@ -53,7 +53,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     const saveLabel = saveState === "saved" ? intl.formatMessage({ id: "navigation.saved" }) : saveState === "saving" ? intl.formatMessage({ id: "navigation.saving" }) : intl.formatMessage({ id: "navigation.saveFailed" });
     const saveTone = saveState === "saved" ? "text-success" : saveState === "saving" ? "text-warning" : "text-danger";
 
-    return <aside className={collapsed ? "flex h-full w-10 flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-52 flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
+    return <aside className={collapsed ? "flex h-full w-full flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-full flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
         {collapsed ? <>
             <header className="flex min-h-18 items-center justify-center">
                 <IconButton className="text-base font-semibold text-brand" label={intl.formatMessage({ id: "navigation.expandArticleLibrary" })} onClick={() => setCollapsed(false)}>S</IconButton>
