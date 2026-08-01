@@ -6,6 +6,14 @@ import { object, readJson, string, writeJson } from "../json.js";
 import { ApplicationServiceError } from "../application-error.js";
 
 
+function draftVersion(value: unknown): number {
+    if (!Number.isInteger(value) || typeof value !== "number" || value < 1)
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    return value;
+}
+
+
 export async function handleArticlesRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
     if (request.method === HTTP_METHOD.GET && pathname === articlesPath) {
         writeJson(response, HTTP_STATUS.OK, repositories.listArticles());
@@ -41,7 +49,7 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
         return true;
     }
 
-    const match = /^\/api\/articles\/([^/]+)(?:\/(revisions|proposal-acceptances|revisions\/[^/]+\/restorations))?$/.exec(pathname);
+    const match = /^\/api\/articles\/([^/]+)(?:\/(draft|revisions|proposal-acceptances|revisions\/[^/]+\/restorations))?$/.exec(pathname);
     if (!match)
         return false;
 
@@ -87,9 +95,38 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
         return true;
     }
 
+    if (request.method === HTTP_METHOD.PUT && match[2] === "draft") {
+        const body = object(await readJson(request));
+        const expectedDraftVersion = body.expectedDraftVersion;
+
+        writeJson(response, HTTP_STATUS.OK, repositories.saveArticleDraft(articleId, {
+            content: string(body.content, "content"),
+            baseRevisionId: string(body.baseRevisionId, "baseRevisionId"),
+            ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion: draftVersion(expectedDraftVersion) }),
+        }));
+
+        return true;
+    }
+
+    if (request.method === HTTP_METHOD.DELETE && match[2] === "draft") {
+        const expectedDraftVersion = new URL(request.url ?? "/", "http://localhost").searchParams.get("expectedDraftVersion");
+        repositories.discardArticleDraft(articleId, draftVersion(Number(expectedDraftVersion)));
+
+        response.writeHead(HTTP_STATUS.NO_CONTENT);
+        response.end();
+
+        return true;
+    }
+
     if (request.method === HTTP_METHOD.POST && match[2] === "revisions") {
         const body = object(await readJson(request));
-        const input: SaveArticleRevisionInput = { content: string(body.content, "content"), baseRevisionId: string(body.baseRevisionId, "baseRevisionId") };
+        const expectedDraftVersion = body.expectedDraftVersion;
+
+        const input: SaveArticleRevisionInput = {
+            content: string(body.content, "content"),
+            baseRevisionId: string(body.baseRevisionId, "baseRevisionId"),
+            ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion: draftVersion(expectedDraftVersion) }),
+        };
 
         writeJson(response, HTTP_STATUS.CREATED, repositories.saveArticleRevision(articleId, input));
         return true;

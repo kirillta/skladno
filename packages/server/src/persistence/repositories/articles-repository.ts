@@ -1,7 +1,7 @@
-import { WORKFLOW_STAGE, isArticleLanguage, isPublishLimitProfileId, isWorkflowStage, type AcceptedChange, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type Article, type ArticleRevision, type SaveArticleRevisionInput } from "@skladno/shared";
+import { WORKFLOW_STAGE, isArticleLanguage, isPublishLimitProfileId, isWorkflowStage, type AcceptedChange, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type Article, type ArticleDraft, type ArticleRevision, type SaveArticleDraftInput, type SaveArticleRevisionInput } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { ArticleRevisionConflictError } from "../errors.js";
+import { ArticleDraftConflictError, ArticleRevisionConflictError } from "../errors.js";
 import { createId, now, parseObject, required, type Row } from "./repository-utils.js";
 
 
@@ -17,6 +17,20 @@ function revision(row: Row): ArticleRevision {
 }
 
 
+function draft(row: Row): ArticleDraft | undefined {
+    if (!row.draft_article_id)
+        return undefined;
+
+    return {
+        articleId: String(row.draft_article_id),
+        content: String(row.draft_content),
+        baseRevisionId: String(row.draft_base_revision_id),
+        version: Number(row.draft_version),
+        updatedAt: String(row.draft_updated_at),
+    };
+}
+
+
 function article(row: Row): Article {
     const currentRevision = revision(row);
     return {
@@ -26,6 +40,7 @@ function article(row: Row): Article {
         updatedAt: String(row.article_updated_at),
         currentRevisionId: currentRevision.id,
         currentRevision,
+        ...(draft(row) ? { draft: draft(row) } : {}),
         workflowStage: String(row.workflow_stage) as Article["workflowStage"],
         ...(row.language ? { language: String(row.language) } : {}),
         ...(row.audience ? { audience: String(row.audience) } : {}),
@@ -34,6 +49,9 @@ function article(row: Row): Article {
         ...(row.source_revision_id ? { sourceRevisionId: String(row.source_revision_id) } : {}),
     };
 }
+
+
+const articleSelect = "SELECT a.id article_id, a.title, a.language, a.audience, a.publishing_profile_id, a.source_article_id, a.source_revision_id, a.workflow_stage, a.created_at article_created_at, a.updated_at article_updated_at, r.*, d.article_id draft_article_id, d.content draft_content, d.base_revision_id draft_base_revision_id, d.version draft_version, d.updated_at draft_updated_at FROM articles a JOIN article_revisions r ON r.id = a.current_revision_id LEFT JOIN article_drafts d ON d.article_id = a.id";
 
 
 export class ArticlesRepository {
@@ -75,12 +93,12 @@ export class ArticlesRepository {
 
 
     list(): Article[] {
-        return (this.database.prepare("SELECT a.id article_id, a.title, a.language, a.audience, a.publishing_profile_id, a.source_article_id, a.source_revision_id, a.workflow_stage, a.created_at article_created_at, a.updated_at article_updated_at, r.* FROM articles a JOIN article_revisions r ON r.id = a.current_revision_id ORDER BY a.updated_at DESC, a.id ASC").all() as Row[]).map(article);
+        return (this.database.prepare(`${articleSelect} ORDER BY a.updated_at DESC, a.id ASC`).all() as Row[]).map(article);
     }
 
 
     get(articleId: string): Article | undefined {
-        const row = this.database.prepare("SELECT a.id article_id, a.title, a.language, a.audience, a.publishing_profile_id, a.source_article_id, a.source_revision_id, a.workflow_stage, a.created_at article_created_at, a.updated_at article_updated_at, r.* FROM articles a JOIN article_revisions r ON r.id = a.current_revision_id WHERE a.id = ?").get(articleId) as Row | undefined;
+        const row = this.database.prepare(`${articleSelect} WHERE a.id = ?`).get(articleId) as Row | undefined;
         return row && article(row);
     }
 
@@ -141,6 +159,54 @@ export class ArticlesRepository {
     }
 
 
+    saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft {
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            const current = this.get(articleId);
+            if (!current)
+                throw new Error("Article not found.");
+
+            if (current.currentRevisionId !== input.baseRevisionId)
+                throw new ArticleRevisionConflictError(current);
+
+            const existing = current.draft;
+            if (existing?.version !== input.expectedDraftVersion)
+                throw new ArticleDraftConflictError(current, existing);
+
+            const timestamp = now();
+            const version = (existing?.version ?? 0) + 1;
+            this.database.prepare("INSERT INTO article_drafts (article_id, content, base_revision_id, version, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(article_id) DO UPDATE SET content = excluded.content, base_revision_id = excluded.base_revision_id, version = excluded.version, updated_at = excluded.updated_at")
+                .run(articleId, input.content, input.baseRevisionId, version, timestamp);
+            this.database.exec("COMMIT;");
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
+
+        return this.get(articleId)!.draft!;
+    }
+
+
+    discardDraft(articleId: string, expectedDraftVersion: number): void {
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            const current = this.get(articleId);
+            if (!current)
+                throw new Error("Article not found.");
+
+            if (current.draft?.version !== expectedDraftVersion)
+                throw new ArticleDraftConflictError(current, current.draft);
+
+            this.database.prepare("DELETE FROM article_drafts WHERE article_id = ? AND version = ?")
+                .run(articleId, expectedDraftVersion);
+            this.database.exec("COMMIT;");
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
+    }
+
+
     acceptChange(articleId: string, change: AcceptedChange): ArticleRevision {
         return this.appendRevision(articleId, change.content, change.provenance);
     }
@@ -160,14 +226,40 @@ export class ArticlesRepository {
 
 
     saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision {
-        const current = this.get(articleId);
-        if (!current)
-            throw new Error("Article not found.");
+        const revisionId = createId();
+        const timestamp = now();
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            const current = this.get(articleId);
+            if (!current)
+                throw new Error("Article not found.");
 
-        if (current.currentRevisionId !== input.baseRevisionId)
-            throw new ArticleRevisionConflictError(current);
+            if (current.currentRevisionId !== input.baseRevisionId)
+                throw new ArticleRevisionConflictError(current);
 
-        return this.appendRevision(articleId, input.content, { kind: "author-draft", baseRevisionId: input.baseRevisionId });
+            if (current.draft?.version !== input.expectedDraftVersion)
+                throw new ArticleDraftConflictError(current, current.draft);
+
+            if (current.draft && current.draft.content !== input.content)
+                throw new ArticleDraftConflictError(current, current.draft);
+
+            const provenance = { kind: "author-draft", baseRevisionId: input.baseRevisionId };
+            this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
+                .run(revisionId, articleId, input.content, JSON.stringify(provenance), timestamp);
+            this.database.prepare("UPDATE articles SET current_revision_id = ?, updated_at = ? WHERE id = ?")
+                .run(revisionId, timestamp, articleId);
+
+            if (current.draft)
+                this.database.prepare("DELETE FROM article_drafts WHERE article_id = ? AND version = ?")
+                    .run(articleId, current.draft.version);
+
+            this.database.exec("COMMIT;");
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
+
+        return this.listRevisions(articleId).find((item) => item.id === revisionId)!;
     }
 
 

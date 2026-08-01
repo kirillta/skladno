@@ -150,7 +150,11 @@ describe("NotificationProvider", () => {
 
         expect(screen.getByRole("status").textContent).toContain("Information");
         expect(screen.getByRole("alert").textContent).toContain("Save failed");
-        expect(screen.getByRole("button", { name: "Dismiss notification: Save failed" })).toBeTruthy();
+        const dismiss = screen.getByRole("button", { name: "Dismiss notification: Save failed" });
+        expect(dismiss).toBeTruthy();
+        expect(dismiss.querySelector("svg")?.classList.contains("size-4")).toBe(true);
+        expect(dismiss.classList.contains("right-1")).toBe(true);
+        expect(dismiss.classList.contains("top-1")).toBe(true);
     });
 
 

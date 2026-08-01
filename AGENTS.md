@@ -16,6 +16,9 @@ Use the following terms consistently in product copy, UI labels, domain code, te
 - **Article library**: the author's local collection of articles. An **article list** is a presentation of that collection; the **current article** is the article open in the workspace.
 - **Revision**: an immutable saved snapshot of an article.
 - **Draft**: the article text currently being edited and not yet saved as a revision.
+- **Draft checkpoint**: the recoverable, mutable persisted state of a Draft, anchored to its base Revision and protected by a monotonic version. A Draft checkpoint is never a Revision.
+- **Current Draft**: the Draft checkpoint whose base Revision is the Article's current Revision. A **stale Draft** is a recoverable Draft checkpoint whose base Revision is no longer current.
+- **Revision promotion**: the author's explicit save of a matching current Draft checkpoint as one new immutable Revision. Promotion clears only that matching Draft checkpoint.
 - **Proposal**: AI-generated candidate content or changes that require the author's explicit approval.
 - **Proposal base revision**: the saved revision reviewed to produce a proposal. A proposal becomes **stale** when the current article revision no longer matches its base revision.
 - **Change selection**: the subset of a proposal's changes that the author has selected to accept. Accepting a selection creates a new revision.

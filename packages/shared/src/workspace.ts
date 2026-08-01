@@ -1,4 +1,4 @@
-import type { CreateArticleInput, UpdateArticleInput, Article, ArticleRevision, SaveArticleRevisionInput } from "./persistence/articles.js";
+import type { CreateArticleInput, UpdateArticleInput, Article, ArticleDraft, ArticleRevision, SaveArticleDraftInput, SaveArticleRevisionInput } from "./persistence/articles.js";
 import type { RevisionClient } from "./revisions.js";
 
 export const articlesPath = "/api/articles";
@@ -9,7 +9,20 @@ export interface ArticleLibraryClient extends RevisionClient {
     createArticle(input: CreateArticleInput): Promise<Article>;
     updateArticle(articleId: string, input: UpdateArticleInput): Promise<Article>;
     deleteArticle(articleId: string): Promise<void>;
+    saveArticleDraft(articleId: string, input: SaveArticleDraftInput): Promise<ArticleDraft>;
+    discardArticleDraft(articleId: string, expectedDraftVersion: number): Promise<void>;
     saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): Promise<ArticleRevision>;
+}
+
+
+export class ArticleDraftConflictError extends Error {
+    constructor(
+        public readonly article: Article,
+        public readonly draft?: ArticleDraft,
+    ) {
+        super("This draft checkpoint was changed by another save. Reload it and try again.");
+        this.name = "ArticleDraftConflictError";
+    }
 }
 
 export class ArticleRevisionConflictError extends Error {

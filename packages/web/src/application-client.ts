@@ -1,10 +1,12 @@
 import {
     ArticleRevisionConflictError,
+    ArticleDraftConflictError,
     ApplicationClientError,
     type ApplicationErrorPayload,
     acceptProposalPath,
     articlesPath,
     articleRevisionsPath,
+    articleDraftPath,
     editorialPath,
     healthPath,
     HTTP_METHOD,
@@ -15,6 +17,8 @@ import {
     type Article,
     type HealthResponse,
     type SaveArticleRevisionInput,
+    type SaveArticleDraftInput,
+    type ArticleDraft,
     type AcceptProposalInput,
     type ArticleRevision,
     type ArticleLibraryClient,
@@ -117,6 +121,16 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     }
 
 
+    async saveArticleDraft(articleId: string, input: SaveArticleDraftInput): Promise<ArticleDraft> {
+        return this.request<ArticleDraft>(articleDraftPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+
+    async discardArticleDraft(articleId: string, expectedDraftVersion: number): Promise<void> {
+        await this.request<void>(`${articleDraftPath(articleId)}?expectedDraftVersion=${expectedDraftVersion}`, { method: HTTP_METHOD.DELETE });
+    }
+
+
     async saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): Promise<ArticleRevision> {
         return this.request<ArticleRevision>(articleRevisionsPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
@@ -209,8 +223,13 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             return undefined as T;
 
         const body: unknown = await response.json().catch(() => ({}));
-        if (response.status === HTTP_STATUS.CONFLICT && typeof body === "object" && body !== null && "article" in body)
-            throw new ArticleRevisionConflictError((body as { article: Article }).article);
+        if (response.status === HTTP_STATUS.CONFLICT && typeof body === "object" && body !== null && "article" in body) {
+            const conflict = body as { error?: { code?: string }; article: Article; draft?: ArticleDraft };
+            if (conflict.error?.code === "draft_conflict")
+                throw new ArticleDraftConflictError(conflict.article, conflict.draft);
+
+            throw new ArticleRevisionConflictError(conflict.article);
+        }
 
         if (!response.ok) {
             const payload = typeof body === "object" && body !== null && "error" in body

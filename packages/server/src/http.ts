@@ -12,7 +12,7 @@ import { handleStyleCorpusRoute } from "./http/routes/style-corpus-route.js";
 import { handleSettingsRoute } from "./http/routes/settings-route.js";
 import { writeJson } from "./http/json.js";
 import { ApplicationServiceError } from "./http/application-error.js";
-import { ArticleRevisionConflictError, Repositories } from "./persistence/index.js";
+import { ArticleDraftConflictError, ArticleRevisionConflictError, Repositories } from "./persistence/index.js";
 
 
 function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): boolean {
@@ -78,6 +78,16 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
         } catch (error) {
             if (error instanceof ArticleRevisionConflictError) {
                 writeJson(response, HTTP_STATUS.CONFLICT, { error: { code: APPLICATION_ERROR.REVISION_CONFLICT }, article: error.article });
+                return;
+            }
+
+            if (error instanceof ArticleDraftConflictError) {
+                writeJson(response, HTTP_STATUS.CONFLICT, {
+                    error: { code: APPLICATION_ERROR.DRAFT_CONFLICT },
+                    article: error.article,
+                    ...(error.draft ? { draft: error.draft } : {}),
+                });
+
                 return;
             }
 

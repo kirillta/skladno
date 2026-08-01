@@ -6,4 +6,4 @@ export { MaterialsRepository } from "./repositories/materials-repository.js";
 export { SettingsRepository } from "./repositories/settings-repository.js";
 export { StyleCorpusRepository } from "./repositories/style-corpus-repository.js";
 export { EditorialArtifactsRepository } from "./repositories/workflow-artifacts-repository.js";
-export { ArticleRevisionConflictError } from "./errors.js";
+export { ArticleDraftConflictError, ArticleRevisionConflictError } from "./errors.js";
