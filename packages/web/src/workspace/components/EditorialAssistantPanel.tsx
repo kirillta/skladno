@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { IntlProvider, useIntl } from "react-intl";
 import { messages } from "../../i18n/messages.js";
-import { EDITORIAL_OPERATION, type EditorialOperation } from "@skladno/shared";
+import { EDITORIAL_OPERATION, KEY_BINDING_COMMAND, type EditorialOperation, type KeyBindingOverrides } from "@skladno/shared";
 import { Banner, Button, Status, TextareaField } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronDownIcon, ChevronRightIcon, SendIcon } from "../../ui/icons.js";
+import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
+import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 
 
 const editorialOperationLabels: Record<EditorialOperation, "operations.thesisToNarrative" | "operations.flowRevision" | "operations.factCheck" | "operations.styleReview" | "operations.translation"> = {
@@ -23,13 +25,15 @@ export function EditorialAssistantPanel(props: {
     collapsed: boolean;
     setCollapsed: (value: boolean) => void;
     language: string;
+    dispatcher?: KeyBindingDispatcher;
+    shortcutOverrides?: KeyBindingOverrides;
 }) {
     return <IntlProvider locale="en" messages={messages}>
         <LocalizedEditorialAssistantPanel {...props} />
     </IntlProvider>;
 }
 
-function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language }: {
+function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language, dispatcher, shortcutOverrides }: {
     state: "idle" | "streaming" | "error";
     message: string;
     onRequest: (operation: EditorialOperation, guidance: string, language?: string) => Promise<void>;
@@ -37,6 +41,8 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
     collapsed: boolean;
     setCollapsed: (value: boolean) => void;
     language: string;
+    dispatcher?: KeyBindingDispatcher;
+    shortcutOverrides?: KeyBindingOverrides;
 }) {
     const intl = useIntl();
     const [guidance, setGuidance] = useState("");
@@ -48,12 +54,21 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
         setSelectedOperation(operation);
     }
 
-    function send() {
+    const send = useCallback(() => {
         if (!selectedOperation || !guidance.trim())
             return;
 
         void onRequest(selectedOperation, guidance, selectedOperation === EDITORIAL_OPERATION.TRANSLATION ? language : undefined);
-    }
+    }, [guidance, language, onRequest, selectedOperation]);
+
+    useEffect(() => {
+        const unregisterSend = dispatcher?.register(KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, send);
+        const unregisterStop = dispatcher?.register(KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, onCancel);
+        return () => {
+            unregisterSend?.();
+            unregisterStop?.();
+        };
+    }, [dispatcher, onCancel, send, selectedOperation, guidance]);
 
     if (collapsed)
         return <aside className="flex h-full w-full flex-col border-l border-border bg-surface-supporting p-1" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
@@ -70,7 +85,7 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
         <header className="flex min-h-18 items-center border-b border-border px-5">
             <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="ml-3 text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2>
-            <Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}>
+            <Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.collapse" }), KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}>
                 <ChevronRightIcon className="size-3" />
             </Button>
         </header>
@@ -91,11 +106,11 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
             </div>
             <div className="relative">
                 <TextareaField className="min-h-25 resize-y pr-12" aria-label={intl.formatMessage({ id: "assistant.guidance" })} value={guidance} onChange={(event) => setGuidance(event.target.value)} placeholder={intl.formatMessage({ id: "assistant.guidancePlaceholder" })} />
-                <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center p-1" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={state === "streaming" || !selectedOperation || !guidance.trim()} onClick={send}>
+                <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center p-1" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={state === "streaming" || !selectedOperation || !guidance.trim()} onClick={send}>
                     <SendIcon className="size-4" />
                 </Button>
             </div>
-            {state === "streaming" && <Button className="mt-3" variant="danger" onClick={onCancel}>{intl.formatMessage({ id: "assistant.stop" })}</Button>}
+            {state === "streaming" && <Button className="mt-3" variant="danger" title={shortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} onClick={onCancel}>{intl.formatMessage({ id: "assistant.stop" })}</Button>}
         </div>
     </aside>;
 }

@@ -1,9 +1,11 @@
-import { useState } from "react";
-import type { Article } from "@skladno/shared";
+import { useEffect, useRef, useState } from "react";
+import { KEY_BINDING_COMMAND, type Article, type KeyBindingOverrides } from "@skladno/shared";
 import type { SaveState } from "../EditorialWorkspace.js";
 import { Button, Field, IconButton } from "../../ui/primitives.js";
 import { ArticleIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";
+import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
+import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 
 
 function formatUpdatedAt(updatedAt: string, formatMessage: ReturnType<typeof useIntl>["formatMessage"]): string {
@@ -37,7 +39,7 @@ function languageCode(language: string | undefined): string {
 }
 
 
-export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, openSettings, language, saveState }: {
+export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, openSettings, language, saveState, dispatcher, shortcutOverrides }: {
     articles: Article[];
     selectedArticleId: string | undefined;
     selectArticle: (articleId: string) => void;
@@ -47,10 +49,14 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     openStyleProfile: () => void;
     openSettings: () => void;
     language: string | undefined;
-    saveState: SaveState
+    saveState: SaveState;
+    dispatcher?: KeyBindingDispatcher;
+    shortcutOverrides?: KeyBindingOverrides;
 }) {
     const intl = useIntl();
     const [query, setQuery] = useState("");
+    const searchRef = useRef<HTMLInputElement>(null);
+    useEffect(() => dispatcher?.register(KEY_BINDING_COMMAND.SEARCH_ARTICLES, () => searchRef.current?.focus()), [dispatcher]);
     const visibleArticles = articles.filter((article) => article.title.toLowerCase().includes(query.toLowerCase()));
     const saveLabels: Record<SaveState, string> = {
         saved: intl.formatMessage({ id: "navigation.saved" }),
@@ -72,7 +78,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                 <IconButton label={intl.formatMessage({ id: "navigation.styleProfile" })} onClick={openStyleProfile}>
                     <UserIcon className="size-4" />
                 </IconButton>
-                <IconButton label={intl.formatMessage({ id: "navigation.settings" })} onClick={openSettings}>
+                <IconButton label={intl.formatMessage({ id: "navigation.settings" })} title={shortcutHint(intl.formatMessage({ id: "navigation.settings" }), KEY_BINDING_COMMAND.OPEN_SETTINGS, shortcutOverrides)} onClick={openSettings}>
                     <SettingsIcon className="size-4" />
                 </IconButton>
                 <span aria-label={saveLabel} className={`mt-1 inline-flex h-4 items-center text-xs ${saveTone}`} role="status" title={saveLabel}>
@@ -86,15 +92,15 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     Skladno
                 </span>
                 <div className="flex items-center gap-1">
-                    <IconButton label={intl.formatMessage({ id: "navigation.newArticle" })} onClick={() => void createBlank()}>&#43;</IconButton>
-                    <IconButton label={intl.formatMessage({ id: "navigation.collapseArticleLibrary" })} onClick={() => setCollapsed(true)}>&#8249;</IconButton>
+                    <IconButton label={intl.formatMessage({ id: "navigation.newArticle" })} title={shortcutHint(intl.formatMessage({ id: "navigation.newArticle" }), KEY_BINDING_COMMAND.NEW_ARTICLE, shortcutOverrides)} onClick={() => void createBlank()}>&#43;</IconButton>
+                    <IconButton label={intl.formatMessage({ id: "navigation.collapseArticleLibrary" })} title={shortcutHint(intl.formatMessage({ id: "navigation.collapseArticleLibrary" }), KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, shortcutOverrides)} onClick={() => setCollapsed(true)}>&#8249;</IconButton>
                 </div>
             </header>
 
             <div className="border-b border-border px-3 py-3">
                 <div className="relative">
                     <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-                    <Field className="min-h-9 py-1.5 pl-8 pr-2" aria-label={intl.formatMessage({ id: "navigation.searchArticles" })} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={intl.formatMessage({ id: "navigation.searchArticles" })} />
+                    <Field ref={searchRef} className="min-h-9 py-1.5 pl-8 pr-2" aria-label={intl.formatMessage({ id: "navigation.searchArticles" })} title={shortcutHint(intl.formatMessage({ id: "navigation.searchArticles" }), KEY_BINDING_COMMAND.SEARCH_ARTICLES, shortcutOverrides)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={intl.formatMessage({ id: "navigation.searchArticles" })} />
                 </div>
             </div>
 
@@ -127,7 +133,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     <UserIcon className="size-4 shrink-0" />
                     <span className="ml-2">{intl.formatMessage({ id: "navigation.styleProfile" })}</span>
                 </Button>
-                <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openSettings}>
+                <Button className="flex w-full items-center justify-start text-left" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "navigation.settings" }), KEY_BINDING_COMMAND.OPEN_SETTINGS, shortcutOverrides)} onClick={openSettings}>
                     <SettingsIcon className="size-4 shrink-0" />
                     <span className="ml-2">{intl.formatMessage({ id: "navigation.settings" })}</span>
                 </Button>

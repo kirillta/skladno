@@ -132,7 +132,7 @@ function formatExample(general: GeneralSettings): string {
     return formatDateTime("2026-07-31T15:45:00Z", general.interfaceLocale, general.dateFormat, general.timeFormat);
 }
 
-export function ApplicationSettings({ client, back }: { client: EditorialWorkspaceClient; back: () => void }) {
+export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { client: EditorialWorkspaceClient; back: () => void; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void }) {
     const intl = useIntl();
     const { notify, notifyError } = useNotifications();
     const [section, setSection] = useState<Section>("general");
@@ -203,6 +203,7 @@ export function ApplicationSettings({ client, back }: { client: EditorialWorkspa
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
             await client.updateKeyBindingOverrides(next);
+            onKeyBindingsUpdated?.(next);
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
             setStatus(intl.formatMessage({ id: "settings.saveFailed" }));

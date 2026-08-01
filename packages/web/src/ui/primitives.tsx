@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, DialogHTMLAttributes, HTMLAttributes, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type DialogHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { useIntl } from "react-intl";
 import { ChevronDownIcon, StatusIcon } from "./icons.js";
 
@@ -41,9 +41,9 @@ export function IconButton({ label, children, className, ...props }: PropsWithCh
 }
 
 
-export function Field({ className, state = "default", ...props }: InputHTMLAttributes<HTMLInputElement> & { state?: ControlState }) {
-    return <input {...props} className={joinClassNames("min-h-10 w-full rounded-control border border-border bg-surface-raised px-3 py-2 text-sm leading-5 text-ink placeholder:text-ink/45", controlStateClasses[state], className)} />;
-}
+export const Field = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { state?: ControlState }>(function Field({ className, state = "default", ...props }, ref) {
+    return <input ref={ref} {...props} className={joinClassNames("min-h-10 w-full rounded-control border border-border bg-surface-raised px-3 py-2 text-sm leading-5 text-ink placeholder:text-ink/45", controlStateClasses[state], className)} />;
+});
 
 
 export function TextareaField({ className, state = "default", ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { state?: ControlState }) {

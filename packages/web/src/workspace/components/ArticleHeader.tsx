@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { articleLanguages, workflowStages, type Article, type UpdateArticleInput, type WorkflowStage } from "@skladno/shared";
+import { articleLanguages, KEY_BINDING_COMMAND, workflowStages, type Article, type KeyBindingOverrides, type UpdateArticleInput, type WorkflowStage } from "@skladno/shared";
 import { Button, Field, Select } from "../../ui/primitives.js";
 import { IntlProvider, useIntl } from "react-intl";
 import { messages } from "../../i18n/messages.js";
 import type { Notifications } from "../../notifications/notifications.js";
+import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 
 export function ArticleHeader(props: {
     article: Article;
@@ -15,13 +16,14 @@ export function ArticleHeader(props: {
     language: string;
     setLanguage: (language: string) => void;
     notifyError?: Notifications["notifyError"];
+    shortcutOverrides?: KeyBindingOverrides;
 }) {
     return <IntlProvider locale="en" messages={messages}>
         <LocalizedArticleHeader {...props} />
     </IntlProvider>;
 }
 
-function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, language, setLanguage, notifyError }: {
+function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, language, setLanguage, notifyError, shortcutOverrides = {} }: {
     article: Article;
     updateArticle: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
     save: () => Promise<unknown>;
@@ -31,6 +33,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
     language: string;
     setLanguage: (language: string) => void;
     notifyError?: Notifications["notifyError"];
+    shortcutOverrides?: KeyBindingOverrides;
 }) {
     const intl = useIntl();
     const reportError = notifyError ?? (() => undefined);
@@ -136,8 +139,8 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
                     <option>{intl.formatMessage({ id: "languages.english" })}</option>
                     <option>{intl.formatMessage({ id: "languages.portuguese" })}</option>
                 </Select>
-                <Button variant="secondary" onClick={() => void save().catch(() => undefined)}>{intl.formatMessage({ id: "articleHeader.saveRevision" })}</Button>
-                <Button variant="quiet" onClick={() => setFocusMode(!focusMode)}>{intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })}</Button>
+                <Button variant="secondary" title={shortcutHint(intl.formatMessage({ id: "articleHeader.saveRevision" }), KEY_BINDING_COMMAND.SAVE_REVISION, shortcutOverrides)} onClick={() => void save().catch(() => undefined)}>{intl.formatMessage({ id: "articleHeader.saveRevision" })}</Button>
+                <Button variant="quiet" title={shortcutHint(intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" }), KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, shortcutOverrides)} onClick={() => setFocusMode(!focusMode)}>{intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })}</Button>
                 <Button variant="danger" onClick={() => void remove(article.id).catch((error) => reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) }))}>{intl.formatMessage({ id: "articleHeader.deleteArticle" })}</Button>
             </div>
         </div>

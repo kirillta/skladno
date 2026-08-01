@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
@@ -17,6 +17,8 @@ import {
     type StyleCorpus,
     type StyleReview,
     type TranslationMetadata,
+    KEY_BINDING_COMMAND,
+    type KeyBindingOverrides,
 } from "@skladno/shared";
 import { ApplicationClientError, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleDraft } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
@@ -28,6 +30,7 @@ import { RestoreRevisionDialog as ExtractedRestoreRevisionDialog } from "./compo
 import { WorkspaceShell as ExtractedWorkspaceShell } from "./components/WorkspaceShell.js";
 import { ApplicationSettings } from "../settings/ApplicationSettings.js";
 import { DraftConflictDialog } from "./components/DraftConflictDialog.js";
+import type { KeyBindingDispatcher } from "../key-bindings/dispatcher.js";
 import { errorMessageId } from "../i18n/errors.js";
 import { useNotifications } from "../notifications/NotificationProvider.js";
 
@@ -671,7 +674,7 @@ export type PublishingState = ReturnType<typeof usePublishing>;
 export type WorkspaceLayoutState = ReturnType<typeof useWorkspaceLayout>;
 
 
-export function EditorialWorkspaceProvider({ client, screen, openSettings, backToWorkspace }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; openSettings: () => void; backToWorkspace: () => void }) {
+export function EditorialWorkspaceProvider({ client, screen, openSettings, backToWorkspace, dispatcher, keyBindingOverrides, onKeyBindingsUpdated }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; openSettings: () => void; backToWorkspace: () => void; dispatcher: KeyBindingDispatcher; keyBindingOverrides: KeyBindingOverrides; onKeyBindingsUpdated: (overrides: KeyBindingOverrides) => void }) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const workspace = useArticleWorkspace(client);
@@ -681,7 +684,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const corpus = useStyleCorpus(client);
     const publishing = usePublishing(client, workspace.content);
 
-    async function createBlank() {
+    const createBlank = useCallback(async () => {
         try {
             const settings = await client.getApplicationSettings();
             const defaultLanguage = settings.general.defaultArticleLanguage;
@@ -693,7 +696,35 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }
-    }
+    }, [client, intl, notifyError, workspace]);
+
+    const enterSettings = useCallback(() => {
+        void workspace.flushSelected().catch(() => undefined);
+        openSettings();
+    }, [openSettings, workspace]);
+
+    useEffect(() => {
+        if (screen !== "editorial-workspace")
+            return;
+
+        const unregister = [
+            dispatcher.register(KEY_BINDING_COMMAND.NEW_ARTICLE, () => void createBlank()),
+            dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, () => void workspace.save().catch(() => undefined)),
+            dispatcher.register(KEY_BINDING_COMMAND.OPEN_SETTINGS, enterSettings),
+            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, () => layout.setFocusMode(!layout.focusMode)),
+            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, () => layout.setLibraryCollapsed(!layout.libraryCollapsed)),
+            dispatcher.register(KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, () => layout.setAssistantCollapsed(!layout.assistantCollapsed)),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_WRITE, () => layout.setView("write")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_PROPOSAL, () => layout.setView("proposal")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_REVISIONS, () => layout.setView("revisions")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_FACT_CHECK, () => layout.setView("fact-check")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, () => layout.setView("style-profile")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, () => layout.setView("translations")),
+            dispatcher.register(KEY_BINDING_COMMAND.VIEW_PUBLISH, () => layout.setView("publish")),
+        ];
+
+        return () => unregister.forEach((remove) => remove());
+    }, [createBlank, dispatcher, enterSettings, layout, screen, workspace]);
 
     if (workspace.state === "loading")
         return <main className="grid min-h-screen place-items-center text-muted">
@@ -706,15 +737,10 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         </main>;
 
     if (screen === "application-settings")
-        return <ApplicationSettings client={client} back={backToWorkspace} />;
+        return <ApplicationSettings client={client} back={backToWorkspace} onKeyBindingsUpdated={onKeyBindingsUpdated} />;
 
-    function enterSettings() {
-        void workspace.flushSelected().catch(() => undefined);
-        openSettings();
-    }
-
-    return <ExtractedWorkspaceShell focusMode={layout.focusMode} libraryCollapsed={layout.libraryCollapsed} setLibraryCollapsed={layout.setLibraryCollapsed} assistantCollapsed={layout.assistantCollapsed} setAssistantCollapsed={layout.setAssistantCollapsed} libraryWidth={layout.libraryWidth} setLibraryWidth={layout.setLibraryWidth} assistantWidth={layout.assistantWidth} setAssistantWidth={layout.setAssistantWidth} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.selectArticle} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={enterSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>
-        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} createBlank={createBlank} />
+    return <ExtractedWorkspaceShell focusMode={layout.focusMode} libraryCollapsed={layout.libraryCollapsed} setLibraryCollapsed={layout.setLibraryCollapsed} assistantCollapsed={layout.assistantCollapsed} setAssistantCollapsed={layout.setAssistantCollapsed} libraryWidth={layout.libraryWidth} setLibraryWidth={layout.setLibraryWidth} assistantWidth={layout.assistantWidth} setAssistantWidth={layout.setAssistantWidth} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.selectArticle} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={enterSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} dispatcher={dispatcher} shortcutOverrides={keyBindingOverrides} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} dispatcher={dispatcher} shortcutOverrides={keyBindingOverrides} />}>
+        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
         <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
     </ExtractedWorkspaceShell>;
