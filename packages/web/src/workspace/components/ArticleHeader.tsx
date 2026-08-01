@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { articleLanguages, workflowStages, type Article, type KeyBindingOverrides, type UpdateArticleInput, type WorkflowStage } from "@skladno/shared";
-import { Button, Field, Select } from "../../ui/primitives.js";
+import { Button, Dialog, Field, IconButton, Select } from "../../ui/primitives.js";
+import { DeleteIcon, FocusIcon, LeaveFocusIcon, SaveIcon } from "../../ui/icons.js";
 import { IntlProvider, useIntl } from "react-intl";
 import { messages } from "../../i18n/messages.js";
 import type { Notifications } from "../../notifications/notifications.js";
@@ -31,12 +32,14 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
     const reportError = notifyError ?? (() => undefined);
     const [title, setTitle] = useState(article.title);
     const [editingTitle, setEditingTitle] = useState(false);
+    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
     const renameTimer = useRef<ReturnType<typeof setTimeout>>();
     const pendingTitle = useRef<string>();
 
     useEffect(() => {
         setTitle(article.title);
         setEditingTitle(false);
+        setDeleteConfirmationOpen(false);
         pendingTitle.current = undefined;
         clearTimeout(renameTimer.current);
     }, [article.id, article.title]);
@@ -72,6 +75,15 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             setTitle(article.title);
     }
 
+    async function confirmDelete() {
+        try {
+            await remove(article.id);
+            setDeleteConfirmationOpen(false);
+        } catch (error) {
+            reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        }
+    }
+
     return <header className="border-b border-border bg-surface-raised">
         <div className="flex min-h-16 items-center gap-3 px-5">
             <h1 className={editingTitle ? "min-w-0 flex-1 text-xl font-semibold tracking-tight" : "min-w-0 flex-1 text-xl font-semibold tracking-tight"}>
@@ -92,10 +104,10 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
                     }} />
                     : <button className="max-w-md truncate text-left hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.rename" }, { articleTitle: article.title })} onClick={() => setEditingTitle(true)}>{article.title}</button>}
             </h1>
-            <div className="flex shrink-0 items-center gap-2">
-                <Button variant="secondary" title={shortcutHint(intl.formatMessage({ id: "articleHeader.saveRevision" }), KEY_BINDING_COMMAND.SAVE_REVISION, shortcutOverrides)} onClick={() => void save().catch(() => undefined)}>{intl.formatMessage({ id: "articleHeader.saveRevision" })}</Button>
-                <Button variant="quiet" title={shortcutHint(intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" }), KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, shortcutOverrides)} onClick={() => setFocusMode(!focusMode)}>{intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })}</Button>
-                <Button variant="danger" onClick={() => void remove(article.id).catch((error) => reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) }))}>{intl.formatMessage({ id: "articleHeader.deleteArticle" })}</Button>
+            <div className="flex shrink-0 items-center">
+                <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })} title={shortcutHint(intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" }), KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, shortcutOverrides)} onClick={() => setFocusMode(!focusMode)}>
+                    {focusMode ? <LeaveFocusIcon className="size-4" /> : <FocusIcon className="size-4" />}
+                </IconButton>
             </div>
         </div>
         <div className="flex min-h-12 items-center gap-2 overflow-x-auto border-t border-border px-5 py-1.5 text-xs" aria-label={intl.formatMessage({ id: "articleHeader.metadata" })}>
@@ -108,7 +120,26 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             <Select className="min-w-28 !w-32" aria-label={intl.formatMessage({ id: "articleHeader.targetLanguage" })} value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)}>
                 {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageId(language) })}</option>)}
             </Select>
+            <div className="ml-auto flex shrink-0 items-center">
+                <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: "articleHeader.saveRevision" })} title={shortcutHint(intl.formatMessage({ id: "articleHeader.saveRevision" }), KEY_BINDING_COMMAND.SAVE_REVISION, shortcutOverrides)} onClick={() => void save().catch(() => undefined)}>
+                    <SaveIcon className="size-4" />
+                </IconButton>
+                <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "articleHeader.deleteArticle" })} title={intl.formatMessage({ id: "articleHeader.deleteArticle" })} onClick={() => setDeleteConfirmationOpen(true)}>
+                    <DeleteIcon className="size-4" />
+                </IconButton>
+            </div>
         </div>
+        {deleteConfirmationOpen && <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl" open aria-labelledby="delete-article-title" onCancel={(event) => {
+            event.preventDefault();
+            setDeleteConfirmationOpen(false);
+        }}>
+            <h2 id="delete-article-title" className="text-lg font-semibold">{intl.formatMessage({ id: "articleHeader.deleteConfirmationTitle" })}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">{intl.formatMessage({ id: "articleHeader.deleteConfirmationDescription" }, { articleTitle: article.title })}</p>
+            <div className="mt-5 flex justify-end gap-2">
+                <Button variant="secondary" autoFocus onClick={() => setDeleteConfirmationOpen(false)}>{intl.formatMessage({ id: "editor.cancel" })}</Button>
+                <Button variant="danger" onClick={() => void confirmDelete()}>{intl.formatMessage({ id: "articleHeader.confirmDeleteArticle" })}</Button>
+            </div>
+        </Dialog>}
     </header>;
 }
 

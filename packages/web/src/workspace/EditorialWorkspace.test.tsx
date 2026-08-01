@@ -240,6 +240,24 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("requires confirmation before deleting an Article", async () => {
+        const user = userEvent.setup();
+        const remove = vi.fn().mockResolvedValue(undefined);
+        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={remove} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
+        const headerScope = within(header.container);
+
+        await user.click(headerScope.getByRole("button", { name: "Delete article" }));
+
+        expect(remove).not.toHaveBeenCalled();
+        expect(headerScope.getByRole("heading", { name: "Delete Article?" })).toBeTruthy();
+        expect(headerScope.getByText(/^Delete “First Article”/)).toBeTruthy();
+
+        await user.click(headerScope.getByRole("button", { name: "Delete Article" }));
+
+        expect(remove).toHaveBeenCalledWith("one");
+    });
+
+
     it("shows a sequential revision number and character count in the Article Status Bar", () => {
         const statusBar = render(<ArticleStatusBar revisionNumber={2} length={{ count: 1234, remaining: 1766, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
