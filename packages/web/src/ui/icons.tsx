@@ -90,3 +90,23 @@ export function AssistantIcon(props: SVGProps<SVGSVGElement>) {
 export function SendIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="1.8" {...props}><path d="m21 3-7.5 18-3.75-7.5L3 9l18-6Z" /><path d="M9.75 13.5 14.5 9" /></Icon>;
 }
+
+
+export function SaveIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M4.5 3.5h13l2 2v15h-15z" /><path d="M8 3.5v6h7v-6M8 20.5v-7h8v7" /></Icon>;
+}
+
+
+export function DeleteIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5" /></Icon>;
+}
+
+
+export function FocusIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /></Icon>;
+}
+
+
+export function LeaveFocusIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M9 3v5H4M15 3v5h5M4 16h5v5M20 16h-5v5" /></Icon>;
+}

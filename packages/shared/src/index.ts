@@ -111,6 +111,7 @@ export { ARTICLE_LANGUAGE, articleLanguages, isArticleLanguage, type ArticleLang
 export {
     countPublishingCharacters,
     defaultPublishLimitProfileId,
+    getPublishingLength,
     getPublishLimitProfile,
     isPublishLimitProfileId,
     preparePlainTextForPublishing,
@@ -119,5 +120,7 @@ export {
     PUBLISH_LIMIT_PROFILE,
     type PublishLimitProfile,
     type PublishLimitProfileId,
+    type PublishingLength,
+    type PublishingLengthState,
     type PublishingClient,
 } from "./publishing.js";

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
-    countPublishingCharacters,
     createTextProposal,
     defaultPublishLimitProfileId,
     getPublishLimitProfile,
+    getPublishingLength,
+    isPublishLimitProfileId,
     isArticleLanguage,
     preparePlainTextForPublishing,
     type Article,
@@ -283,7 +284,7 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
     }
 
 
-    async function create(input: { title: string; content: string; language?: string; audience?: string; sourceArticleId?: string; sourceRevisionId?: string }) {
+    async function create(input: { title: string; content: string; language?: string; audience?: string; publishingProfileId?: string; sourceArticleId?: string; sourceRevisionId?: string }) {
         const article = await client.createArticle(input);
         revisions.current.set(article.id, article.currentRevisionId);
         replaceArticles((items) => [article, ...items]);
@@ -447,7 +448,7 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
 
             controller.current = new AbortController();
 
-            await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage } : {}) }, (event: EditorialEvent) => {
+            await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}) }, (event: EditorialEvent) => {
                 if (event.type === "text_delta")
                     setProposal((value) => value + event.delta);
 
@@ -502,10 +503,16 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
             return;
 
         try {
+            const configuredDefaultProfile = await client.getPublishLimitProfile();
             await workspace.create({
                 title: `${article.title} — ${translation.targetLanguage}`,
                 content: proposal,
                 language: targetLanguageId(translation.targetLanguage),
+                publishingProfileId: isPublishLimitProfileId(article.publishingProfileId)
+                    ? article.publishingProfileId
+                    : isPublishLimitProfileId(configuredDefaultProfile)
+                        ? configuredDefaultProfile
+                        : defaultPublishLimitProfileId,
                 sourceArticleId: article.id,
                 sourceRevisionId: base.revisionId
             });
@@ -543,6 +550,11 @@ function targetLanguageId(language: string): string {
 }
 
 
+function providerLanguageName(languageId: string): string {
+    return ({ en: "English", es: "Spanish", pt: "Portuguese", ru: "Russian", fr: "French", de: "German", it: "Italian" } as Record<string, string>)[languageId] ?? languageId;
+}
+
+
 function useStyleCorpus(client: EditorialWorkspaceClient) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
@@ -575,27 +587,32 @@ function useStyleCorpus(client: EditorialWorkspaceClient) {
 }
 
 
-function usePublishing(client: EditorialWorkspaceClient, content: string) {
+function usePublishing(client: EditorialWorkspaceClient, article: Article | undefined, content: string, updateArticle: (articleId: string, input: import("@skladno/shared").UpdateArticleInput) => Promise<void>) {
     const intl = useIntl();
     const { notify } = useNotifications();
-    const [profileId, setProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
+    const [defaultProfileId, setDefaultProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
 
     useEffect(() => {
         client.getPublishLimitProfile()
-            .then(setProfileId)
+            .then((profileId) => setDefaultProfileId(isPublishLimitProfileId(profileId) ? profileId : defaultPublishLimitProfileId))
             .catch(() => notify({ tone: "info", title: intl.formatMessage({ id: "publishing.defaultProfile" }) }));
     }, [client, intl, notify]);
 
     const text = preparePlainTextForPublishing(content);
+    const profileId = isPublishLimitProfileId(article?.publishingProfileId) ? article.publishingProfileId : defaultProfileId;
+    const profile = getPublishLimitProfile(profileId);
 
     return {
         text,
-        count: countPublishingCharacters(text),
         profileId,
-        profile: getPublishLimitProfile(profileId),
-        setProfile: async (id: PublishLimitProfileId) => {
+        profile,
+        length: getPublishingLength(text, profile),
+        setProfile: async (id: typeof profileId) => {
+            if (!article)
+                return;
+
             try {
-                setProfileId(await client.setPublishLimitProfile(id));
+                await updateArticle(article.id, { publishingProfileId: id });
             } catch (error) {
                 notify({ tone: "error", title: intl.formatMessage({ id: "publishing.profileSaveFailed" }) });
                 throw error;
@@ -643,7 +660,7 @@ function useWorkspaceLayout() {
         return migrated;
     });
     const [focusMode, setFocusMode] = useState(false);
-    const [targetLanguage, setTargetLanguage] = useState("Spanish");
+    const [targetLanguage, setTargetLanguage] = useState("es");
 
     useEffect(() => localStorage.setItem("skladno-workspace-layout", JSON.stringify(preferences)), [preferences]);
 
@@ -682,16 +699,18 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
     const editorial = useEditorialProposal(client, workspace);
     const corpus = useStyleCorpus(client);
-    const publishing = usePublishing(client, workspace.content);
+    const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
 
     const createBlank = useCallback(async () => {
         try {
             const settings = await client.getApplicationSettings();
             const defaultLanguage = settings.general.defaultArticleLanguage;
+            const defaultProfileId = await client.getPublishLimitProfile();
             return await workspace.create({
                 title: "Untitled article",
                 content: "",
                 language: isArticleLanguage(defaultLanguage) ? defaultLanguage : "en",
+                publishingProfileId: isPublishLimitProfileId(defaultProfileId) ? defaultProfileId : defaultPublishLimitProfileId,
             });
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });

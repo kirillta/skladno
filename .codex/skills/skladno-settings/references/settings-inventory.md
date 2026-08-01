@@ -7,6 +7,6 @@
 | AI | OpenAI connections and active connection | `app_settings.application-ai-connections` | Persisted; add/active/test implemented; connection management incomplete |
 | AI | Default model and per-operation overrides | `app_settings.application-model-preferences` | Persisted and resolved for later requests |
 | AI | Available model list | Server-side OpenAI refresh only | Implemented; not persisted |
-| Publishing | Named profiles, limits, default profile | `publishing_profiles` | Not implemented; fixed legacy profile remains |
+| Publishing | Fixed built-in profiles and persisted default for new Articles | `app_settings.publish-limit-profile` | Partial; Article-specific selection is implemented, while custom profile management remains deferred. |
 | Data | Active data directory | Startup configuration | UI incomplete |
 | Backups | Destination, schedule, retention | `app_settings.application-backup-policy` | Persisted; validation, snapshots, and retention incomplete |

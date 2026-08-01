@@ -39,8 +39,8 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             remove={workspace.remove}
             focusMode={layout.focusMode}
             setFocusMode={layout.setFocusMode}
-            language={layout.targetLanguage}
-            setLanguage={layout.setTargetLanguage}
+            targetLanguage={layout.targetLanguage}
+            setTargetLanguage={layout.setTargetLanguage}
             notifyError={notifyError}
             shortcutOverrides={shortcutOverrides}
         />
@@ -54,6 +54,6 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
         </Banner>}
         <WorkspaceTabBar view={layout.view} setView={layout.setView} shortcutOverrides={shortcutOverrides} />
         <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} />
-        <ArticleStatusBar revisionNumber={revisionNumber} characterCount={publishing.count} profile={publishing.profile} setProfile={publishing.setProfile} />
+        <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} setProfile={publishing.setProfile} />
     </div>;
 }
