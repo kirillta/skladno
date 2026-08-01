@@ -191,7 +191,7 @@ describe("Editorial Workspace", () => {
     it("selects a target language from the Article Header", async () => {
         const user = userEvent.setup();
         const setLanguage = vi.fn();
-        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={setLanguage} saveState="saved" />);
+        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={setLanguage} />);
         const headerScope = within(header.container);
 
         expect(headerScope.getByRole("combobox", { name: "Target language" })).toBeTruthy();
@@ -205,7 +205,7 @@ describe("Editorial Workspace", () => {
     it("updates workflow stage as Article metadata without an editorial request", async () => {
         const user = userEvent.setup();
         const updateArticle = vi.fn().mockResolvedValue(undefined);
-        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} saveState="saved" />);
+        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
 
         await user.selectOptions(within(header.container).getByRole("combobox", { name: "Suggested editorial workflow" }), "fact_checking");
 
@@ -228,7 +228,7 @@ describe("Editorial Workspace", () => {
     it("renames an Article from its header when editing finishes", async () => {
         const user = userEvent.setup();
         const updateArticle = vi.fn().mockResolvedValue(undefined);
-        const header = render(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} saveState="saved" />);
+        const header = render(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
         const headerScope = within(header.container);
 
         await user.click(headerScope.getByRole("button", { name: "Rename article: Untitled article" }));

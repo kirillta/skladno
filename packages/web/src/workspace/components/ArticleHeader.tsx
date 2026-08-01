@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { articleLanguages, workflowStages, type Article, type KeyBindingOverrides, type UpdateArticleInput, type WorkflowStage } from "@skladno/shared";
 import { Button, Field, Select } from "../../ui/primitives.js";
-import { StatusIcon } from "../../ui/icons.js";
 import { IntlProvider, useIntl } from "react-intl";
 import { messages } from "../../i18n/messages.js";
 import type { Notifications } from "../../notifications/notifications.js";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { KEY_BINDING_COMMAND } from "@skladno/shared";
-import type { SaveState } from "../EditorialWorkspace.js";
 
 
 export function ArticleHeader(props: {
@@ -19,7 +17,6 @@ export function ArticleHeader(props: {
     setFocusMode: (value: boolean) => void;
     targetLanguage: string;
     setTargetLanguage: (language: string) => void;
-    saveState: SaveState;
     notifyError?: Notifications["notifyError"];
     shortcutOverrides?: KeyBindingOverrides;
 }) {
@@ -29,7 +26,7 @@ export function ArticleHeader(props: {
 }
 
 
-function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, targetLanguage, setTargetLanguage, saveState, notifyError, shortcutOverrides = {} }: Parameters<typeof ArticleHeader>[0]) {
+function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, targetLanguage, setTargetLanguage, notifyError, shortcutOverrides = {} }: Parameters<typeof ArticleHeader>[0]) {
     const intl = useIntl();
     const reportError = notifyError ?? (() => undefined);
     const [title, setTitle] = useState(article.title);
@@ -111,10 +108,6 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             <Select className="min-w-28 !w-32" aria-label={intl.formatMessage({ id: "articleHeader.targetLanguage" })} value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)}>
                 {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageId(language) })}</option>)}
             </Select>
-            <span className={`ml-auto inline-flex shrink-0 items-center gap-1 font-semibold ${saveStateTone(saveState) === "error" ? "text-danger" : saveStateTone(saveState) === "warning" ? "text-warning" : saveStateTone(saveState) === "success" ? "text-success" : "text-muted"}`} role="status">
-                <StatusIcon tone={saveStateTone(saveState)} className="size-3" />
-                {intl.formatMessage({ id: saveStateMessageId(saveState) })}
-            </span>
         </div>
     </header>;
 }
@@ -127,14 +120,4 @@ function workflowStageMessageId(stage: WorkflowStage): "articleHeader.talkingPoi
 
 function languageMessageId(language: string): "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" {
     return ({ en: "languages.english", es: "languages.spanish", pt: "languages.portuguese", ru: "languages.russian", fr: "languages.french", de: "languages.german", it: "languages.italian" } as const)[language as "en" | "es" | "pt" | "ru" | "fr" | "de" | "it"];
-}
-
-
-function saveStateMessageId(state: SaveState): "navigation.saved" | "navigation.unsaved" | "navigation.savingDraft" | "navigation.draftSaved" | "navigation.saveFailed" | "navigation.saveConflict" {
-    return ({ saved: "navigation.saved", unsaved: "navigation.unsaved", saving: "navigation.savingDraft", "draft-saved": "navigation.draftSaved", error: "navigation.saveFailed", conflict: "navigation.saveConflict" } as const)[state];
-}
-
-
-function saveStateTone(state: SaveState): "info" | "success" | "warning" | "error" {
-    return state === "error" || state === "conflict" ? "error" : state === "unsaved" ? "warning" : state === "saved" || state === "draft-saved" ? "success" : "info";
 }
