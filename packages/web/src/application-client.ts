@@ -107,8 +107,8 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     }
 
 
-    async renameArticle(articleId: string, title: string): Promise<Article> {
-        return this.request<Article>(`${articlesPath}/${encodeURIComponent(articleId)}`, { method: HTTP_METHOD.PATCH, body: JSON.stringify({ title }) });
+    async updateArticle(articleId: string, input: import("@skladno/shared").UpdateArticleInput): Promise<Article> {
+        return this.request<Article>(`${articlesPath}/${encodeURIComponent(articleId)}`, { method: HTTP_METHOD.PATCH, body: JSON.stringify(input) });
     }
 
 

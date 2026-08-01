@@ -15,6 +15,7 @@ export interface Article {
     updatedAt: string;
     currentRevisionId: string;
     currentRevision: ArticleRevision;
+    workflowStage: WorkflowStage;
     language?: string;
     audience?: string;
     publishingProfileId?: string;
@@ -28,11 +29,21 @@ export interface CreateArticleInput {
     title: string;
     content: string;
     provenance?: Record<string, unknown>;
+    workflowStage?: WorkflowStage;
     language?: string;
     audience?: string;
     publishingProfileId?: string;
     sourceArticleId?: string;
     sourceRevisionId?: string;
+}
+
+
+/** An Article-level change that never affects its immutable Revision history. */
+export interface UpdateArticleInput {
+    title?: string;
+    workflowStage?: WorkflowStage;
+    language?: string;
+    publishingProfileId?: string;
 }
 
 
@@ -47,3 +58,4 @@ export interface AcceptedChange {
     content: string;
     provenance: Record<string, unknown>;
 }
+import type { WorkflowStage } from "../workflow-stage.js";

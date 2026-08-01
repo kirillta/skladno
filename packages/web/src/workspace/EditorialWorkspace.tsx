@@ -6,6 +6,7 @@ import {
     createTextProposal,
     defaultPublishLimitProfileId,
     getPublishLimitProfile,
+    isArticleLanguage,
     preparePlainTextForPublishing,
     type Article,
     type ArticleRevision,
@@ -112,8 +113,8 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
     }
 
 
-    async function rename(articleId: string, title: string) {
-        const article = await client.renameArticle(articleId, title);
+    async function updateArticle(articleId: string, input: import("@skladno/shared").UpdateArticleInput) {
+        const article = await client.updateArticle(articleId, input);
         setArticles((items) => items.map((item) => item.id === articleId ? article : item));
     }
 
@@ -141,7 +142,7 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
         saveState,
         save,
         create,
-        rename,
+        updateArticle,
         remove,
         updateRevision
     };
@@ -265,7 +266,7 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
         await workspace.create({
             title: `${article.title} — ${translation.targetLanguage}`,
             content: proposal,
-            language: translation.targetLanguage,
+            language: targetLanguageId(translation.targetLanguage),
             sourceArticleId: article.id,
             sourceRevisionId: base.revisionId
         });
@@ -292,6 +293,11 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
         cancel: () => controller.current?.abort(),
         createTranslation
     };
+}
+
+
+function targetLanguageId(language: string): string {
+    return ({ English: "en", Spanish: "es", Portuguese: "pt", Russian: "ru", French: "fr", German: "de", Italian: "it" } as Record<string, string>)[language] ?? "en";
 }
 
 
@@ -417,10 +423,13 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const corpus = useStyleCorpus(client);
     const publishing = usePublishing(client, workspace.content);
 
-    function createBlank() {
+    async function createBlank() {
+        const settings = await client.getApplicationSettings();
+        const defaultLanguage = settings.general.defaultArticleLanguage;
         return workspace.create({
             title: "Untitled article",
-            content: ""
+            content: "",
+            language: isArticleLanguage(defaultLanguage) ? defaultLanguage : "en",
         });
     }
 
