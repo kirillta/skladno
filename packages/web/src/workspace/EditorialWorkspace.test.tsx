@@ -132,6 +132,20 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("surfaces Application Settings save failures through the notification center", async () => {
+        const client = fakeClient();
+        client.updateGeneralSettings = vi.fn().mockRejectedValue(new Error("private settings detail"));
+        const user = userEvent.setup();
+
+        render(<App client={client} />);
+        await user.click((await screen.findAllByRole("button", { name: "Settings" })).at(-1)!);
+        await user.selectOptions(screen.getAllByRole("combobox")[0]!, "dark");
+
+        expect((await screen.findByRole("alert")).textContent).toContain("Couldn’t save your changes.");
+        expect(screen.queryByText("private settings detail")).toBeNull();
+    });
+
+
     it("offers focused editorial operations without applying a proposal", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);

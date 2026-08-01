@@ -5,6 +5,7 @@ import { ArticleHeader } from "./ArticleHeader.js";
 import { ArticleStatusBar } from "./ArticleStatusBar.js";
 import { WorkspaceTabBar } from "./WorkspaceTabBar.js";
 import { WorkspaceViewRouter } from "./WorkspaceViewRouter.js";
+import { useNotifications } from "../../notifications/NotificationProvider.js";
 
 export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, createBlank }: {
     workspace: ArticleWorkspaceState;
@@ -16,6 +17,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     createBlank: () => Promise<unknown>
 }) {
     const intl = useIntl();
+    const { notifyError } = useNotifications();
     const article = workspace.selectedArticle;
 
     if (!article)
@@ -35,6 +37,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             setFocusMode={layout.setFocusMode}
             language={layout.targetLanguage}
             setLanguage={layout.setTargetLanguage}
+            notifyError={notifyError}
         />
         <WorkspaceTabBar view={layout.view} setView={layout.setView} />
         <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} />

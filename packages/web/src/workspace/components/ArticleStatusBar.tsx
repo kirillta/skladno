@@ -3,6 +3,7 @@ import { IntlProvider, useIntl } from "react-intl";
 import { publishLimitProfiles, type PublishLimitProfile, type PublishLimitProfileId } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
+import { ChevronDownIcon } from "../../ui/icons.js";
 
 export function ArticleStatusBar(props: {
     revisionNumber: number;
@@ -43,9 +44,7 @@ function LocalizedArticleStatusBar({ revisionNumber, characterCount, profile, se
                 }}
             >
                 <span>{intl.formatMessage({ id: "status.characterCount" }, { characterCount: intl.formatNumber(characterCount), characterLimit: intl.formatNumber(profile.characterLimit) })}</span>
-                <svg aria-hidden="true" className={`size-3 transition-transform ${limitMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                    <path d="m6 9 6 6 6-6" />
-                </svg>
+                <ChevronDownIcon className={`size-3 transition-transform ${limitMenuOpen ? "rotate-180" : ""}`} />
             </button>
             {limitMenuOpen && <div className="absolute bottom-6 right-0 z-10 w-56 rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "status.characterLimitPresets" })}>
                 {publishLimitProfiles.map((preset) => <button

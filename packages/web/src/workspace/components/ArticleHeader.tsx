@@ -3,6 +3,7 @@ import { articleLanguages, workflowStages, type Article, type UpdateArticleInput
 import { Button, Field, Select } from "../../ui/primitives.js";
 import { IntlProvider, useIntl } from "react-intl";
 import { messages } from "../../i18n/messages.js";
+import type { Notifications } from "../../notifications/notifications.js";
 
 export function ArticleHeader(props: {
     article: Article;
@@ -13,13 +14,14 @@ export function ArticleHeader(props: {
     setFocusMode: (value: boolean) => void;
     language: string;
     setLanguage: (language: string) => void;
+    notifyError?: Notifications["notifyError"];
 }) {
     return <IntlProvider locale="en" messages={messages}>
         <LocalizedArticleHeader {...props} />
     </IntlProvider>;
 }
 
-function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, language, setLanguage }: {
+function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, language, setLanguage, notifyError }: {
     article: Article;
     updateArticle: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
     save: () => Promise<unknown>;
@@ -28,8 +30,10 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
     setFocusMode: (value: boolean) => void;
     language: string;
     setLanguage: (language: string) => void;
+    notifyError?: Notifications["notifyError"];
 }) {
     const intl = useIntl();
+    const reportError = notifyError ?? (() => undefined);
     const [title, setTitle] = useState(article.title);
     const [editingTitle, setEditingTitle] = useState(false);
     const renameTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -65,7 +69,10 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
         pendingTitle.current = nextTitle;
 
         void updateArticle(article.id, { title: nextTitle })
-            .catch(() => setTitle(article.title))
+            .catch((error) => {
+                setTitle(article.title);
+                reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            })
             .finally(() => {
                 if (pendingTitle.current === nextTitle)
                     pendingTitle.current = undefined;
@@ -90,7 +97,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
 
 
     function updateMetadata(input: UpdateArticleInput) {
-        void updateArticle(article.id, input);
+        void updateArticle(article.id, input).catch((error) => reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) }));
     }
 
     return <header className="border-b border-border bg-surface-raised">
@@ -129,9 +136,9 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
                     <option>{intl.formatMessage({ id: "languages.english" })}</option>
                     <option>{intl.formatMessage({ id: "languages.portuguese" })}</option>
                 </Select>
-                <Button variant="secondary" onClick={() => void save()}>{intl.formatMessage({ id: "articleHeader.saveRevision" })}</Button>
+                <Button variant="secondary" onClick={() => void save().catch(() => undefined)}>{intl.formatMessage({ id: "articleHeader.saveRevision" })}</Button>
                 <Button variant="quiet" onClick={() => setFocusMode(!focusMode)}>{intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })}</Button>
-                <Button variant="danger" onClick={() => void remove(article.id)}>{intl.formatMessage({ id: "articleHeader.deleteArticle" })}</Button>
+                <Button variant="danger" onClick={() => void remove(article.id).catch((error) => reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) }))}>{intl.formatMessage({ id: "articleHeader.deleteArticle" })}</Button>
             </div>
         </div>
         <div className="flex min-h-10 items-end gap-5 overflow-x-auto px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "articleHeader.workflow" })}>

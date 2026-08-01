@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Article } from "@skladno/shared";
 import { Button, Field, IconButton } from "../../ui/primitives.js";
+import { ArticleIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";
 
 
@@ -60,16 +61,10 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
             </header>
             <footer className="mt-auto flex flex-col items-center gap-1 border-t border-border px-0.5 py-2">
                 <IconButton label={intl.formatMessage({ id: "navigation.styleProfile" })} onClick={openStyleProfile}>
-                    <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <circle cx="12" cy="8" r="3" />
-                        <path d="M5.5 20c.6-3.3 3.1-5 6.5-5s5.9 1.7 6.5 5" />
-                    </svg>
+                    <UserIcon className="size-4" />
                 </IconButton>
                 <IconButton label={intl.formatMessage({ id: "navigation.settings" })} onClick={openSettings}>
-                    <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <circle cx="12" cy="12" r="3.25" />
-                        <path d="M12 2.75v2.5M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5M18.54 5.46l-1.77 1.77M7.23 16.77l-1.77 1.77M18.54 18.54l-1.77-1.77M7.23 7.23 5.46 5.46" />
-                    </svg>
+                    <SettingsIcon className="size-4" />
                 </IconButton>
                 <span aria-label={saveLabel} className={`mt-1 inline-flex h-4 items-center text-xs ${saveTone}`} role="status" title={saveLabel}>
                     <span aria-hidden="true">&#9679;</span>
@@ -89,10 +84,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
 
             <div className="border-b border-border px-3 py-3">
                 <div className="relative">
-                    <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <circle cx="11" cy="11" r="5.5" />
-                        <path d="m15.25 15.25 4 4" />
-                    </svg>
+                    <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
                     <Field className="min-h-9 py-1.5 pl-8 pr-2" aria-label={intl.formatMessage({ id: "navigation.searchArticles" })} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={intl.formatMessage({ id: "navigation.searchArticles" })} />
                 </div>
             </div>
@@ -107,10 +99,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
 
                             return <button key={article.id} onClick={() => selectArticle(article.id)} className={`w-full rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-brand" : "text-ink hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
                                 <span className="flex gap-2">
-                                    <svg aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                        <path d="M6.5 3.5h7l4 4v13h-11z" />
-                                        <path d="M13.5 3.5v4h4M8.5 12h7M8.5 15.5h7" />
-                                    </svg>
+                                    <ArticleIcon className="mt-0.5 size-4 shrink-0 text-muted" />
                                     <span className="min-w-0">
                                         <span className="block text-sm font-medium leading-5">{article.title}</span>
                                         <span className="mt-0.5 block text-xs leading-4 text-muted">{detail}</span>
@@ -126,17 +115,11 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
 
             <footer className="border-t border-border px-2 py-2">
                 <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openStyleProfile}>
-                    <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <circle cx="12" cy="8" r="3" />
-                        <path d="M5.5 20c.6-3.3 3.1-5 6.5-5s5.9 1.7 6.5 5" />
-                    </svg>
+                    <UserIcon className="size-4 shrink-0" />
                     <span className="ml-2">{intl.formatMessage({ id: "navigation.styleProfile" })}</span>
                 </Button>
                 <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openSettings}>
-                    <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <circle cx="12" cy="12" r="3.25" />
-                        <path d="M12 2.75v2.5M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5M18.54 5.46l-1.77 1.77M7.23 16.77l-1.77 1.77M18.54 18.54l-1.77-1.77M7.23 7.23 5.46 5.46" />
-                    </svg>
+                    <SettingsIcon className="size-4 shrink-0" />
                     <span className="ml-2">{intl.formatMessage({ id: "navigation.settings" })}</span>
                 </Button>
                 <div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted">

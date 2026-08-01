@@ -10,6 +10,16 @@ The complete typography and color reference is the [visual atlas](visual-atlas.m
 
 Buttons expose default, hover, focus, active, disabled, and loading behavior. The semantic state variants add a solid success/warning/error border, a dashed outdated border, or a double conflicted border so the meaning survives color loss.
 
+## Popup notifications
+
+Use application-level popup notifications for cross-screen outcomes and background actions. Use the `useNotifications` hook within the application notification provider; callers must provide localized title, message, and action text. `notifyError` maps local-service failures through the existing localized error catalog and never presents raw unknown error details.
+
+Informational and successful notifications dismiss after six seconds. Warnings and errors remain until the author dismisses them. A popup may expose one optional action and always exposes a keyboard-accessible dismiss control. The visible stack is limited to three items; additional notifications wait in order. Timers pause while a popup is hovered, focused, or the application is hidden.
+
+Popups do not move focus and use `status` for informational/success content and `alert` for warnings/errors. Use visible icon, title, and text alongside semantic color. Keep them out of document flow above the supporting workspace surfaces.
+
+Do not use popup notifications for field validation or contextual workflow state. Editorial Assistant request, streaming, cancellation, retry, and composer-validation feedback stays inside the Editorial Assistant Panel so the author can resolve it where the operation occurred. Reserve a global popup for assistant-originated failures only when they affect the application beyond that request.
+
 Use `TabList` and `Tab` for tab selection, `Progress` for streaming work, `Skeleton` while content is loading, `EmptyState` for an intentionally blank area, and `Dialog` or `Drawer` for a temporary focused task. `Tooltip` supplements, rather than replaces, an accessible label. Use `Diff` for review changes so additions and removals have text labels as well as distinct striped patterns.
 
 ## Accessibility baseline
