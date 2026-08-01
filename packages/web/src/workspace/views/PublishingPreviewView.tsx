@@ -1,24 +1,20 @@
-import { publishLimitProfiles, type PublishLimitProfileId } from "@skladno/shared";
-import { Select, TextareaField } from "../../ui/primitives.js";
+import { Button, TextareaField } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
-import { publishingProfileMessageId } from "../../i18n/publishing.js";
 
 export function PublishingPreviewView({ publishing }: {
     publishing: {
         text: string;
-        count: number;
-        profileId: PublishLimitProfileId;
-        profile: { characterLimit: number };
-        setProfile: (id: PublishLimitProfileId) => Promise<void>
+        length: { count: number; remaining: number; state: "within-limit" | "near-limit" | "over-limit" };
+        copy: () => Promise<void>;
     }
 }) {
     const intl = useIntl();
     return <div>
         <h2 className="font-semibold">{intl.formatMessage({ id: "views.publishingPreview" })}</h2>
-        <Select aria-label={intl.formatMessage({ id: "views.publishingProfile" })} value={publishing.profileId} onChange={(event) => void publishing.setProfile(event.target.value as PublishLimitProfileId)}>
-            {publishLimitProfiles.map((profile) => <option key={profile.id} value={profile.id}>{intl.formatMessage({ id: publishingProfileMessageId(profile.id) })}</option>)}
-        </Select>
-        <p className="mt-3 text-sm">{intl.formatMessage({ id: "views.characterCount" }, { count: intl.formatNumber(publishing.count), limit: intl.formatNumber(publishing.profile.characterLimit) })}</p>
+        <p className={publishing.length.state === "over-limit" ? "mt-3 text-sm text-danger" : publishing.length.state === "near-limit" ? "mt-3 text-sm text-warning" : "mt-3 text-sm text-muted"}>{publishing.length.state === "over-limit"
+            ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(publishing.length.remaining)) })
+            : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(publishing.length.remaining) })}</p>
         <TextareaField aria-label={intl.formatMessage({ id: "views.plainTextPreview" })} className="mt-3 min-h-72" readOnly value={publishing.text} />
+        <Button className="mt-3" variant="secondary" onClick={() => void publishing.copy()}>{intl.formatMessage({ id: "views.copyPlainText" })}</Button>
     </div>;
 }

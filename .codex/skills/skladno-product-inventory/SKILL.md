@@ -1,6 +1,6 @@
 ---
 name: skladno-product-inventory
-description: Maintain Skladno's product feature inventories and distinguish implemented, partial, and deferred capabilities. Use when adding, reviewing, or documenting user-visible Skladno features outside the detailed Settings and Article Workspace guardrails.
+description: Preserve and maintain Skladno's user-visible product capabilities and feature inventories while distinguishing implemented, partial, and deferred work. Use when adding, changing, removing, reviewing, or documenting Skladno features outside the detailed Settings and Article Workspace guardrails, especially when a change could regress, replace, hide, or narrow an existing capability.
 ---
 
 # Skladno Product Inventory
@@ -12,6 +12,45 @@ Use the feature-area reference that matches the change:
 - Read `references/history-and-publishing-inventory.md` for Revisions, evidence, translations, and publishing preview.
 - Read `references/cross-cutting-inventory.md` for internationalization, accessibility, keyboard control, notifications, privacy, validation, and database lifecycle.
 
-Keep the inventories synchronized with the repository. Use **Implemented** only when the user-facing flow and contract exist, **Partial** when an explicit limitation remains, and **Deferred** for intentionally out-of-scope MVP capabilities. Record persistence and safety boundaries, not just UI labels.
+## Preserve the baseline
+
+Before changing product code or an inventory:
+
+1. Read every inventory relevant to the touched surface, including the authoritative Settings or Article Workspace inventory when applicable.
+2. Treat each existing **Implemented** or **Partial** row as a preservation requirement, not disposable documentation.
+3. Inspect the current implementation, contracts, tests, and working-tree diff for those rows. Inventory text alone is not proof that code is present, and the active issue's silence is not permission to remove a capability.
+4. List the affected existing capabilities and how the planned change preserves, extends, replaces, or intentionally removes each one.
+
+Prefer additive integration. Keep existing controls, states, persistence behavior, accessibility, and safety boundaries working while adding the new feature. A redesign, refactor, renamed component, or narrower acceptance criterion does not authorize loss of behavior.
+
+## Control feature loss
+
+Do not delete, hide, disable, narrow, or overwrite an existing **Implemented** or **Partial** capability unless the active issue or user explicitly requires that product change. This includes accidental loss caused by replacing a component, route, contract, state model, translation key, or inventory row.
+
+If explicit removal or narrowing is required:
+
+- identify the exact capability and authorizing requirement before editing;
+- trace affected UI, shared contracts, persistence, tests, accessibility, and documentation;
+- preserve recoverability and all product invariants;
+- update rather than silently delete its inventory row, recording the new status and limitation or deferral reason;
+- call out the intentional feature loss in the handoff.
+
+If authorization is absent or conflicts with a product invariant, stop and ask rather than infer removal.
+
+## Maintain status accurately
+
+Keep the inventories synchronized with repository evidence. Use **Implemented** only when the complete user-facing flow and contract exist, **Partial** when a concrete limitation remains, and **Deferred** only for intentionally out-of-scope capabilities. Record persistence and safety boundaries, not just UI labels.
+
+Do not downgrade **Implemented** to **Partial** or **Deferred**, delete a row, or rewrite a row so it covers less behavior merely to make an incomplete implementation appear consistent. First preserve or repair the implementation. Change status only when repository evidence shows the prior inventory was inaccurate or an explicitly authorized product decision changed the capability; record the concrete reason in the row.
+
+## Audit before handoff
+
+After implementation:
+
+1. Compare the final diff against the pre-change inventory baseline.
+2. Search for removed controls, routes, contracts, tests, messages, and persistence paths related to affected capabilities.
+3. Verify every affected baseline capability still has implementation and test evidence, alongside the new behavior.
+4. Update inventory rows additively where possible; do not collapse distinct capabilities into a vague row that conceals loss.
+5. Report preserved capabilities, intentional status changes, and any verification that remains.
 
 When a change affects Application Settings or the Article Workspace, also read and update the authoritative references in `skladno-settings` or `skladno-ui-guardrails`.

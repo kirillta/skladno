@@ -134,6 +134,7 @@ describe("Editorial Workspace", () => {
             title: "Untitled article",
             content: "",
             language: "en",
+            publishingProfileId: "linkedin-post",
         });
     });
 
@@ -190,32 +191,44 @@ describe("Editorial Workspace", () => {
     it("selects a target language from the Article Header", async () => {
         const user = userEvent.setup();
         const setLanguage = vi.fn();
-        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={setLanguage} />);
+        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={setLanguage} saveState="saved" />);
         const headerScope = within(header.container);
 
         expect(headerScope.getByRole("combobox", { name: "Target language" })).toBeTruthy();
 
-        await user.selectOptions(headerScope.getByRole("combobox", { name: "Target language" }), "Portuguese");
+        await user.selectOptions(headerScope.getByRole("combobox", { name: "Target language" }), "pt");
 
-        expect(setLanguage).toHaveBeenCalledWith("Portuguese");
+        expect(setLanguage).toHaveBeenCalledWith("pt");
     });
 
 
     it("updates workflow stage as Article metadata without an editorial request", async () => {
         const user = userEvent.setup();
         const updateArticle = vi.fn().mockResolvedValue(undefined);
-        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={vi.fn()} />);
+        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} saveState="saved" />);
 
-        await user.click(within(header.container).getByRole("button", { name: "Fact-checking" }));
+        await user.selectOptions(within(header.container).getByRole("combobox", { name: "Suggested editorial workflow" }), "fact_checking");
 
         expect(updateArticle).toHaveBeenCalledWith("one", { workflowStage: "fact_checking" });
+    });
+
+
+    it("updates the publishing profile from the Status Bar without saving a Revision", async () => {
+        const user = userEvent.setup();
+        const setProfile = vi.fn().mockResolvedValue(undefined);
+        const statusBar = render(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={setProfile} />);
+
+        await user.click(within(statusBar.container).getByRole("button", { name: /Character count:/ }));
+        await user.click(within(statusBar.container).getByRole("menuitemradio", { name: /LinkedIn short post/ }));
+
+        expect(setProfile).toHaveBeenCalledWith("linkedin-short");
     });
 
 
     it("renames an Article from its header when editing finishes", async () => {
         const user = userEvent.setup();
         const updateArticle = vi.fn().mockResolvedValue(undefined);
-        const header = render(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={vi.fn()} />);
+        const header = render(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} saveState="saved" />);
         const headerScope = within(header.container);
 
         await user.click(headerScope.getByRole("button", { name: "Rename article: Untitled article" }));
@@ -228,24 +241,19 @@ describe("Editorial Workspace", () => {
 
 
     it("shows a sequential revision number and character count in the Article Status Bar", () => {
-        const statusBar = render(<ArticleStatusBar revisionNumber={2} characterCount={1234} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
+        const statusBar = render(<ArticleStatusBar revisionNumber={2} length={{ count: 1234, remaining: 1766, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
         expect(statusBarScope.getByText("v2")).toBeTruthy();
-        expect(statusBarScope.getByRole("button", { name: /Character count: .* of .* characters/ })).toBeTruthy();
-        expect(statusBarScope.queryByText("Saved")).toBeNull();
+        expect(statusBarScope.getByText(/1,234 \/ 3,000 characters/)).toBeTruthy();
+        expect(statusBarScope.queryByText(/1,766 characters remaining/)).toBeNull();
     });
 
 
-    it("selects a publishing character limit from the Article Status Bar", async () => {
-        const user = userEvent.setup();
-        const setProfile = vi.fn().mockResolvedValue(undefined);
-        const statusBar = render(<ArticleStatusBar revisionNumber={1} characterCount={0} profile={publishLimitProfiles[1]!} setProfile={setProfile} />);
+    it("shows an overflow state in the Article Status Bar without disabling its profile selector", () => {
+        const statusBar = render(<ArticleStatusBar revisionNumber={1} length={{ count: 3001, remaining: -1, state: "over-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
-        await user.click(statusBarScope.getByRole("button", { name: /Character count: 0 of .* characters/ }));
-        await user.click(statusBarScope.getByRole("menuitemradio", { name: /LinkedIn short post/ }));
-
-        expect(setProfile).toHaveBeenCalledWith("linkedin-short");
+        expect(statusBarScope.getByRole("button", { name: /Character count: 3,001 of 3,000 characters/ })).toBeTruthy();
     });
 });

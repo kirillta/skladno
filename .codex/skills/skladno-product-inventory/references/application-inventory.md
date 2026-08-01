@@ -11,9 +11,9 @@
 | Article library | Collapsed Navigation Rail with Style Profile, Settings, and save state | Implemented | `ArticleLibraryPanel`; layout is local preference and controls remain accessible. |
 | Workspace shell | Three-column Article Library Panel, Article Workspace, and Editorial Assistant Panel | Implemented | `WorkspaceShell`; panels collapse and resize independently while the Article stays central. |
 | Workspace shell | Focus mode | Implemented | `WorkspaceShell`; hides supporting panels without changing Article content, metadata, or Revisions. |
-| Article header | Rename, source language, target language, save Revision, focus mode, delete | Implemented | `ArticleHeader`; target language is request guidance, not Article metadata. |
+| Article header | Rename, workflow, source/target language, Draft state, save Revision, focus mode, delete | Implemented | `ArticleHeader`; workflow and source persist as Article metadata, while target language is stable request guidance only. |
 | Article header | Advisory workflow stage | Implemented | Article metadata; never runs AI, changes text, or creates a Revision. |
 | Workspace navigation | Write, Proposal Review, Revisions, Fact Check, Style Profile, Translations, Publish | Implemented | `WorkspaceTabBar` and `WorkspaceViewRouter`; active view is local UI state. |
 | Article editor | Markdown writing surface, formatting toolbar, safe HTML paste conversion | Implemented | `ArticleRichEditor` and editor helpers; writing surface is a constrained worksheet. |
 | Draft lifecycle | Debounced checkpoints, restore, retry, flush, and conflict recovery | Implemented | Mutable per-Article Draft checkpoints; explicit save promotes the exact checkpoint as one Revision. |
-| Article status | Current Revision, save state, and character-limit selector | Implemented | `ArticleStatusBar`; fixed bottom row of the Article Workspace. |
+| Article status | Current Revision, Article publishing-profile selector, plus shared character count and remaining/overflow guidance | Implemented | `ArticleStatusBar`; fixed 24px bottom row of the Article Workspace. |

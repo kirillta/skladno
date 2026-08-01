@@ -69,6 +69,33 @@ export function countPublishingCharacters(content: string): number {
 }
 
 
+export type PublishingLengthState = "within-limit" | "near-limit" | "over-limit";
+
+
+export interface PublishingLength {
+    count: number;
+    remaining: number;
+    state: PublishingLengthState;
+}
+
+
+/** Resolves advisory publishing guidance without restricting any Article action. */
+export function getPublishingLength(content: string, profile: PublishLimitProfile): PublishingLength {
+    const count = countPublishingCharacters(content);
+    const remaining = profile.characterLimit - count;
+
+    return {
+        count,
+        remaining,
+        state: remaining < 0
+            ? "over-limit"
+            : count >= profile.warningThreshold
+                ? "near-limit"
+                : "within-limit",
+    };
+}
+
+
 export interface PublishingClient {
     getPublishLimitProfile(): Promise<PublishLimitProfileId>;
     setPublishLimitProfile(profileId: PublishLimitProfileId): Promise<PublishLimitProfileId>;
