@@ -3,6 +3,7 @@ import type {
     AcceptProposalInput,
     AppSetting,
     CreateArticleInput,
+    UpdateArticleInput,
     CreateMaterialInput,
     CreateSourceCitationInput,
     CreateEditorialArtifactInput,
@@ -77,8 +78,8 @@ export class Repositories {
     }
 
 
-    renameArticle(articleId: string, title: string): Article {
-        return this.articles.rename(articleId, title);
+    updateArticle(articleId: string, input: UpdateArticleInput): Article {
+        return this.articles.update(articleId, input);
     }
 
 

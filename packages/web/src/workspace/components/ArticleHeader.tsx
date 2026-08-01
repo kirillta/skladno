@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type { Article } from "@skladno/shared";
+import { articleLanguages, workflowStages, type Article, type UpdateArticleInput, type WorkflowStage } from "@skladno/shared";
 import { Button, Field, Select } from "../../ui/primitives.js";
 import { IntlProvider, useIntl } from "react-intl";
 import { messages } from "../../i18n/messages.js";
 
 export function ArticleHeader(props: {
     article: Article;
-    rename: (articleId: string, title: string) => Promise<void>;
+    updateArticle: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
     save: () => Promise<unknown>;
     remove: (articleId: string) => Promise<void>;
     focusMode: boolean;
@@ -19,9 +19,9 @@ export function ArticleHeader(props: {
     </IntlProvider>;
 }
 
-function LocalizedArticleHeader({ article, rename, save, remove, focusMode, setFocusMode, language, setLanguage }: {
+function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, language, setLanguage }: {
     article: Article;
-    rename: (articleId: string, title: string) => Promise<void>;
+    updateArticle: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
     save: () => Promise<unknown>;
     remove: (articleId: string) => Promise<void>;
     focusMode: boolean;
@@ -34,7 +34,16 @@ function LocalizedArticleHeader({ article, rename, save, remove, focusMode, setF
     const [editingTitle, setEditingTitle] = useState(false);
     const renameTimer = useRef<ReturnType<typeof setTimeout>>();
     const pendingTitle = useRef<string>();
-    const workflowStages = ["articleHeader.talkingPoints", "articleHeader.narrative", "articleHeader.authorEdit", "articleHeader.flow", "articleHeader.facts", "articleHeader.style", "articleHeader.translate", "articleHeader.publish"] as const;
+    const workflowStageLabels: Record<WorkflowStage, "articleHeader.talkingPoints" | "articleHeader.narrative" | "articleHeader.authorEdit" | "articleHeader.flow" | "articleHeader.facts" | "articleHeader.style" | "articleHeader.translate" | "articleHeader.publish"> = {
+        talking_points: "articleHeader.talkingPoints",
+        narrative_draft: "articleHeader.narrative",
+        author_editing: "articleHeader.authorEdit",
+        flow_and_clarity: "articleHeader.flow",
+        fact_checking: "articleHeader.facts",
+        style_review: "articleHeader.style",
+        translation: "articleHeader.translate",
+        publication_preview: "articleHeader.publish",
+    };
 
     useEffect(() => {
         setTitle(article.title);
@@ -55,7 +64,7 @@ function LocalizedArticleHeader({ article, rename, save, remove, focusMode, setF
 
         pendingTitle.current = nextTitle;
 
-        void rename(article.id, nextTitle)
+        void updateArticle(article.id, { title: nextTitle })
             .catch(() => setTitle(article.title))
             .finally(() => {
                 if (pendingTitle.current === nextTitle)
@@ -77,6 +86,11 @@ function LocalizedArticleHeader({ article, rename, save, remove, focusMode, setF
 
         if (!title.trim())
             setTitle(article.title);
+    }
+
+
+    function updateMetadata(input: UpdateArticleInput) {
+        void updateArticle(article.id, input);
     }
 
     return <header className="border-b border-border bg-surface-raised">
@@ -107,6 +121,9 @@ function LocalizedArticleHeader({ article, rename, save, remove, focusMode, setF
                     : <button className="max-w-md truncate text-left hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.rename" }, { articleTitle: article.title })} onClick={() => setEditingTitle(true)}>{article.title}</button>}
             </h1>
             <div className="ml-auto flex shrink-0 items-center gap-2">
+                <Select className="min-h-9 !w-28 py-1.5 text-xs" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} value={article.language ?? "en"} onChange={(event) => updateMetadata({ language: event.target.value })}>
+                    {articleLanguages.map((value) => <option key={value} value={value}>{intl.formatMessage({ id: languageMessageId(value) })}</option>)}
+                </Select>
                 <Select className="min-h-9 !w-28 py-1.5 text-xs" aria-label={intl.formatMessage({ id: "articleHeader.targetLanguage" })} value={language} onChange={(event) => setLanguage(event.target.value)}>
                     <option>{intl.formatMessage({ id: "languages.spanish" })}</option>
                     <option>{intl.formatMessage({ id: "languages.english" })}</option>
@@ -118,7 +135,12 @@ function LocalizedArticleHeader({ article, rename, save, remove, focusMode, setF
             </div>
         </div>
         <div className="flex min-h-10 items-end gap-5 overflow-x-auto px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "articleHeader.workflow" })}>
-            {workflowStages.map((stage) => <span key={stage} className={stage === "articleHeader.flow" ? "border-b-2 border-brand py-3 font-semibold text-brand" : "py-3"}>{intl.formatMessage({ id: stage })}</span>)}
+            {workflowStages.map((stage) => <button key={stage} type="button" className={stage === article.workflowStage ? "border-b-2 border-brand py-3 font-semibold text-brand" : "py-3 hover:text-ink"} aria-pressed={stage === article.workflowStage} onClick={() => updateMetadata({ workflowStage: stage })}>{intl.formatMessage({ id: workflowStageLabels[stage] })}</button>)}
         </div>
     </header>;
+}
+
+
+function languageMessageId(language: string): "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" {
+    return ({ en: "languages.english", es: "languages.spanish", pt: "languages.portuguese", ru: "languages.russian", fr: "languages.french", de: "languages.german", it: "languages.italian" } as const)[language as "en" | "es" | "pt" | "ru" | "fr" | "de" | "it"];
 }

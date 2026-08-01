@@ -27,7 +27,15 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     const revisionNumber = revisionIndex < 0 ? 1 : revisionIndex + 1;
 
     return <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <ArticleHeader article={article} rename={workspace.rename} save={workspace.save} remove={workspace.remove} focusMode={layout.focusMode} setFocusMode={layout.setFocusMode} language={layout.targetLanguage} setLanguage={layout.setTargetLanguage} />
+        <ArticleHeader article={article}
+            updateArticle={workspace.updateArticle}
+            save={workspace.save}
+            remove={workspace.remove}
+            focusMode={layout.focusMode}
+            setFocusMode={layout.setFocusMode}
+            language={layout.targetLanguage}
+            setLanguage={layout.setTargetLanguage}
+        />
         <WorkspaceTabBar view={layout.view} setView={layout.setView} />
         <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} />
         <ArticleStatusBar revisionNumber={revisionNumber} characterCount={publishing.count} profile={publishing.profile} setProfile={publishing.setProfile} />

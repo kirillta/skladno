@@ -262,7 +262,7 @@ test("translation carries its target language, preserves the source, and records
         const translated = repositories.createArticle({
             title: "Source — Spanish",
             content: "Ejecuta `npm test` en https://example.com.",
-            language: "Spanish",
+            language: "es",
             sourceArticleId: source.id,
             sourceRevisionId: source.currentRevisionId,
             provenance: { kind: "accepted-translation", targetLanguage: "Spanish" },
@@ -275,7 +275,7 @@ test("translation carries its target language, preserves the source, and records
             targetLanguage: "Spanish",
             protectedSpans: ["`npm test`", "https://example.com"],
         });
-        assert.equal(translated.language, "Spanish");
+        assert.equal(translated.language, "es");
         assert.equal(translated.sourceArticleId, source.id);
         assert.equal(repositories.restoreRevision(translated.id, translated.currentRevisionId).content, translated.currentRevision.content);
     });

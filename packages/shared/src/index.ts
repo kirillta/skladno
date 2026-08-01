@@ -73,6 +73,7 @@ export type {
     AcceptedChange,
     AppSetting,
     CreateArticleInput,
+    UpdateArticleInput,
     CreateMaterialInput,
     CreateSourceCitationInput,
     CreateEditorialArtifactInput,
@@ -85,6 +86,8 @@ export type {
     EditorialArtifact,
 } from "./persistence/index.js";
 export { articlesPath, ArticleRevisionConflictError, type ArticleLibraryClient } from "./workspace.js";
+export { WORKFLOW_STAGE, isWorkflowStage, workflowStages, type WorkflowStage } from "./workflow-stage.js";
+export { ARTICLE_LANGUAGE, articleLanguages, isArticleLanguage, type ArticleLanguage } from "./languages.js";
 export {
     countPublishingCharacters,
     defaultPublishLimitProfileId,

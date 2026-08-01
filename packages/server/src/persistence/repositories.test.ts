@@ -50,6 +50,26 @@ test("proposal acceptance requires the reviewed Revision to still be current", (
 }));
 
 
+test("Article metadata updates preserve the current Revision", () => withRepository((repositories) => {
+    const article = repositories.createArticle({ title: "Metadata", content: "Draft", language: "en" });
+    const updated = repositories.updateArticle(article.id, {
+        title: "Updated metadata",
+        workflowStage: "fact_checking",
+        language: "es",
+        publishingProfileId: "linkedin-short",
+    });
+
+    assert.equal(updated.title, "Updated metadata");
+    assert.equal(updated.workflowStage, "fact_checking");
+    assert.equal(updated.language, "es");
+    assert.equal(updated.publishingProfileId, "linkedin-short");
+    assert.equal(updated.currentRevisionId, article.currentRevisionId);
+    assert.equal(repositories.listArticleRevisions(article.id).length, 1);
+    assert.throws(() => repositories.updateArticle(article.id, { workflowStage: "flow" as never }), /Invalid workflow stage/);
+    assert.throws(() => repositories.updateArticle(article.id, { publishingProfileId: "unknown" }), /Unsupported publishing profile/);
+}));
+
+
 test("materials, settings, artifacts and citations persist through reopening", () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
     const filename = join(directory, "skladno.sqlite");

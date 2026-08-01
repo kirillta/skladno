@@ -80,6 +80,13 @@ const migrations = [
         ALTER TABLE articles ADD COLUMN publishing_profile_id TEXT;
         `,
     },
+    {
+        version: 6,
+        name: "article_workflow_stage",
+        sql: `
+        ALTER TABLE articles ADD COLUMN workflow_stage TEXT NOT NULL DEFAULT 'talking_points';
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

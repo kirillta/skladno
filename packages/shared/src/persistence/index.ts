@@ -1,6 +1,7 @@
 export type {
     AcceptedChange,
     CreateArticleInput,
+    UpdateArticleInput,
     Article,
     ArticleRevision,
     SaveArticleRevisionInput,

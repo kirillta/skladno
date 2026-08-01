@@ -12,14 +12,14 @@ import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
 
 function article(id: string, title: string): Article {
     const revision: ArticleRevision = { id: `${id}-revision`, articleId: id, content: "Draft", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" } };
-    return { id, title, createdAt: revision.createdAt, updatedAt: revision.createdAt, currentRevisionId: revision.id, currentRevision: revision };
+    return { id, title, createdAt: revision.createdAt, updatedAt: revision.createdAt, currentRevisionId: revision.id, currentRevision: revision, workflowStage: "talking_points" };
 }
 
 
 function fakeClient(): EditorialWorkspaceClient {
     const created = article("new", "New Article");
     return {
-        getHealth: vi.fn(), listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]), createArticle: vi.fn().mockResolvedValue(created), renameArticle: vi.fn(), deleteArticle: vi.fn(), saveArticleRevision: vi.fn(), listArticleRevisions: vi.fn().mockResolvedValue([]), acceptProposal: vi.fn(), restoreRevision: vi.fn(), streamEditorial: vi.fn(), getStyleCorpus: vi.fn().mockResolvedValue({ items: [] }), addStyleCorpusItem: vi.fn(), removeStyleCorpusItem: vi.fn(), getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"), setPublishLimitProfile: vi.fn(), getApplicationSettings: vi.fn().mockResolvedValue({ general: defaultGeneralSettings, connections: [], modelPreferences: { defaultModel: "", operationOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } } }), updateGeneralSettings: vi.fn(), updateBackupPolicy: vi.fn(), addOpenAiConnection: vi.fn(), updateOpenAiConnection: vi.fn(), removeOpenAiConnection: vi.fn(), setActiveOpenAiConnection: vi.fn(), testOpenAiConnection: vi.fn(), refreshOpenAiModels: vi.fn(), updateModelPreferences: vi.fn(),
+        getHealth: vi.fn(), listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]), createArticle: vi.fn().mockResolvedValue(created), updateArticle: vi.fn(), deleteArticle: vi.fn(), saveArticleRevision: vi.fn(), listArticleRevisions: vi.fn().mockResolvedValue([]), acceptProposal: vi.fn(), restoreRevision: vi.fn(), streamEditorial: vi.fn(), getStyleCorpus: vi.fn().mockResolvedValue({ items: [] }), addStyleCorpusItem: vi.fn(), removeStyleCorpusItem: vi.fn(), getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"), setPublishLimitProfile: vi.fn(), getApplicationSettings: vi.fn().mockResolvedValue({ general: defaultGeneralSettings, connections: [], modelPreferences: { defaultModel: "", operationOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } } }), updateGeneralSettings: vi.fn(), updateBackupPolicy: vi.fn(), addOpenAiConnection: vi.fn(), updateOpenAiConnection: vi.fn(), removeOpenAiConnection: vi.fn(), setActiveOpenAiConnection: vi.fn(), testOpenAiConnection: vi.fn(), refreshOpenAiModels: vi.fn(), updateModelPreferences: vi.fn(),
     };
 }
 
@@ -115,7 +115,8 @@ describe("Editorial Workspace", () => {
 
         expect(client.createArticle).toHaveBeenCalledWith({
             title: "Untitled article",
-            content: ""
+            content: "",
+            language: "en",
         });
     });
 
@@ -158,7 +159,7 @@ describe("Editorial Workspace", () => {
     it("selects a target language from the Article Header", async () => {
         const user = userEvent.setup();
         const setLanguage = vi.fn();
-        const header = render(<ArticleHeader article={article("one", "First Article")} rename={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={setLanguage} />);
+        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={setLanguage} />);
         const headerScope = within(header.container);
 
         expect(headerScope.getByRole("combobox", { name: "Target language" })).toBeTruthy();
@@ -169,10 +170,21 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("updates workflow stage as Article metadata without an editorial request", async () => {
+        const user = userEvent.setup();
+        const updateArticle = vi.fn().mockResolvedValue(undefined);
+        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={vi.fn()} />);
+
+        await user.click(within(header.container).getByRole("button", { name: "Fact-checking" }));
+
+        expect(updateArticle).toHaveBeenCalledWith("one", { workflowStage: "fact_checking" });
+    });
+
+
     it("renames an Article from its header when editing finishes", async () => {
         const user = userEvent.setup();
-        const rename = vi.fn().mockResolvedValue(undefined);
-        const header = render(<ArticleHeader article={article("one", "Untitled article")} rename={rename} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={vi.fn()} />);
+        const updateArticle = vi.fn().mockResolvedValue(undefined);
+        const header = render(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} language="Spanish" setLanguage={vi.fn()} />);
         const headerScope = within(header.container);
 
         await user.click(headerScope.getByRole("button", { name: "Rename article: Untitled article" }));
@@ -180,7 +192,7 @@ describe("Editorial Workspace", () => {
         await user.type(headerScope.getByRole("textbox", { name: "Article title" }), "A better title");
         await user.tab();
 
-        expect(rename).toHaveBeenCalledWith("one", "A better title");
+        expect(updateArticle).toHaveBeenCalledWith("one", { title: "A better title" });
     });
 
 

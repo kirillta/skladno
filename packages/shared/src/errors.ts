@@ -8,6 +8,7 @@ export const APPLICATION_ERROR = {
     REVISION_NOT_FOUND: "revision_not_found",
     REVISION_CONFLICT: "revision_conflict",
     UNSUPPORTED_PUBLISHING_PROFILE: "unsupported_publishing_profile",
+    INVALID_WORKFLOW_STAGE: "invalid_workflow_stage",
     INVALID_ENVIRONMENT_VARIABLE_NAME: "invalid_environment_variable_name",
     ENVIRONMENT_VARIABLE_UNAVAILABLE: "environment_variable_unavailable",
     OPENAI_CONNECTION_NOT_FOUND: "openai_connection_not_found",

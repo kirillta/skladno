@@ -51,12 +51,25 @@ test("article API supports CRUD and revision-aware saves", async () => {
 
         const restored = await fetch(`${baseUrl}/${created.id}/revisions/${proposalRevision.id}/restorations`, { method: HTTP_METHOD.POST });
         assert.equal(restored.status, HTTP_STATUS.CREATED);
+        const restoredRevision = await restored.json() as { id: string };
 
         const conflict = await fetch(`${baseUrl}/${created.id}/revisions`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ content: "stale", baseRevisionId: created.currentRevisionId }) });
         assert.equal(conflict.status, HTTP_STATUS.CONFLICT);
 
-        const renamed = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed draft" }) });
-        assert.equal((await renamed.json() as Article).title, "Renamed draft");
+        const renamed = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed draft", workflowStage: "fact_checking", language: "es", publishingProfileId: "linkedin-short" }) });
+        const updated = await renamed.json() as Article;
+        assert.equal(updated.title, "Renamed draft");
+        assert.equal(updated.workflowStage, "fact_checking");
+        assert.equal(updated.language, "es");
+        assert.equal(updated.publishingProfileId, "linkedin-short");
+        assert.equal(updated.currentRevisionId, restoredRevision.id);
+        assert.equal((await (await fetch(`${baseUrl}/${created.id}/revisions`)).json() as unknown[]).length, 4);
+
+        const emptyPatch = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({}) });
+        assert.equal(emptyPatch.status, HTTP_STATUS.BAD_REQUEST);
+
+        const invalidStage = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ workflowStage: "flow" }) });
+        assert.equal(invalidStage.status, HTTP_STATUS.BAD_REQUEST);
         assert.ok(saved.id);
 
         const settingsUrl = baseUrl.replace("/api/articles", publishSettingsPath);

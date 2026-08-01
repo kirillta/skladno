@@ -1,4 +1,4 @@
-import type { CreateArticleInput, Article, ArticleRevision, SaveArticleRevisionInput } from "./persistence/articles.js";
+import type { CreateArticleInput, UpdateArticleInput, Article, ArticleRevision, SaveArticleRevisionInput } from "./persistence/articles.js";
 import type { RevisionClient } from "./revisions.js";
 
 export const articlesPath = "/api/articles";
@@ -7,7 +7,7 @@ export const articlesPath = "/api/articles";
 export interface ArticleLibraryClient extends RevisionClient {
     listArticles(): Promise<Article[]>;
     createArticle(input: CreateArticleInput): Promise<Article>;
-    renameArticle(articleId: string, title: string): Promise<Article>;
+    updateArticle(articleId: string, input: UpdateArticleInput): Promise<Article>;
     deleteArticle(articleId: string): Promise<void>;
     saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): Promise<ArticleRevision>;
 }
