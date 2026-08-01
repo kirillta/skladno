@@ -1,0 +1,12 @@
+# Skladno cross-cutting inventory
+
+| Area | Feature | Status | Contract |
+|---|---|---|---|
+| Internationalization | Validated catalogs and English interface catalog | Implemented | English is the only complete installed catalog; incomplete locales are not selectable. |
+| Accessibility | Semantic controls, labels, descriptions, focus treatment, keyboard navigation, non-color cues | Implemented | Workspace and Settings accessibility contracts are preserved. |
+| Keyboard control | Shortcut hints, normalization, conflict detection, and command registration | Partial | Persisted overrides and dispatch primitives exist; complete workspace-action wiring remains follow-up work. |
+| Notifications | Shared success/error provider and viewport | Implemented | Recoverable failures are surfaced without sensitive values. |
+| Data validation | Shared domain contracts, HTTP constants, and transport-boundary validation | Implemented | Malformed provider responses are treated as failures. |
+| Privacy | Server-side secrets, local materials, minimum request context, redacted diagnostics, provider-storage opt-in | Implemented | `OPENAI_STORE_RESPONSES` is opt-in; private content is not logged or traced by default. |
+| Database lifecycle | SQLite persistence and Article schema transition | Implemented | Legacy schema cleanup occurs once at startup; the resulting Article database is preserved later. |
+| Deferred MVP | Accounts, cloud sync, teams, analytics, direct publishing, imports, exports, research libraries, voice/visual assets, Electron, local models, multiple providers, mobile/PWA/browser extension, custom workflows | Deferred | These remain outside the current MVP boundary. |
