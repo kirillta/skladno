@@ -350,15 +350,54 @@ function usePublishing(client: EditorialWorkspaceClient, content: string) {
 
 function useWorkspaceLayout() {
     const [view, setView] = useState<WorkspaceView>("write");
-    const [libraryCollapsed, setLibraryCollapsed] = useState(() => localStorage.getItem("skladno-navigation-collapsed") === "true");
-    const [assistantCollapsed, setAssistantCollapsed] = useState(() => localStorage.getItem("skladno-assistant-collapsed") === "true");
+    const [preferences, setPreferences] = useState(() => {
+        const stored = localStorage.getItem("skladno-workspace-layout");
+
+        if (stored)
+            try {
+                const parsed = JSON.parse(stored) as { version?: number; libraryWidth?: number; assistantWidth?: number; libraryCollapsed?: boolean; assistantCollapsed?: boolean };
+
+                if (parsed.version === 1)
+                    return {
+                        version: 1,
+                        libraryWidth: Math.min(280, Math.max(192, parsed.libraryWidth ?? 208)),
+                        assistantWidth: Math.max(320, parsed.assistantWidth ?? 384),
+                        libraryCollapsed: parsed.libraryCollapsed ?? false,
+                        assistantCollapsed: parsed.assistantCollapsed ?? false,
+                    };
+            } catch {
+                // Replace malformed local preferences with the current version.
+            }
+
+        const migrated = { version: 1, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: localStorage.getItem("skladno-navigation-collapsed") === "true", assistantCollapsed: localStorage.getItem("skladno-assistant-collapsed") === "true" };
+
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify(migrated));
+        localStorage.removeItem("skladno-navigation-collapsed");
+        localStorage.removeItem("skladno-assistant-collapsed");
+
+        return migrated;
+    });
     const [focusMode, setFocusMode] = useState(false);
     const [targetLanguage, setTargetLanguage] = useState("Spanish");
 
-    useEffect(() => localStorage.setItem("skladno-navigation-collapsed", String(libraryCollapsed)), [libraryCollapsed]);
-    useEffect(() => localStorage.setItem("skladno-assistant-collapsed", String(assistantCollapsed)), [assistantCollapsed]);
+    useEffect(() => localStorage.setItem("skladno-workspace-layout", JSON.stringify(preferences)), [preferences]);
 
-    return { view, setView, libraryCollapsed, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, focusMode, setFocusMode, targetLanguage, setTargetLanguage };
+    return {
+        view,
+        setView,
+        libraryCollapsed: preferences.libraryCollapsed,
+        setLibraryCollapsed: (libraryCollapsed: boolean) => setPreferences((current) => ({ ...current, libraryCollapsed })),
+        assistantCollapsed: preferences.assistantCollapsed,
+        setAssistantCollapsed: (assistantCollapsed: boolean) => setPreferences((current) => ({ ...current, assistantCollapsed })),
+        libraryWidth: preferences.libraryWidth,
+        setLibraryWidth: (libraryWidth: number) => setPreferences((current) => ({ ...current, libraryWidth: Math.min(280, Math.max(192, libraryWidth)) })),
+        assistantWidth: preferences.assistantWidth,
+        setAssistantWidth: (assistantWidth: number) => setPreferences((current) => ({ ...current, assistantWidth: Math.max(320, assistantWidth) })),
+        focusMode,
+        setFocusMode,
+        targetLanguage,
+        setTargetLanguage
+    };
 }
 
 
@@ -398,7 +437,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     if (screen === "application-settings")
         return <ApplicationSettings client={client} back={backToWorkspace} />;
 
-    return <ExtractedWorkspaceShell focusMode={layout.focusMode} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.setSelectedArticleId} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={openSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>
+    return <ExtractedWorkspaceShell focusMode={layout.focusMode} libraryCollapsed={layout.libraryCollapsed} setLibraryCollapsed={layout.setLibraryCollapsed} assistantCollapsed={layout.assistantCollapsed} setAssistantCollapsed={layout.setAssistantCollapsed} libraryWidth={layout.libraryWidth} setLibraryWidth={layout.setLibraryWidth} assistantWidth={layout.assistantWidth} setAssistantWidth={layout.setAssistantWidth} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.setSelectedArticleId} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={openSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} />}>
         <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} createBlank={createBlank} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
     </ExtractedWorkspaceShell>;
