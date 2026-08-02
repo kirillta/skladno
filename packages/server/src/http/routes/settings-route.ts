@@ -117,7 +117,7 @@ async function listModels(environmentVariable: string): Promise<string[]> {
 
     const response = await fetch("https://api.openai.com/v1/models", { headers: { authorization: `Bearer ${apiKey}` } });
     if (!response.ok)
-        throw new ApplicationServiceError(APPLICATION_ERROR.OPENAI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
+        throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
 
     const body = await response.json() as { data?: { id?: unknown }[] };
     return (body.data ?? []).map((model) => model.id).filter((id): id is string => typeof id === "string" && !/(embedding|moderation|image|audio|transcri|speech|realtime)/i.test(id)).sort();
@@ -181,7 +181,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
         const saved = connections(repositories.getSetting(aiConnectionsKey)?.value);
         const index = saved.connections.findIndex((connection) => connection.id === connectionId);
         if (index < 0)
-            throw new ApplicationServiceError(APPLICATION_ERROR.OPENAI_CONNECTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+            throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
         if (action === "active" && request.method === HTTP_METHOD.PUT) {
             repositories.setSetting(aiConnectionsKey, { ...saved, activeConnectionId: connectionId });
