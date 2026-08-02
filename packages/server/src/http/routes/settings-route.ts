@@ -163,7 +163,11 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
     if (pathname === aiConnectionsPath && request.method === HTTP_METHOD.POST) {
         const body = object(await readJson(request));
         const saved = connections(repositories.getSetting(aiConnectionsKey)?.value);
-        const connection: OpenAiConnection = { id: randomUUID(), provider: "openai", label: typeof body.label === "string" && body.label.trim() ? body.label.trim() : "OpenAI", environmentVariableName: environmentVariableName(body.environmentVariableName), status: "unchecked" };
+        const requestedEnvironmentVariableName = environmentVariableName(body.environmentVariableName);
+        if (saved.connections.some((connection) => connection.environmentVariableName === requestedEnvironmentVariableName))
+            throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_OPENAI_CONNECTION, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: requestedEnvironmentVariableName });
+
+        const connection: OpenAiConnection = { id: randomUUID(), provider: "openai", label: typeof body.label === "string" && body.label.trim() ? body.label.trim() : "OpenAI", environmentVariableName: requestedEnvironmentVariableName, status: "unchecked" };
         saved.connections.push(connection);
         repositories.setSetting(aiConnectionsKey, { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
         writeJson(response, HTTP_STATUS.CREATED, connection);
@@ -211,7 +215,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
         }
 
         if (!action && request.method === HTTP_METHOD.DELETE) {
-            if (saved.activeConnectionId === connectionId && saved.connections.length > 1)
+            if (saved.activeConnectionId === connectionId)
                 throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REMOVAL_BLOCKED, HTTP_STATUS.BAD_REQUEST);
 
             saved.connections.splice(index, 1);

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { applicationSettingsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article, type GeneralSettings } from "@skladno/shared";
+import { aiConnectionsPath, applicationSettingsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article, type GeneralSettings } from "@skladno/shared";
 import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";
 
@@ -175,6 +175,70 @@ test("General settings preserve valid time zones and reject invalid updates", as
         repositories.setSetting("application-general", { ...defaultGeneralSettings, timeZone: "invalid-zone" });
         const recovered = await fetch(settingsUrl);
         assert.equal((await recovered.json() as { general: GeneralSettings }).general.timeZone, "system");
+    } finally {
+        await new Promise<void>((resolve) => service.close(() => resolve()));
+        database.close();
+        rmSync(directory, { recursive: true, force: true });
+    }
+});
+
+
+test("AI connections reject duplicate environment-variable names and persist active selection and deletion", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "skladno-ai-connections-"));
+    const database = openDatabase(join(directory, "skladno.sqlite"));
+    const service = createLocalService({
+        host: "127.0.0.1",
+        port: 0,
+        webOrigin: "http://localhost:5173",
+        databasePath: "unused",
+        openAiModel: "gpt-5",
+        openAiStoreResponses: false,
+    }, new Repositories(database));
+
+    service.listen(0, "127.0.0.1");
+    await once(service, "listening");
+
+    const address = service.address();
+    assert.ok(address && typeof address !== "string");
+    const connectionsUrl = `http://127.0.0.1:${address.port}${aiConnectionsPath}`;
+
+    try {
+        const firstResponse = await fetch(connectionsUrl, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY" }),
+        });
+        assert.equal(firstResponse.status, HTTP_STATUS.CREATED);
+        const first = await firstResponse.json() as { id: string };
+
+        const duplicate = await fetch(connectionsUrl, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ label: "Duplicate", environmentVariableName: "OPENAI_API_KEY" }),
+        });
+        assert.equal(duplicate.status, HTTP_STATUS.BAD_REQUEST);
+        assert.equal((await duplicate.json() as { error: { code: string } }).error.code, "duplicate_openai_connection");
+
+        const secondResponse = await fetch(connectionsUrl, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ label: "Work OpenAI", environmentVariableName: "WORK_OPENAI_API_KEY" }),
+        });
+        assert.equal(secondResponse.status, HTTP_STATUS.CREATED);
+        const second = await secondResponse.json() as { id: string };
+
+        const activeRemoval = await fetch(`${connectionsUrl}/${first.id}`, { method: HTTP_METHOD.DELETE });
+        assert.equal(activeRemoval.status, HTTP_STATUS.BAD_REQUEST);
+        assert.equal((await activeRemoval.json() as { error: { code: string } }).error.code, "active_connection_removal_blocked");
+
+        const selected = await fetch(`${connectionsUrl}/${second.id}/active`, { method: HTTP_METHOD.PUT });
+        assert.equal(selected.status, HTTP_STATUS.NO_CONTENT);
+        const removed = await fetch(`${connectionsUrl}/${first.id}`, { method: HTTP_METHOD.DELETE });
+        assert.equal(removed.status, HTTP_STATUS.NO_CONTENT);
+
+        const settings = await fetch(`http://127.0.0.1:${address.port}${applicationSettingsPath}`);
+        assert.deepEqual((await settings.json() as { connections: { id: string }[]; activeConnectionId?: string }).connections, [{ id: second.id, provider: "openai", label: "Work OpenAI", environmentVariableName: "WORK_OPENAI_API_KEY", status: "unchecked" }]);
+        assert.equal((await (await fetch(`http://127.0.0.1:${address.port}${applicationSettingsPath}`)).json() as { activeConnectionId?: string }).activeConnectionId, second.id);
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));
         database.close();
