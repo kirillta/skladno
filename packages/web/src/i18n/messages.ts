@@ -335,7 +335,7 @@ export const messages = {
     "errors.invalidEnvironmentVariableName": "Enter an environment-variable name using capital letters, numbers, and underscores.",
     "errors.environmentVariableUnavailable": "The {environmentVariableName} variable is not available to the local service.",
     "errors.openaiConnectionNotFound": "AI connection not found.",
-    "errors.duplicateOpenAiConnection": "That environment-variable name is already saved. Use a different name or remove the existing connection.",
+    "errors.duplicateAiConnection": "That environment-variable name is already saved. Use a different name or remove the existing connection.",
     "errors.activeConnectionRequired": "Add and select an OpenAI connection first.",
     "errors.activeConnectionRemovalBlocked": "Choose another active AI connection before removing this one.",
     "errors.openaiConnectionVerificationFailed": "OpenAI could not verify this connection. Check the variable and its key, then try again.",

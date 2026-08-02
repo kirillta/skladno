@@ -165,7 +165,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
         const saved = connections(repositories.getSetting(aiConnectionsKey)?.value);
         const requestedEnvironmentVariableName = environmentVariableName(body.environmentVariableName);
         if (saved.connections.some((connection) => connection.environmentVariableName === requestedEnvironmentVariableName))
-            throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_OPENAI_CONNECTION, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: requestedEnvironmentVariableName });
+            throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_AI_CONNECTION, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: requestedEnvironmentVariableName });
 
         const connection: OpenAiConnection = { id: randomUUID(), provider: "openai", label: typeof body.label === "string" && body.label.trim() ? body.label.trim() : "OpenAI", environmentVariableName: requestedEnvironmentVariableName, status: "unchecked" };
         saved.connections.push(connection);

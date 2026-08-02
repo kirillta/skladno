@@ -217,7 +217,7 @@ test("AI connections reject duplicate environment-variable names and persist act
             body: JSON.stringify({ label: "Duplicate", environmentVariableName: "OPENAI_API_KEY" }),
         });
         assert.equal(duplicate.status, HTTP_STATUS.BAD_REQUEST);
-        assert.equal((await duplicate.json() as { error: { code: string } }).error.code, "duplicate_openai_connection");
+        assert.equal((await duplicate.json() as { error: { code: string } }).error.code, "duplicate_ai_connection");
 
         const secondResponse = await fetch(connectionsUrl, {
             method: HTTP_METHOD.POST,
