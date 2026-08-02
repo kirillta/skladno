@@ -22,7 +22,7 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, setProfile
     }
 
     return <footer className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
-        <span className="font-semibold">{intl.formatMessage({ id: "status.revision" }, { revisionNumber })}</span>
+        <span className="font-normal text-muted">{intl.formatMessage({ id: "status.revision" }, { revisionNumber })}</span>
         <div className="relative ml-auto">
             <button className={`inline-flex h-6 items-center gap-1 rounded-control px-1.5 hover:bg-brand-soft hover:text-brand focus:outline-none ${tone === "error" ? "font-semibold text-danger" : tone === "warning" ? "font-semibold text-warning" : "text-muted"}`} type="button" aria-expanded={profileMenuOpen} aria-haspopup="menu" aria-label={intl.formatMessage({ id: "status.characterCount.ariaLabel" }, { characterCount: intl.formatNumber(length.count), characterLimit: intl.formatNumber(profile.characterLimit) })} title={length.state === "over-limit" ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(length.remaining)) }) : length.state === "near-limit" ? intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(length.remaining) }) : undefined} onClick={() => setProfileMenuOpen((open) => !open)} onKeyDown={(event) => {
                 if (event.key === "Escape")
