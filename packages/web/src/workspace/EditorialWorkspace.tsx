@@ -836,7 +836,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             const defaultLanguage = settings.general.defaultArticleLanguage;
             const defaultProfileId = await client.getPublishLimitProfile();
             return await workspace.create({
-                title: "Untitled article",
+                title: intl.formatMessage({ id: "article.defaultTitle" }),
                 content: "",
                 language: isArticleLanguage(defaultLanguage) ? defaultLanguage : "en",
                 publishingProfileId: isPublishLimitProfileId(defaultProfileId) ? defaultProfileId : defaultPublishLimitProfileId,
@@ -882,7 +882,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             const activeElement = document.activeElement;
             const focusWillBeLost = !(activeElement instanceof HTMLElement)
                 || activeElement === document.body
-                || Boolean(activeElement.closest('[aria-label="Article Library Panel"], [aria-label="Editorial Assistant Panel"]'));
+                || Boolean(activeElement.closest("[data-workspace-panel]"));
 
             if (focusWillBeLost)
                 document.querySelector<HTMLElement>("[data-article-workspace]")?.focus({ preventScroll: true });
@@ -911,7 +911,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
 
     if (workspace.state === "loading")
         return <main className="grid min-h-screen place-items-center text-muted">
-            Loading your Article Library…
+            {intl.formatMessage({ id: "workspace.loadingArticles" })}
         </main>;
 
     if (workspace.state === "error")

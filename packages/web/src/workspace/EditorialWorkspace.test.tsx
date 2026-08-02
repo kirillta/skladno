@@ -2,9 +2,12 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultGeneralSettings, publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
+import { IntlProvider } from "react-intl";
+import type { ReactElement } from "react";
 
 import { App } from "../App.js";
 import type { EditorialWorkspaceClient } from "../application-client.js";
+import { messages } from "../i18n/messages.js";
 import { articleContentForWorkspace, sortArticlesByActivity } from "./EditorialWorkspace.js";
 import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
@@ -14,6 +17,11 @@ import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
 function article(id: string, title: string): Article {
     const revision: ArticleRevision = { id: `${id}-revision`, articleId: id, content: "Draft", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" } };
     return { id, title, createdAt: revision.createdAt, updatedAt: revision.createdAt, currentRevisionId: revision.id, currentRevision: revision };
+}
+
+
+function renderLocalized(element: ReactElement) {
+    return render(<IntlProvider locale="en" messages={messages}>{element}</IntlProvider>);
 }
 
 
@@ -215,7 +223,7 @@ describe("Editorial Workspace", () => {
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const updateArticle = vi.fn().mockResolvedValue(undefined);
 
-        const panel = render(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} article={article("one", "First Article")} updateArticle={updateArticle} />);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} article={article("one", "First Article")} updateArticle={updateArticle} />);
         const panelScope = within(panel.container);
 
         expect(panelScope.getByText(/Suggestions stay separate from your Article until you accept them\./)).toBeTruthy();
@@ -244,7 +252,7 @@ describe("Editorial Workspace", () => {
     it("selects a target language from the Article Header", async () => {
         const user = userEvent.setup();
         const setLanguage = vi.fn();
-        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={setLanguage} />);
+        const header = renderLocalized(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={setLanguage} />);
         const headerScope = within(header.container);
 
         expect(headerScope.getByRole("combobox", { name: "Target language" })).toBeTruthy();
@@ -258,7 +266,7 @@ describe("Editorial Workspace", () => {
     it("updates the publishing profile from the Status Bar without saving a Revision", async () => {
         const user = userEvent.setup();
         const setProfile = vi.fn().mockResolvedValue(undefined);
-        const statusBar = render(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={setProfile} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={setProfile} />);
 
         await user.click(within(statusBar.container).getByRole("button", { name: /Character count:/ }));
         await user.click(within(statusBar.container).getByRole("menuitemradio", { name: /LinkedIn short post/ }));
@@ -270,7 +278,7 @@ describe("Editorial Workspace", () => {
     it("renames an Article from its header when editing finishes", async () => {
         const user = userEvent.setup();
         const updateArticle = vi.fn().mockResolvedValue(undefined);
-        const header = render(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
+        const header = renderLocalized(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
         const headerScope = within(header.container);
 
         await user.click(headerScope.getByRole("button", { name: "Rename article: Untitled article" }));
@@ -285,7 +293,7 @@ describe("Editorial Workspace", () => {
     it("requires confirmation before deleting an Article", async () => {
         const user = userEvent.setup();
         const remove = vi.fn().mockResolvedValue(undefined);
-        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={remove} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
+        const header = renderLocalized(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={remove} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
         const headerScope = within(header.container);
 
         await user.click(headerScope.getByRole("button", { name: "Delete article" }));
@@ -301,7 +309,7 @@ describe("Editorial Workspace", () => {
 
 
     it("shows a sequential revision number and character count in the Article Status Bar", () => {
-        const statusBar = render(<ArticleStatusBar revisionNumber={2} length={{ count: 1234, remaining: 1766, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={2} length={{ count: 1234, remaining: 1766, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
         expect(statusBarScope.getByText("v2")).toBeTruthy();
@@ -311,7 +319,7 @@ describe("Editorial Workspace", () => {
 
 
     it("shows an overflow state in the Article Status Bar without disabling its profile selector", () => {
-        const statusBar = render(<ArticleStatusBar revisionNumber={1} length={{ count: 3001, remaining: -1, state: "over-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 3001, remaining: -1, state: "over-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
         expect(statusBarScope.getByRole("button", { name: /Character count: 3,001 of 3,000 characters/ })).toBeTruthy();

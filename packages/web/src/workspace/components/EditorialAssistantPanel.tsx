@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { IntlProvider, useIntl } from "react-intl";
-import { messages } from "../../i18n/messages.js";
+import { useIntl } from "react-intl";
 import { BUILT_IN_SKILL, EDITORIAL_OPERATION, KEY_BINDING_COMMAND, builtInSkills, type Article, type AssistantMessage, type BuiltInSkillId, type EditorialOperation, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Banner, Button, Status, TextareaField } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronDownIcon, ChevronRightIcon, SendIcon } from "../../ui/icons.js";
@@ -42,9 +41,7 @@ export function EditorialAssistantPanel(props: {
     dispatcher?: KeyBindingDispatcher;
     shortcutOverrides?: KeyBindingOverrides;
 }) {
-    return <IntlProvider locale="en" messages={messages}>
-        <LocalizedEditorialAssistantPanel {...props} />
-    </IntlProvider>;
+    return <LocalizedEditorialAssistantPanel {...props} />;
 }
 
 function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language, assistantMessages, dispatcher, shortcutOverrides }: {
@@ -88,7 +85,7 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
     }, [dispatcher, onCancel, send, selectedSkill, guidance]);
 
     if (collapsed)
-        return <aside className="flex h-full w-full flex-col border-l border-border bg-surface-supporting p-1" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
+        return <aside data-workspace-panel="editorial-assistant" className="flex h-full w-full flex-col border-l border-border bg-surface-supporting p-1" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
             <header className="flex min-h-18 w-full items-center justify-center">
                 <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.expand" })} onClick={() => setCollapsed(false)}>
                     <span className="grid size-full place-items-center">
@@ -98,7 +95,7 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
             </header>
         </aside>;
 
-    return <aside className="flex h-full min-h-0 w-full flex-col border-l border-border bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
+    return <aside data-workspace-panel="editorial-assistant" className="flex h-full min-h-0 w-full flex-col border-l border-border bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
         <header className="flex min-h-18 items-center border-b border-border px-5">
             <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="ml-3 text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2>

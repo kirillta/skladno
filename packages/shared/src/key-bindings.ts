@@ -44,7 +44,7 @@ function binding(key: string, options: Partial<Omit<KeyBinding, "key">> = {}): K
     return { primary: true, shift: false, alt: false, ...options, key };
 }
 
-export const keyBindingCommands: readonly KeyBindingCommand[] = [
+export const keyBindingCommands = [
     { id: KEY_BINDING_COMMAND.NEW_ARTICLE, category: "general", labelMessageId: "keyBindings.newArticle", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("n"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.SAVE_REVISION, category: "general", labelMessageId: "keyBindings.saveRevision", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("s"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.SEARCH_ARTICLES, category: "general", labelMessageId: "keyBindings.searchArticles", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("f"), scope: "application", allowInEditable: true },
@@ -61,7 +61,7 @@ export const keyBindingCommands: readonly KeyBindingCommand[] = [
     { id: KEY_BINDING_COMMAND.VIEW_PUBLISH, category: "workspace", labelMessageId: "keyBindings.viewPublish", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("7"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.sendEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: binding("enter"), scope: "assistant", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.stopEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: { primary: false, shift: false, alt: false, key: "escape" }, scope: "assistant", allowInEditable: false },
-];
+] as const satisfies readonly KeyBindingCommand[];
 
 const commandIds = new Set<KeyBindingCommandId>(keyBindingCommands.map((command) => command.id));
 

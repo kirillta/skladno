@@ -12,7 +12,7 @@ export function useKeyBindingDispatcher(overrides: KeyBindingOverrides | undefin
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             const target = event.target;
-            const scope = target instanceof HTMLElement && target.closest('[aria-label="Editorial Assistant Panel"]') ? "assistant" : "application";
+            const scope = target instanceof HTMLElement && target.closest('[data-workspace-panel="editorial-assistant"]') ? "assistant" : "application";
             dispatcher.dispatch(event, scope);
         };
         window.addEventListener("keydown", onKeyDown);

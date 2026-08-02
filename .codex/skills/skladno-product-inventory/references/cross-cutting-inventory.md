@@ -2,7 +2,7 @@
 
 | Area | Feature | Status | Contract |
 |---|---|---|---|
-| Internationalization | Validated catalogs and English interface catalog | Implemented | English is the only complete installed catalog; incomplete locales are not selectable. |
+| Internationalization | Typed, validated catalogs and English interface catalog | Implemented | English is the only complete installed catalog; incomplete locales are not selectable. Application copy is linted, production surfaces inherit the root locale provider, localized labels are excluded from selectors and logic, and pseudo-locale coverage guards core workspace surfaces. |
 | Accessibility | Semantic controls, labels, descriptions, focus treatment, keyboard navigation, non-color cues | Implemented | Workspace and Settings accessibility contracts are preserved. |
 | Keyboard control | Shortcut hints, normalization, conflict detection, and command registration | Partial | Persisted overrides and dispatch primitives exist; complete workspace-action wiring remains follow-up work. |
 | Notifications | Shared success/error provider and viewport | Implemented | Recoverable failures are surfaced without sensitive values. |
