@@ -5,6 +5,7 @@ import {
     type ApplicationErrorPayload,
     acceptProposalPath,
     articlesPath,
+    assistantMessagesPath,
     articleRevisionsPath,
     articleDraftPath,
     editorialPath,
@@ -21,6 +22,7 @@ import {
     type ArticleDraft,
     type AcceptProposalInput,
     type ArticleRevision,
+    type AssistantMessage,
     type ArticleLibraryClient,
     type EditorialClient,
     type EditorialEvent,
@@ -114,6 +116,10 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async createArticle(input: CreateArticleInput): Promise<Article> {
         return this.request<Article>(articlesPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+    }
+
+    async listAssistantMessages(articleId: string): Promise<AssistantMessage[]> {
+        return this.request<AssistantMessage[]>(assistantMessagesPath(articleId));
     }
 
 

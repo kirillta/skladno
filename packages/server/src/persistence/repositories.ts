@@ -17,6 +17,7 @@ import type {
     SourceCitation,
     UpdateMaterialInput,
     EditorialArtifact,
+    AssistantMessage,
     CreateStyleCorpusItemInput,
     StyleCorpus,
 } from "@skladno/shared";
@@ -28,6 +29,7 @@ import { MaterialsRepository } from "./repositories/materials-repository.js";
 import { SettingsRepository } from "./repositories/settings-repository.js";
 import { EditorialArtifactsRepository } from "./repositories/workflow-artifacts-repository.js";
 import { StyleCorpusRepository } from "./repositories/style-corpus-repository.js";
+import { AssistantRepository } from "./repositories/assistant-repository.js";
 
 
 /** Compatibility facade for current application services. Domain repositories remain independently usable. */
@@ -38,6 +40,7 @@ export class Repositories {
     readonly settings: SettingsRepository;
     readonly editorialSessions: EditorialSessionsRepository;
     readonly styleCorpus: StyleCorpusRepository;
+    readonly assistant: AssistantRepository;
 
 
     constructor(database: SqliteDatabase) {
@@ -47,6 +50,8 @@ export class Repositories {
         this.settings = new SettingsRepository(database);
         this.editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(this.articles.get(articleId)));
         this.styleCorpus = new StyleCorpusRepository(database);
+        this.assistant = new AssistantRepository(database);
+        this.assistant.seedGreetings();
     }
 
 
@@ -66,7 +71,10 @@ export class Repositories {
 
 
     createArticle(input: CreateArticleInput): Article {
-        return this.articles.create(input);
+        const article = this.articles.create(input);
+        this.assistant.ensureGreeting(article.id);
+
+        return article;
     }
 
 
@@ -87,6 +95,13 @@ export class Repositories {
 
     deleteArticle(articleId: string): void {
         this.articles.delete(articleId);
+    }
+
+    listAssistantMessages(articleId: string): AssistantMessage[] {
+        if (!this.articles.get(articleId))
+            throw new Error("Article not found.");
+
+        return this.assistant.listMessages(articleId);
     }
 
 

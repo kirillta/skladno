@@ -13,14 +13,14 @@ import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
 
 function article(id: string, title: string): Article {
     const revision: ArticleRevision = { id: `${id}-revision`, articleId: id, content: "Draft", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" } };
-    return { id, title, createdAt: revision.createdAt, updatedAt: revision.createdAt, currentRevisionId: revision.id, currentRevision: revision, workflowStage: "talking_points" };
+    return { id, title, createdAt: revision.createdAt, updatedAt: revision.createdAt, currentRevisionId: revision.id, currentRevision: revision };
 }
 
 
 function fakeClient(): EditorialWorkspaceClient {
     const created = article("new", "New Article");
     return {
-        getHealth: vi.fn(), listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]), createArticle: vi.fn().mockResolvedValue(created), updateArticle: vi.fn(), deleteArticle: vi.fn(), saveArticleDraft: vi.fn(), discardArticleDraft: vi.fn(), saveArticleRevision: vi.fn(), listArticleRevisions: vi.fn().mockResolvedValue([]), acceptProposal: vi.fn(), restoreRevision: vi.fn(), streamEditorial: vi.fn(), getStyleCorpus: vi.fn().mockResolvedValue({ items: [] }), addStyleCorpusItem: vi.fn(), removeStyleCorpusItem: vi.fn(), getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"), setPublishLimitProfile: vi.fn(), getApplicationSettings: vi.fn().mockResolvedValue({ general: defaultGeneralSettings, connections: [], modelPreferences: { defaultModel: "", operationOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} }), updateGeneralSettings: vi.fn(), updateBackupPolicy: vi.fn(), updateKeyBindingOverrides: vi.fn(), addOpenAiConnection: vi.fn(), updateOpenAiConnection: vi.fn(), removeOpenAiConnection: vi.fn(), setActiveOpenAiConnection: vi.fn(), testOpenAiConnection: vi.fn(), refreshOpenAiModels: vi.fn(), updateModelPreferences: vi.fn(),
+        getHealth: vi.fn(), listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]), createArticle: vi.fn().mockResolvedValue(created), updateArticle: vi.fn(), deleteArticle: vi.fn(), saveArticleDraft: vi.fn(), discardArticleDraft: vi.fn(), saveArticleRevision: vi.fn(), listArticleRevisions: vi.fn().mockResolvedValue([]), listAssistantMessages: vi.fn().mockResolvedValue([]), acceptProposal: vi.fn(), restoreRevision: vi.fn(), streamEditorial: vi.fn(), getStyleCorpus: vi.fn().mockResolvedValue({ items: [] }), addStyleCorpusItem: vi.fn(), removeStyleCorpusItem: vi.fn(), getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"), setPublishLimitProfile: vi.fn(), getApplicationSettings: vi.fn().mockResolvedValue({ general: defaultGeneralSettings, connections: [], modelPreferences: { defaultModel: "", skillOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} }), updateGeneralSettings: vi.fn(), updateBackupPolicy: vi.fn(), updateKeyBindingOverrides: vi.fn(), addOpenAiConnection: vi.fn(), updateOpenAiConnection: vi.fn(), removeOpenAiConnection: vi.fn(), setActiveOpenAiConnection: vi.fn(), testOpenAiConnection: vi.fn(), refreshOpenAiModels: vi.fn(), updateModelPreferences: vi.fn(),
     };
 }
 
@@ -215,20 +215,25 @@ describe("Editorial Workspace", () => {
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const updateArticle = vi.fn().mockResolvedValue(undefined);
 
-        const panel = render(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" article={article("one", "First Article")} updateArticle={updateArticle} />);
+        const panel = render(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} article={article("one", "First Article")} updateArticle={updateArticle} />);
         const panelScope = within(panel.container);
 
         expect(panelScope.getByText(/Suggestions stay separate from your Article until you accept them\./)).toBeTruthy();
+        expect(panelScope.getByText(/I’m here to help shape this Article/)).toBeTruthy();
         expect(panelScope.queryByRole("button", { name: "Talking points" })).toBeNull();
 
         await user.click(panelScope.getByRole("button", { name: "Stages" }));
 
+        expect(panelScope.getByRole("button", { name: "Talking points" })).toBeTruthy();
+        expect(panelScope.getByRole("button", { name: "Narrative draft" })).toBeTruthy();
+        expect(panelScope.getByRole("button", { name: "Flow and clarity" })).toBeTruthy();
+        expect(panelScope.getByRole("button", { name: "Fact checking" })).toBeTruthy();
+        expect(panelScope.getByRole("button", { name: "Style review" })).toBeTruthy();
         expect(panelScope.getByRole("button", { name: "Translation" })).toBeTruthy();
 
         await user.type(panelScope.getByRole("textbox", { name: "Editorial guidance" }), "Preserve the key claims.");
         await user.click(panelScope.getByRole("button", { name: "Translation" }));
         expect(onRequest).not.toHaveBeenCalled();
-        expect(updateArticle).toHaveBeenCalledWith("one", { workflowStage: "translation" });
 
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 

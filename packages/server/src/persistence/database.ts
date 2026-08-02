@@ -100,6 +100,43 @@ const migrations = [
         );
         `,
     },
+    {
+        version: 8,
+        name: "assistant_conversations",
+        sql: `
+        CREATE TABLE assistant_requests (
+            id TEXT PRIMARY KEY,
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            base_revision_id TEXT NOT NULL REFERENCES article_revisions(id) ON DELETE RESTRICT,
+            scope_json TEXT NOT NULL,
+            explicit_skill_id TEXT,
+            resolved_skill_id TEXT,
+            skill_source TEXT,
+            status TEXT NOT NULL,
+            retry_of_request_id TEXT REFERENCES assistant_requests(id) ON DELETE SET NULL,
+            error_code TEXT,
+            error_parameters_json TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX assistant_requests_article_created ON assistant_requests(article_id, created_at, id);
+        CREATE TABLE assistant_messages (
+            id TEXT PRIMARY KEY,
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            request_id TEXT REFERENCES assistant_requests(id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            status TEXT NOT NULL,
+            content TEXT,
+            skill_id TEXT,
+            response_kind TEXT,
+            editorial_artifact_id TEXT REFERENCES editorial_artifacts(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX assistant_messages_article_created ON assistant_messages(article_id, created_at, id);
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

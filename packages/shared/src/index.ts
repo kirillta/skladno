@@ -108,7 +108,7 @@ export type {
     EditorialArtifact,
 } from "./persistence/index.js";
 export { articlesPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./workspace.js";
-export { WORKFLOW_STAGE, isWorkflowStage, workflowStages, type WorkflowStage } from "./workflow-stage.js";
+export { BUILT_IN_SKILL, assistantMessagesPath, builtInSkills, builtInSkillScopeCompatibility, isBuiltInSkillId, legacyEditorialOperationSkillMap, resolveBuiltInSkillId, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantMessageTemplate, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId } from "./assistant.js";
 export { ARTICLE_LANGUAGE, articleLanguages, isArticleLanguage, type ArticleLanguage } from "./languages.js";
 export {
     countPublishingCharacters,

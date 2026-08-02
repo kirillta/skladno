@@ -18,7 +18,6 @@ const article: Article = {
         createdAt: "2026-01-01T00:00:00.000Z",
         provenance: { kind: "initial" },
     },
-    workflowStage: "talking_points",
 };
 
 
