@@ -88,11 +88,11 @@ describe("RevisionHistoryView", () => {
     });
 
 
-    it("uses the saved 24-hour time preference for Revision timestamps", () => {
+    it("uses the saved time format and time zone preference for Revision timestamps", () => {
         const initial = revision("initial", "Initial", "initial", "2026-01-01T15:45:00.000Z");
-        renderHistory([initial], initial.id, { ...defaultGeneralSettings, timeFormat: "24-hour" });
+        renderHistory([initial], initial.id, { ...defaultGeneralSettings, timeFormat: "24-hour", timeZone: "America/New_York" });
 
-        expect(screen.getAllByText(/15:45/).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/10:45/).length).toBeGreaterThan(0);
         expect(screen.queryByText(/PM/)).toBeNull();
     });
 });

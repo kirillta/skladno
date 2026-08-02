@@ -15,6 +15,7 @@ export {
     defaultGeneralSettings,
     defaultInterfaceLocale,
     INTERFACE_LOCALE,
+    isTimeZonePreference,
     type ApplicationScreen,
     type ApplicationSettingsClient,
     type ApplicationSettingsSnapshot,
@@ -27,6 +28,7 @@ export {
     type OpenAiConnection,
     type ThemePreference,
     type TimeFormatPreference,
+    type TimeZonePreference,
 } from "./settings.js";
 export {
     KEY_BINDING_COMMAND,

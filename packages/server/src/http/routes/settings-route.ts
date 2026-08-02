@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, isKeyBindingCommandId, keyBindingsPath, normalizeKeyBinding, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, isKeyBindingCommandId, isTimeZonePreference, keyBindingsPath, normalizeKeyBinding, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, writeJson } from "../json.js";
 import { ApplicationServiceError } from "../application-error.js";
@@ -11,12 +11,16 @@ const aiConnectionsKey = "application-ai-connections";
 const modelPreferencesKey = "application-model-preferences";
 const keyBindingsKey = "application-key-bindings";
 
-function general(value: unknown): GeneralSettings {
+function general(value: unknown, rejectInvalidTimeZone = false): GeneralSettings {
     const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
+    if (rejectInvalidTimeZone && candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
     return {
         ...defaultGeneralSettings,
         ...candidate,
         interfaceLocale: candidate.interfaceLocale === INTERFACE_LOCALE.EN ? candidate.interfaceLocale : defaultInterfaceLocale,
+        timeZone: isTimeZonePreference(candidate.timeZone) ? candidate.timeZone : defaultGeneralSettings.timeZone,
         defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages)
             ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))]
             : [],
@@ -133,7 +137,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
     }
 
     if (pathname === `${applicationSettingsPath}/general` && request.method === HTTP_METHOD.PUT) {
-        const value = general(object(await readJson(request)));
+        const value = general(object(await readJson(request)), true);
         repositories.setSetting(generalKey, value);
 
         writeJson(response, HTTP_STATUS.OK, value);
