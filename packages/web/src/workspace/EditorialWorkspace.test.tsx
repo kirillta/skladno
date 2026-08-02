@@ -218,7 +218,7 @@ describe("Editorial Workspace", () => {
     });
 
 
-    it("selects an advisory Stage before an editorial request without applying a proposal", async () => {
+    it("inserts a Quick action before sending an editorial request", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const updateArticle = vi.fn().mockResolvedValue(undefined);
@@ -226,11 +226,10 @@ describe("Editorial Workspace", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} article={article("one", "First Article")} updateArticle={updateArticle} />);
         const panelScope = within(panel.container);
 
-        expect(panelScope.getByText(/Suggestions stay separate from your Article until you accept them\./)).toBeTruthy();
         expect(panelScope.getByText(/I’m here to help shape this Article/)).toBeTruthy();
         expect(panelScope.queryByRole("button", { name: "Talking points" })).toBeNull();
 
-        await user.click(panelScope.getByRole("button", { name: "Stages" }));
+        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
 
         expect(panelScope.getByRole("button", { name: "Talking points" })).toBeTruthy();
         expect(panelScope.getByRole("button", { name: "Narrative draft" })).toBeTruthy();
@@ -245,7 +244,7 @@ describe("Editorial Workspace", () => {
 
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
-        expect(onRequest).toHaveBeenCalledWith("translation", "Preserve the key claims.", "Portuguese");
+        expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", "Portuguese");
     });
 
 
