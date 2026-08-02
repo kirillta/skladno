@@ -87,13 +87,18 @@ export function WorkspaceShell({ children, library, assistant, focusMode, librar
     const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
     const requestedLibraryWidth = libraryCollapsed ? libraryLimits.collapsed : libraryWidth;
     const assistantMaximum = Math.min(Math.floor(viewportWidth / 2), viewportWidth - requestedLibraryWidth - articleWorkspaceMinimum);
-    const requestedAssistantWidth = assistantMaximum >= assistantLimits.minimum ? clamp(assistantWidth, assistantLimits.minimum, assistantMaximum) : assistantLimits.collapsed;
+    // Keep the author's requested width separate from the width that can be rendered
+    // in the current viewport. Otherwise clamping it first masks the condition that
+    // should temporarily collapse the Assistant Panel.
+    const requestedAssistantWidth = Math.max(assistantWidth, assistantLimits.minimum);
     const requiredWidth = requestedLibraryWidth + (assistantCollapsed ? assistantLimits.collapsed : requestedAssistantWidth) + articleWorkspaceMinimum;
     const effectiveAssistantCollapsed = !focusMode && (assistantCollapsed || requiredWidth > viewportWidth);
     const widthWithoutAssistant = (libraryCollapsed ? libraryLimits.collapsed : libraryWidth) + assistantLimits.collapsed + articleWorkspaceMinimum;
     const effectiveLibraryCollapsed = !focusMode && (libraryCollapsed || widthWithoutAssistant > viewportWidth);
     const effectiveLibraryWidth = effectiveLibraryCollapsed ? libraryLimits.collapsed : libraryWidth;
-    const effectiveAssistantWidth = effectiveAssistantCollapsed ? assistantLimits.collapsed : requestedAssistantWidth;
+    const effectiveAssistantWidth = effectiveAssistantCollapsed
+        ? assistantLimits.collapsed
+        : clamp(requestedAssistantWidth, assistantLimits.minimum, assistantMaximum);
 
     useEffect(() => {
         function updateViewportWidth() {

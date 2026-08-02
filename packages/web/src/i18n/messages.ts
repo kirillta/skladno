@@ -94,6 +94,7 @@ export const messages = {
     "assistant.preparing": "Preparing your proposal…",
     "assistant.quickActions": "Quick actions",
     "assistant.quickActionSelected": "Quick actions: {operation} selected",
+    "assistant.stages": "Stages",
     "assistant.guidance": "Editorial guidance",
     "assistant.guidancePlaceholder": "Ask or instruct…",
     "assistant.send": "Send editorial request",
