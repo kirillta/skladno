@@ -78,6 +78,17 @@ function EditorBridge({ content, onChange, onReady }: { content: string; onChang
 }
 
 
+function EditorSelectionBridge({ onSelectionChange }: { onSelectionChange?: (value: string | undefined) => void }) {
+    return <OnChangePlugin ignoreHistoryMergeTagChange ignoreSelectionChange={false} onChange={(state) => {
+        state.read(() => {
+            const selection = $getSelection();
+            const text = $isRangeSelection(selection) ? selection.getTextContent() : "";
+            onSelectionChange?.(text || undefined);
+        });
+    }} />;
+}
+
+
 function $setBlockType(type: BlockType) {
     const selection = $getSelection();
     if (!$isRangeSelection(selection))
@@ -459,7 +470,7 @@ function SupportedPastePlugin() {
 }
 
 
-function EditorContents({ content, onChange }: { content: string; onChange: (value: string) => void }) {
+function EditorContents({ content, onChange, onSelectionChange }: { content: string; onChange: (value: string) => void; onSelectionChange?: (value: string | undefined) => void }) {
     const intl = useIntl();
     const [editor, setEditor] = useState<LexicalEditor>();
     return <>{editor && <LinkControl editor={editor} />}
@@ -472,6 +483,7 @@ function EditorContents({ content, onChange }: { content: string; onChange: (val
                     <LinkPlugin />
                     <SupportedPastePlugin />
                     <EditorBridge content={content} onChange={onChange} onReady={setEditor} />
+                    <EditorSelectionBridge onSelectionChange={onSelectionChange} />
                 </div>
             </div>
         </div>
@@ -479,7 +491,7 @@ function EditorContents({ content, onChange }: { content: string; onChange: (val
 }
 
 
-export function ArticleRichEditor({ articleId, content, setContent }: { articleId: string; content: string; setContent: (value: string) => void }) {
+export function ArticleRichEditor({ articleId, content, setContent, onSelectionChange }: { articleId: string; content: string; setContent: (value: string) => void; onSelectionChange?: (value: string | undefined) => void }) {
     const config = useMemo(() => ({
         namespace: `skladno-article-${articleId}`,
         nodes: articleEditorNodes,
@@ -493,7 +505,7 @@ export function ArticleRichEditor({ articleId, content, setContent }: { articleI
 
     return <LexicalComposer key={articleId} initialConfig={config}>
         <div className="flex h-full min-h-0 flex-col">
-            <EditorContents content={content} onChange={setContent} />
+            <EditorContents content={content} onChange={setContent} onSelectionChange={onSelectionChange} />
         </div>
     </LexicalComposer>;
 }

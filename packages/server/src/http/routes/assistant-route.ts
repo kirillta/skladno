@@ -1,12 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, HTTP_METHOD, HTTP_STATUS, isBuiltInSkillId, type AssistantEvent, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, HTTP_METHOD, HTTP_STATUS, isBuiltInSkillId, type AssistantEditorialResult, type AssistantEvent, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation } from "@skladno/shared";
 
 import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine, type EditorialEngineEvent } from "../../editorial/editorial-engine.js";
 import { Repositories } from "../../persistence/index.js";
 import { ApplicationServiceError } from "../application-error.js";
 import { object, readJson, string, writeJson } from "../json.js";
 
-type ResolveEngine = (operation: EditorialOperation) => EditorialEngine | undefined;
+type ResolveEngine = (operation: EditorialOperation, skillId?: BuiltInSkillId) => EditorialEngine | undefined;
 
 interface AssistantRequestInput {
     requestId: string;
@@ -135,7 +135,7 @@ function prepareAssistantRequest(articleId: string, input: AssistantRequestInput
         throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
     const operation = operationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
-    const engine = resolveEngine(operation);
+    const engine = resolveEngine(operation, resolvedSkillId);
     if (!engine)
         throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 
@@ -188,7 +188,7 @@ function completedContent(request: PreparedAssistantRequest, text: string): stri
 }
 
 
-function persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>, repositories: Repositories): { messageId: string; artifactId?: string; responseKind: AssistantResponseKind } {
+function persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>, repositories: Repositories): { messageId: string; artifactId?: string; responseKind: AssistantResponseKind; result?: AssistantEditorialResult } {
     const content = completedContent(request, event.text);
     const kind = responseKind(request.resolvedSkillId);
     const artifactId = request.resolvedSkillId
@@ -196,7 +196,16 @@ function persistCompletion(request: PreparedAssistantRequest, event: Extract<Edi
         : undefined;
     const message = repositories.assistant.completeRequest({ requestId: request.requestId, articleId: request.articleId, skillId: request.resolvedSkillId, responseKind: kind, content: request.resolvedSkillId ? "" : content, editorialArtifactId: artifactId });
 
-    return { messageId: message.id, ...(artifactId ? { artifactId } : {}), responseKind: kind };
+    const result: AssistantEditorialResult | undefined = request.resolvedSkillId
+        ? {
+            ...(request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING && event.factCheck ? { factCheck: event.factCheck } : {}),
+            ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { proposal: content, ...(event.styleReview ? { styleReview: event.styleReview } : {}) } : {}),
+            ...(request.resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && event.translation ? { translation: { metadata: event.translation, content } } : {}),
+            ...(request.resolvedSkillId === BUILT_IN_SKILL.TALKING_POINTS || request.resolvedSkillId === BUILT_IN_SKILL.NARRATIVE_DRAFT || request.resolvedSkillId === BUILT_IN_SKILL.FLOW_AND_CLARITY ? { proposal: content } : {}),
+        }
+        : undefined;
+
+    return { messageId: message.id, ...(artifactId ? { artifactId } : {}), responseKind: kind, ...(result ? { result } : {}) };
 }
 
 
@@ -215,7 +224,7 @@ async function streamAssistantRequest(request: PreparedAssistantRequest, incomin
             } else {
                 completed = true;
                 const completion = persistCompletion(request, event, repositories);
-                writeEvent(response, { type: "completed", requestId: request.requestId, responseKind: completion.responseKind, messageId: completion.messageId, ...(completion.artifactId ? { editorialArtifactId: completion.artifactId } : {}) });
+                writeEvent(response, { type: "completed", requestId: request.requestId, responseKind: completion.responseKind, messageId: completion.messageId, ...(completion.artifactId ? { editorialArtifactId: completion.artifactId } : {}), ...(completion.result ? { result: completion.result } : {}) });
             }
         }
 

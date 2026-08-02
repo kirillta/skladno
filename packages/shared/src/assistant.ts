@@ -112,6 +112,16 @@ export interface AssistantMessage {
     updatedAt: string;
 }
 
+export interface AssistantEditorialResult {
+    proposal?: string;
+    factCheck?: import("./editorial.js").FactCheck;
+    styleReview?: import("./editorial.js").StyleReview;
+    translation?: {
+        metadata: import("./editorial.js").TranslationMetadata;
+        content: string;
+    };
+}
+
 
 export const assistantMessagesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/messages`;
 export const assistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
@@ -130,7 +140,7 @@ export type AssistantEvent =
     | { type: "skill_resolved"; requestId: string; skillId?: BuiltInSkillId; source?: AssistantSkillSource }
     | { type: "text_delta"; requestId: string; delta: string }
     | { type: "tool_status"; requestId: string; tool: string; status: "started" | "completed" }
-    | { type: "completed"; requestId: string; responseKind: AssistantResponseKind; messageId: string; editorialArtifactId?: string }
+    | { type: "completed"; requestId: string; responseKind: AssistantResponseKind; messageId: string; editorialArtifactId?: string; result?: AssistantEditorialResult }
     | { type: "error"; requestId: string; errorCode: import("./errors.js").ApplicationErrorCode; retryable: boolean };
 
 export interface AssistantClient {

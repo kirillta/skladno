@@ -22,7 +22,7 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 
 
 export function createLocalService(config: ServerConfig, repositories: Repositories, engine?: EditorialEngine) {
-    function resolveEngine(operation: EditorialOperation): EditorialEngine | undefined {
+    function resolveEngine(operation: EditorialOperation, assistantSkillId?: import("@skladno/shared").BuiltInSkillId): EditorialEngine | undefined {
         if (engine)
             return engine;
 
@@ -33,7 +33,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
             return undefined;
 
         const preferences = repositories.getSetting("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
-        const skillId = resolveBuiltInSkillId(operation);
+        const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
         const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || config.openAiModel;
         return new LangChainEditorialEngine({ apiKey, model, storeResponses: config.openAiStoreResponses });
     }

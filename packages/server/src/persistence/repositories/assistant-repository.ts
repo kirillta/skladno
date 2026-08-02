@@ -82,7 +82,23 @@ export class AssistantRepository {
     }
 
     failRequest(requestId: string, status: "failed" | "cancelled", errorCode: string): void {
-        this.database.prepare("UPDATE assistant_requests SET status = ?, error_code = ?, updated_at = ? WHERE id = ?").run(status, errorCode, now(), requestId);
+        const timestamp = now();
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            const request = this.getRequest(requestId);
+            if (!request || request.status === "completed") {
+                this.database.exec("COMMIT;");
+                return;
+            }
+
+            this.database.prepare("UPDATE assistant_requests SET status = ?, error_code = ?, updated_at = ? WHERE id = ?").run(status, errorCode, timestamp, requestId);
+            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, created_at, updated_at) SELECT ?, article_id, id, 'assistant', 'status', ?, ?, ? FROM assistant_requests WHERE id = ? AND NOT EXISTS (SELECT 1 FROM assistant_messages WHERE request_id = ? AND kind = 'status')")
+                .run(createId(), status, timestamp, timestamp, requestId, requestId);
+            this.database.exec("COMMIT;");
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
     }
 
     getRequest(requestId: string): AssistantRequest | undefined {
@@ -123,7 +139,7 @@ export class AssistantRepository {
 
         return {
             id: String(row.id), articleId: String(row.article_id), ...(row.request_id === null ? {} : { requestId: String(row.request_id) }), role, kind, status,
-            ...(row.content === null ? {} : { content: String(row.content) }), ...(kind === "greeting" ? { template: "greeting" as const } : {}), ...(skillId === undefined ? {} : { skillId }),
+            ...(row.content === null ? {} : { content: String(row.content) }), ...(kind === "greeting" ? { template: "greeting" as const } : {}), ...(status === "cancelled" ? { template: "request_cancelled" as const } : {}), ...(status === "failed" ? { template: "request_failed" as const } : {}), ...(skillId === undefined ? {} : { skillId }),
             ...(row.response_kind === null ? {} : { responseKind: String(row.response_kind) as AssistantMessage["responseKind"] }),
             ...(row.editorial_artifact_id === null ? {} : { editorialArtifactId: String(row.editorial_artifact_id) }), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
         };

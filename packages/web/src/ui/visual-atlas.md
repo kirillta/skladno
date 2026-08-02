@@ -110,7 +110,7 @@ Diff color is always paired with `ins`/`del` semantics, an Added/Removed or Prop
 | Area | Surface | Primary type | Supporting type | Accent |
 | --- | --- | --- | --- | --- |
 | Article Library Panel | `surface` | Body label | Overline and metadata | `brand` for selection and identity |
-| Article Header | `surface-raised` | Article title | Metadata and control label | `brand` for the active workflow stage |
+| Article Header | `surface-raised` | Article title | Metadata and control label | `brand` for active Article controls |
 | Workspace Tab Bar | Inherited workspace surface | Control label | — | `brand` for the selected view |
 | Article Editor | `surface-raised` | Article body | Metadata | `brand` only for actions and focus |
 | Supporting workspace views | Inherited workspace surface | Panel title and body | Metadata or status copy | Semantic status colors as needed |

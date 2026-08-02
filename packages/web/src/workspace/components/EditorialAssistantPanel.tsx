@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useIntl } from "react-intl";
-import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkills, type Article, type AssistantMessage, type AssistantResponseKind, type BuiltInSkillId, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
+import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, type Article, type AssistantMessage, type AssistantResponseKind, type BuiltInSkillId, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Banner, Button, Status, TextareaField } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, SendIcon } from "../../ui/icons.js";
 import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
@@ -28,7 +28,7 @@ const responseMessages: Record<AssistantResponseKind, "assistant.response.conver
 };
 
 
-export function EditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language, assistantMessages, dispatcher, shortcutOverrides, openView }: {
+export function EditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language, assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection }: {
     state: "idle" | "streaming" | "error";
     message: string;
     onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string) => Promise<void>;
@@ -42,30 +42,36 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
     dispatcher?: KeyBindingDispatcher;
     shortcutOverrides?: KeyBindingOverrides;
     openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
+    selection?: string;
+    clearSelection?: () => void;
 }) {
     const intl = useIntl();
     const [guidance, setGuidance] = useState("");
     const [quickActionsOpen, setQuickActionsOpen] = useState(false);
-    const [selectedSkill, setSelectedSkill] = useState<BuiltInSkillId>();
     const greeting = assistantMessages?.find((item) => item.template === "greeting" || item.kind === "greeting");
-    const canSend = state !== "streaming" && (Boolean(selectedSkill) || Boolean(guidance.trim()));
+    const tag = /\[skill:(talking_points|narrative_draft|flow_and_clarity|fact_checking|style_review|translation)\]/.exec(guidance)?.[1] as BuiltInSkillId | undefined;
+    const canSend = state !== "streaming" && Boolean(guidance.replace(/\[skill:[^\]]+\]/g, "").trim());
 
     const selectSkill = useCallback((skill: BuiltInSkillId) => {
         setQuickActionsOpen(false);
-        setSelectedSkill(skill);
-        requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>("[data-assistant-composer]")?.focus());
-    }, []);
+        const input = document.querySelector<HTMLTextAreaElement>("[data-assistant-composer]");
+        const start = input?.selectionStart ?? guidance.length;
+        const end = input?.selectionEnd ?? start;
+        const withoutTag = guidance.replace(/\[skill:[^\]]+\]\s*/g, "");
+        const next = `${withoutTag.slice(0, start)}[skill:${skill}] ${withoutTag.slice(end)}`;
+        setGuidance(next);
+        requestAnimationFrame(() => input?.focus());
+    }, [guidance]);
 
     const send = useCallback(() => {
         if (!canSend)
             return;
 
-        void onRequest(guidance, selectedSkill, selectedSkill === BUILT_IN_SKILL.TRANSLATION ? language : undefined)
+        void onRequest(guidance.replace(/\[skill:[^\]]+\]\s*/g, "").trim(), tag, tag === BUILT_IN_SKILL.TRANSLATION ? language : undefined)
             .then(() => {
                 setGuidance("");
-                setSelectedSkill(undefined);
             });
-    }, [canSend, guidance, language, onRequest, selectedSkill]);
+    }, [canSend, guidance, language, onRequest, tag]);
 
     useEffect(() => {
         const unregisterSend = dispatcher?.register(KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, send);
@@ -93,12 +99,17 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
         <footer className="shrink-0 border-t border-border px-5 py-4">
             <div className="relative mb-3">
                 {quickActionsOpen && <div className="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "assistant.quickActions" })}>
-                    {builtInSkills.map((skill) => <Button className="flex w-full justify-start text-xs" key={skill} disabled={state === "streaming"} variant="quiet" onClick={() => selectSkill(skill)}>{intl.formatMessage({ id: skillMessages[skill] })}</Button>)}
+                    {builtInSkills.filter((skill) => !selection || builtInSkillScopeCompatibility[skill].includes("selection")).map((skill) => <Button className="flex w-full justify-start text-xs" key={skill} disabled={state === "streaming"} variant="quiet" onClick={() => selectSkill(skill)}>{intl.formatMessage({ id: skillMessages[skill] })}</Button>)}
                 </div>}
                 <Button className="flex items-center gap-2" variant="secondary" aria-expanded={quickActionsOpen} onClick={() => setQuickActionsOpen((open) => !open)}>{intl.formatMessage({ id: "assistant.quickActions" })}<ChevronDownIcon className={`size-4 ${quickActionsOpen ? "rotate-180" : ""}`} /></Button>
             </div>
-            {selectedSkill && <span className="mb-2 inline-flex items-center gap-1 rounded-control border border-border bg-surface-raised px-2 py-1 text-xs" aria-label={intl.formatMessage({ id: "assistant.selectedSkill" }, { skill: intl.formatMessage({ id: skillMessages[selectedSkill] }) })}>{intl.formatMessage({ id: skillMessages[selectedSkill] })}<Button className="inline-grid size-5 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.removeSkill" }, { skill: intl.formatMessage({ id: skillMessages[selectedSkill] }) })} onClick={() => setSelectedSkill(undefined)}><CloseIcon className="size-3" /></Button></span>}
-            <div className="relative"><TextareaField data-assistant-composer className="min-h-25 resize-y pr-12" aria-label={intl.formatMessage({ id: "assistant.guidance" })} value={guidance} onChange={(event) => setGuidance(event.target.value)} placeholder={intl.formatMessage({ id: "assistant.guidancePlaceholder" })} /><Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center p-1" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button></div>
+            {tag && <span className="mb-2 inline-flex items-center gap-1 rounded-control border border-border bg-surface-raised px-2 py-1 text-xs" aria-label={intl.formatMessage({ id: "assistant.selectedSkill" }, { skill: intl.formatMessage({ id: skillMessages[tag] }) })}>{intl.formatMessage({ id: skillMessages[tag] })}<Button className="inline-grid size-5 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.removeSkill" }, { skill: intl.formatMessage({ id: skillMessages[tag] }) })} onClick={() => setGuidance((value) => value.replace(/\[skill:[^\]]+\]\s*/g, ""))}><CloseIcon className="size-3" /></Button></span>}
+            {selection && <span className="mb-2 ml-2 inline-flex items-center gap-1 rounded-control border border-border bg-surface-raised px-2 py-1 text-xs">{intl.formatMessage({ id: "assistant.articleSelection" })}<Button className="inline-grid size-5 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.clearArticleSelection" })} onClick={clearSelection}><CloseIcon className="size-3" /></Button></span>}
+            <div className="relative"><TextareaField data-assistant-composer className="min-h-25 resize-y pr-12" aria-label={intl.formatMessage({ id: "assistant.guidance" })} value={guidance} onChange={(event) => {
+                setGuidance(event.target.value);
+                if (event.target.value.endsWith("/"))
+                    setQuickActionsOpen(true);
+            }} placeholder={intl.formatMessage({ id: "assistant.guidancePlaceholder" })} /><Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center p-1" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button></div>
             {state === "streaming" && <Button className="mt-3" variant="danger" title={shortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} onClick={onCancel}>{intl.formatMessage({ id: "assistant.stop" })}</Button>}
         </footer>
     </aside>;

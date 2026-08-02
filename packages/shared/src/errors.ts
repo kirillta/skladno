@@ -9,7 +9,6 @@ export const APPLICATION_ERROR = {
     REVISION_CONFLICT: "revision_conflict",
     DRAFT_CONFLICT: "draft_conflict",
     UNSUPPORTED_PUBLISHING_PROFILE: "unsupported_publishing_profile",
-    INVALID_WORKFLOW_STAGE: "invalid_workflow_stage",
     INVALID_ENVIRONMENT_VARIABLE_NAME: "invalid_environment_variable_name",
     ENVIRONMENT_VARIABLE_UNAVAILABLE: "environment_variable_unavailable",
     AI_CONNECTION_NOT_FOUND: "ai_connection_not_found",

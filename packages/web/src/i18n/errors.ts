@@ -13,7 +13,6 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     revision_conflict: "errors.revisionConflict",
     draft_conflict: "errors.revisionConflict",
     unsupported_publishing_profile: "errors.unsupportedPublishingProfile",
-    invalid_workflow_stage: "errors.invalidWorkflowStage",
     invalid_environment_variable_name: "errors.invalidEnvironmentVariableName",
     environment_variable_unavailable: "errors.environmentVariableUnavailable",
     ai_connection_not_found: "errors.aiConnectionNotFound",

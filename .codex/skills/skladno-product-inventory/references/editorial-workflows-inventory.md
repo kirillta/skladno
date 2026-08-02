@@ -2,7 +2,7 @@
 
 | Area | Feature | Status | Owner / contract |
 |---|---|---|---|
-| Assistant foundation | Durable local conversation and built-in skill registry | Partial | Every Article has one persisted greeting and stable contracts for six skills. The server accepts revision-bound Assistant requests, resolves one eligible explicit or inferred skill, streams typed events, and retains completed local messages and artifacts; the final conversation UI remains follow-up work. Workflow Stage persistence is intentionally retired; legacy database values remain untouched. |
+| Assistant foundation | Durable local conversation and built-in skill registry | Implemented | Every Article has one persisted greeting and stable contracts for six skills. The server accepts revision-bound Assistant requests, resolves one eligible explicit or inferred skill, streams typed events, and retains completed local messages and review artifacts. Workflow Stage persistence is intentionally retired; legacy database values remain untouched. |
 | Assistant panel | Streamed responses, progress, cancellation, and error recovery | Implemented | Editorial route and SSE client; incomplete streams do not modify the Article. |
 | Editorial operations | Thesis-to-narrative composition | Implemented | Server editorial engine; output remains a Proposal until acceptance. |
 | Editorial operations | Flow revision | Implemented | Server editorial engine; generated changes are reviewable. |

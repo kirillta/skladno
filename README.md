@@ -35,7 +35,7 @@ Skladno is designed around three visible parts:
 
 AI output is always a proposal. The author reviews a diff and explicitly accepts or rejects it. Accepted changes create immutable Revisions, and restoring an earlier Revision creates a new Revision.
 
-Drafts autosave locally as recoverable checkpoints and become immutable Revisions only when the author explicitly saves. Workspace layout preferences are local to the application, workflow stages are advisory, and publishing-length feedback is guidance rather than a limit. Supporting-view badges identify content ready for review and results made stale by a newer Revision.
+Drafts autosave locally as recoverable checkpoints and become immutable Revisions only when the author explicitly saves. Workspace layout preferences are local to the application, and publishing-length feedback is guidance rather than a limit. The Editorial Assistant keeps one local conversation per Article and offers optional skills; supporting-view badges identify content ready for review and results made stale by a newer Revision.
 
 ## MVP
 
