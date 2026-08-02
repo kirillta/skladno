@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { articleLanguages, workflowStages, type Article, type KeyBindingOverrides, type UpdateArticleInput, type WorkflowStage } from "@skladno/shared";
+import { articleLanguages, type Article, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Button, Dialog, Field, IconButton, Select } from "../../ui/primitives.js";
 import { DeleteIcon, FocusIcon, LeaveFocusIcon, SaveIcon } from "../../ui/icons.js";
 import { IntlProvider, useIntl } from "react-intl";
@@ -111,9 +111,6 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             </div>
         </div>
         <div className="flex min-h-12 items-center gap-2 overflow-x-auto border-t border-border px-5 py-1.5 text-xs" aria-label={intl.formatMessage({ id: "articleHeader.metadata" })}>
-            <Select className="min-w-32 !w-36" aria-label={intl.formatMessage({ id: "articleHeader.workflow" })} value={article.workflowStage} onChange={(event) => updateMetadata({ workflowStage: event.target.value as WorkflowStage })}>
-                {workflowStages.map((stage) => <option key={stage} value={stage}>{intl.formatMessage({ id: workflowStageMessageId(stage) })}</option>)}
-            </Select>
             <Select className="min-w-28 !w-32" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} value={article.language ?? "en"} onChange={(event) => updateMetadata({ language: event.target.value })}>
                 {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageId(language) })}</option>)}
             </Select>
@@ -141,11 +138,6 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             </div>
         </Dialog>}
     </header>;
-}
-
-
-function workflowStageMessageId(stage: WorkflowStage): "articleHeader.talkingPoints" | "articleHeader.narrative" | "articleHeader.authorEdit" | "articleHeader.flow" | "articleHeader.facts" | "articleHeader.style" | "articleHeader.translate" | "articleHeader.publish" {
-    return ({ talking_points: "articleHeader.talkingPoints", narrative_draft: "articleHeader.narrative", author_editing: "articleHeader.authorEdit", flow_and_clarity: "articleHeader.flow", fact_checking: "articleHeader.facts", style_review: "articleHeader.style", translation: "articleHeader.translate", publication_preview: "articleHeader.publish" } as const)[stage];
 }
 
 

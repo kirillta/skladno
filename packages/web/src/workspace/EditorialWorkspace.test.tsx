@@ -164,23 +164,25 @@ describe("Editorial Workspace", () => {
     });
 
 
-    it("offers focused editorial operations without applying a proposal", async () => {
+    it("selects an advisory Stage before an editorial request without applying a proposal", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
+        const updateArticle = vi.fn().mockResolvedValue(undefined);
 
-        const panel = render(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" />);
+        const panel = render(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" article={article("one", "First Article")} updateArticle={updateArticle} />);
         const panelScope = within(panel.container);
 
         expect(panelScope.getByText(/Suggestions stay separate from your Article until you accept them\./)).toBeTruthy();
-        expect(panelScope.queryByRole("button", { name: "Thesis to narrative" })).toBeNull();
+        expect(panelScope.queryByRole("button", { name: "Talking points" })).toBeNull();
 
-        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
+        await user.click(panelScope.getByRole("button", { name: "Stages" }));
 
-        expect(panelScope.getByRole("button", { name: "Thesis to narrative" })).toBeTruthy();
+        expect(panelScope.getByRole("button", { name: "Translation" })).toBeTruthy();
 
         await user.type(panelScope.getByRole("textbox", { name: "Editorial guidance" }), "Preserve the key claims.");
         await user.click(panelScope.getByRole("button", { name: "Translation" }));
         expect(onRequest).not.toHaveBeenCalled();
+        expect(updateArticle).toHaveBeenCalledWith("one", { workflowStage: "translation" });
 
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
@@ -199,17 +201,6 @@ describe("Editorial Workspace", () => {
         await user.selectOptions(headerScope.getByRole("combobox", { name: "Target language" }), "pt");
 
         expect(setLanguage).toHaveBeenCalledWith("pt");
-    });
-
-
-    it("updates workflow stage as Article metadata without an editorial request", async () => {
-        const user = userEvent.setup();
-        const updateArticle = vi.fn().mockResolvedValue(undefined);
-        const header = render(<ArticleHeader article={article("one", "First Article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
-
-        await user.selectOptions(within(header.container).getByRole("combobox", { name: "Suggested editorial workflow" }), "fact_checking");
-
-        expect(updateArticle).toHaveBeenCalledWith("one", { workflowStage: "fact_checking" });
     });
 
 

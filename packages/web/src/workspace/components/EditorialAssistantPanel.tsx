@@ -1,19 +1,31 @@
 import { useCallback, useEffect, useState } from "react";
 import { IntlProvider, useIntl } from "react-intl";
 import { messages } from "../../i18n/messages.js";
-import { EDITORIAL_OPERATION, KEY_BINDING_COMMAND, type EditorialOperation, type KeyBindingOverrides } from "@skladno/shared";
+import { EDITORIAL_OPERATION, KEY_BINDING_COMMAND, workflowStages, type Article, type EditorialOperation, type KeyBindingOverrides, type UpdateArticleInput, type WorkflowStage } from "@skladno/shared";
 import { Banner, Button, Status, TextareaField } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronDownIcon, ChevronRightIcon, SendIcon } from "../../ui/icons.js";
 import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 
 
-const editorialOperationLabels: Record<EditorialOperation, "operations.thesisToNarrative" | "operations.flowRevision" | "operations.factCheck" | "operations.styleReview" | "operations.translation"> = {
-    [EDITORIAL_OPERATION.THESIS_TO_NARRATIVE]: "operations.thesisToNarrative",
-    [EDITORIAL_OPERATION.FLOW_REVISION]: "operations.flowRevision",
-    [EDITORIAL_OPERATION.FACT_CHECK]: "operations.factCheck",
-    [EDITORIAL_OPERATION.STYLE_REVIEW]: "operations.styleReview",
-    [EDITORIAL_OPERATION.TRANSLATION]: "operations.translation",
+const workflowStageLabels: Record<WorkflowStage, "articleHeader.talkingPoints" | "articleHeader.narrative" | "articleHeader.authorEdit" | "articleHeader.flow" | "articleHeader.facts" | "articleHeader.style" | "articleHeader.translate" | "articleHeader.publish"> = {
+    talking_points: "articleHeader.talkingPoints",
+    narrative_draft: "articleHeader.narrative",
+    author_editing: "articleHeader.authorEdit",
+    flow_and_clarity: "articleHeader.flow",
+    fact_checking: "articleHeader.facts",
+    style_review: "articleHeader.style",
+    translation: "articleHeader.translate",
+    publication_preview: "articleHeader.publish",
+};
+
+const stageOperations: Partial<Record<WorkflowStage, EditorialOperation>> = {
+    talking_points: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
+    narrative_draft: EDITORIAL_OPERATION.FLOW_REVISION,
+    flow_and_clarity: EDITORIAL_OPERATION.FLOW_REVISION,
+    fact_checking: EDITORIAL_OPERATION.FACT_CHECK,
+    style_review: EDITORIAL_OPERATION.STYLE_REVIEW,
+    translation: EDITORIAL_OPERATION.TRANSLATION,
 };
 
 
@@ -25,6 +37,8 @@ export function EditorialAssistantPanel(props: {
     collapsed: boolean;
     setCollapsed: (value: boolean) => void;
     language: string;
+    article?: Article;
+    updateArticle?: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
     dispatcher?: KeyBindingDispatcher;
     shortcutOverrides?: KeyBindingOverrides;
 }) {
@@ -33,7 +47,7 @@ export function EditorialAssistantPanel(props: {
     </IntlProvider>;
 }
 
-function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language, dispatcher, shortcutOverrides }: {
+function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language, article, updateArticle, dispatcher, shortcutOverrides }: {
     state: "idle" | "streaming" | "error";
     message: string;
     onRequest: (operation: EditorialOperation, guidance: string, language?: string) => Promise<void>;
@@ -41,17 +55,22 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
     collapsed: boolean;
     setCollapsed: (value: boolean) => void;
     language: string;
+    article?: Article;
+    updateArticle?: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
     dispatcher?: KeyBindingDispatcher;
     shortcutOverrides?: KeyBindingOverrides;
 }) {
     const intl = useIntl();
     const [guidance, setGuidance] = useState("");
-    const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+    const [stagesOpen, setStagesOpen] = useState(false);
     const [selectedOperation, setSelectedOperation] = useState<EditorialOperation>();
 
-    function selectOperation(operation: EditorialOperation) {
-        setQuickActionsOpen(false);
-        setSelectedOperation(operation);
+    function selectStage(stage: WorkflowStage) {
+        setStagesOpen(false);
+        setSelectedOperation(stageOperations[stage]);
+
+        if (article && updateArticle)
+            void updateArticle(article.id, { workflowStage: stage });
     }
 
     const send = useCallback(() => {
@@ -95,13 +114,13 @@ function LocalizedEditorialAssistantPanel({ state, message, onRequest, onCancel,
             {message && <Banner className="mt-5" tone="error" role="alert">{message}</Banner>}
         </div>
         <div className="shrink-0 border-t border-border px-5 py-7">
-            <div className="relative mt-auto py-3">
-                {quickActionsOpen && <div className="absolute bottom-full left-0 z-10 mb-2 w-52 rounded-panel border border-border bg-surface-raised p-1 shadow-raised">
-                    {Object.values(EDITORIAL_OPERATION).map((operation) => <Button className="flex w-full justify-start text-xs" key={operation} disabled={state === "streaming"} variant="quiet" onClick={() => selectOperation(operation)}>{intl.formatMessage({ id: editorialOperationLabels[operation] })}</Button>)}
+            <div className="relative mb-3 mt-auto">
+                {stagesOpen && <div className="absolute bottom-full left-0 z-10 w-52 rounded-panel border border-border bg-surface-raised p-1 shadow-raised">
+                    {workflowStages.map((stage) => <Button className="flex w-full justify-start text-xs" key={stage} disabled={state === "streaming"} variant="quiet" onClick={() => selectStage(stage)}>{intl.formatMessage({ id: workflowStageLabels[stage] })}</Button>)}
                 </div>}
-                <Button className="flex items-center gap-2" variant="secondary" aria-expanded={quickActionsOpen} aria-label={selectedOperation ? intl.formatMessage({ id: "assistant.quickActionSelected" }, { operation: intl.formatMessage({ id: editorialOperationLabels[selectedOperation] }) }) : intl.formatMessage({ id: "assistant.quickActions" })} onClick={() => setQuickActionsOpen((open) => !open)}>
-                    {selectedOperation ? `${intl.formatMessage({ id: "assistant.quickActions" })}: ${intl.formatMessage({ id: editorialOperationLabels[selectedOperation] })}` : intl.formatMessage({ id: "assistant.quickActions" })}
-                    <ChevronDownIcon className={`size-4 transition-transform motion-reduce:transition-none ${quickActionsOpen ? "rotate-180" : ""}`} />
+                <Button className="flex items-center gap-2" variant="secondary" aria-expanded={stagesOpen} aria-label={intl.formatMessage({ id: "assistant.stages" })} onClick={() => setStagesOpen((open) => !open)}>
+                    {article ? `${intl.formatMessage({ id: "assistant.stages" })}: ${intl.formatMessage({ id: workflowStageLabels[article.workflowStage] })}` : intl.formatMessage({ id: "assistant.stages" })}
+                    <ChevronDownIcon className={`size-4 transition-transform motion-reduce:transition-none ${stagesOpen ? "rotate-180" : ""}`} />
                 </Button>
             </div>
             <div className="relative">

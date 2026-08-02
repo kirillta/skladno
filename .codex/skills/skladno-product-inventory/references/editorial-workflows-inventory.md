@@ -2,7 +2,7 @@
 
 | Area | Feature | Status | Owner / contract |
 |---|---|---|---|
-| Assistant panel | Editorial guidance composer and Quick actions menu | Implemented | `EditorialAssistantPanel`; Send requires explicit guidance and an operation. |
+| Assistant panel | Editorial guidance composer and Stages menu | Implemented | `EditorialAssistantPanel`; selecting a Stage persists only advisory workflow metadata and selects an aligned pending operation. Send still requires explicit guidance and remains the sole request trigger. |
 | Assistant panel | Streamed responses, progress, cancellation, and error recovery | Implemented | Editorial route and SSE client; incomplete streams do not modify the Article. |
 | Editorial operations | Thesis-to-narrative composition | Implemented | Server editorial engine; output remains a Proposal until acceptance. |
 | Editorial operations | Flow revision | Implemented | Server editorial engine; generated changes are reviewable. |
