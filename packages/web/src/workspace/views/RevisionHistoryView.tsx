@@ -74,7 +74,7 @@ export function RevisionHistoryView({ revisions, currentRevisionId, select, gene
     const selectedIsCurrent = selected.id === currentRevisionId;
     const selectedProvenance = intl.formatMessage({ id: provenanceMessageId(selected) });
     const choose = (revision: ArticleRevision) => setSelectedRevisionId(revision.id);
-    const formatRevisionDate = (createdAt: string) => formatDateTime(createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, "UTC");
+    const formatRevisionDate = (createdAt: string) => formatDateTime(createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
 
     return <div className="flex min-h-0 flex-1 overflow-hidden rounded-panel border border-border bg-surface-raised">
         <nav className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex" aria-label={intl.formatMessage({ id: "revisions.historyNavigation" })}>
