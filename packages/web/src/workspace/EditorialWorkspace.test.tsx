@@ -5,7 +5,7 @@ import { defaultGeneralSettings, publishLimitProfiles, type Article, type Articl
 
 import { App } from "../App.js";
 import type { EditorialWorkspaceClient } from "../application-client.js";
-import { articleContentForWorkspace } from "./EditorialWorkspace.js";
+import { articleContentForWorkspace, sortArticlesByActivity } from "./EditorialWorkspace.js";
 import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
@@ -56,14 +56,60 @@ describe("Editorial Workspace", () => {
         await screen.findByRole("heading", { name: "First Article" });
 
         expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toEqual({
-            version: 1,
+            version: 2,
             libraryWidth: 208,
             assistantWidth: 384,
             libraryCollapsed: true,
             assistantCollapsed: false,
+            view: "write",
+            selectedArticleId: "one",
         });
         expect(localStorage.getItem("skladno-navigation-collapsed")).toBeNull();
         expect(localStorage.getItem("skladno-assistant-collapsed")).toBeNull();
+    });
+
+
+    it("restores the selected Article and Workspace View from local preferences", async () => {
+        const client = fakeClient();
+        client.listArticles = vi.fn().mockResolvedValue([article("one", "First Article"), article("two", "Second Article")]);
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({
+            version: 2,
+            libraryWidth: 208,
+            assistantWidth: 384,
+            libraryCollapsed: false,
+            assistantCollapsed: false,
+            selectedArticleId: "two",
+            view: "revisions",
+        }));
+
+        render(<App client={client} />);
+
+        await screen.findByRole("heading", { name: "Second Article" });
+
+        expect(screen.getByRole("tab", { name: "Revisions" }).getAttribute("aria-selected")).toBe("true");
+    });
+
+
+    it("orders Articles by the most recent persisted Article or Draft activity", () => {
+        const older = article("z", "Older Article");
+        older.updatedAt = "2026-01-01T00:00:00.000Z";
+        const checkpointed = article("a", "Checkpointed Article");
+        checkpointed.updatedAt = "2026-01-02T00:00:00.000Z";
+        checkpointed.draft = {
+            articleId: checkpointed.id,
+            content: "Draft checkpoint",
+            baseRevisionId: checkpointed.currentRevisionId,
+            version: 1,
+            updatedAt: "2026-01-03T00:00:00.000Z",
+        };
+
+        expect(sortArticlesByActivity([older, checkpointed]).map((item) => item.id)).toEqual(["a", "z"]);
+
+        older.updatedAt = checkpointed.draft.updatedAt;
+        delete checkpointed.draft;
+        checkpointed.updatedAt = older.updatedAt;
+
+        expect(sortArticlesByActivity([older, checkpointed]).map((item) => item.id)).toEqual(["a", "z"]);
     });
 
 

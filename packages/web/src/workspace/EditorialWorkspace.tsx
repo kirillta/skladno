@@ -53,6 +53,24 @@ export interface DraftConflict {
 }
 
 
+const workspaceViews: readonly WorkspaceView[] = ["write", "proposal", "revisions", "fact-check", "style-profile", "translations", "publish"];
+
+
+function isWorkspaceView(value: unknown): value is WorkspaceView {
+    return typeof value === "string" && workspaceViews.includes(value as WorkspaceView);
+}
+
+
+function articleActivityTimestamp(article: Article): string {
+    return article.draft && article.draft.updatedAt > article.updatedAt ? article.draft.updatedAt : article.updatedAt;
+}
+
+
+export function sortArticlesByActivity(articles: Article[]): Article[] {
+    return [...articles].sort((first, second) => articleActivityTimestamp(second).localeCompare(articleActivityTimestamp(first)) || first.id.localeCompare(second.id));
+}
+
+
 function withoutDraft(article: Article): Omit<Article, "draft"> {
     const { draft: _draft, ...result } = article;
     void _draft;
@@ -68,7 +86,7 @@ export function articleContentForWorkspace(article: Article): string {
 
 
 
-function useArticleWorkspace(client: EditorialWorkspaceClient) {
+function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelectedArticleId: string | undefined, setPersistedSelectedArticleId: (articleId: string | undefined) => void) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [articles, setArticles] = useState<Article[]>([]);
@@ -87,11 +105,16 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
     const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
     const generations = useRef(new Map<string, number>());
     const checkpointRef = useRef<(articleId: string) => Promise<void>>(() => Promise.resolve());
+    const preferredSelectedArticleIdRef = useRef(preferredSelectedArticleId);
+    const setPersistedSelectedArticleIdRef = useRef(setPersistedSelectedArticleId);
+
+    preferredSelectedArticleIdRef.current = preferredSelectedArticleId;
+    setPersistedSelectedArticleIdRef.current = setPersistedSelectedArticleId;
 
 
     function replaceArticles(update: (items: Article[]) => Article[]) {
         setArticles((items) => {
-            const next = update(items);
+            const next = sortArticlesByActivity(update(items));
             articlesRef.current = next;
 
             return next;
@@ -112,14 +135,18 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
 
     useEffect(() => {
         client.listArticles().then((loaded) => {
-            articlesRef.current = loaded;
-            draftsRef.current = Object.fromEntries(loaded.map((article) => [article.id, articleContentForWorkspace(article)]));
-            setArticles(loaded);
+            const sorted = sortArticlesByActivity(loaded);
+            const preferredArticleId = preferredSelectedArticleIdRef.current;
+            const selectedArticleId = sorted.some((article) => article.id === preferredArticleId) ? preferredArticleId : sorted[0]?.id;
+            articlesRef.current = sorted;
+            draftsRef.current = Object.fromEntries(sorted.map((article) => [article.id, articleContentForWorkspace(article)]));
+            setArticles(sorted);
             setDrafts(draftsRef.current);
-            setSaveStates(Object.fromEntries(loaded.map((article) => [article.id, article.draft ? "draft-saved" : "saved"])));
-            revisions.current = new Map(loaded.map((article) => [article.id, article.currentRevisionId]));
-            versions.current = new Map(loaded.flatMap((article) => article.draft ? [[article.id, article.draft.version]] : []));
-            setSelectedArticleId(loaded[0]?.id);
+            setSaveStates(Object.fromEntries(sorted.map((article) => [article.id, article.draft ? "draft-saved" : "saved"])));
+            revisions.current = new Map(sorted.map((article) => [article.id, article.currentRevisionId]));
+            versions.current = new Map(sorted.flatMap((article) => article.draft ? [[article.id, article.draft.version]] : []));
+            setSelectedArticleId(selectedArticleId);
+            setPersistedSelectedArticleIdRef.current(selectedArticleId);
             setState("ready");
         }).catch(() => {
             setState("error");
@@ -299,6 +326,7 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
         replaceDraft(article.id, article.currentRevision.content);
         setSaveState(article.id, "saved");
         setSelectedArticleId(article.id);
+        setPersistedSelectedArticleId(article.id);
         return article;
     }
 
@@ -313,8 +341,10 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
         await client.deleteArticle(articleId);
         replaceArticles((items) => {
             const next = items.filter((item) => item.id !== articleId);
-            if (selectedArticleId === articleId)
+            if (selectedArticleId === articleId) {
                 setSelectedArticleId(next[0]?.id);
+                setPersistedSelectedArticleId(next[0]?.id);
+            }
 
             return next;
         });
@@ -349,6 +379,7 @@ function useArticleWorkspace(client: EditorialWorkspaceClient) {
                 void checkpoint(selectedArticleId).catch(() => undefined);
 
             setSelectedArticleId(articleId);
+            setPersistedSelectedArticleId(articleId);
         },
         content,
         setContent: (value: string) => {
@@ -663,27 +694,38 @@ function usePublishing(client: EditorialWorkspaceClient, article: Article | unde
 
 
 function useWorkspaceLayout() {
-    const [view, setView] = useState<WorkspaceView>("write");
     const [preferences, setPreferences] = useState(() => {
         const stored = localStorage.getItem("skladno-workspace-layout");
 
         if (stored)
             try {
-                const parsed = JSON.parse(stored) as { version?: number; libraryWidth?: number; assistantWidth?: number; libraryCollapsed?: boolean; assistantCollapsed?: boolean };
+                const parsed = JSON.parse(stored) as { version?: number; libraryWidth?: number; assistantWidth?: number; libraryCollapsed?: boolean; assistantCollapsed?: boolean; selectedArticleId?: unknown; view?: unknown };
 
-                if (parsed.version === 1)
+                if (parsed.version === 2 && isWorkspaceView(parsed.view))
                     return {
-                        version: 1,
+                        version: 2,
                         libraryWidth: Math.min(280, Math.max(192, parsed.libraryWidth ?? 208)),
                         assistantWidth: Math.max(320, parsed.assistantWidth ?? 384),
                         libraryCollapsed: parsed.libraryCollapsed ?? false,
                         assistantCollapsed: parsed.assistantCollapsed ?? false,
+                        view: parsed.view,
+                        ...(typeof parsed.selectedArticleId === "string" && parsed.selectedArticleId.trim() ? { selectedArticleId: parsed.selectedArticleId } : {}),
+                    };
+
+                if (parsed.version === 1)
+                    return {
+                        version: 2,
+                        libraryWidth: Math.min(280, Math.max(192, parsed.libraryWidth ?? 208)),
+                        assistantWidth: Math.max(320, parsed.assistantWidth ?? 384),
+                        libraryCollapsed: parsed.libraryCollapsed ?? false,
+                        assistantCollapsed: parsed.assistantCollapsed ?? false,
+                        view: "write" as const,
                     };
             } catch {
                 // Replace malformed local preferences with the current version.
             }
 
-        const migrated = { version: 1, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: localStorage.getItem("skladno-navigation-collapsed") === "true", assistantCollapsed: localStorage.getItem("skladno-assistant-collapsed") === "true" };
+        const migrated = { version: 2, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: localStorage.getItem("skladno-navigation-collapsed") === "true", assistantCollapsed: localStorage.getItem("skladno-assistant-collapsed") === "true", view: "write" as const };
 
         localStorage.setItem("skladno-workspace-layout", JSON.stringify(migrated));
         localStorage.removeItem("skladno-navigation-collapsed");
@@ -694,11 +736,16 @@ function useWorkspaceLayout() {
     const [focusMode, setFocusMode] = useState(false);
     const [targetLanguage, setTargetLanguage] = useState("es");
 
+    const setView = useCallback((view: WorkspaceView) => setPreferences((current) => ({ ...current, view })), []);
+    const setSelectedArticleId = useCallback((selectedArticleId: string | undefined) => setPreferences((current) => ({ ...current, ...(selectedArticleId ? { selectedArticleId } : { selectedArticleId: undefined }) })), []);
+
     useEffect(() => localStorage.setItem("skladno-workspace-layout", JSON.stringify(preferences)), [preferences]);
 
     return {
-        view,
+        view: preferences.view,
         setView,
+        selectedArticleId: preferences.selectedArticleId,
+        setSelectedArticleId,
         libraryCollapsed: preferences.libraryCollapsed,
         setLibraryCollapsed: (libraryCollapsed: boolean) => setPreferences((current) => ({ ...current, libraryCollapsed })),
         assistantCollapsed: preferences.assistantCollapsed,
@@ -742,8 +789,8 @@ export type WorkspaceLayoutState = ReturnType<typeof useWorkspaceLayout>;
 export function EditorialWorkspaceProvider({ client, screen, openSettings, backToWorkspace, dispatcher, keyBindingOverrides, onKeyBindingsUpdated }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; openSettings: () => void; backToWorkspace: () => void; dispatcher: KeyBindingDispatcher; keyBindingOverrides: KeyBindingOverrides; onKeyBindingsUpdated: (overrides: KeyBindingOverrides) => void }) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
-    const workspace = useArticleWorkspace(client);
     const layout = useWorkspaceLayout();
+    const workspace = useArticleWorkspace(client, layout.selectedArticleId, layout.setSelectedArticleId);
     const generalSettings = useWorkspaceGeneralSettings(client, screen);
     const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
     const editorial = useEditorialProposal(client, workspace);

@@ -7,11 +7,11 @@ import test from "node:test";
 import { openDatabase } from "./database.js";
 import { Repositories } from "./repositories.js";
 
-function withRepository(run: (repositories: Repositories, close: () => void) => void): void {
+function withRepository(run: (repositories: Repositories, close: () => void, database: ReturnType<typeof openDatabase>) => void): void {
     const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     try {
-        run(new Repositories(database), () => database.close());
+        run(new Repositories(database), () => database.close(), database);
     } finally {
         database.close();
         rmSync(directory, { recursive: true, force: true });
@@ -75,6 +75,30 @@ test("Draft checkpoints are versioned, recoverable, and separate from Revisions"
     repositories.discardArticleDraft(article.id, second.version);
     assert.equal(repositories.getArticle(article.id)?.draft, undefined);
     assert.throws(() => repositories.discardArticleDraft(article.id, second.version), /newer checkpoint/);
+}));
+
+
+test("Article lists use the latest Article or Draft checkpoint activity", () => withRepository((repositories, _close, database) => {
+    const older = repositories.createArticle({ id: "z", title: "Older", content: "first" });
+    const checkpointed = repositories.createArticle({ id: "a", title: "Checkpointed", content: "first" });
+    database.prepare("UPDATE articles SET updated_at = ? WHERE id = ?").run("2026-01-03T00:00:00.000Z", older.id);
+    database.prepare("UPDATE articles SET updated_at = ? WHERE id = ?").run("2026-01-01T00:00:00.000Z", checkpointed.id);
+
+    assert.deepEqual(repositories.listArticles().map((item) => item.id), ["z", "a"]);
+
+    const first = repositories.saveArticleDraft(checkpointed.id, { content: "checkpoint one", baseRevisionId: checkpointed.currentRevisionId });
+    database.prepare("UPDATE article_drafts SET updated_at = ? WHERE article_id = ?").run("2026-01-04T00:00:00.000Z", checkpointed.id);
+    assert.deepEqual(repositories.listArticles().map((item) => item.id), ["a", "z"]);
+
+    const second = repositories.saveArticleDraft(checkpointed.id, { content: "checkpoint two", baseRevisionId: checkpointed.currentRevisionId, expectedDraftVersion: first.version });
+    database.prepare("UPDATE article_drafts SET updated_at = ? WHERE article_id = ?").run("2026-01-05T00:00:00.000Z", checkpointed.id);
+    assert.deepEqual(repositories.listArticles().map((item) => item.id), ["a", "z"]);
+    assert.equal(second.version, 2);
+    assert.equal(repositories.listArticleRevisions(checkpointed.id).length, 1);
+
+    repositories.discardArticleDraft(checkpointed.id, second.version);
+    database.prepare("UPDATE articles SET updated_at = ?").run("2026-01-06T00:00:00.000Z");
+    assert.deepEqual(repositories.listArticles().map((item) => item.id), ["a", "z"]);
 }));
 
 

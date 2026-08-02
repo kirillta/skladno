@@ -93,7 +93,7 @@ export class ArticlesRepository {
 
 
     list(): Article[] {
-        return (this.database.prepare(`${articleSelect} ORDER BY a.updated_at DESC, a.id ASC`).all() as Row[]).map(article);
+        return (this.database.prepare(`${articleSelect} ORDER BY CASE WHEN d.updated_at IS NOT NULL AND d.updated_at > a.updated_at THEN d.updated_at ELSE a.updated_at END DESC, a.id ASC`).all() as Row[]).map(article);
     }
 
 
