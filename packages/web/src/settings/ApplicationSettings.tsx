@@ -1,9 +1,9 @@
-import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { defaultPublishLimitProfileId, defaultGeneralSettings, findKeyBindingConflict, formatKeyBinding, keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, publishLimitProfiles, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingCommandId, type KeyBindingOverrides, type ModelPreferences, type PublishLimitProfileId } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Banner, Button, Field, Select } from "../ui/primitives.js";
 import { catalogByLocale, installedLocaleCatalogs } from "../i18n/catalogs.js";
-import { formatDateTime } from "../i18n/formatting.js";
+import { formatDateTime, formatTimeZoneLabel, systemTimeZone, timeZoneOptions } from "../i18n/formatting.js";
 import { useIntl } from "react-intl";
 import { publishingProfileMessageId } from "../i18n/publishing.js";
 import { useNotifications } from "../notifications/NotificationProvider.js";
@@ -107,13 +107,14 @@ const operations = [
     ["translation", "operations.translation"],
 ] as const;
 
-function SettingRow({ label, hint, children, status }: { label: string; hint: string; children: ReactNode; status?: ReactNode }) {
+function SettingRow({ label, hint, children, status, action }: { label: string; hint: string; children: ReactNode; status?: ReactNode; action?: ReactNode }) {
     const hintId = useId();
 
     return <section className="border-b border-border py-5 last:border-b-0">
         <h2 className="text-sm font-semibold">{label}</h2>
         <p id={hintId} className="mt-1 text-sm leading-5 text-muted">{hint}</p>
-        <div className="mt-3 max-w-md" aria-describedby={hintId}>{children}</div>
+        <div className="mt-3 max-w-md">{isValidElement(children) ? cloneElement(children, { "aria-describedby": hintId }) : children}</div>
+        {action && <div className="mt-3">{action}</div>}
         {status && <p className="mt-2 text-xs text-muted" role="status">{status}</p>}
     </section>;
 }
@@ -129,7 +130,7 @@ function Control({ label, hint, children }: { label: string; hint: string; child
 }
 
 function formatExample(general: GeneralSettings): string {
-    return formatDateTime("2026-07-31T15:45:00Z", general.interfaceLocale, general.dateFormat, general.timeFormat);
+    return formatDateTime(new Date(), general.interfaceLocale, general.dateFormat, general.timeFormat, general.timeZone);
 }
 
 export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { client: EditorialWorkspaceClient; back: () => void; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void }) {
@@ -252,6 +253,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
                     <SettingRow label={intl.formatMessage({ id: "settings.interfaceLanguage" })} hint={intl.formatMessage({ id: "settings.interfaceLanguageHint" })}><Select value={catalogByLocale.has(general.interfaceLocale) ? general.interfaceLocale : "en"} disabled={installedLocaleCatalogs.length === 1} onChange={(event) => void saveGeneral({ ...general, interfaceLocale: event.target.value as GeneralSettings["interfaceLocale"] })}>{installedLocaleCatalogs.map((catalog) => <option key={catalog.code} value={catalog.code}>{intl.formatMessage({ id: catalog.nameMessageId })}</option>)}</Select></SettingRow>
                     <SettingRow label={intl.formatMessage({ id: "settings.dateFormat" })} hint={intl.formatMessage({ id: "settings.dateFormatHint" })}><Select value={general.dateFormat} onChange={(event) => void saveGeneral({ ...general, dateFormat: event.target.value as GeneralSettings["dateFormat"] })}><option value="system">{intl.formatMessage({ id: "settings.system" })}</option><option value="day-first">{intl.formatMessage({ id: "settings.dayFirst" })}</option><option value="month-first">{intl.formatMessage({ id: "settings.monthFirst" })}</option><option value="iso">{intl.formatMessage({ id: "settings.iso" })}</option></Select></SettingRow>
                     <SettingRow label={intl.formatMessage({ id: "settings.timeFormat" })} hint={intl.formatMessage({ id: "settings.timeFormatHint" })} status={intl.formatMessage({ id: "settings.example" }, { value: formatExample(general) })}><Select value={general.timeFormat} onChange={(event) => void saveGeneral({ ...general, timeFormat: event.target.value as GeneralSettings["timeFormat"] })}><option value="system">{intl.formatMessage({ id: "settings.system" })}</option><option value="12-hour">{intl.formatMessage({ id: "settings.twelveHour" })}</option><option value="24-hour">{intl.formatMessage({ id: "settings.twentyFourHour" })}</option></Select></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.timeZone" })} hint={intl.formatMessage({ id: "settings.timeZoneHint" })} action={<Button variant="quiet" disabled={general.timeZone === "system"} onClick={() => void saveGeneral({ ...general, timeZone: "system" })}>{intl.formatMessage({ id: "settings.resetTimeZone" })}</Button>}><Select value={general.timeZone} onChange={(event) => void saveGeneral({ ...general, timeZone: event.target.value })}><option value="system">{intl.formatMessage({ id: "settings.systemTimeZone" }, { timeZone: systemTimeZone() ? formatTimeZoneLabel(systemTimeZone()!) : intl.formatMessage({ id: "settings.localTimeZone" }) })}</option>{timeZoneOptions(general.timeZone).map((timeZone) => <option key={timeZone.value} value={timeZone.value}>{timeZone.label}</option>)}</Select></SettingRow>
                     <SettingRow label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} hint={intl.formatMessage({ id: "settings.defaultArticleLanguageHint" })}><Select value={general.defaultArticleLanguage} onChange={(event) => void saveGeneral({ ...general, defaultArticleLanguage: event.target.value })}>{[["en", "languages.english"], ["es", "languages.spanish"], ["pt", "languages.portuguese"], ["ru", "languages.russian"], ["fr", "languages.french"], ["de", "languages.german"], ["it", "languages.italian"]].map(([value, label]) => <option key={value} value={value}>{intl.formatMessage({ id: label as "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" })}</option>)}</Select></SettingRow>
                 </> : section === "keyBindings" ? <KeyBindingSettings overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <>
                     <SettingRow label={intl.formatMessage({ id: "settings.addConnection" })} hint={intl.formatMessage({ id: "settings.connectionHint" })}><div className="grid gap-4"><Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}><Field value={connectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setConnectionName(event.target.value)} /></Control><Control label={intl.formatMessage({ id: "settings.environmentName" })} hint={intl.formatMessage({ id: "settings.environmentNameHint" })}><Field value={environmentName} placeholder={intl.formatMessage({ id: "settings.environmentNamePlaceholder" })} onChange={(event) => setEnvironmentName(event.target.value)} /></Control><Button className="w-fit" variant="secondary" onClick={() => void addConnection()}>{intl.formatMessage({ id: "settings.addConnectionButton" })}</Button></div></SettingRow>

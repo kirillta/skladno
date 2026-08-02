@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article } from "@skladno/shared";
+import { applicationSettingsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article, type GeneralSettings } from "@skladno/shared";
 import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";
 
@@ -124,6 +124,57 @@ test("article API supports CRUD and revision-aware saves", async () => {
         assert.equal((await fetch(baseUrl)).status, HTTP_STATUS.OK);
         assert.equal((await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.DELETE })).status, HTTP_STATUS.NO_CONTENT);
         assert.deepEqual(await (await fetch(baseUrl)).json(), []);
+    } finally {
+        await new Promise<void>((resolve) => service.close(() => resolve()));
+        database.close();
+        rmSync(directory, { recursive: true, force: true });
+    }
+});
+
+
+test("General settings preserve valid time zones and reject invalid updates", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "skladno-settings-"));
+    const database = openDatabase(join(directory, "skladno.sqlite"));
+    const repositories = new Repositories(database);
+    repositories.setSetting("application-general", { ...defaultGeneralSettings, timeZone: "America/Argentina/Buenos_Aires" });
+    const service = createLocalService({
+        host: "127.0.0.1",
+        port: 0,
+        webOrigin: "http://localhost:5173",
+        databasePath: "unused",
+        openAiModel: "gpt-5",
+        openAiStoreResponses: false,
+    }, repositories);
+
+    service.listen(0, "127.0.0.1");
+    await once(service, "listening");
+
+    const address = service.address();
+    assert.ok(address && typeof address !== "string");
+    const settingsUrl = `http://127.0.0.1:${address.port}${applicationSettingsPath}`;
+
+    try {
+        const loaded = await fetch(settingsUrl);
+        assert.equal(loaded.status, HTTP_STATUS.OK);
+        assert.equal((await loaded.json() as { general: GeneralSettings }).general.timeZone, "America/Argentina/Buenos_Aires");
+
+        repositories.setSetting("application-general", {});
+        const legacy = await fetch(settingsUrl);
+        assert.equal((await legacy.json() as { general: GeneralSettings }).general.timeZone, "system");
+
+        repositories.setSetting("application-general", { ...defaultGeneralSettings, timeZone: "America/Argentina/Buenos_Aires" });
+        const invalid = await fetch(`${settingsUrl}/general`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ...defaultGeneralSettings, timeZone: "UTC-03:00" }),
+        });
+        assert.equal(invalid.status, HTTP_STATUS.BAD_REQUEST);
+        assert.equal((await invalid.json() as { error: { code: string } }).error.code, "invalid_request");
+        assert.equal((repositories.getSetting("application-general")?.value as GeneralSettings).timeZone, "America/Argentina/Buenos_Aires");
+
+        repositories.setSetting("application-general", { ...defaultGeneralSettings, timeZone: "invalid-zone" });
+        const recovered = await fetch(settingsUrl);
+        assert.equal((await recovered.json() as { general: GeneralSettings }).general.timeZone, "system");
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));
         database.close();

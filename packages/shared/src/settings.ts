@@ -17,12 +17,31 @@ export const defaultInterfaceLocale: InterfaceLocale = INTERFACE_LOCALE.EN;
 export type ThemePreference = "system" | "light" | "dark";
 export type DateFormatPreference = "system" | "day-first" | "month-first" | "iso";
 export type TimeFormatPreference = "system" | "12-hour" | "24-hour";
+export type TimeZonePreference = "system" | string;
+
+
+export function isTimeZonePreference(value: unknown): value is TimeZonePreference {
+    if (value === "system")
+        return true;
+
+    if (typeof value !== "string" || !value)
+        return false;
+
+    try {
+        const resolved = new Intl.DateTimeFormat("en", { timeZone: value }).resolvedOptions().timeZone;
+
+        return resolved === "UTC" || resolved.includes("/");
+    } catch {
+        return false;
+    }
+}
 
 export interface GeneralSettings {
     theme: ThemePreference;
     interfaceLocale: InterfaceLocale;
     dateFormat: DateFormatPreference;
     timeFormat: TimeFormatPreference;
+    timeZone: TimeZonePreference;
     defaultArticleLanguage: string;
     defaultTranslationLanguages: string[];
 }
@@ -62,6 +81,7 @@ export const defaultGeneralSettings: GeneralSettings = {
     interfaceLocale: defaultInterfaceLocale,
     dateFormat: "system",
     timeFormat: "system",
+    timeZone: "system",
     defaultArticleLanguage: "en",
     defaultTranslationLanguages: [],
 };
