@@ -110,3 +110,18 @@ export function FocusIcon(props: SVGProps<SVGSVGElement>) {
 export function LeaveFocusIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="1.8" {...props}><path d="M9 3v5H4M15 3v5h5M4 16h5v5M20 16h-5v5" /></Icon>;
 }
+
+
+export function RevisionManualIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="m5 19 3.2-.8L18.5 7.9a2.1 2.1 0 0 0-3-3L5.2 15.2zM13.8 6.6l3 3" /></Icon>;
+}
+
+
+export function RevisionAiIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="m12 3 .9 3.1L16 7l-3.1.9L12 11l-.9-3.1L8 7l3.1-.9L12 3Zm6 8 .6 2.4L21 14l-2.4.6L18 17l-.6-2.4L15 14l2.4-.6L18 11ZM6 13l.9 3.1L10 17l-3.1.9L6 21l-.9-3.1L2 17l3.1-.9L6 13Z" /></Icon>;
+}
+
+
+export function RevisionRestoreIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></Icon>;
+}

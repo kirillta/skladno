@@ -3,6 +3,7 @@ import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
     createTextProposal,
+    defaultGeneralSettings,
     defaultPublishLimitProfileId,
     getPublishLimitProfile,
     getPublishingLength,
@@ -14,6 +15,7 @@ import {
     type EditorialEvent,
     type EditorialOperation,
     type FactCheck,
+    type GeneralSettings,
     type PublishLimitProfileId,
     type StyleCorpus,
     type StyleReview,
@@ -713,6 +715,22 @@ function useWorkspaceLayout() {
 }
 
 
+function useWorkspaceGeneralSettings(client: EditorialWorkspaceClient, screen: "editorial-workspace" | "application-settings") {
+    const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(defaultGeneralSettings);
+
+    useEffect(() => {
+        if (screen !== "editorial-workspace")
+            return;
+
+        void client.getApplicationSettings()
+            .then((settings) => setGeneralSettings(settings.general))
+            .catch(() => undefined);
+    }, [client, screen]);
+
+    return generalSettings;
+}
+
+
 export type ArticleWorkspaceState = ReturnType<typeof useArticleWorkspace>;
 export type ArticleRevisionsState = ReturnType<typeof useArticleRevisions>;
 export type EditorialProposalState = ReturnType<typeof useEditorialProposal>;
@@ -726,6 +744,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const { notifyError } = useNotifications();
     const workspace = useArticleWorkspace(client);
     const layout = useWorkspaceLayout();
+    const generalSettings = useWorkspaceGeneralSettings(client, screen);
     const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
     const editorial = useEditorialProposal(client, workspace);
     const corpus = useStyleCorpus(client);
@@ -824,7 +843,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         return <ApplicationSettings client={client} back={backToWorkspace} onKeyBindingsUpdated={onKeyBindingsUpdated} />;
 
     return <ExtractedWorkspaceShell focusMode={layout.focusMode} libraryCollapsed={layout.libraryCollapsed} setLibraryCollapsed={layout.setLibraryCollapsed} assistantCollapsed={layout.assistantCollapsed} setAssistantCollapsed={layout.setAssistantCollapsed} libraryWidth={layout.libraryWidth} setLibraryWidth={layout.setLibraryWidth} assistantWidth={layout.assistantWidth} setAssistantWidth={layout.setAssistantWidth} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.selectArticle} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={enterSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} dispatcher={dispatcher} shortcutOverrides={keyBindingOverrides} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} article={workspace.selectedArticle} updateArticle={workspace.updateArticle} dispatcher={dispatcher} shortcutOverrides={keyBindingOverrides} />}>
-        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} />
+        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
         <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
     </ExtractedWorkspaceShell>;

@@ -21,7 +21,7 @@ import { sanitizeRichPasteDocument } from "./paste.js";
 import { BoldIcon, CodeIcon, ItalicIcon, LinkIcon, ListIcon, NumberedListIcon, StrikeIcon } from "../../ui/icons.js";
 
 type BlockType = "paragraph" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "quote" | "code";
-const articleEditorTheme: EditorThemeClasses = {
+export const articleEditorTheme: EditorThemeClasses = {
     text: {
         bold: "font-bold",
         code: "rounded-control bg-surface px-1 font-mono text-base",
@@ -34,6 +34,9 @@ const articleEditorTheme: EditorThemeClasses = {
         ul: "list-disc pl-7",
     },
 };
+
+
+export const articleEditorNodes = [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode];
 
 
 function EditorErrorBoundary({ children }: { children: ReactNode }) {
@@ -479,7 +482,7 @@ function EditorContents({ content, onChange }: { content: string; onChange: (val
 export function ArticleRichEditor({ articleId, content, setContent }: { articleId: string; content: string; setContent: (value: string) => void }) {
     const config = useMemo(() => ({
         namespace: `skladno-article-${articleId}`,
-        nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode],
+        nodes: articleEditorNodes,
         theme: articleEditorTheme,
         onError: (error: Error) => {
             throw error;

@@ -6,17 +6,18 @@ import { ArticleStatusBar } from "./ArticleStatusBar.js";
 import { WorkspaceTabBar, type WorkspaceTabBadgeDescriptor } from "./WorkspaceTabBar.js";
 import { WorkspaceViewRouter } from "./WorkspaceViewRouter.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
-import type { KeyBindingOverrides } from "@skladno/shared";
+import type { GeneralSettings, KeyBindingOverrides } from "@skladno/shared";
 import { KEY_BINDING_COMMAND } from "@skladno/shared";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 
-export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, createBlank, shortcutOverrides }: {
+export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, shortcutOverrides }: {
     workspace: ArticleWorkspaceState;
     layout: WorkspaceLayoutState;
     editorial: EditorialProposalState;
     revisions: ArticleRevisionsState;
     corpus: StyleCorpusState;
     publishing: PublishingState;
+    generalSettings: GeneralSettings;
     createBlank: () => Promise<unknown>;
     shortcutOverrides?: KeyBindingOverrides;
 }) {
@@ -79,7 +80,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             <Button className="ml-auto" variant="secondary" onClick={() => void workspace.retry()}>{intl.formatMessage({ id: "draftSave.retry" })}</Button>
         </Banner>}
         <WorkspaceTabBar view={layout.view} setView={layout.setView} badges={badges} shortcutOverrides={shortcutOverrides} />
-        <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} />
+        <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} />
         <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} setProfile={publishing.setProfile} />
     </div>;
 }

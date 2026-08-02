@@ -40,6 +40,8 @@ The desktop shell has an Article Library Panel, an Article Workspace with a cent
 
 At 1440 × 1024 and 1280 × 800, preserve a comfortable editorial line length before showing secondary content. Use tabs, collapse, or drawers for supporting work rather than permanently narrowing the editor.
 
+Every scrollable Workspace View region—including Article reading surfaces, Revision history lists, and supporting-pane lists—uses the shared quiet scrollbar: a slim `w-2` track, no arrow buttons, transparent track, and rounded `bg-border-strong` thumb. Never leave a workspace scroll region on the browser-default scrollbar.
+
 ## Application Settings
 
 Application Settings is a separate application screen, never a Workspace View or Workspace Tab Bar item. Its desktop navigation is a `w-52` supporting surface with a Back to workspace action; the central settings content is constrained to `max-w-3xl` and is the only scrolling area. Do not show the Editorial Assistant Panel there. Narrow layouts use an accessible section selector and compact Back action.

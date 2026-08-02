@@ -2,7 +2,7 @@
 
 | Area | Feature | Status | Owner / contract |
 |---|---|---|---|
-| Revision history | Ordered immutable Revision list | Implemented | `RevisionHistoryView` and Article repository. |
+| Revision history | Ordered immutable Revision list with initial/manual/AI-assisted/restored timeline icons, selected read-only formatted Article preview, and compact selector | Implemented | `RevisionHistoryView`, `RevisionArticlePreview`, and Article repository; selecting a Revision is local-only and does not alter the Article or Draft. |
 | Revision history | Restore a prior Revision | Implemented | Restore creates a new Revision and never rewrites history; uncommitted Drafts require an explicit choice. |
 | Style corpus | Add/remove local writing samples and derive a compact style profile | Implemented | `StyleProfileView` and style corpus repository; raw samples stay local. |
 | Fact Check | Revision-tied findings, statuses, source links, uncertainty, and stale indication | Implemented | `FactCheckView` and workspace editorial-result state; findings never modify Article text. |

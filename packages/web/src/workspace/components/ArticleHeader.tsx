@@ -84,7 +84,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
         }
     }
 
-    return <header className="border-b border-border bg-surface-raised">
+    return <header className="border-b border-border bg-surface">
         <div className="flex min-h-16 items-center gap-3 px-5">
             <h1 className={editingTitle ? "min-w-0 flex-1 text-xl font-semibold tracking-tight" : "min-w-0 flex-1 text-xl font-semibold tracking-tight"}>
                 {editingTitle

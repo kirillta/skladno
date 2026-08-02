@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Article } from "@skladno/shared";
+import type { Article, GeneralSettings } from "@skladno/shared";
 import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState, WorkspaceView } from "../EditorialWorkspace.js";
 import { ArticleEditorView } from "../views/ArticleEditorView.js";
 import { FactCheckView } from "../views/FactCheckView.js";
@@ -9,16 +9,17 @@ import { RevisionHistoryView } from "../views/RevisionHistoryView.js";
 import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
 
-export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing }: {
+export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings }: {
     view: WorkspaceView;
     article: Article;
     workspace: ArticleWorkspaceState;
     editorial: EditorialProposalState;
     revisions: ArticleRevisionsState;
     corpus: StyleCorpusState;
-    publishing: PublishingState
+    publishing: PublishingState;
+    generalSettings: GeneralSettings;
 }) {
-    const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "min-h-0 flex-1 overflow-y-auto p-5"}>{children}</section>;
+    const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" || view === "revisions" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "min-h-0 flex-1 overflow-y-auto p-5"}>{children}</section>;
 
     if (view === "write")
         return panel(<ArticleEditorView articleId={article.id} content={workspace.content} setContent={workspace.setContent} />);
@@ -27,7 +28,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
         return panel(<ProposalReviewView review={editorial.review} stale={editorial.stale} selectedChanges={editorial.selectedChanges} setSelectedChanges={editorial.setSelectedChanges} accept={editorial.accept} reject={editorial.reject} />);
 
     if (view === "revisions")
-        return panel(<RevisionHistoryView revisions={revisions.revisions} currentRevisionId={article.currentRevisionId} select={revisions.setCandidate} />);
+        return panel(<RevisionHistoryView revisions={revisions.revisions} currentRevisionId={article.currentRevisionId} select={revisions.setCandidate} generalSettings={generalSettings} />);
 
     if (view === "fact-check")
         return panel(<FactCheckView factCheck={editorial.factCheck} />);
