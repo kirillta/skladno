@@ -6,6 +6,7 @@ import {
     acceptProposalPath,
     articlesPath,
     assistantMessagesPath,
+    assistantRequestsPath,
     articleRevisionsPath,
     articleDraftPath,
     editorialPath,
@@ -23,6 +24,8 @@ import {
     type AcceptProposalInput,
     type ArticleRevision,
     type AssistantMessage,
+    type AssistantEvent,
+    type StartAssistantRequest,
     type ArticleLibraryClient,
     type EditorialClient,
     type EditorialEvent,
@@ -120,6 +123,36 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async listAssistantMessages(articleId: string): Promise<AssistantMessage[]> {
         return this.request<AssistantMessage[]>(assistantMessagesPath(articleId));
+    }
+
+
+    async streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void> {
+        const response = await fetch(`${this.serviceUrl}${assistantRequestsPath(articleId)}`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(input),
+            signal,
+        });
+        if (!response.ok || !response.body)
+            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let pending = "";
+        while (true) {
+            const result = await reader.read();
+            if (result.done)
+                break;
+
+            pending += decoder.decode(result.value, { stream: true });
+            const events = pending.split("\n\n");
+            pending = events.pop() ?? "";
+            for (const item of events) {
+                const data = item.split("\n").find((line) => line.startsWith("data: "));
+                if (data)
+                    onEvent(JSON.parse(data.slice(6)) as AssistantEvent);
+            }
+        }
     }
 
 

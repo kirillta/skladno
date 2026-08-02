@@ -27,7 +27,7 @@ export const builtInSkillScopeCompatibility: Record<BuiltInSkillId, readonly ("a
     flow_and_clarity: ["article", "selection"],
     fact_checking: ["article", "selection"],
     style_review: ["article", "selection"],
-    translation: ["article", "selection"],
+    translation: ["article"],
 };
 
 
@@ -69,7 +69,7 @@ export type AssistantMessageKind = "greeting" | "message" | "response" | "status
 export type AssistantMessageTemplate = "greeting" | "request_cancelled" | "request_failed";
 export type AssistantMessageStatus = "completed" | "pending" | "failed" | "cancelled";
 export type AssistantRequestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
-export type AssistantSkillSource = "explicit" | "resolved";
+export type AssistantSkillSource = "explicit" | "inferred";
 export type AssistantResponseKind = "editorial_conversation" |
     "skill_response" |
     "proposal_prepared" |
@@ -114,3 +114,25 @@ export interface AssistantMessage {
 
 
 export const assistantMessagesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/messages`;
+export const assistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
+
+export interface StartAssistantRequest {
+    requestId: string;
+    authorMessage: string;
+    scope: AssistantRequestScope;
+    explicitSkillId?: BuiltInSkillId;
+    targetLanguage?: string;
+    retryOfRequestId?: string;
+}
+
+export type AssistantEvent =
+    | { type: "accepted"; requestId: string }
+    | { type: "skill_resolved"; requestId: string; skillId?: BuiltInSkillId; source?: AssistantSkillSource }
+    | { type: "text_delta"; requestId: string; delta: string }
+    | { type: "tool_status"; requestId: string; tool: string; status: "started" | "completed" }
+    | { type: "completed"; requestId: string; responseKind: AssistantResponseKind; messageId: string; editorialArtifactId?: string }
+    | { type: "error"; requestId: string; errorCode: import("./errors.js").ApplicationErrorCode; retryable: boolean };
+
+export interface AssistantClient {
+    streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void>;
+}

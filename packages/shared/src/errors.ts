@@ -26,6 +26,12 @@ export const APPLICATION_ERROR = {
     EDITORIAL_REQUEST_FAILED: "editorial_request_failed",
     INVALID_KEY_BINDING: "invalid_key_binding",
     KEY_BINDING_CONFLICT: "key_binding_conflict",
+    ASSISTANT_SKILL_UNSUPPORTED: "assistant_skill_unsupported",
+    ASSISTANT_SKILL_SCOPE_INCOMPATIBLE: "assistant_skill_scope_incompatible",
+    ASSISTANT_SELECTION_INVALID: "assistant_selection_invalid",
+    ASSISTANT_REQUEST_CONFLICT: "assistant_request_conflict",
+    ASSISTANT_RETRY_INVALID: "assistant_retry_invalid",
+    ASSISTANT_COORDINATOR_FAILED: "assistant_coordinator_failed",
 } as const;
 
 export type ApplicationErrorCode = typeof APPLICATION_ERROR[keyof typeof APPLICATION_ERROR];

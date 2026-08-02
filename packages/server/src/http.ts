@@ -63,7 +63,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
 
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         try {
-            if (handleAssistantRoute(request, response, pathname, repositories))
+            if (await handleAssistantRoute(request, response, pathname, repositories, resolveEngine))
                 return;
 
             if (await handleEditorialRoute(request, response, pathname, config, repositories, resolveEngine))

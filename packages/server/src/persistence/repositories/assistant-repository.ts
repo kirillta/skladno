@@ -1,4 +1,4 @@
-import { isBuiltInSkillId, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus } from "@skladno/shared";
+import { isBuiltInSkillId, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { createId, now, type Row } from "./repository-utils.js";
@@ -6,6 +6,8 @@ import { createId, now, type Row } from "./repository-utils.js";
 const roles: readonly AssistantMessageRole[] = ["assistant", "author", "system"];
 const kinds: readonly AssistantMessageKind[] = ["greeting", "message", "response", "status"];
 const statuses: readonly AssistantMessageStatus[] = ["completed", "pending", "failed", "cancelled"];
+const requestStatuses: readonly AssistantRequestStatus[] = ["pending", "running", "completed", "failed", "cancelled"];
+const skillSources: readonly AssistantSkillSource[] = ["explicit", "inferred"];
 
 export class AssistantRepository {
     constructor(private readonly database: SqliteDatabase) {}
@@ -31,6 +33,81 @@ export class AssistantRepository {
         const rows = this.database.prepare("SELECT * FROM assistant_messages WHERE article_id = ? ORDER BY created_at, id").all(articleId) as Row[];
 
         return rows.map((row) => this.toMessage(row));
+    }
+
+    createRequest(input: { id: string; articleId: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; retryOfRequestId?: string }): AssistantRequest {
+        if (this.database.prepare("SELECT 1 FROM assistant_requests WHERE id = ?").get(input.id))
+            throw new Error("Assistant request already exists.");
+
+        const timestamp = now();
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            this.database.prepare("INSERT INTO assistant_requests (id, article_id, base_revision_id, scope_json, explicit_skill_id, status, retry_of_request_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(input.id, input.articleId, input.scope.baseRevisionId, JSON.stringify(input.scope), input.explicitSkillId ?? null, "running", input.retryOfRequestId ?? null, timestamp, timestamp);
+            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(createId(), input.articleId, input.id, "author", "message", "completed", "", timestamp, timestamp);
+            this.database.exec("COMMIT;");
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
+
+        return this.getRequest(input.id)!;
+    }
+
+    setAuthorMessage(requestId: string, content: string): void {
+        this.database.prepare("UPDATE assistant_messages SET content = ?, updated_at = ? WHERE request_id = ? AND role = 'author'").run(content, now(), requestId);
+    }
+
+    resolveRequest(requestId: string, skillId: BuiltInSkillId | undefined, source: AssistantSkillSource | undefined): void {
+        this.database.prepare("UPDATE assistant_requests SET resolved_skill_id = ?, skill_source = ?, updated_at = ? WHERE id = ?")
+            .run(skillId ?? null, source ?? null, now(), requestId);
+    }
+
+    completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; editorialArtifactId?: string }): AssistantMessage {
+        const timestamp = now();
+        const messageId = createId();
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, skill_id, response_kind, editorial_artifact_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(messageId, input.articleId, input.requestId, "assistant", "response", "completed", input.content, input.skillId ?? null, input.responseKind, input.editorialArtifactId ?? null, timestamp, timestamp);
+            this.database.prepare("UPDATE assistant_requests SET status = 'completed', updated_at = ? WHERE id = ?").run(timestamp, input.requestId);
+            this.database.exec("COMMIT;");
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
+
+        return this.toMessage(this.database.prepare("SELECT * FROM assistant_messages WHERE id = ?").get(messageId) as Row);
+    }
+
+    failRequest(requestId: string, status: "failed" | "cancelled", errorCode: string): void {
+        this.database.prepare("UPDATE assistant_requests SET status = ?, error_code = ?, updated_at = ? WHERE id = ?").run(status, errorCode, now(), requestId);
+    }
+
+    getRequest(requestId: string): AssistantRequest | undefined {
+        const row = this.database.prepare("SELECT * FROM assistant_requests WHERE id = ?").get(requestId) as Row | undefined;
+        if (!row)
+            return undefined;
+
+        const scope = JSON.parse(String(row.scope_json)) as AssistantRequestScope;
+        const status = String(row.status) as AssistantRequestStatus;
+        if (!requestStatuses.includes(status) || !scope || (scope.kind !== "article" && scope.kind !== "selection"))
+            throw new Error("Invalid persisted assistant request.");
+
+        const explicitSkillValue = row.explicit_skill_id === null ? undefined : String(row.explicit_skill_id);
+        const resolvedSkillValue = row.resolved_skill_id === null ? undefined : String(row.resolved_skill_id);
+        const skillSource = row.skill_source === null ? undefined : String(row.skill_source) as AssistantSkillSource;
+        if ((explicitSkillValue && !isBuiltInSkillId(explicitSkillValue)) || (resolvedSkillValue && !isBuiltInSkillId(resolvedSkillValue)) || (skillSource && !skillSources.includes(skillSource)))
+            throw new Error("Invalid persisted assistant request.");
+
+        const explicitSkillId = explicitSkillValue as BuiltInSkillId | undefined;
+        const resolvedSkillId = resolvedSkillValue as BuiltInSkillId | undefined;
+
+        return { id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
+            ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}), status,
+            ...(row.retry_of_request_id === null ? {} : { retryOfRequestId: String(row.retry_of_request_id) }), ...(row.error_code === null ? {} : { errorCode: String(row.error_code) }),
+            createdAt: String(row.created_at), updatedAt: String(row.updated_at) };
     }
 
     private toMessage(row: Row): AssistantMessage {
