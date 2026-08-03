@@ -1,5 +1,6 @@
 /** Canonical application-owned messages. IDs are stable; English is the source text. */
 export const messages = {
+    "article.defaultTitle": "Untitled article",
     "workspace.tabs.write": "Write",
     "workspace.tabs.proposal": "Proposal Review",
     "workspace.tabs.revisions": "Revisions",
@@ -105,13 +106,47 @@ export const messages = {
     "assistant.heading": "Editorial Assistant",
     "assistant.intro": "Ask for a focused editorial operation when you are ready. Suggestions stay separate from your Article until you accept them.",
     "assistant.preparing": "Preparing your proposal…",
+    "assistant.workingFor": "Working for {duration}",
+    "assistant.duration.seconds": "{seconds, plural, one {# second} other {# seconds}}",
+    "assistant.duration.minutesAndSeconds": "{minutes, plural, one {# minute} other {# minutes}} {seconds, plural, one {# second} other {# seconds}}",
     "assistant.quickActions": "Quick actions",
     "assistant.quickActionSelected": "Quick actions: {operation} selected",
-    "assistant.stages": "Stages",
+    "assistant.selectedSkill": "Selected skill: {skill}",
+    "assistant.removeSkill": "Remove {skill}",
+    "assistant.articleSelection": "Article selection",
+    "assistant.clearArticleSelection": "Clear Article selection",
+    "assistant.authorMessage": "Your message",
+    "assistant.response.conversation": "Editorial conversation",
+    "assistant.response.skill": "{skill}",
+    "assistant.response.proposal": "Proposal prepared",
+    "assistant.response.talkingPointsProposal": "Talking points prepared",
+    "assistant.response.findings": "Findings prepared",
+    "assistant.response.proposalAndFindings": "Proposal and findings prepared",
+    "assistant.response.translation": "Translation proposal prepared",
+    "assistant.reviewProposal": "Review Proposal",
+    "assistant.viewFindings": "View Findings",
+    "assistant.reviewTranslation": "Review Translation",
     "assistant.guidance": "Editorial guidance",
     "assistant.guidancePlaceholder": "Ask or instruct…",
     "assistant.send": "Send editorial request",
     "assistant.stop": "Stop request",
+    "assistant.greeting": "Hi — I’m here to help shape this Article while keeping you in control. Tell me what you’re working on, or choose a Quick action.",
+    "assistant.requestCancelled": "This editorial request was cancelled. Your Article was not changed.",
+    "assistant.requestFailed": "This editorial request failed. Your Article was not changed.",
+    "assistant.requestStartFailed": "Couldn’t complete this editorial request.",
+    "assistant.errorDetails": "Error details",
+    "assistant.skill.talkingPoints.label": "Talking points",
+    "assistant.skill.talkingPoints.hint": "Develop the main points you want this Article to make.",
+    "assistant.skill.narrativeDraft.label": "Narrative draft",
+    "assistant.skill.narrativeDraft.hint": "Turn your ideas into a coherent first draft.",
+    "assistant.skill.flowAndClarity.label": "Flow and clarity",
+    "assistant.skill.flowAndClarity.hint": "Improve structure, transitions, and readability without changing your claims.",
+    "assistant.skill.factChecking.label": "Fact checking",
+    "assistant.skill.factChecking.hint": "Review claims and prepare advisory findings with sources and uncertainty.",
+    "assistant.skill.styleReview.label": "Style review",
+    "assistant.skill.styleReview.hint": "Review the draft against your local style profile.",
+    "assistant.skill.translation.label": "Translation",
+    "assistant.skill.translation.hint": "Prepare a separate translation Article for your review.",
     "operations.thesisToNarrative": "Thesis to narrative",
     "operations.flowRevision": "Flow revision",
     "operations.factCheck": "Fact check",
@@ -341,7 +376,6 @@ export const messages = {
     "errors.aiConnectionVerificationFailed": "The AI provider could not verify this connection. Check the variable and its key, then try again.",
     "errors.styleCorpusRequired": "Add at least one style corpus item before checking style.",
     "errors.targetLanguageRequired": "Choose a target language before requesting a translation.",
-    "errors.invalidWorkflowStage": "Choose a valid workflow stage.",
     "errors.editorialOperationUnsupported": "Choose an available editorial workflow.",
     "errors.editorialConfigurationMissing": "Add OPENAI_API_KEY to the local service environment, then retry.",
     "errors.editorialProviderFailed": "The editorial provider could not complete this request. Try again.",
@@ -352,3 +386,13 @@ export const messages = {
 } as const;
 
 export type MessageId = keyof typeof messages;
+
+
+declare global {
+    // eslint-disable-next-line @typescript-eslint/no-namespace -- React Intl exposes this namespace for application message-ID augmentation.
+    namespace FormatjsIntl {
+        interface Message {
+            ids: MessageId;
+        }
+    }
+}

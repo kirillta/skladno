@@ -328,3 +328,89 @@ test("fact checks persist completed findings and citations against the reviewed 
         assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "An article");
     });
 });
+
+
+test("assistant requests persist a revision-bound proposal and splice only the selected Markdown", async () => {
+    const engine = new FixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "improved" },
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-flow", text: "improved" },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.createArticle({ title: "Draft", content: "before selected after" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "assistant-request-1",
+                authorMessage: "Improve the flow of this selection.",
+                scope: { kind: "selection", baseRevisionId: article.currentRevisionId, startOffset: 7, endOffset: 15 },
+            }),
+        });
+        const body = await response.text();
+        const artifact = repositories.listEditorialArtifacts(article.id)[0]!;
+
+        assert.match(body, /"type":"accepted"/);
+        assert.match(body, /"type":"skill_resolved".*"skillId":"flow_and_clarity"/);
+        assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
+        assert.equal(engine.requests[0]?.article, "selected");
+        assert.equal(JSON.parse(artifact.content).proposal, "before improved after");
+        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "before selected after");
+        assert.equal(repositories.assistant.getRequest("assistant-request-1")?.status, "completed");
+        assert.equal(repositories.listAssistantMessages(article.id).filter((message) => message.requestId === "assistant-request-1").length, 2);
+        assert.equal(repositories.listAssistantMessages(article.id).find((message) => message.role === "author")?.selectionText, "selected");
+    });
+});
+
+
+test("conversational Assistant requests send only the selected Article context", async () => {
+    let conversation: { article: string; scope: "article" | "selection" } | undefined;
+    const engine: EditorialEngine = {
+        async *stream(): AsyncIterable<EditorialEngineEvent> {
+            return;
+        },
+        async *streamConversation(request): AsyncIterable<EditorialEngineEvent> {
+            conversation = { article: request.article, scope: request.scope };
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "conversation-selection", text: "I received the selected text." };
+        },
+    };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.createArticle({ title: "Draft", content: "before selected after" });
+        await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "assistant-conversation-selection",
+                authorMessage: "What did I send?",
+                scope: { kind: "selection", baseRevisionId: article.currentRevisionId, startOffset: 7, endOffset: 15 },
+            }),
+        });
+
+        assert.deepEqual(conversation, { article: "selected", scope: "selection" });
+    });
+});
+
+
+test("assistant streams include a stable failure code", async () => {
+    const engine: EditorialEngine = {
+        async *stream(): AsyncIterable<EditorialEngineEvent> {
+            throw new EditorialEngineError("network", "OpenAI could not be reached. Check your connection and API settings, then retry.");
+        },
+    };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "assistant-request-error",
+                authorMessage: "Improve the flow.",
+                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+            }),
+        });
+
+        assert.match(await response.text(), /"errorCode":"editorial_provider_failed"/);
+    });
+});

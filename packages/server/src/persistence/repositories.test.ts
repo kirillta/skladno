@@ -33,6 +33,39 @@ test("accepted edits and restores create immutable ordered Revisions", () => wit
 }));
 
 
+test("Assistant greetings persist a localized template without server-owned copy", () => withRepository((repositories) => {
+    const article = repositories.createArticle({ title: "Conversation", content: "Draft" });
+    const messages = repositories.listAssistantMessages(article.id);
+
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0]?.template, "greeting");
+    assert.equal(messages[0]?.content, undefined);
+}));
+
+
+test("Assistant author messages retain their resolved skill", () => withRepository((repositories) => {
+    const article = repositories.createArticle({ title: "Conversation", content: "Draft" });
+    const request = repositories.assistant.createRequest({
+        id: "assistant-request",
+        articleId: article.id,
+        scope: {
+            kind: "article",
+            baseRevisionId: article.currentRevisionId,
+        },
+        explicitSkillId: "talking_points",
+        skillOffset: 9,
+    });
+
+    repositories.assistant.setAuthorMessage(request.id, "Organize these ideas.");
+    repositories.assistant.resolveRequest(request.id, "talking_points", "explicit");
+
+    const authorMessage = repositories.listAssistantMessages(article.id).find((message) => message.requestId === request.id && message.role === "author");
+
+    assert.equal(authorMessage?.skillId, "talking_points");
+    assert.equal(authorMessage?.skillOffset, 9);
+}));
+
+
 test("proposal acceptance requires the reviewed Revision to still be current", () => withRepository((repositories) => {
     const article = repositories.createArticle({ title: "Proposal", content: "before" });
     const accepted = repositories.acceptProposal(article.id, {
@@ -150,18 +183,15 @@ test("Article metadata updates preserve the current Revision", () => withReposit
     const article = repositories.createArticle({ title: "Metadata", content: "Draft", language: "en" });
     const updated = repositories.updateArticle(article.id, {
         title: "Updated metadata",
-        workflowStage: "fact_checking",
         language: "es",
         publishingProfileId: "linkedin-short",
     });
 
     assert.equal(updated.title, "Updated metadata");
-    assert.equal(updated.workflowStage, "fact_checking");
     assert.equal(updated.language, "es");
     assert.equal(updated.publishingProfileId, "linkedin-short");
     assert.equal(updated.currentRevisionId, article.currentRevisionId);
     assert.equal(repositories.listArticleRevisions(article.id).length, 1);
-    assert.throws(() => repositories.updateArticle(article.id, { workflowStage: "flow" as never }), /Invalid workflow stage/);
     assert.throws(() => repositories.updateArticle(article.id, { publishingProfileId: "unknown" }), /Unsupported publishing profile/);
 }));
 

@@ -5,6 +5,8 @@ import {
     type ApplicationErrorPayload,
     acceptProposalPath,
     articlesPath,
+    assistantMessagesPath,
+    assistantRequestsPath,
     articleRevisionsPath,
     articleDraftPath,
     editorialPath,
@@ -21,6 +23,9 @@ import {
     type ArticleDraft,
     type AcceptProposalInput,
     type ArticleRevision,
+    type AssistantMessage,
+    type AssistantEvent,
+    type StartAssistantRequest,
     type ArticleLibraryClient,
     type EditorialClient,
     type EditorialEvent,
@@ -49,6 +54,16 @@ import {
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
 export interface EditorialWorkspaceClient extends ApplicationClient, ArticleLibraryClient, EditorialClient, StyleCorpusClient, PublishingClient, ApplicationSettingsClient { }
+
+
+function applicationClientError(payload: unknown, status: number): ApplicationClientError {
+    if (payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string") {
+        const error = payload as ApplicationErrorPayload;
+        return new ApplicationClientError(error.code, error.parameters, status);
+    }
+
+    return new ApplicationClientError("editorial_request_failed", { status }, status);
+}
 
 
 export class HttpApplicationClient implements EditorialWorkspaceClient {
@@ -114,6 +129,51 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async createArticle(input: CreateArticleInput): Promise<Article> {
         return this.request<Article>(articlesPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+    }
+
+    async listAssistantMessages(articleId: string): Promise<AssistantMessage[]> {
+        return this.request<AssistantMessage[]>(assistantMessagesPath(articleId));
+    }
+
+
+    async streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void> {
+        const response = await fetch(`${this.serviceUrl}${assistantRequestsPath(articleId)}`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(input),
+            signal,
+        });
+        if (!response.ok || !response.body) {
+            const body: unknown = await response.json().catch(() => undefined);
+            const payload = body && typeof body === "object" && "error" in body
+                ? (body as { error: unknown }).error
+                : undefined;
+
+            throw applicationClientError(payload, response.status);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let pending = "";
+        while (true) {
+            const result = await reader.read();
+            if (result.done)
+                break;
+
+            pending += decoder.decode(result.value, { stream: true });
+            const events = pending.split("\n\n");
+            pending = events.pop() ?? "";
+            for (const item of events) {
+                const data = item.split("\n").find((line) => line.startsWith("data: "));
+                if (data) {
+                    const event = JSON.parse(data.slice(6)) as AssistantEvent;
+                    if (event.type === "error")
+                        throw new ApplicationClientError(event.errorCode, undefined, response.status);
+
+                    onEvent(event);
+                }
+            }
+        }
     }
 
 
@@ -241,12 +301,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             const payload = typeof body === "object" && body !== null && "error" in body
                 ? (body as { error: unknown }).error
                 : undefined;
-            if (payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string") {
-                const error = payload as ApplicationErrorPayload;
-                throw new ApplicationClientError(error.code, error.parameters, response.status);
-            }
-
-            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
+            throw applicationClientError(payload, response.status);
         }
 
         return body as T;

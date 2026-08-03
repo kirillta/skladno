@@ -101,6 +101,10 @@
         @apply outline-2 outline-focus outline-offset-2;
     }
 
+    ::highlight(skladno-assistant-selection) {
+        background-color: var(--color-brand-soft);
+    }
+
     @media (prefers-reduced-motion: reduce) {
         *,
         ::before,

@@ -1,5 +1,5 @@
 import { cloneElement, isValidElement, useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
-import { defaultPublishLimitProfileId, defaultGeneralSettings, findKeyBindingConflict, formatKeyBinding, keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, publishLimitProfiles, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingCommandId, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection, type PublishLimitProfileId } from "@skladno/shared";
+import { builtInSkills, defaultPublishLimitProfileId, defaultGeneralSettings, findKeyBindingConflict, formatKeyBinding, keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, publishLimitProfiles, type ApplicationSettingsSnapshot, type BackupPolicy, type BuiltInSkillId, type GeneralSettings, type KeyBindingCommandId, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection, type PublishLimitProfileId } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Banner, Button, Dialog, Field, Select } from "../ui/primitives.js";
 import { catalogByLocale, installedLocaleCatalogs } from "../i18n/catalogs.js";
@@ -99,13 +99,14 @@ function KeyBindingSettings({ overrides, save }: { overrides: KeyBindingOverride
     </>;
 }
 
-const operations = [
-    ["thesis_to_narrative", "operations.thesisToNarrative"],
-    ["flow_revision", "operations.flowRevision"],
-    ["fact_check", "operations.factCheck"],
-    ["style_review", "operations.styleReview"],
-    ["translation", "operations.translation"],
-] as const;
+const skillMessages: Record<BuiltInSkillId, { label: "assistant.skill.talkingPoints.label" | "assistant.skill.narrativeDraft.label" | "assistant.skill.flowAndClarity.label" | "assistant.skill.factChecking.label" | "assistant.skill.styleReview.label" | "assistant.skill.translation.label"; hint: "assistant.skill.talkingPoints.hint" | "assistant.skill.narrativeDraft.hint" | "assistant.skill.flowAndClarity.hint" | "assistant.skill.factChecking.hint" | "assistant.skill.styleReview.hint" | "assistant.skill.translation.hint" }> = {
+    talking_points: { label: "assistant.skill.talkingPoints.label", hint: "assistant.skill.talkingPoints.hint" },
+    narrative_draft: { label: "assistant.skill.narrativeDraft.label", hint: "assistant.skill.narrativeDraft.hint" },
+    flow_and_clarity: { label: "assistant.skill.flowAndClarity.label", hint: "assistant.skill.flowAndClarity.hint" },
+    fact_checking: { label: "assistant.skill.factChecking.label", hint: "assistant.skill.factChecking.hint" },
+    style_review: { label: "assistant.skill.styleReview.label", hint: "assistant.skill.styleReview.hint" },
+    translation: { label: "assistant.skill.translation.label", hint: "assistant.skill.translation.hint" },
+};
 
 function SettingRow({ label, hint, children, status, action }: { label: string; hint: string; children: ReactNode; status?: ReactNode; action?: ReactNode }) {
     const hintId = useId();
@@ -146,7 +147,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
     const [section, setSection] = useState<Section>("general");
     const [settings, setSettings] = useState<ApplicationSettingsSnapshot>();
     const [general, setGeneral] = useState(defaultGeneralSettings);
-    const [preferences, setPreferences] = useState<ModelPreferences>({ defaultModel: "", operationOverrides: {} });
+    const [preferences, setPreferences] = useState<ModelPreferences>({ defaultModel: "", skillOverrides: {} });
     const [backupPolicy, setBackupPolicy] = useState<BackupPolicy>({ schedule: "off", retention: { mode: "count", count: 7 } });
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>({});
     const [publishingProfileId, setPublishingProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
@@ -336,7 +337,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
                     }} /></Control>{connectionError && <Banner tone="warning" role="alert"><span>{connectionError}</span></Banner>}<Button className="w-fit" variant="secondary" onClick={() => void addConnection()}>{intl.formatMessage({ id: "settings.addConnectionButton" })}</Button></div></SettingRow>
                     {settings.connections.length > 0 && <SettingRow label={intl.formatMessage({ id: "settings.configuredConnections" })} hint={intl.formatMessage({ id: "settings.configuredConnectionsHint" })}><div className="grid gap-2">{settings.connections.map((connection) => <div key={connection.id} className="flex flex-col gap-3 rounded-control border border-border bg-surface-raised px-3 py-2 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><p className="text-sm font-medium">{connection.label}</p><p className="mt-1 truncate text-xs text-muted">{connection.environmentVariableName}</p></div><div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">{connection.id === settings.activeConnectionId ? <p className="text-xs text-muted" role="status">{intl.formatMessage({ id: "settings.activeConnection" })}</p> : <><Button variant="quiet" onClick={() => void setActiveConnection(connection.id)}>{intl.formatMessage({ id: "settings.useConnection" })}</Button><Button variant="danger" onClick={() => setConnectionPendingRemoval(connection)}>{intl.formatMessage({ id: "settings.removeConnection" })}</Button></>}</div></div>)}</div></SettingRow>}
                     <SettingRow label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}><Control label={intl.formatMessage({ id: "settings.model" })} hint={intl.formatMessage({ id: "settings.modelHint" })}><Select value={preferences.defaultModel} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, defaultModel: event.target.value })}><option value="">{models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" })}</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control><Button className="mt-3 w-fit" variant="secondary" onClick={() => void refreshModels()}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button></SettingRow>
-                    <SettingRow label={intl.formatMessage({ id: "settings.specificModels" })} hint={intl.formatMessage({ id: "settings.specificModelsHint" })}><div className="grid gap-4">{operations.map(([operation, label]) => <Control key={operation} label={intl.formatMessage({ id: label as "operations.thesisToNarrative" | "operations.flowRevision" | "operations.factCheck" | "operations.styleReview" | "operations.translation" })} hint={intl.formatMessage({ id: "settings.specificModelHint" })}><Select value={preferences.operationOverrides[operation] ?? ""} onChange={(event) => void savePreferences({ ...preferences, operationOverrides: { ...preferences.operationOverrides, [operation]: event.target.value } })}><option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control>)}</div></SettingRow>
+                    <SettingRow label={intl.formatMessage({ id: "settings.specificModels" })} hint={intl.formatMessage({ id: "settings.specificModelsHint" })}><div className="grid gap-4">{builtInSkills.map((skill) => <Control key={skill} label={intl.formatMessage({ id: skillMessages[skill].label })} hint={intl.formatMessage({ id: skillMessages[skill].hint })}><Select value={preferences.skillOverrides[skill] ?? ""} onChange={(event) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: event.target.value } })}><option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>{models.map((model) => <option key={model}>{model}</option>)}</Select></Control>)}</div></SettingRow>
                 </> : section === "publishing" ? <SettingRow label={intl.formatMessage({ id: "settings.publishingProfile" })} hint={intl.formatMessage({ id: "settings.publishingProfileHint" })}><Select value={publishingProfileId} onChange={(event) => {
                     const profileId = event.target.value as PublishLimitProfileId;
                     setPublishingProfileId(profileId);

@@ -78,6 +78,57 @@ function EditorBridge({ content, onChange, onReady }: { content: string; onChang
 }
 
 
+const assistantSelectionHighlight = "skladno-assistant-selection";
+
+
+function EditorSelectionBridge({ onSelectionChange }: { onSelectionChange?: (value: string | undefined) => void }) {
+    return <OnChangePlugin ignoreHistoryMergeTagChange ignoreSelectionChange={false} onChange={(state) => {
+        state.read(() => {
+            const selection = $getSelection();
+            const text = $isRangeSelection(selection) ? selection.getTextContent() : "";
+            if (text)
+                onSelectionChange?.(text);
+        });
+    }} />;
+}
+
+
+function AssistantSelectionHighlight({ active }: { active: boolean }) {
+    const [editor] = useLexicalComposerContext();
+
+    useEffect(() => {
+        const highlights = (globalThis.CSS as typeof CSS & { highlights?: { delete(name: string): void; set(name: string, value: unknown): void } } | undefined)?.highlights;
+        const HighlightConstructor = (globalThis as typeof globalThis & { Highlight?: new (range: Range) => unknown }).Highlight;
+        if (!highlights || !HighlightConstructor)
+            return;
+
+        if (!active) {
+            highlights.delete(assistantSelectionHighlight);
+            return;
+        }
+
+        const captureSelection = () => {
+            const selection = window.getSelection();
+            const range = selection?.rangeCount ? selection.getRangeAt(0) : undefined;
+            const root = editor.getRootElement();
+            if (!range || !root?.contains(range.commonAncestorContainer))
+                return;
+
+            highlights.set(assistantSelectionHighlight, new HighlightConstructor(range.cloneRange()));
+        };
+
+        captureSelection();
+        return editor.registerUpdateListener(captureSelection);
+    }, [active, editor]);
+
+    useEffect(() => () => {
+        (globalThis.CSS as typeof CSS & { highlights?: { delete(name: string): void } } | undefined)?.highlights?.delete(assistantSelectionHighlight);
+    }, []);
+
+    return null;
+}
+
+
 function $setBlockType(type: BlockType) {
     const selection = $getSelection();
     if (!$isRangeSelection(selection))
@@ -459,7 +510,7 @@ function SupportedPastePlugin() {
 }
 
 
-function EditorContents({ content, onChange }: { content: string; onChange: (value: string) => void }) {
+function EditorContents({ content, onChange, onSelectionChange, assistantSelection }: { content: string; onChange: (value: string) => void; onSelectionChange?: (value: string | undefined) => void; assistantSelection?: string }) {
     const intl = useIntl();
     const [editor, setEditor] = useState<LexicalEditor>();
     return <>{editor && <LinkControl editor={editor} />}
@@ -472,6 +523,8 @@ function EditorContents({ content, onChange }: { content: string; onChange: (val
                     <LinkPlugin />
                     <SupportedPastePlugin />
                     <EditorBridge content={content} onChange={onChange} onReady={setEditor} />
+                    <EditorSelectionBridge onSelectionChange={onSelectionChange} />
+                    <AssistantSelectionHighlight active={Boolean(assistantSelection)} />
                 </div>
             </div>
         </div>
@@ -479,7 +532,7 @@ function EditorContents({ content, onChange }: { content: string; onChange: (val
 }
 
 
-export function ArticleRichEditor({ articleId, content, setContent }: { articleId: string; content: string; setContent: (value: string) => void }) {
+export function ArticleRichEditor({ articleId, content, setContent, onSelectionChange, assistantSelection }: { articleId: string; content: string; setContent: (value: string) => void; onSelectionChange?: (value: string | undefined) => void; assistantSelection?: string }) {
     const config = useMemo(() => ({
         namespace: `skladno-article-${articleId}`,
         nodes: articleEditorNodes,
@@ -493,7 +546,7 @@ export function ArticleRichEditor({ articleId, content, setContent }: { articleI
 
     return <LexicalComposer key={articleId} initialConfig={config}>
         <div className="flex h-full min-h-0 flex-col">
-            <EditorContents content={content} onChange={setContent} />
+            <EditorContents content={content} onChange={setContent} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} />
         </div>
     </LexicalComposer>;
 }

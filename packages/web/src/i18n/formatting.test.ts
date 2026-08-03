@@ -6,6 +6,9 @@ describe("time-zone formatting", () => {
     it("uses the device time zone for the system preference", () => {
         const value = "2026-01-01T15:45:00.000Z";
         const expected = new Intl.DateTimeFormat("en", {
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
             hour: "2-digit",
             minute: "2-digit",
             hourCycle: "h23",

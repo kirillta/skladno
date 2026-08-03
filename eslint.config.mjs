@@ -82,14 +82,31 @@ export default defineConfig(
             "react-hooks": reactHooks,
         },
         rules: {
+            "project-style/no-accessible-label-selector": "error",
+            "project-style/no-production-intl-provider": "error",
+            "project-style/no-untranslated-ui-copy": ["error", {
+                allowedLiterals: [
+                    "S",
+                    "Skladno",
+                ],
+            }],
             "react-hooks/exhaustive-deps": "warn",
             "react-hooks/rules-of-hooks": "error",
+        },
+    },
+    {
+        files: ["packages/web/src/i18n/I18nProvider.tsx"],
+        rules: {
+            "project-style/no-production-intl-provider": "off",
         },
     },
     {
         files: testFiles,
         rules: {
             "@typescript-eslint/no-explicit-any": "off",
+            "project-style/no-accessible-label-selector": "off",
+            "project-style/no-production-intl-provider": "off",
+            "project-style/no-untranslated-ui-copy": "off",
             "require-yield": "off",
         },
     },

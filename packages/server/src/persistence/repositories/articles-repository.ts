@@ -1,4 +1,4 @@
-import { WORKFLOW_STAGE, isArticleLanguage, isPublishLimitProfileId, isWorkflowStage, type AcceptedChange, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type Article, type ArticleDraft, type ArticleRevision, type SaveArticleDraftInput, type SaveArticleRevisionInput } from "@skladno/shared";
+import { isArticleLanguage, isPublishLimitProfileId, type AcceptedChange, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type Article, type ArticleDraft, type ArticleRevision, type SaveArticleDraftInput, type SaveArticleRevisionInput } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { ArticleDraftConflictError, ArticleRevisionConflictError } from "../errors.js";
@@ -41,7 +41,6 @@ function article(row: Row): Article {
         currentRevisionId: currentRevision.id,
         currentRevision,
         ...(draft(row) ? { draft: draft(row) } : {}),
-        workflowStage: String(row.workflow_stage) as Article["workflowStage"],
         ...(row.language ? { language: String(row.language) } : {}),
         ...(row.audience ? { audience: String(row.audience) } : {}),
         ...(row.publishing_profile_id ? { publishingProfileId: String(row.publishing_profile_id) } : {}),
@@ -51,15 +50,13 @@ function article(row: Row): Article {
 }
 
 
-const articleSelect = "SELECT a.id article_id, a.title, a.language, a.audience, a.publishing_profile_id, a.source_article_id, a.source_revision_id, a.workflow_stage, a.created_at article_created_at, a.updated_at article_updated_at, r.*, d.article_id draft_article_id, d.content draft_content, d.base_revision_id draft_base_revision_id, d.version draft_version, d.updated_at draft_updated_at FROM articles a JOIN article_revisions r ON r.id = a.current_revision_id LEFT JOIN article_drafts d ON d.article_id = a.id";
+const articleSelect = "SELECT a.id article_id, a.title, a.language, a.audience, a.publishing_profile_id, a.source_article_id, a.source_revision_id, a.created_at article_created_at, a.updated_at article_updated_at, r.*, d.article_id draft_article_id, d.content draft_content, d.base_revision_id draft_base_revision_id, d.version draft_version, d.updated_at draft_updated_at FROM articles a JOIN article_revisions r ON r.id = a.current_revision_id LEFT JOIN article_drafts d ON d.article_id = a.id";
 
 
 export class ArticlesRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
     create(input: CreateArticleInput): Article {
-        if (input.workflowStage !== undefined && !isWorkflowStage(input.workflowStage))
-            throw new Error("Invalid workflow stage.");
 
         const language = input.language;
         if (language !== undefined && !isArticleLanguage(language))
@@ -77,8 +74,8 @@ export class ArticlesRepository {
 
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            this.database.prepare("INSERT INTO articles (id, title, language, audience, publishing_profile_id, source_article_id, source_revision_id, workflow_stage, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .run(articleId, required(input.title, "Article title"), language ?? null, input.audience ?? null, input.publishingProfileId ?? null, sourceArticleId ?? null, input.sourceRevisionId ?? null, input.workflowStage ?? WORKFLOW_STAGE.TALKING_POINTS, timestamp, timestamp);
+            this.database.prepare("INSERT INTO articles (id, title, language, audience, publishing_profile_id, source_article_id, source_revision_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(articleId, required(input.title, "Article title"), language ?? null, input.audience ?? null, input.publishingProfileId ?? null, sourceArticleId ?? null, input.sourceRevisionId ?? null, timestamp, timestamp);
             this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
                 .run(revisionId, articleId, input.content, JSON.stringify(input.provenance ?? { kind: "initial" }), timestamp);
             this.database.prepare("UPDATE articles SET current_revision_id = ? WHERE id = ?").run(revisionId, articleId);
@@ -107,8 +104,6 @@ export class ArticlesRepository {
         if (!this.get(articleId))
             throw new Error("Article not found.");
 
-        if (input.workflowStage !== undefined && !isWorkflowStage(input.workflowStage))
-            throw new Error("Invalid workflow stage.");
 
         const language = input.language;
         if (language !== undefined && !isArticleLanguage(language))
@@ -125,10 +120,6 @@ export class ArticlesRepository {
             values.push(required(input.title, "Article title"));
         }
 
-        if (input.workflowStage !== undefined) {
-            assignments.push("workflow_stage = ?");
-            values.push(input.workflowStage);
-        }
 
         if (language !== undefined) {
             assignments.push("language = ?");

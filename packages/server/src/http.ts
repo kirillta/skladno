@@ -1,10 +1,11 @@
 import { createServer, type IncomingMessage } from "node:http";
-import { APPLICATION_ERROR, HTTP_METHOD, HTTP_STATUS, type EditorialOperation, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, HTTP_METHOD, HTTP_STATUS, resolveBuiltInSkillId, type EditorialOperation, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 
 import type { ServerConfig } from "./config.js";
 import { LangChainEditorialEngine } from "./editorial/langchain-editorial-engine.js";
 import type { EditorialEngine } from "./editorial/editorial-engine.js";
 import { handleArticlesRoute } from "./http/routes/articles-route.js";
+import { handleAssistantRoute } from "./http/routes/assistant-route.js";
 import { handleEditorialRoute } from "./http/routes/editorial-route.js";
 import { handleHealthRoute } from "./http/routes/health-route.js";
 import { handlePublishSettingsRoute } from "./http/routes/publish-settings-route.js";
@@ -21,7 +22,7 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 
 
 export function createLocalService(config: ServerConfig, repositories: Repositories, engine?: EditorialEngine) {
-    function resolveEngine(operation: EditorialOperation): EditorialEngine | undefined {
+    function resolveEngine(operation: EditorialOperation, assistantSkillId?: import("@skladno/shared").BuiltInSkillId): EditorialEngine | undefined {
         if (engine)
             return engine;
 
@@ -32,7 +33,9 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
             return undefined;
 
         const preferences = repositories.getSetting("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
-        const model = preferences?.operationOverrides?.[operation] || preferences?.defaultModel || config.openAiModel;
+        const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
+        const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || config.openAiModel;
+
         return new LangChainEditorialEngine({ apiKey, model, storeResponses: config.openAiStoreResponses });
     }
 
@@ -61,6 +64,9 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
 
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         try {
+            if (await handleAssistantRoute(request, response, pathname, repositories, resolveEngine))
+                return;
+
             if (await handleEditorialRoute(request, response, pathname, config, repositories, resolveEngine))
                 return;
 

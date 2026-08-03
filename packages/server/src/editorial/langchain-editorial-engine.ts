@@ -1,5 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
-import type { BaseMessage } from "@langchain/core/messages";
+import { HumanMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import type { StyleProfile, StyleReview } from "@skladno/shared";
 
@@ -113,6 +113,27 @@ export class LangChainEditorialEngine implements EditorialEngine {
                 throw error;
 
             throw providerError(error, Boolean(request.previousResponseId));
+        }
+    }
+
+
+    async *streamConversation(request: { message: string; article: string; scope: "article" | "selection"; history: { role: "author" | "assistant"; content: string }[]; signal: AbortSignal }): AsyncIterable<EditorialEngineEvent> {
+        const messages: BaseMessage[] = [new SystemMessage("You are Skladno's editorial assistant. Answer conversationally and help the author decide what to do next. Do not claim to have changed or saved the Article. Do not turn the Article into a proposal unless the author explicitly asks for an editorial operation.")];
+        if (request.article)
+            messages.push(new SystemMessage(`${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`));
+
+        for (const turn of request.history.slice(-12))
+            messages.push(turn.role === "author" ? new HumanMessage(turn.content) : new SystemMessage(`Assistant: ${turn.content}`));
+
+        messages.push(new HumanMessage(request.message));
+
+        try {
+            yield* this.streamTextProposal({ messages, callOptions: { signal: request.signal } });
+        } catch (error) {
+            if (error instanceof EditorialEngineError)
+                throw error;
+
+            throw providerError(error, false);
         }
     }
 

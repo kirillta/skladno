@@ -18,6 +18,9 @@ import {
     type GeneralSettings,
     type PublishLimitProfileId,
     type StyleCorpus,
+    type AssistantEditorialResult,
+    type AssistantMessage,
+    type BuiltInSkillId,
     type StyleReview,
     type TranslationMetadata,
     KEY_BINDING_COMMAND,
@@ -580,6 +583,27 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
         }
     }
 
+    function applyAssistantResult(articleId: string, baseRevisionId: string, result: AssistantEditorialResult) {
+        const article = workspace.articles.find((item) => item.id === articleId);
+        if (!article)
+            return;
+
+        if (result.proposal) {
+            setBase({ articleId, content: article.currentRevision.content, revisionId: baseRevisionId });
+            setProposal(result.proposal);
+            setSelectedChanges(new Set());
+        }
+
+        if (result.factCheck)
+            setFactCheckResult({ articleId, baseRevisionId, value: result.factCheck });
+
+        if (result.styleReview)
+            setStyleReviewResult({ articleId, baseRevisionId, value: result.styleReview });
+
+        if (result.translation)
+            setTranslationResult({ articleId, baseRevisionId, value: result.translation });
+    }
+
     return {
         proposal,
         review,
@@ -603,7 +627,8 @@ function useEditorialProposal(client: EditorialWorkspaceClient, workspace: Retur
             setBase(undefined);
         },
         cancel: () => controller.current?.abort(),
-        createTranslation
+        createTranslation,
+        applyAssistantResult
     };
 }
 
@@ -647,6 +672,163 @@ function useStyleCorpus(client: EditorialWorkspaceClient) {
             }
         }
     };
+}
+
+
+function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ReturnType<typeof useArticleWorkspace>, selection: string | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult) => void) {
+    const intl = useIntl();
+    const [messagesByArticle, setMessagesByArticle] = useState<Record<string, AssistantMessage[]>>({});
+    const [stateByArticle, setStateByArticle] = useState<Record<string, ProposalState>>({});
+    const [messageByArticle, setMessageByArticle] = useState<Record<string, string>>({});
+    const [errorDetailsByArticle, setErrorDetailsByArticle] = useState<Record<string, string>>({});
+    const controller = useRef<AbortController>();
+    const article = workspace.selectedArticle;
+    const messages = article ? messagesByArticle[article.id] : undefined;
+    const state = article ? stateByArticle[article.id] ?? "idle" : "idle";
+    const message = article ? messageByArticle[article.id] ?? "" : "";
+    const errorDetails = article ? errorDetailsByArticle[article.id] : undefined;
+
+    const reload = useCallback(async (articleId: string | undefined = article?.id) => {
+        if (!articleId)
+            return;
+
+        const items = await client.listAssistantMessages(articleId);
+        setMessagesByArticle((current) => ({
+            ...current,
+            [articleId]: items,
+        }));
+    }, [article, client]);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!article)
+            return () => {
+                cancelled = true;
+            };
+
+        void client.listAssistantMessages(article.id)
+            .then((items) => {
+                if (!cancelled)
+                    setMessagesByArticle((current) => ({
+                        ...current,
+                        [article.id]: items,
+                    }));
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setMessagesByArticle((current) => {
+                        const remaining = { ...current };
+                        delete remaining[article.id];
+
+                        return remaining;
+                    });
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [article, client]);
+
+    const request = useCallback(async (authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string, skillOffset?: number) => {
+        const current = workspace.selectedArticle;
+        if (!current)
+            return;
+
+        try {
+            const saved = await workspace.save(current.id);
+            const revision = saved ?? current.currentRevision;
+            setMessageByArticle((messages) => {
+                const next = { ...messages };
+                delete next[current.id];
+
+                return next;
+            });
+            setErrorDetailsByArticle((details) => {
+                const next = { ...details };
+                delete next[current.id];
+
+                return next;
+            });
+            setStateByArticle((states) => ({
+                ...states,
+                [current.id]: "streaming",
+            }));
+            controller.current = new AbortController();
+            const streamedId = `streaming-${crypto.randomUUID()}`;
+            const selectedContent = selection && workspace.content.includes(selection) ? selection : undefined;
+            const selectionStart = selectedContent ? workspace.content.indexOf(selectedContent) : -1;
+            await client.streamAssistantRequest(current.id, {
+                requestId: crypto.randomUUID(),
+                authorMessage,
+                scope: selectedContent && selectionStart >= 0
+                    ? { kind: "selection", baseRevisionId: revision.id, startOffset: selectionStart, endOffset: selectionStart + selectedContent.length }
+                    : { kind: "article", baseRevisionId: revision.id },
+                ...(explicitSkillId ? { explicitSkillId } : {}),
+                ...(skillOffset === undefined ? {} : { skillOffset }),
+                ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}),
+            }, (event) => {
+                if (event.type === "completed" && event.result)
+                    onResult(current.id, revision.id, event.result);
+
+                if (event.type !== "text_delta")
+                    return;
+
+                setMessagesByArticle((itemsByArticle) => {
+                    const items = itemsByArticle[current.id];
+                    const streamed = items?.find((item) => item.id === streamedId);
+                    const next = {
+                        id: streamedId,
+                        articleId: current.id,
+                        role: "assistant" as const,
+                        kind: "response" as const,
+                        status: "pending" as const,
+                        content: `${streamed?.content ?? ""}${event.delta}`,
+                        createdAt: streamed?.createdAt ?? new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                    };
+
+                    return {
+                        ...itemsByArticle,
+                        [current.id]: [...(items ?? []).filter((item) => item.id !== streamedId), next],
+                    };
+                });
+            }, controller.current.signal);
+            await reload(current.id);
+            setStateByArticle((states) => ({
+                ...states,
+                [current.id]: "idle",
+            }));
+        } catch (error) {
+            if ((error as DOMException).name === "AbortError") {
+                await reload(current.id).catch(() => undefined);
+                setStateByArticle((states) => ({
+                    ...states,
+                    [current.id]: "idle",
+                }));
+
+                return;
+            }
+
+            setStateByArticle((states) => ({
+                ...states,
+                [current.id]: "error",
+            }));
+            setMessageByArticle((messages) => ({
+                ...messages,
+                [current.id]: intl.formatMessage({ id: "assistant.requestStartFailed" }),
+            }));
+            setErrorDetailsByArticle((details) => ({
+                ...details,
+                [current.id]: error instanceof ApplicationClientError
+                    ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
+                    : intl.formatMessage({ id: "errors.editorialRequestFailed" }),
+            }));
+
+            await reload(current.id).catch(() => undefined);
+        }
+    }, [client, intl, onResult, reload, selection, workspace]);
+
+    return { messages, state, message, errorDetails, request, cancel: () => controller.current?.abort() };
 }
 
 
@@ -795,6 +977,8 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
     const editorial = useEditorialProposal(client, workspace);
     const corpus = useStyleCorpus(client);
+    const [assistantSelection, setAssistantSelection] = useState<string>();
+    const assistant = useAssistantMessages(client, workspace, assistantSelection, editorial.applyAssistantResult);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
 
     const createBlank = useCallback(async () => {
@@ -803,7 +987,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             const defaultLanguage = settings.general.defaultArticleLanguage;
             const defaultProfileId = await client.getPublishLimitProfile();
             return await workspace.create({
-                title: "Untitled article",
+                title: intl.formatMessage({ id: "article.defaultTitle" }),
                 content: "",
                 language: isArticleLanguage(defaultLanguage) ? defaultLanguage : "en",
                 publishingProfileId: isPublishLimitProfileId(defaultProfileId) ? defaultProfileId : defaultPublishLimitProfileId,
@@ -849,7 +1033,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             const activeElement = document.activeElement;
             const focusWillBeLost = !(activeElement instanceof HTMLElement)
                 || activeElement === document.body
-                || Boolean(activeElement.closest('[aria-label="Article Library Panel"], [aria-label="Editorial Assistant Panel"]'));
+                || Boolean(activeElement.closest("[data-workspace-panel]"));
 
             if (focusWillBeLost)
                 document.querySelector<HTMLElement>("[data-article-workspace]")?.focus({ preventScroll: true });
@@ -878,7 +1062,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
 
     if (workspace.state === "loading")
         return <main className="grid min-h-screen place-items-center text-muted">
-            Loading your Article Library…
+            {intl.formatMessage({ id: "workspace.loadingArticles" })}
         </main>;
 
     if (workspace.state === "error")
@@ -889,8 +1073,48 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     if (screen === "application-settings")
         return <ApplicationSettings client={client} back={backToWorkspace} onKeyBindingsUpdated={onKeyBindingsUpdated} />;
 
-    return <ExtractedWorkspaceShell focusMode={layout.focusMode} libraryCollapsed={layout.libraryCollapsed} setLibraryCollapsed={layout.setLibraryCollapsed} assistantCollapsed={layout.assistantCollapsed} setAssistantCollapsed={layout.setAssistantCollapsed} libraryWidth={layout.libraryWidth} setLibraryWidth={layout.setLibraryWidth} assistantWidth={layout.assistantWidth} setAssistantWidth={layout.setAssistantWidth} library={<ExtractedArticleLibraryPanel articles={workspace.articles} selectedArticleId={workspace.selectedArticleId} selectArticle={workspace.selectArticle} collapsed={layout.libraryCollapsed} setCollapsed={layout.setLibraryCollapsed} createBlank={createBlank} openStyleProfile={() => layout.setView("style-profile")} openSettings={enterSettings} language={workspace.selectedArticle?.language} saveState={workspace.saveState} dispatcher={dispatcher} shortcutOverrides={keyBindingOverrides} />} assistant={<ExtractedEditorialAssistantPanel state={editorial.state} message={editorial.message} onRequest={editorial.request} onCancel={editorial.cancel} collapsed={layout.assistantCollapsed} setCollapsed={layout.setAssistantCollapsed} language={layout.targetLanguage} article={workspace.selectedArticle} updateArticle={workspace.updateArticle} dispatcher={dispatcher} shortcutOverrides={keyBindingOverrides} />}>
-        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} />
+    return <ExtractedWorkspaceShell
+        focusMode={layout.focusMode}
+        libraryCollapsed={layout.libraryCollapsed}
+        setLibraryCollapsed={layout.setLibraryCollapsed}
+        assistantCollapsed={layout.assistantCollapsed}
+        setAssistantCollapsed={layout.setAssistantCollapsed}
+        libraryWidth={layout.libraryWidth}
+        setLibraryWidth={layout.setLibraryWidth}
+        assistantWidth={layout.assistantWidth}
+        setAssistantWidth={layout.setAssistantWidth}
+        library={<ExtractedArticleLibraryPanel
+            articles={workspace.articles}
+            selectedArticleId={workspace.selectedArticleId}
+            selectArticle={workspace.selectArticle}
+            collapsed={layout.libraryCollapsed}
+            setCollapsed={layout.setLibraryCollapsed}
+            createBlank={createBlank}
+            openStyleProfile={() => layout.setView("style-profile")}
+            openSettings={enterSettings}
+            language={workspace.selectedArticle?.language}
+            saveState={workspace.saveState}
+            dispatcher={dispatcher}
+            shortcutOverrides={keyBindingOverrides} />
+        }
+        assistant={<ExtractedEditorialAssistantPanel
+            state={assistant.state}
+            message={assistant.message}
+            errorDetails={assistant.errorDetails}
+            onRequest={assistant.request}
+            onCancel={assistant.cancel}
+            collapsed={layout.assistantCollapsed}
+            setCollapsed={layout.setAssistantCollapsed}
+            language={layout.targetLanguage}
+            assistantMessages={assistant.messages}
+            dispatcher={dispatcher}
+            shortcutOverrides={keyBindingOverrides}
+            selection={assistantSelection}
+            openView={layout.setView}
+            generalSettings={generalSettings}
+            clearSelection={() => setAssistantSelection(undefined)} />
+        }>
+        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} assistantSelection={assistantSelection} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
         <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
     </ExtractedWorkspaceShell>;

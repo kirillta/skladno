@@ -10,15 +10,14 @@ Use these decisions for the desktop Editorial Assistant Panel and its collapsed 
 - Do not make the Assistant title larger or use a different font treatment than the Article Library identity.
 - Keep the idle conversation area quiet. Place its author-centered explanation at the top and preserve open space for future editorial activity; do not fill it with permanently visible operation controls.
 
-## Stages and composer
+## Skills and composer
 
 - Place the composer in a fixed footer.
 - Reserve textarea space for an inline paper-plane Send icon at the lower right. Give the icon-only Send control an accessible name and never let it cover entered text.
-- Select the advisory workflow through one **Stages** dropdown button immediately above the composer.
-- Open Stages as a compact floating menu upward so it does not reflow or resize the composer. Do not use a permanently expanded grid, a collapsible in-flow button stack, or a native select.
-- Make a Stage update Article metadata and select its aligned pending operation without sending the request. Keep the current Stage visible in the Stages button.
-- Enable Send only after the author supplies guidance and selects an operation. Disable Send while streaming.
-- Send the selected operation with the current guidance. For translation, also send the current target language.
+- Offer optional built-in skills through one **Quick actions** dropdown button immediately above the composer. Open it upward without reflowing the composer.
+- Quick actions and `/` insert one structured skill tag at the composer caret. The visible tag can be removed without deleting the author’s remaining message.
+- Send is the sole request trigger. It is enabled for a non-empty author message, with or without a skill tag, and disabled while streaming.
+- A non-empty Article Editor selection becomes the active request scope. Show a removable `Article selection` chip and only offer selection-compatible skills.
 
 ## Shared state and safety
 

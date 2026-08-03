@@ -89,10 +89,9 @@ test("article API supports CRUD and revision-aware saves", async () => {
         const conflict = await fetch(`${baseUrl}/${created.id}/revisions`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ content: "stale", baseRevisionId: created.currentRevisionId }) });
         assert.equal(conflict.status, HTTP_STATUS.CONFLICT);
 
-        const renamed = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed draft", workflowStage: "fact_checking", language: "es", publishingProfileId: "linkedin-short" }) });
+        const renamed = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed draft", language: "es", publishingProfileId: "linkedin-short" }) });
         const updated = await renamed.json() as Article;
         assert.equal(updated.title, "Renamed draft");
-        assert.equal(updated.workflowStage, "fact_checking");
         assert.equal(updated.language, "es");
         assert.equal(updated.publishingProfileId, "linkedin-short");
         assert.equal(updated.currentRevisionId, restoredRevision.id);
@@ -101,8 +100,6 @@ test("article API supports CRUD and revision-aware saves", async () => {
         const emptyPatch = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({}) });
         assert.equal(emptyPatch.status, HTTP_STATUS.BAD_REQUEST);
 
-        const invalidStage = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ workflowStage: "flow" }) });
-        assert.equal(invalidStage.status, HTTP_STATUS.BAD_REQUEST);
         assert.ok(saved.id);
 
         const settingsUrl = baseUrl.replace("/api/articles", publishSettingsPath);

@@ -1,9 +1,13 @@
 import { isTimeZonePreference, type DateFormatPreference, type TimeFormatPreference, type TimeZonePreference } from "@skladno/shared";
 
 export function dateTimeOptions(dateFormat: DateFormatPreference, timeFormat: TimeFormatPreference): Intl.DateTimeFormatOptions {
-    const date = dateFormat === "system" ? {} : dateFormat === "iso"
-        ? { year: "numeric", month: "2-digit", day: "2-digit" } as const
-        : { year: "2-digit", month: "2-digit", day: "2-digit" } as const;
+    let date: Intl.DateTimeFormatOptions = { year: "numeric", month: "numeric", day: "numeric" };
+    if (dateFormat === "iso")
+        date = { year: "numeric", month: "2-digit", day: "2-digit" };
+
+    if (dateFormat === "day-first" || dateFormat === "month-first")
+        date = { year: "2-digit", month: "2-digit", day: "2-digit" };
+
     const hourCycle = timeFormat === "12-hour" ? "h12" : timeFormat === "24-hour" ? "h23" : undefined;
 
     return { ...date, hour: "2-digit", minute: "2-digit", ...(hourCycle ? { hourCycle } : {}) };

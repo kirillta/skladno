@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { APPLICATION_ERROR, articlesPath, HTTP_METHOD, HTTP_STATUS, isArticleLanguage, isPublishLimitProfileId, isWorkflowStage, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type SaveArticleRevisionInput } from "@skladno/shared";
+import { APPLICATION_ERROR, articlesPath, HTTP_METHOD, HTTP_STATUS, isArticleLanguage, isPublishLimitProfileId, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type SaveArticleRevisionInput } from "@skladno/shared";
 
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, string, writeJson } from "../json.js";
@@ -26,10 +26,6 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
         if (publishingProfileId !== undefined && !isPublishLimitProfileId(publishingProfileId))
             throw new ApplicationServiceError(APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE, HTTP_STATUS.BAD_REQUEST);
 
-        const workflowStage = body.workflowStage === undefined ? undefined : string(body.workflowStage, "workflowStage");
-        if (workflowStage !== undefined && !isWorkflowStage(workflowStage))
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_WORKFLOW_STAGE, HTTP_STATUS.BAD_REQUEST);
-
         const language = body.language === undefined ? undefined : string(body.language, "language");
         if (language !== undefined && !isArticleLanguage(language))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
@@ -40,7 +36,6 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
             ...(language === undefined ? {} : { language }),
             ...(body.audience === undefined ? {} : { audience: string(body.audience, "audience") }),
             ...(publishingProfileId === undefined ? {} : { publishingProfileId }),
-            ...(workflowStage === undefined ? {} : { workflowStage }),
             ...(body.sourceArticleId === undefined ? {} : { sourceArticleId: string(body.sourceArticleId, "sourceArticleId") }),
             ...(body.sourceRevisionId === undefined ? {} : { sourceRevisionId: string(body.sourceRevisionId, "sourceRevisionId") }),
         };
@@ -68,12 +63,8 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
     if (request.method === HTTP_METHOD.PATCH && !match[2]) {
         const body = object(await readJson(request));
         const title = body.title === undefined ? undefined : string(body.title, "title");
-        const workflowStage = body.workflowStage === undefined ? undefined : string(body.workflowStage, "workflowStage");
         const language = body.language === undefined ? undefined : string(body.language, "language");
         const publishingProfileId = body.publishingProfileId === undefined ? undefined : string(body.publishingProfileId, "publishingProfileId");
-
-        if (workflowStage !== undefined && !isWorkflowStage(workflowStage))
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_WORKFLOW_STAGE, HTTP_STATUS.BAD_REQUEST);
 
         if (language !== undefined && !isArticleLanguage(language))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
@@ -83,7 +74,6 @@ export async function handleArticlesRoute(request: IncomingMessage, response: Se
 
         const input: UpdateArticleInput = {
             ...(title === undefined ? {} : { title }),
-            ...(workflowStage === undefined ? {} : { workflowStage }),
             ...(language === undefined ? {} : { language }),
             ...(publishingProfileId === undefined ? {} : { publishingProfileId }),
         };

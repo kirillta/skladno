@@ -100,8 +100,181 @@ const conditionalBraces = {
 };
 
 
+function literalString(node) {
+    if (node?.type === "Literal" && typeof node.value === "string")
+        return node.value;
+
+    if (node?.type === "TemplateLiteral" && node.expressions.length === 0)
+        return node.quasis[0]?.value.cooked ?? "";
+
+    return undefined;
+}
+
+
+const noUntranslatedUiCopy = {
+    meta: {
+        type: "problem",
+        docs: {
+            description: "Require application-owned visible and accessible copy to resolve through the ICU catalog.",
+        },
+        messages: {
+            untranslatedCopy: "Move application-owned UI copy to the typed ICU catalog and format it with a semantic message ID.",
+        },
+        schema: [{
+            type: "object",
+            properties: {
+                allowedLiterals: {
+                    type: "array",
+                    items: {
+                        type: "string",
+                    },
+                    uniqueItems: true,
+                },
+            },
+            additionalProperties: false,
+        }],
+    },
+
+    create(context) {
+        const allowedLiterals = new Set(context.options[0]?.allowedLiterals ?? []);
+        const visibleAttributes = new Set([
+            "alt",
+            "aria-label",
+            "description",
+            "hint",
+            "label",
+            "message",
+            "placeholder",
+            "title",
+        ]);
+
+
+        function isApplicationCopy(value) {
+            const copy = value.trim();
+
+            return /\p{L}/u.test(copy) && !allowedLiterals.has(copy);
+        }
+
+
+        function reportIfApplicationCopy(node, value) {
+            if (isApplicationCopy(value))
+                context.report({
+                    node,
+                    messageId: "untranslatedCopy",
+                });
+        }
+
+
+        return {
+            JSXText(node) {
+                reportIfApplicationCopy(node, node.value);
+            },
+
+            JSXExpressionContainer(node) {
+                if (node.parent.type === "JSXAttribute")
+                    return;
+
+                const value = literalString(node.expression);
+
+                if (value !== undefined)
+                    reportIfApplicationCopy(node, value);
+            },
+
+            JSXAttribute(node) {
+                if (node.name.type !== "JSXIdentifier" || !visibleAttributes.has(node.name.name) || !node.value)
+                    return;
+
+                if (node.value.type === "Literal") {
+                    const value = literalString(node.value);
+
+                    if (value !== undefined)
+                        reportIfApplicationCopy(node.value, value);
+
+                    return;
+                }
+
+                if (node.value.type !== "JSXExpressionContainer")
+                    return;
+
+                const value = literalString(node.value.expression);
+
+                if (value !== undefined)
+                    reportIfApplicationCopy(node.value, value);
+            },
+        };
+    },
+};
+
+
+const noProductionIntlProvider = {
+    meta: {
+        type: "problem",
+        docs: {
+            description: "Keep production components on the application-level locale provider.",
+        },
+        messages: {
+            nestedProvider: "Production components must consume the application I18nProvider instead of creating another IntlProvider.",
+        },
+        schema: [],
+    },
+
+    create(context) {
+        return {
+            JSXOpeningElement(node) {
+                if (node.name.type === "JSXIdentifier" && node.name.name === "IntlProvider")
+                    context.report({
+                        node,
+                        messageId: "nestedProvider",
+                    });
+            },
+        };
+    },
+};
+
+
+const noAccessibleLabelSelector = {
+    meta: {
+        type: "problem",
+        docs: {
+            description: "Prevent localized accessible names from becoming DOM selectors.",
+        },
+        messages: {
+            localizedSelector: "Use a ref or stable data attribute instead of selecting an element by its localized accessible label.",
+        },
+        schema: [],
+    },
+
+    create(context) {
+        const selectorMethods = new Set([
+            "closest",
+            "matches",
+            "querySelector",
+            "querySelectorAll",
+        ]);
+
+        return {
+            CallExpression(node) {
+                if (node.callee.type !== "MemberExpression" || node.callee.computed || node.callee.property.type !== "Identifier" || !selectorMethods.has(node.callee.property.name))
+                    return;
+
+                const selector = literalString(node.arguments[0]);
+
+                if (selector?.includes("aria-label"))
+                    context.report({
+                        node: node.arguments[0],
+                        messageId: "localizedSelector",
+                    });
+            },
+        };
+    },
+};
+
+
 export default {
     rules: {
         "conditional-braces": conditionalBraces,
+        "no-accessible-label-selector": noAccessibleLabelSelector,
+        "no-production-intl-provider": noProductionIntlProvider,
+        "no-untranslated-ui-copy": noUntranslatedUiCopy,
     },
 };

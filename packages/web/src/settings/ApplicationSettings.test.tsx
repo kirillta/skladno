@@ -13,7 +13,7 @@ function settingsSnapshot(): ApplicationSettingsSnapshot {
     return {
         general: defaultGeneralSettings,
         connections: [],
-        modelPreferences: { defaultModel: "", operationOverrides: {} },
+        modelPreferences: { defaultModel: "", skillOverrides: {} },
         backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } },
         keyBindingOverrides: {},
     };

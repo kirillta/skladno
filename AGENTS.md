@@ -201,6 +201,16 @@ AI-facing tests should prefer deterministic fixtures or mocked provider response
 - Always provide useful loading, empty, cancelled, offline, and recoverable error states.
 - Core workflows must be keyboard accessible.
 
+## Internationalization
+
+- All application-owned visible and accessible renderer copy must resolve through the typed ICU catalog in `packages/web/src/i18n/messages.ts`, including loading, empty, error, notification, dialog, tooltip, placeholder, and accessible-only text.
+- Production components consume the application-level `I18nProvider`. Do not add component-local or fixed-locale `IntlProvider` instances outside tests.
+- Use semantic message IDs, named ICU parameters, and shared number/date formatting. Do not concatenate translated fragments or construct unchecked message IDs.
+- Never use translated text as an identifier, selector, branch condition, enum, transport value, or persisted control value. Use refs, stable data attributes, and domain values for logic.
+- Do not translate Article text, proposals, findings, citations, author-entered names, model IDs, environment-variable names, paths, URLs, Markdown, or provider output.
+- A localized default may be persisted only when it becomes author-editable content or metadata at creation time. Once stored, treat it as Article data and never retranslate it automatically.
+- New or changed UI copy requires a catalog entry and focused coverage. Run lint, typecheck, catalog tests, and relevant component tests before handoff.
+
 ## Repository commands
 
 The MVP Article refactor has one intentional schema transition: at startup, detect the legacy Documents schema, delete its `skladno.sqlite` file and SQLite sidecars once, and recreate the Article schema in the same location. Preserve the resulting Article database on future starts. If cleanup fails, stop startup with a clear error.

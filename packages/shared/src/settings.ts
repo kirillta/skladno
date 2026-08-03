@@ -1,4 +1,4 @@
-import type { EditorialOperation } from "./editorial.js";
+import type { BuiltInSkillId } from "./assistant.js";
 import type { KeyBindingOverrides } from "./key-bindings.js";
 
 export const applicationSettingsPath = "/api/settings";
@@ -58,7 +58,7 @@ export interface OpenAiConnection {
 
 export interface ModelPreferences {
     defaultModel: string;
-    operationOverrides: Partial<Record<EditorialOperation, string>>;
+    skillOverrides: Partial<Record<BuiltInSkillId, string>>;
 }
 
 export interface BackupPolicy {

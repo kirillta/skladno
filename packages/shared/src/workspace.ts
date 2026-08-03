@@ -1,10 +1,11 @@
 import type { CreateArticleInput, UpdateArticleInput, Article, ArticleDraft, ArticleRevision, SaveArticleDraftInput, SaveArticleRevisionInput } from "./persistence/articles.js";
 import type { RevisionClient } from "./revisions.js";
+import type { AssistantClient, AssistantMessage } from "./assistant.js";
 
 export const articlesPath = "/api/articles";
 
 /** The transport-neutral operations required by the author workspace. */
-export interface ArticleLibraryClient extends RevisionClient {
+export interface ArticleLibraryClient extends RevisionClient, AssistantClient {
     listArticles(): Promise<Article[]>;
     createArticle(input: CreateArticleInput): Promise<Article>;
     updateArticle(articleId: string, input: UpdateArticleInput): Promise<Article>;
@@ -12,6 +13,7 @@ export interface ArticleLibraryClient extends RevisionClient {
     saveArticleDraft(articleId: string, input: SaveArticleDraftInput): Promise<ArticleDraft>;
     discardArticleDraft(articleId: string, expectedDraftVersion: number): Promise<void>;
     saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): Promise<ArticleRevision>;
+    listAssistantMessages(articleId: string): Promise<AssistantMessage[]>;
 }
 
 

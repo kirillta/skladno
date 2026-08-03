@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { articleLanguages, type Article, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Button, Dialog, Field, IconButton, Select } from "../../ui/primitives.js";
 import { DeleteIcon, FocusIcon, LeaveFocusIcon, SaveIcon } from "../../ui/icons.js";
-import { IntlProvider, useIntl } from "react-intl";
-import { messages } from "../../i18n/messages.js";
+import { useIntl } from "react-intl";
 import type { Notifications } from "../../notifications/notifications.js";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { KEY_BINDING_COMMAND } from "@skladno/shared";
@@ -21,9 +20,7 @@ export function ArticleHeader(props: {
     notifyError?: Notifications["notifyError"];
     shortcutOverrides?: KeyBindingOverrides;
 }) {
-    return <IntlProvider locale="en" messages={messages}>
-        <LocalizedArticleHeader {...props} />
-    </IntlProvider>;
+    return <LocalizedArticleHeader {...props} />;
 }
 
 

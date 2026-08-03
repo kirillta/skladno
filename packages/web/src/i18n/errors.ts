@@ -13,7 +13,6 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     revision_conflict: "errors.revisionConflict",
     draft_conflict: "errors.revisionConflict",
     unsupported_publishing_profile: "errors.unsupportedPublishingProfile",
-    invalid_workflow_stage: "errors.invalidWorkflowStage",
     invalid_environment_variable_name: "errors.invalidEnvironmentVariableName",
     environment_variable_unavailable: "errors.environmentVariableUnavailable",
     ai_connection_not_found: "errors.aiConnectionNotFound",
@@ -30,6 +29,12 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     editorial_request_failed: "errors.editorialRequestFailed",
     invalid_key_binding: "errors.invalidKeyBinding",
     key_binding_conflict: "errors.keyBindingConflict",
+    assistant_skill_unsupported: "errors.generic",
+    assistant_skill_scope_incompatible: "errors.generic",
+    assistant_selection_invalid: "errors.generic",
+    assistant_request_conflict: "errors.generic",
+    assistant_retry_invalid: "errors.generic",
+    assistant_coordinator_failed: "errors.generic",
 };
 
 

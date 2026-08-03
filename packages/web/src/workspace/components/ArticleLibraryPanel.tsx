@@ -69,7 +69,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     const saveLabel = saveLabels[saveState];
     const saveTone = saveState === "saved" || saveState === "draft-saved" ? "text-success" : saveState === "unsaved" || saveState === "saving" ? "text-warning" : "text-danger";
 
-    return <aside className={collapsed ? "flex h-full w-full flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-full flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
+    return <aside data-workspace-panel="article-library" className={collapsed ? "flex h-full w-full flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-full flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
         {collapsed ? <>
             <header className="flex min-h-18 items-center justify-center">
                 <IconButton className="text-base font-semibold text-brand" label={intl.formatMessage({ id: "navigation.expandArticleLibrary" })} onClick={() => setCollapsed(false)}>S</IconButton>
@@ -104,7 +104,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                 </div>
             </div>
 
-            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4" aria-label={intl.formatMessage({ id: "navigation.articleLibraryNav" })}>
+            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "navigation.articleLibraryNav" })}>
                 {articles.length > 0 && <>
                     <p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "navigation.recent" })}</p>
                     <div className="mt-2 space-y-1">

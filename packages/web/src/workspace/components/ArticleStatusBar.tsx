@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { IntlProvider, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 import { publishLimitProfiles, type PublishLimitProfile, type PublishLimitProfileId, type PublishingLength } from "@skladno/shared";
 import { ChevronDownIcon, StatusIcon } from "../../ui/icons.js";
-import { messages } from "../../i18n/messages.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
 
 
 export function ArticleStatusBar(props: { revisionNumber: number; length: PublishingLength; profile: PublishLimitProfile; setProfile: (id: PublishLimitProfileId) => Promise<void> }) {
-    return <IntlProvider locale="en" messages={messages}><LocalizedArticleStatusBar {...props} /></IntlProvider>;
+    return <LocalizedArticleStatusBar {...props} />;
 }
 
 

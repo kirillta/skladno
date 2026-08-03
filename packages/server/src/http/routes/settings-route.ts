@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, isKeyBindingCommandId, isTimeZonePreference, keyBindingsPath, normalizeKeyBinding, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, isKeyBindingCommandId, isTimeZonePreference, keyBindingsPath, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 import { Repositories } from "../../persistence/index.js";
 import { object, readJson, writeJson } from "../json.js";
 import { ApplicationServiceError } from "../application-error.js";
@@ -54,10 +54,16 @@ function connections(value: unknown): { connections: OpenAiConnection[]; activeC
 }
 
 function modelPreferences(value: unknown): ModelPreferences {
-    const candidate = value && typeof value === "object" ? value as Partial<ModelPreferences> : {};
-    const operationOverrides = candidate.operationOverrides && typeof candidate.operationOverrides === "object" ? Object.fromEntries(Object.entries(candidate.operationOverrides).filter(([operation, model]) => typeof operation === "string" && typeof model === "string")) : {};
+    const candidate = value && typeof value === "object" ? value as Partial<ModelPreferences> & { operationOverrides?: unknown } : {};
+    const values = candidate.skillOverrides && typeof candidate.skillOverrides === "object" ? candidate.skillOverrides : candidate.operationOverrides;
+    const skillOverrides = Object.fromEntries(Object.entries(values ?? {}).flatMap(([skill, model]) => {
+        const normalized = resolveBuiltInSkillId(skill);
+        return normalized && typeof model === "string"
+            ? [[normalized, model.trim()]]
+            : [];
+    })) as ModelPreferences["skillOverrides"];
 
-    return { defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "", operationOverrides };
+    return { defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "", skillOverrides };
 }
 
 function keyBindingOverrides(value: unknown): KeyBindingOverrides {
