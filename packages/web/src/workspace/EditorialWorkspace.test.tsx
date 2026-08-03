@@ -355,6 +355,26 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("removes an incompatible selected skill when an Article selection becomes active", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} />);
+        const composer = within(panel.container).getByRole("textbox", { name: "Editorial guidance" });
+
+        await user.type(composer, "Review this selection.");
+        await user.click(within(panel.container).getByRole("button", { name: "Quick actions" }));
+        await user.click(within(panel.container).getByRole("button", { name: "Talking points" }));
+        expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy();
+
+        panel.rerender(<IntlProvider locale="en" messages={messages}><EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection="Selected Article text" clearSelection={vi.fn()} /></IntlProvider>);
+
+        await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeNull());
+        await user.click(within(panel.container).getByRole("button", { name: "Send editorial request" }));
+
+        expect(onRequest).toHaveBeenCalledWith("Review this selection.", undefined, undefined, undefined);
+    });
+
+
     it("formats Assistant timeline timestamps with the configured preferences", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" generalSettings={{ ...defaultGeneralSettings, dateFormat: "iso", timeFormat: "24-hour", timeZone: "America/New_York" }} assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} />);
 

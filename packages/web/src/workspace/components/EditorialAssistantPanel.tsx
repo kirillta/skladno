@@ -265,15 +265,16 @@ export function EditorialAssistantPanel({ state, message, errorDetails, onReques
 
         const authorMessage = guidance.trim();
         const leadingWhitespace = guidance.length - guidance.trimStart().length;
-        const selectedSkillOffset = selectedSkill ? Math.max(0, skillOffset - leadingWhitespace) : undefined;
+        const requestSkill = selectedSkill && (!selection || builtInSkillScopeCompatibility[selectedSkill].includes("selection")) ? selectedSkill : undefined;
+        const selectedSkillOffset = requestSkill ? Math.max(0, skillOffset - leadingWhitespace) : undefined;
 
-        void onRequest(authorMessage, selectedSkill, selectedSkill === BUILT_IN_SKILL.TRANSLATION ? language : undefined, selectedSkillOffset)
+        void onRequest(authorMessage, requestSkill, requestSkill === BUILT_IN_SKILL.TRANSLATION ? language : undefined, selectedSkillOffset)
             .then(() => {
                 setGuidance("");
                 setSelectedSkill(undefined);
                 renderComposerContent("");
             });
-    }, [canSend, guidance, language, onRequest, renderComposerContent, selectedSkill, skillOffset]);
+    }, [canSend, guidance, language, onRequest, renderComposerContent, selectedSkill, selection, skillOffset]);
 
     useEffect(() => {
         const unregisterSend = dispatcher?.register(KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, send);
@@ -310,6 +311,15 @@ export function EditorialAssistantPanel({ state, message, errorDetails, onReques
         const currentState = composerState.current;
         renderComposerContent(currentState.guidance, currentState.selectedSkill, currentState.skillOffset);
     }, [renderComposerContent]);
+
+    useEffect(() => {
+        if (!selectedSkill || !selection || builtInSkillScopeCompatibility[selectedSkill].includes("selection"))
+            return;
+
+        setSelectedSkill(undefined);
+        setSkillOffset(0);
+        renderComposerContent(guidance);
+    }, [guidance, renderComposerContent, selectedSkill, selection]);
 
     const elapsedMinutes = Math.floor(elapsedSeconds / 60);
     const elapsedDuration = elapsedMinutes > 0
