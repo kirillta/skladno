@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultGeneralSettings, publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
 import { IntlProvider } from "react-intl";
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 
 import { App } from "../App.js";
 import type { EditorialWorkspaceClient } from "../application-client.js";
@@ -372,6 +372,42 @@ describe("Editorial Workspace", () => {
         await user.click(within(panel.container).getByRole("button", { name: "Send editorial request" }));
 
         expect(onRequest).toHaveBeenCalledWith("Review this selection.", undefined, undefined, undefined);
+    });
+
+
+    it("returns an expanded Assistant Panel to the latest message", async () => {
+        const user = userEvent.setup();
+        const scrollHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
+        Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+            configurable: true,
+            get: () => 640,
+        });
+
+        function AssistantPanelHarness() {
+            const [collapsed, setCollapsed] = useState(false);
+
+            return <EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={collapsed} setCollapsed={setCollapsed} language="Portuguese" assistantMessages={[
+                { id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+                { id: "latest", articleId: "one", role: "assistant", kind: "response", status: "completed", content: "The latest response.", createdAt: "2026-01-01T00:01:00.000Z", updatedAt: "2026-01-01T00:01:00.000Z" },
+            ]} />;
+        }
+
+        try {
+            const panel = renderLocalized(<AssistantPanelHarness />);
+            const timeline = () => panel.container.querySelector<HTMLElement>('aside[data-workspace-panel="editorial-assistant"] > div')!;
+
+            expect(timeline().scrollTop).toBe(640);
+
+            await user.click(within(panel.container).getByRole("button", { name: "Collapse Editorial Assistant Panel" }));
+            await user.click(within(panel.container).getByRole("button", { name: "Expand Editorial Assistant Panel" }));
+
+            expect(timeline().scrollTop).toBe(640);
+        } finally {
+            if (scrollHeight)
+                Object.defineProperty(HTMLElement.prototype, "scrollHeight", scrollHeight);
+            else
+                Reflect.deleteProperty(HTMLElement.prototype, "scrollHeight");
+        }
     });
 
 

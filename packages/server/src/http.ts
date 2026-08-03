@@ -35,7 +35,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
         const preferences = repositories.getSetting("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
         const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
         const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || config.openAiModel;
-        
+
         return new LangChainEditorialEngine({ apiKey, model, storeResponses: config.openAiStoreResponses });
     }
 

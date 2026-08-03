@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, type Article, type AssistantMessage, type AssistantResponseKind, type BuiltInSkillId, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Banner, Button } from "../../ui/primitives.js";
@@ -285,13 +285,16 @@ export function EditorialAssistantPanel({ state, message, errorDetails, onReques
         };
     }, [dispatcher, onCancel, send]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
+        if (collapsed)
+            return;
+
         const element = timeline.current;
         if (!element)
             return;
 
         element.scrollTop = element.scrollHeight;
-    }, [assistantMessages, state]);
+    }, [assistantMessages, collapsed, state]);
 
     useEffect(() => {
         if (state !== "streaming") {
