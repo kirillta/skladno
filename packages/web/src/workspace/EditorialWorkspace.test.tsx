@@ -362,6 +362,26 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("shows an Article selection chip in the persisted Author message", () => {
+        renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[{
+            id: "author-selection",
+            articleId: "one",
+            role: "author",
+            kind: "message",
+            status: "completed",
+            content: "Please review this.",
+            selectionText: "Selected Article text",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+        }]} />);
+
+        const selection = screen.getByLabelText("Article selection");
+        expect(selection.getAttribute("title")).toBe("Selected Article text");
+        expect(selection.textContent).toContain("Selected Article tex");
+        expect(selection.parentElement?.textContent).toContain("Please review this.");
+    });
+
+
     it("shows the selected skill on author messages and names Talking points proposals", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[
             { id: "author", articleId: "one", requestId: "request", role: "author", kind: "message", status: "completed", content: "Organize these ideas.", skillOffset: "Organize ".length, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },

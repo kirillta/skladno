@@ -10,7 +10,7 @@ const requestStatuses: readonly AssistantRequestStatus[] = ["pending", "running"
 const skillSources: readonly AssistantSkillSource[] = ["explicit", "inferred"];
 
 export class AssistantRepository {
-    constructor(private readonly database: SqliteDatabase) {}
+    constructor(private readonly database: SqliteDatabase) { }
 
     ensureGreeting(articleId: string): void {
         const exists = this.database.prepare("SELECT 1 FROM assistant_messages WHERE article_id = ? AND kind = 'greeting' LIMIT 1").get(articleId);
@@ -30,7 +30,14 @@ export class AssistantRepository {
 
     listMessages(articleId: string): AssistantMessage[] {
         this.ensureGreeting(articleId);
-        const rows = this.database.prepare("SELECT * FROM assistant_messages WHERE article_id = ? ORDER BY created_at, id").all(articleId) as Row[];
+        const rows = this.database.prepare(`
+            SELECT assistant_messages.*, assistant_requests.scope_json AS request_scope_json, article_revisions.content AS request_revision_content
+            FROM assistant_messages
+            LEFT JOIN assistant_requests ON assistant_requests.id = assistant_messages.request_id
+            LEFT JOIN article_revisions ON article_revisions.id = assistant_requests.base_revision_id
+            WHERE assistant_messages.article_id = ?
+            ORDER BY assistant_messages.created_at, assistant_messages.id
+        `).all(articleId) as Row[];
 
         return rows.map((row) => this.toMessage(row));
     }
@@ -122,10 +129,12 @@ export class AssistantRepository {
         const explicitSkillId = explicitSkillValue as BuiltInSkillId | undefined;
         const resolvedSkillId = resolvedSkillValue as BuiltInSkillId | undefined;
 
-        return { id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
+        return {
+            id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
             ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}), status,
             ...(row.retry_of_request_id === null ? {} : { retryOfRequestId: String(row.retry_of_request_id) }), ...(row.error_code === null ? {} : { errorCode: String(row.error_code) }),
-            createdAt: String(row.created_at), updatedAt: String(row.updated_at) };
+            createdAt: String(row.created_at), updatedAt: String(row.updated_at)
+        };
     }
 
     private toMessage(row: Row): AssistantMessage {
@@ -143,9 +152,18 @@ export class AssistantRepository {
         if (skillOffset !== undefined && (!Number.isInteger(skillOffset) || skillOffset < 0))
             throw new Error("Invalid persisted assistant skill offset.");
 
+        const requestScope = row.request_scope_json === null || row.request_scope_json === undefined
+            ? undefined
+            : JSON.parse(String(row.request_scope_json)) as AssistantRequestScope;
+
+        const selectionText = role === "author" && requestScope?.kind === "selection" && typeof row.request_revision_content === "string"
+            ? String(row.request_revision_content).slice(requestScope.startOffset, requestScope.endOffset)
+            : undefined;
+
         return {
             id: String(row.id), articleId: String(row.article_id), ...(row.request_id === null ? {} : { requestId: String(row.request_id) }), role, kind, status,
             ...(row.content === null ? {} : { content: String(row.content) }), ...(kind === "greeting" ? { template: "greeting" as const } : {}), ...(status === "cancelled" ? { template: "request_cancelled" as const } : {}), ...(status === "failed" ? { template: "request_failed" as const } : {}), ...(skillId === undefined ? {} : { skillId }), ...(skillOffset === undefined ? {} : { skillOffset }),
+            ...(selectionText ? { selectionText } : {}),
             ...(row.response_kind === null ? {} : { responseKind: String(row.response_kind) as AssistantMessage["responseKind"] }),
             ...(row.editorial_artifact_id === null ? {} : { editorialArtifactId: String(row.editorial_artifact_id) }), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
         };

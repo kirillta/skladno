@@ -178,7 +178,7 @@ function assistantStream(request: PreparedAssistantRequest, repositories: Reposi
 
     if (request.engine.streamConversation) {
         const history = repositories.listAssistantMessages(request.articleId).flatMap((message) => message.role === "author" || (message.role === "assistant" && message.kind === "response") ? message.content ? [{ role: message.role, content: message.content }] : [] : []);
-        return request.engine.streamConversation({ message: request.authorMessage, article: excerpt, history, signal: controller.signal });
+        return request.engine.streamConversation({ message: request.authorMessage, article: excerpt, scope: request.scope.kind, history, signal: controller.signal });
     }
 
     return request.engine.stream({ operation: request.operation, article: excerpt, authorContext: request.authorMessage }, controller.signal);

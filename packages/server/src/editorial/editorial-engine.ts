@@ -47,5 +47,5 @@ export class EditorialEngineError extends Error {
 
 export interface EditorialEngine {
     stream(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent>;
-    streamConversation?(request: { message: string; article: string; history: { role: "author" | "assistant"; content: string }[]; signal: AbortSignal }): AsyncIterable<EditorialEngineEvent>;
+    streamConversation?(request: { message: string; article: string; scope: "article" | "selection"; history: { role: "author" | "assistant"; content: string }[]; signal: AbortSignal }): AsyncIterable<EditorialEngineEvent>;
 }

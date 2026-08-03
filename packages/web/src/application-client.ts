@@ -148,7 +148,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             const payload = body && typeof body === "object" && "error" in body
                 ? (body as { error: unknown }).error
                 : undefined;
-                
+            
             throw applicationClientError(payload, response.status);
         }
 

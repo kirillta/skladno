@@ -358,6 +358,36 @@ test("assistant requests persist a revision-bound proposal and splice only the s
         assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "before selected after");
         assert.equal(repositories.assistant.getRequest("assistant-request-1")?.status, "completed");
         assert.equal(repositories.listAssistantMessages(article.id).filter((message) => message.requestId === "assistant-request-1").length, 2);
+        assert.equal(repositories.listAssistantMessages(article.id).find((message) => message.role === "author")?.selectionText, "selected");
+    });
+});
+
+
+test("conversational Assistant requests send only the selected Article context", async () => {
+    let conversation: { article: string; scope: "article" | "selection" } | undefined;
+    const engine: EditorialEngine = {
+        async *stream(): AsyncIterable<EditorialEngineEvent> {
+            return;
+        },
+        async *streamConversation(request): AsyncIterable<EditorialEngineEvent> {
+            conversation = { article: request.article, scope: request.scope };
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "conversation-selection", text: "I received the selected text." };
+        },
+    };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.createArticle({ title: "Draft", content: "before selected after" });
+        await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "assistant-conversation-selection",
+                authorMessage: "What did I send?",
+                scope: { kind: "selection", baseRevisionId: article.currentRevisionId, startOffset: 7, endOffset: 15 },
+            }),
+        });
+
+        assert.deepEqual(conversation, { article: "selected", scope: "selection" });
     });
 });
 

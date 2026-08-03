@@ -1114,7 +1114,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             generalSettings={generalSettings}
             clearSelection={() => setAssistantSelection(undefined)} />
         }>
-        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} />
+        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} assistantSelection={assistantSelection} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
         <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
     </ExtractedWorkspaceShell>;

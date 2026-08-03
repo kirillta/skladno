@@ -107,6 +107,7 @@ export interface AssistantMessage {
     content?: string;
     skillId?: BuiltInSkillId;
     skillOffset?: number;
+    selectionText?: string;
     responseKind?: AssistantResponseKind;
     editorialArtifactId?: string;
     createdAt: string;
