@@ -360,3 +360,27 @@ test("assistant requests persist a revision-bound proposal and splice only the s
         assert.equal(repositories.listAssistantMessages(article.id).filter((message) => message.requestId === "assistant-request-1").length, 2);
     });
 });
+
+
+test("assistant streams include a stable failure code", async () => {
+    const engine: EditorialEngine = {
+        async *stream(): AsyncIterable<EditorialEngineEvent> {
+            throw new EditorialEngineError("network", "OpenAI could not be reached. Check your connection and API settings, then retry.");
+        },
+    };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "assistant-request-error",
+                authorMessage: "Improve the flow.",
+                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+            }),
+        });
+
+        assert.match(await response.text(), /"errorCode":"editorial_provider_failed"/);
+    });
+});

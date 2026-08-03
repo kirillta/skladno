@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultGeneralSettings, publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
@@ -63,7 +63,7 @@ describe("Editorial Workspace", () => {
         render(<App client={fakeClient()} />);
         await screen.findByRole("heading", { name: "First Article" });
 
-        expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toEqual({
+        await waitFor(() => expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toEqual({
             version: 2,
             libraryWidth: 208,
             assistantWidth: 384,
@@ -71,7 +71,7 @@ describe("Editorial Workspace", () => {
             assistantCollapsed: false,
             view: "write",
             selectedArticleId: "one",
-        });
+        }));
         expect(localStorage.getItem("skladno-navigation-collapsed")).toBeNull();
         expect(localStorage.getItem("skladno-assistant-collapsed")).toBeNull();
     });
@@ -95,6 +95,77 @@ describe("Editorial Workspace", () => {
         await screen.findByRole("heading", { name: "Second Article" });
 
         expect(screen.getByRole("tab", { name: "Revisions" }).getAttribute("aria-selected")).toBe("true");
+    });
+
+
+    it("keeps Assistant conversations isolated to the selected Article", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({
+            version: 2,
+            libraryWidth: 208,
+            assistantWidth: 384,
+            libraryCollapsed: false,
+            assistantCollapsed: false,
+            view: "write",
+            selectedArticleId: "one",
+        }));
+        client.listArticles = vi.fn().mockResolvedValue([article("one", "First Article"), article("two", "Second Article")]);
+        client.listAssistantMessages = vi.fn().mockImplementation(async (articleId: string) => [{
+            id: `${articleId}-message`,
+            articleId,
+            role: "assistant" as const,
+            kind: "response" as const,
+            status: "completed" as const,
+            content: articleId === "one" ? "First Article conversation" : "Second Article conversation",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+        }]);
+
+        render(<App client={client} />);
+
+        await screen.findByRole("heading", { name: "First Article" });
+        expect(await screen.findByText("First Article conversation")).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: /Second Article/ }));
+
+        expect(await screen.findByText("Second Article conversation")).toBeTruthy();
+        expect(screen.queryByText("First Article conversation")).toBeNull();
+    });
+
+
+    it("keeps Assistant request errors on the Article where they occurred", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({
+            version: 2,
+            libraryWidth: 208,
+            assistantWidth: 384,
+            libraryCollapsed: false,
+            assistantCollapsed: false,
+            view: "write",
+            selectedArticleId: "one",
+        }));
+        client.listArticles = vi.fn().mockResolvedValue([article("one", "First Article"), article("two", "Second Article")]);
+        client.streamAssistantRequest = vi.fn().mockRejectedValue(new Error("connection failed"));
+
+        render(<App client={client} />);
+
+        await screen.findByRole("heading", { name: "First Article" });
+        await user.type(screen.getByRole("textbox", { name: "Editorial guidance" }), "Please help.");
+        await user.click(screen.getByRole("button", { name: "Send editorial request" }));
+
+        expect((await screen.findByRole("alert")).textContent).toContain("complete this editorial request.");
+        const errorDetails = screen.getByText("Error details").closest("details");
+        expect(errorDetails?.open).toBe(false);
+        await user.click(screen.getByText("Error details"));
+        expect(errorDetails?.open).toBe(true);
+        expect(screen.getByText("The editorial request failed. Retry it in a moment.")).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: /Second Article/ }));
+
+        await screen.findByRole("heading", { name: "Second Article" });
+        expect(screen.queryByRole("alert")).toBeNull();
     });
 
 
@@ -244,7 +315,7 @@ describe("Editorial Workspace", () => {
 
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
-        expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", "Portuguese");
+        expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", "Portuguese", "Preserve the key claims.".length);
     });
 
 
@@ -269,7 +340,18 @@ describe("Editorial Workspace", () => {
 
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
-        expect(onRequest).toHaveBeenCalledWith("Keep this focused.", "talking_points", undefined);
+        expect(onRequest).toHaveBeenCalledWith("Keep this focused.", "talking_points", undefined, "Keep this ".length);
+    });
+
+
+    it("summarizes an Article selection in a compact composer chip", () => {
+        const selection = "The first selected sentence provides enough context to identify the excerpt.";
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection={selection} clearSelection={vi.fn()} />);
+        const selectionChip = panel.container.querySelector<HTMLElement>("[data-assistant-composer-decoration]")!;
+
+        expect(selectionChip.textContent).toBe("The first selected s…");
+        expect(selectionChip.getAttribute("title")).toBe(selection);
+        expect(within(selectionChip).getByRole("button", { name: "Clear Article selection" })).toBeTruthy();
     });
 
 
@@ -277,6 +359,24 @@ describe("Editorial Workspace", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" generalSettings={{ ...defaultGeneralSettings, dateFormat: "iso", timeFormat: "24-hour", timeZone: "America/New_York" }} assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} />);
 
         expect(within(panel.container).getByText("12/31/2025, 19:00")).toBeTruthy();
+    });
+
+
+    it("shows the selected skill on author messages and names Talking points proposals", () => {
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[
+            { id: "author", articleId: "one", requestId: "request", role: "author", kind: "message", status: "completed", content: "Organize these ideas.", skillOffset: "Organize ".length, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+            { id: "response", articleId: "one", requestId: "request", role: "assistant", kind: "response", status: "completed", skillId: "talking_points", responseKind: "proposal_prepared", editorialArtifactId: "proposal", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+        ]} />);
+        const panelScope = within(panel.container);
+        const review = panelScope.getByRole("button", { name: "Review Proposal" });
+        const timestamp = [...panel.container.querySelectorAll("time")].at(-1)!;
+
+        expect(panelScope.getByText("Talking points")).toBeTruthy();
+        expect(panelScope.getByText("Talking points prepared")).toBeTruthy();
+        const authorContent = panel.container.querySelector('article[aria-label="Talking points"] p')!;
+        expect(authorContent.childNodes[0]?.textContent).toBe("Organize ");
+        expect(authorContent.childNodes[1]?.textContent).toBe("Talking points");
+        expect(review.compareDocumentPosition(timestamp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
 

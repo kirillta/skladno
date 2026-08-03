@@ -43,6 +43,29 @@ test("Assistant greetings persist a localized template without server-owned copy
 }));
 
 
+test("Assistant author messages retain their resolved skill", () => withRepository((repositories) => {
+    const article = repositories.createArticle({ title: "Conversation", content: "Draft" });
+    const request = repositories.assistant.createRequest({
+        id: "assistant-request",
+        articleId: article.id,
+        scope: {
+            kind: "article",
+            baseRevisionId: article.currentRevisionId,
+        },
+        explicitSkillId: "talking_points",
+        skillOffset: 9,
+    });
+
+    repositories.assistant.setAuthorMessage(request.id, "Organize these ideas.");
+    repositories.assistant.resolveRequest(request.id, "talking_points", "explicit");
+
+    const authorMessage = repositories.listAssistantMessages(article.id).find((message) => message.requestId === request.id && message.role === "author");
+
+    assert.equal(authorMessage?.skillId, "talking_points");
+    assert.equal(authorMessage?.skillOffset, 9);
+}));
+
+
 test("proposal acceptance requires the reviewed Revision to still be current", () => withRepository((repositories) => {
     const article = repositories.createArticle({ title: "Proposal", content: "before" });
     const accepted = repositories.acceptProposal(article.id, {

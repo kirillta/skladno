@@ -13,6 +13,7 @@ interface AssistantRequestInput {
     authorMessage: string;
     scope: AssistantRequestScope;
     explicitSkillId?: BuiltInSkillId;
+    skillOffset?: number;
     targetLanguage?: string;
     retryOfRequestId?: string;
 }
@@ -97,12 +98,16 @@ function readAssistantRequest(body: Record<string, unknown>): AssistantRequestIn
 
     const targetLanguage = body.targetLanguage === undefined ? undefined : string(body.targetLanguage, "targetLanguage");
     const retryOfRequestId = body.retryOfRequestId === undefined ? undefined : string(body.retryOfRequestId, "retryOfRequestId");
+    const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
+    if (skillOffset !== undefined && (!explicitSkillValue || !Number.isInteger(skillOffset) || skillOffset < 0 || skillOffset > String(body.authorMessage ?? "").length))
+        throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
 
     return {
         requestId: string(body.requestId, "requestId"),
         authorMessage: string(body.authorMessage, "authorMessage"),
         scope: scope(body.scope),
         ...(explicitSkillValue ? { explicitSkillId: explicitSkillValue as BuiltInSkillId } : {}),
+        ...(skillOffset === undefined ? {} : { skillOffset }),
         ...(targetLanguage ? { targetLanguage } : {}),
         ...(retryOfRequestId ? { retryOfRequestId } : {}),
     };
@@ -144,7 +149,7 @@ function prepareAssistantRequest(articleId: string, input: AssistantRequestInput
 
 
 function persistAcceptedRequest(request: PreparedAssistantRequest, repositories: Repositories): void {
-    repositories.assistant.createRequest({ id: request.requestId, articleId: request.articleId, scope: request.scope, explicitSkillId: request.explicitSkillId, retryOfRequestId: request.retryOfRequestId });
+    repositories.assistant.createRequest({ id: request.requestId, articleId: request.articleId, scope: request.scope, explicitSkillId: request.explicitSkillId, skillOffset: request.skillOffset, retryOfRequestId: request.retryOfRequestId });
     repositories.assistant.setAuthorMessage(request.requestId, request.authorMessage);
     repositories.assistant.resolveRequest(request.requestId, request.resolvedSkillId, request.explicitSkillId ? "explicit" : request.resolvedSkillId ? "inferred" : undefined);
 }

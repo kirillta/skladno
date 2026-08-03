@@ -98,10 +98,18 @@ function placeCaretAfterSkill(composer: HTMLDivElement): void {
 }
 
 
-export function EditorialAssistantPanel({ state, message, onRequest, onCancel, collapsed, setCollapsed, language, assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
+function selectionPreview(selection: string): string {
+    const normalized = selection.replace(/\s+/g, " ").trim();
+
+    return normalized.length > 20 ? `${normalized.slice(0, 20)}…` : normalized;
+}
+
+
+export function EditorialAssistantPanel({ state, message, errorDetails, onRequest, onCancel, collapsed, setCollapsed, language, assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
     state: "idle" | "streaming" | "error";
     message: string;
-    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string) => Promise<void>;
+    errorDetails?: string;
+    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string, skillOffset?: number) => Promise<void>;
     onCancel: () => void;
     collapsed: boolean;
     setCollapsed: (value: boolean) => void;
@@ -122,6 +130,7 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
     const [selectedSkill, setSelectedSkill] = useState<BuiltInSkillId>();
     const [skillOffset, setSkillOffset] = useState(0);
     const [slashTriggerOffset, setSlashTriggerOffset] = useState<number>();
+    const [composerOffset, setComposerOffset] = useState(0);
     const [activeSkillIndex, setActiveSkillIndex] = useState(0);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const timeline = useRef<HTMLDivElement>(null);
@@ -132,6 +141,7 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
         skillOffset,
     });
     const greeting = assistantMessages?.find((item) => item.template === "greeting" || item.kind === "greeting");
+    const skillByRequest = new Map(assistantMessages?.flatMap((item) => item.requestId && item.skillId ? [[item.requestId, item.skillId] as const] : []));
     const canSend = state !== "streaming" && Boolean(guidance.trim());
     const availableSkills = builtInSkills.filter((skill) => !selection || builtInSkillScopeCompatibility[skill].includes("selection"));
 
@@ -152,14 +162,32 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
             const selectionChip = document.createElement("span");
             selectionChip.dataset.assistantComposerDecoration = "";
             selectionChip.contentEditable = "false";
-            selectionChip.className = "mx-1 inline-flex h-8 min-h-0 items-center gap-1 align-middle rounded-control border border-border bg-surface px-2 py-1 text-xs font-semibold text-muted";
-            selectionChip.append(intl.formatMessage({ id: "assistant.articleSelection" }));
+            selectionChip.className = "mx-1 inline-flex h-5 min-h-0 max-w-[calc(100%-0.5rem)] items-center gap-1 align-middle rounded-full border border-border bg-surface px-1.5 text-xs font-semibold text-muted";
+            selectionChip.ariaLabel = intl.formatMessage({ id: "assistant.articleSelection" });
+            selectionChip.title = selection;
+
+            const preview = document.createElement("span");
+            preview.className = "relative -top-px max-w-48 truncate";
+            preview.append(selectionPreview(selection));
+            selectionChip.append(preview);
 
             const clearButton = document.createElement("button");
             clearButton.type = "button";
-            clearButton.className = "inline-grid size-5 min-h-0 place-items-center rounded-control p-0 text-muted hover:bg-surface-supporting";
+            clearButton.className = "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-muted hover:bg-surface-supporting";
             clearButton.ariaLabel = intl.formatMessage({ id: "assistant.clearArticleSelection" });
             clearButton.textContent = "×";
+            const closeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            closeIcon.setAttribute("viewBox", "0 0 16 16");
+            closeIcon.setAttribute("fill", "none");
+            closeIcon.setAttribute("aria-hidden", "true");
+            closeIcon.classList.add("size-3");
+            const closePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            closePath.setAttribute("d", "m4 4 8 8m0-8-8 8");
+            closePath.setAttribute("stroke", "currentColor");
+            closePath.setAttribute("stroke-linecap", "round");
+            closePath.setAttribute("stroke-width", "1.5");
+            closeIcon.append(closePath);
+            clearButton.replaceChildren(closeIcon);
             clearButton.addEventListener("mousedown", (event) => event.preventDefault());
             clearButton.addEventListener("click", () => clearSelection?.());
             selectionChip.append(clearButton);
@@ -217,7 +245,7 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
     }
 
     const selectSkill = useCallback((skill: BuiltInSkillId) => {
-        const insertionOffset = selectedSkill ? skillOffset : slashTriggerOffset ?? (composer.current ? composerCaretOffset(composer.current) : guidance.length);
+        const insertionOffset = selectedSkill ? skillOffset : slashTriggerOffset ?? composerOffset;
         const slashOffset = guidance[insertionOffset - 1] === "/" ? insertionOffset - 1 : undefined;
         const nextGuidance = slashOffset === undefined ? guidance : `${guidance.slice(0, slashOffset)}${guidance.slice(insertionOffset)}`;
         setQuickActionsOpen(false);
@@ -229,19 +257,23 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
         composer.current?.focus();
         if (composer.current)
             placeCaretAfterSkill(composer.current);
-    }, [guidance, renderComposerContent, selectedSkill, skillOffset, slashTriggerOffset]);
+    }, [composerOffset, guidance, renderComposerContent, selectedSkill, skillOffset, slashTriggerOffset]);
 
     const send = useCallback(() => {
         if (!canSend)
             return;
 
-        void onRequest(guidance.trim(), selectedSkill, selectedSkill === BUILT_IN_SKILL.TRANSLATION ? language : undefined)
+        const authorMessage = guidance.trim();
+        const leadingWhitespace = guidance.length - guidance.trimStart().length;
+        const selectedSkillOffset = selectedSkill ? Math.max(0, skillOffset - leadingWhitespace) : undefined;
+
+        void onRequest(authorMessage, selectedSkill, selectedSkill === BUILT_IN_SKILL.TRANSLATION ? language : undefined, selectedSkillOffset)
             .then(() => {
                 setGuidance("");
                 setSelectedSkill(undefined);
                 renderComposerContent("");
             });
-    }, [canSend, guidance, language, onRequest, renderComposerContent, selectedSkill]);
+    }, [canSend, guidance, language, onRequest, renderComposerContent, selectedSkill, skillOffset]);
 
     useEffect(() => {
         const unregisterSend = dispatcher?.register(KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, send);
@@ -292,8 +324,8 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
     return <aside data-workspace-panel="editorial-assistant" className="flex h-full min-h-0 w-full flex-col border-l border-border bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
         <header className="flex min-h-18 items-center border-b border-border px-5"><AssistantIcon className="size-5 shrink-0 text-brand" /><h2 className="ml-3 text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2><Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.collapse" }), KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}><ChevronRightIcon className="size-3" /></Button></header>
         <div ref={timeline} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-live="polite">
-            {greeting && <TimelineMessage message={greeting} generalSettings={generalSettings} />}
-            {assistantMessages?.filter((item) => item !== greeting).map((item) => <TimelineMessage key={item.id} message={item} openView={openView} generalSettings={generalSettings} />)}
+            {greeting && <TimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} />}
+            {assistantMessages?.filter((item) => item !== greeting).map((item) => <TimelineMessage key={item.id} message={item} openView={openView} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
             {!assistantMessages?.length && <p className="text-sm leading-6 text-muted">{intl.formatMessage({ id: "assistant.intro" })}</p>}
             {state === "streaming" && <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted" role="status">
                 <span className="flex gap-1" aria-hidden="true">
@@ -303,7 +335,13 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
                 </span>
                 <span>{intl.formatMessage({ id: "assistant.workingFor" }, { duration: elapsedDuration })}</span>
             </div>}
-            {message && <Banner tone="error" role="alert">{message}</Banner>}
+            {message && <Banner tone="error" className="border-danger/35 bg-surface-raised text-ink" role="alert"><div>
+                <p>{message}</p>
+                {errorDetails && <details className="mt-1 border-t border-border pt-1 text-xs leading-5 text-muted">
+                    <summary className="flex min-h-9 cursor-pointer items-center hover:text-ink">{intl.formatMessage({ id: "assistant.errorDetails" })}</summary>
+                    <p className="mb-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-4">{errorDetails}</p>
+                </details>}
+            </div></Banner>}
         </div>
         <footer className="shrink-0 border-t border-border px-5 py-4">
             <div className="relative mb-3">
@@ -337,14 +375,16 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
                 const element = event.currentTarget;
                 const text = composerText(element);
                 const caretOffset = composerCaretOffset(element);
+                const currentComposerOffset = caretOffset === 0 && text.length > 0 ? text.length : caretOffset;
                 setGuidance(text);
+                setComposerOffset(currentComposerOffset);
                 if (selectedSkill)
                     setSkillOffset(textBeforeSkill(element));
 
-                if (text[caretOffset - 1] === "/" || text.endsWith("/")) {
+                if (text[currentComposerOffset - 1] === "/" || text.endsWith("/")) {
                     setQuickActionsOpen(true);
                     setActiveSkillIndex(-1);
-                    setSlashTriggerOffset(text[caretOffset - 1] === "/" ? caretOffset : text.length);
+                    setSlashTriggerOffset(text[currentComposerOffset - 1] === "/" ? currentComposerOffset : text.length);
                 }
             }} onKeyDown={(event) => {
                 if (!quickActionsOpen)
@@ -365,28 +405,32 @@ export function EditorialAssistantPanel({ state, message, onRequest, onCancel, c
                     setQuickActionsOpen(false);
                 }
             }} />
-                {state === "streaming"
-                    ? <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center !p-0" variant="danger" title={shortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></Button>
-                    : <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center !p-0" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button>}
+            {state === "streaming"
+                ? <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center !p-0" variant="danger" title={shortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></Button>
+                : <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center !p-0" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button>}
             </div>
         </footer>
     </aside>;
 }
 
 
-function TimelineMessage({ message, openView, generalSettings }: { message: AssistantMessage; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; generalSettings: GeneralSettings }) {
+function TimelineMessage({ message, openView, generalSettings, skillByRequest }: { message: AssistantMessage; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, BuiltInSkillId> }) {
     const intl = useIntl();
     const authorMessage = message.role === "author";
-    const label = message.responseKind ? intl.formatMessage({ id: responseMessages[message.responseKind] }, message.skillId ? { skill: intl.formatMessage({ id: skillMessages[message.skillId] }) } : {}) : message.skillId ? intl.formatMessage({ id: skillMessages[message.skillId] }) : message.role === "author" ? intl.formatMessage({ id: "assistant.authorMessage" }) : intl.formatMessage({ id: "assistant.heading" });
+    const skillId = message.skillId ?? (authorMessage && message.requestId ? skillByRequest.get(message.requestId) : undefined);
+    const label = message.responseKind === "proposal_prepared" && skillId === BUILT_IN_SKILL.TALKING_POINTS
+        ? intl.formatMessage({ id: "assistant.response.talkingPointsProposal" })
+        : message.responseKind ? intl.formatMessage({ id: responseMessages[message.responseKind] }, skillId ? { skill: intl.formatMessage({ id: skillMessages[skillId] }) } : {}) : skillId ? intl.formatMessage({ id: skillMessages[skillId] }) : message.role === "author" ? intl.formatMessage({ id: "assistant.authorMessage" }) : intl.formatMessage({ id: "assistant.heading" });
     const content = message.template === "greeting" ? intl.formatMessage({ id: "assistant.greeting" }) : message.template === "request_cancelled" ? intl.formatMessage({ id: "assistant.requestCancelled" }) : message.template === "request_failed" ? intl.formatMessage({ id: "assistant.requestFailed" }) : message.content;
     const view = message.responseKind === "findings_prepared" ? "fact-check" : message.responseKind === "translation_proposal_prepared" ? "translations" : message.responseKind === "proposal_and_findings_prepared" ? "style-profile" : message.responseKind === "proposal_prepared" ? "proposal" : undefined;
+    const skillOffset = authorMessage && skillId ? Math.min(Math.max(message.skillOffset ?? 0, 0), content?.length ?? 0) : undefined;
 
     return <article className={`rounded-panel border p-3 ${authorMessage ? "ml-6 border-brand/45 bg-brand-soft" : "mr-6 border-border bg-surface-raised"}`} aria-label={authorMessage ? label : undefined}>
         {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
-        {content && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">{content}</p>}
-        <time className="mt-2 block text-xs text-muted">{formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)}</time>
+        {content && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">{skillOffset === undefined ? content : <>{content.slice(0, skillOffset)}<span className="mx-1 inline-flex h-5 items-center align-middle rounded-full border border-brand/45 bg-surface-raised px-1.5 text-xs font-semibold text-brand">{intl.formatMessage({ id: skillMessages[skillId!] })}</span>{content.slice(skillOffset)}</>}</p>}
         {view && <Button className="mt-2" variant="secondary" onClick={() => openView?.(view)}>
             {intl.formatMessage({ id: view === "fact-check" || view === "style-profile" ? "assistant.viewFindings" : view === "translations" ? "assistant.reviewTranslation" : "assistant.reviewProposal" })}
         </Button>}
+        <time className="mt-2 block text-xs text-muted">{formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)}</time>
     </article>;
 }

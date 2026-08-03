@@ -137,6 +137,13 @@ const migrations = [
         CREATE INDEX assistant_messages_article_created ON assistant_messages(article_id, created_at, id);
         `,
     },
+    {
+        version: 9,
+        name: "assistant_message_skill_offsets",
+        sql: `
+        ALTER TABLE assistant_messages ADD COLUMN skill_offset INTEGER;
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

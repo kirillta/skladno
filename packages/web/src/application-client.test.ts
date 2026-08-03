@@ -57,4 +57,34 @@ describe("HttpApplicationClient", () => {
             draft: { version: 2 },
         });
     });
+
+
+    it("maps a streamed Assistant failure to its stable error code", async () => {
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("event: assistant\ndata: {\"type\":\"error\",\"requestId\":\"request-1\",\"errorCode\":\"editorial_provider_failed\",\"retryable\":true}\n\n")));
+
+        await expect(new HttpApplicationClient().streamAssistantRequest(article.id, {
+            requestId: "request-1",
+            authorMessage: "Help with this Article.",
+            scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+        }, vi.fn())).rejects.toMatchObject({
+            code: "editorial_provider_failed",
+        });
+    });
+
+
+    it("maps an Assistant rejection before streaming to its stable error code", async () => {
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+            error: {
+                code: "editorial_request_failed",
+            },
+        }), { status: 500 })));
+
+        await expect(new HttpApplicationClient().streamAssistantRequest(article.id, {
+            requestId: "request-1",
+            authorMessage: "Help with this Article.",
+            scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+        }, vi.fn())).rejects.toMatchObject({
+            code: "editorial_request_failed",
+        });
+    });
 });

@@ -106,6 +106,7 @@ export interface AssistantMessage {
     template?: AssistantMessageTemplate;
     content?: string;
     skillId?: BuiltInSkillId;
+    skillOffset?: number;
     responseKind?: AssistantResponseKind;
     editorialArtifactId?: string;
     createdAt: string;
@@ -131,6 +132,7 @@ export interface StartAssistantRequest {
     authorMessage: string;
     scope: AssistantRequestScope;
     explicitSkillId?: BuiltInSkillId;
+    skillOffset?: number;
     targetLanguage?: string;
     retryOfRequestId?: string;
 }

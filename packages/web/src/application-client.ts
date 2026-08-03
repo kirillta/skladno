@@ -56,6 +56,16 @@ import {
 export interface EditorialWorkspaceClient extends ApplicationClient, ArticleLibraryClient, EditorialClient, StyleCorpusClient, PublishingClient, ApplicationSettingsClient { }
 
 
+function applicationClientError(payload: unknown, status: number): ApplicationClientError {
+    if (payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string") {
+        const error = payload as ApplicationErrorPayload;
+        return new ApplicationClientError(error.code, error.parameters, status);
+    }
+
+    return new ApplicationClientError("editorial_request_failed", { status }, status);
+}
+
+
 export class HttpApplicationClient implements EditorialWorkspaceClient {
     constructor(private readonly serviceUrl = "http://127.0.0.1:8787") { }
 
@@ -133,8 +143,14 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             body: JSON.stringify(input),
             signal,
         });
-        if (!response.ok || !response.body)
-            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
+        if (!response.ok || !response.body) {
+            const body: unknown = await response.json().catch(() => undefined);
+            const payload = body && typeof body === "object" && "error" in body
+                ? (body as { error: unknown }).error
+                : undefined;
+                
+            throw applicationClientError(payload, response.status);
+        }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -149,8 +165,13 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             pending = events.pop() ?? "";
             for (const item of events) {
                 const data = item.split("\n").find((line) => line.startsWith("data: "));
-                if (data)
-                    onEvent(JSON.parse(data.slice(6)) as AssistantEvent);
+                if (data) {
+                    const event = JSON.parse(data.slice(6)) as AssistantEvent;
+                    if (event.type === "error")
+                        throw new ApplicationClientError(event.errorCode, undefined, response.status);
+
+                    onEvent(event);
+                }
             }
         }
     }
@@ -280,12 +301,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             const payload = typeof body === "object" && body !== null && "error" in body
                 ? (body as { error: unknown }).error
                 : undefined;
-            if (payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string") {
-                const error = payload as ApplicationErrorPayload;
-                throw new ApplicationClientError(error.code, error.parameters, response.status);
-            }
-
-            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
+            throw applicationClientError(payload, response.status);
         }
 
         return body as T;

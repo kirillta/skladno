@@ -35,7 +35,7 @@ export class AssistantRepository {
         return rows.map((row) => this.toMessage(row));
     }
 
-    createRequest(input: { id: string; articleId: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; retryOfRequestId?: string }): AssistantRequest {
+    createRequest(input: { id: string; articleId: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; skillOffset?: number; retryOfRequestId?: string }): AssistantRequest {
         if (this.database.prepare("SELECT 1 FROM assistant_requests WHERE id = ?").get(input.id))
             throw new Error("Assistant request already exists.");
 
@@ -44,8 +44,8 @@ export class AssistantRepository {
         try {
             this.database.prepare("INSERT INTO assistant_requests (id, article_id, base_revision_id, scope_json, explicit_skill_id, status, retry_of_request_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 .run(input.id, input.articleId, input.scope.baseRevisionId, JSON.stringify(input.scope), input.explicitSkillId ?? null, "running", input.retryOfRequestId ?? null, timestamp, timestamp);
-            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .run(createId(), input.articleId, input.id, "author", "message", "completed", "", timestamp, timestamp);
+            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, skill_offset, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(createId(), input.articleId, input.id, "author", "message", "completed", "", input.skillOffset ?? null, timestamp, timestamp);
             this.database.exec("COMMIT;");
         } catch (error) {
             this.database.exec("ROLLBACK;");
@@ -62,6 +62,8 @@ export class AssistantRepository {
     resolveRequest(requestId: string, skillId: BuiltInSkillId | undefined, source: AssistantSkillSource | undefined): void {
         this.database.prepare("UPDATE assistant_requests SET resolved_skill_id = ?, skill_source = ?, updated_at = ? WHERE id = ?")
             .run(skillId ?? null, source ?? null, now(), requestId);
+        this.database.prepare("UPDATE assistant_messages SET skill_id = ?, updated_at = ? WHERE request_id = ? AND role = 'author'")
+            .run(skillId ?? null, now(), requestId);
     }
 
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; editorialArtifactId?: string }): AssistantMessage {
@@ -137,9 +139,13 @@ export class AssistantRepository {
         if (skillId !== undefined && !isBuiltInSkillId(skillId))
             throw new Error("Invalid persisted assistant skill.");
 
+        const skillOffset = row.skill_offset === null || row.skill_offset === undefined ? undefined : Number(row.skill_offset);
+        if (skillOffset !== undefined && (!Number.isInteger(skillOffset) || skillOffset < 0))
+            throw new Error("Invalid persisted assistant skill offset.");
+
         return {
             id: String(row.id), articleId: String(row.article_id), ...(row.request_id === null ? {} : { requestId: String(row.request_id) }), role, kind, status,
-            ...(row.content === null ? {} : { content: String(row.content) }), ...(kind === "greeting" ? { template: "greeting" as const } : {}), ...(status === "cancelled" ? { template: "request_cancelled" as const } : {}), ...(status === "failed" ? { template: "request_failed" as const } : {}), ...(skillId === undefined ? {} : { skillId }),
+            ...(row.content === null ? {} : { content: String(row.content) }), ...(kind === "greeting" ? { template: "greeting" as const } : {}), ...(status === "cancelled" ? { template: "request_cancelled" as const } : {}), ...(status === "failed" ? { template: "request_failed" as const } : {}), ...(skillId === undefined ? {} : { skillId }), ...(skillOffset === undefined ? {} : { skillOffset }),
             ...(row.response_kind === null ? {} : { responseKind: String(row.response_kind) as AssistantMessage["responseKind"] }),
             ...(row.editorial_artifact_id === null ? {} : { editorialArtifactId: String(row.editorial_artifact_id) }), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
         };
