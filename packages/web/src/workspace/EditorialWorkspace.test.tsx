@@ -248,6 +248,38 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("replaces a slash trigger with a Quick action selected from the keyboard", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} article={article("one", "First Article")} updateArticle={vi.fn()} />);
+        const panelScope = within(panel.container);
+        const composer = panelScope.getByRole("textbox", { name: "Editorial guidance" });
+
+        await user.type(composer, "Keep this /");
+        await user.keyboard("{ArrowDown}{Enter}");
+        await user.type(composer, "focused.");
+
+        expect(composer.textContent).toContain("Keep this ");
+        expect(composer.textContent).not.toContain("/");
+        expect(composer.textContent).toContain("Talking points");
+        expect(composer.childNodes[0]?.textContent).toBe("Keep this ");
+        expect((composer.childNodes[1] as HTMLElement | undefined)?.dataset.assistantSkillChip).toBe("");
+        expect((composer.childNodes[1] as HTMLElement | undefined)?.contentEditable).toBe("false");
+        expect([...composer.childNodes].slice(2).map((node) => node.textContent).join("")).toBe("focused.");
+
+        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+
+        expect(onRequest).toHaveBeenCalledWith("Keep this focused.", "talking_points", undefined);
+    });
+
+
+    it("formats Assistant timeline timestamps with the configured preferences", () => {
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" generalSettings={{ ...defaultGeneralSettings, dateFormat: "iso", timeFormat: "24-hour", timeZone: "America/New_York" }} assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} />);
+
+        expect(within(panel.container).getByText("12/31/2025, 19:00")).toBeTruthy();
+    });
+
+
     it("selects a target language from the Article Header", async () => {
         const user = userEvent.setup();
         const setLanguage = vi.fn();

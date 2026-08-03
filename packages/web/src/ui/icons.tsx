@@ -36,6 +36,11 @@ export function CloseIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 
+export function StopIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><rect x="7" y="7" width="10" height="10" rx="1" /></Icon>;
+}
+
+
 export function SuccessIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="2" {...props}><path d="m5 12 4 4L19 6" /></Icon>;
 }

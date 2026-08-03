@@ -1058,6 +1058,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             shortcutOverrides={keyBindingOverrides}
             selection={assistantSelection}
             openView={layout.setView}
+            generalSettings={generalSettings}
             clearSelection={() => setAssistantSelection(undefined)} />
         }>
         <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} />

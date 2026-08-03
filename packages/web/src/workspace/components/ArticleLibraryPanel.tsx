@@ -104,7 +104,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                 </div>
             </div>
 
-            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4" aria-label={intl.formatMessage({ id: "navigation.articleLibraryNav" })}>
+            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "navigation.articleLibraryNav" })}>
                 {articles.length > 0 && <>
                     <p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "navigation.recent" })}</p>
                     <div className="mt-2 space-y-1">
