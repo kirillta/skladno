@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
+import { workspaceViews } from "../workspace-views.js";
 import { WorkspaceTabBar } from "./WorkspaceTabBar.js";
 
+// Product scenario: workspace.navigation.keyboard-tabs
 
 describe("WorkspaceTabBar", () => {
     afterEach(cleanup);
@@ -58,7 +60,7 @@ describe("WorkspaceTabBar", () => {
         </IntlProvider>);
 
         const tabs = screen.getAllByRole("tab");
-        const expectedViews = ["write", "proposal", "revisions", "fact-check", "style-profile", "translations", "publish"];
+        const expectedViews = workspaceViews;
 
         expect(tabs).toHaveLength(expectedViews.length);
         for (const [index, id] of expectedViews.entries()) {

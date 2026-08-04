@@ -1,0 +1,661 @@
+{
+    "schemaVersion": 1,
+    "area": "article-workspace",
+    "capabilities": [
+        {
+            "id": "workspace.shell.three-column-layout",
+            "area": "Workspace Shell",
+            "title": "Three-column desktop shell with independently collapsible and resizable supporting panels",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/components/WorkspaceShell.tsx"
+            ],
+            "contract": "The Article remains the central column at viewport height.",
+            "persistence": "Local workspace layout preferences only.",
+            "scenarioIds": [
+                "workspace.shell.responsive-collapse"
+            ]
+        },
+        {
+            "id": "workspace.shell.focus-mode",
+            "area": "Focus mode",
+            "title": "Focus mode hides both supporting panels without changing Article data",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/components/WorkspaceShell.tsx"
+            ],
+            "contract": "Focus mode changes only local layout state.",
+            "persistence": "No Article metadata, Draft, or Revision changes.",
+            "scenarioIds": [
+                "workspace.shell.focus-mode"
+            ]
+        },
+        {
+            "id": "workspace.library.article-navigation",
+            "area": "Article Library Panel",
+            "title": "Create, search, select, and list Articles by latest persisted activity",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/components/ArticleLibraryPanel.tsx",
+                "packages/web/src/workspace/EditorialWorkspace.tsx"
+            ],
+            "contract": "Selected Article is restored locally and Article activity includes retained Draft checkpoints.",
+            "persistence": "Article service plus local workspace preferences.",
+            "scenarioIds": [
+                "workspace.library.create-and-select"
+            ]
+        },
+        {
+            "id": "workspace.assistant.explicit-request",
+            "area": "Editorial Assistant Panel",
+            "title": "Persisted conversation, explicit Quick actions, selection scope, streaming, cancellation, and recovery",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/components/EditorialAssistantPanel.tsx",
+                "packages/web/src/workspace/EditorialWorkspace.tsx"
+            ],
+            "contract": "A skill tag never sends a request; generated text remains a Proposal until accepted.",
+            "persistence": "Per-Article Assistant records and explicit Editorial Requests.",
+            "scenarioIds": [
+                "workspace.assistant.quick-action"
+            ]
+        },
+        {
+            "id": "workspace.empty.create-article",
+            "area": "Empty Article Workspace",
+            "title": "Quiet empty state creates an Article using the configured default language",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/components/ArticleWorkspace.tsx",
+                "packages/web/src/workspace/EditorialWorkspace.tsx"
+            ],
+            "contract": "Creation does not create a Revision outside Article creation.",
+            "persistence": "New Article service request.",
+            "scenarioIds": [
+                "workspace.empty.create-article"
+            ]
+        },
+        {
+            "id": "workspace.header.article-metadata",
+            "area": "Article Header",
+            "title": "Title, language context, Revision promotion, focus mode, and confirmed Article deletion",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/components/ArticleHeader.tsx"
+            ],
+            "contract": "Metadata changes do not create a Revision and deletion requires confirmation.",
+            "persistence": "Article metadata PATCH, local target-language guidance, and Article deletion route.",
+            "scenarioIds": [
+                "workspace.header.metadata-and-deletion"
+            ]
+        },
+        {
+            "id": "workspace.navigation.views",
+            "area": "Workspace Tab Bar",
+            "title": "Seven keyboard-operable Workspace Views with revision-aware actionable and stale badges",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/workspace-views.ts",
+                "packages/web/src/workspace/components/WorkspaceTabBar.tsx",
+                "packages/web/src/workspace/components/WorkspaceViewRouter.tsx"
+            ],
+            "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation.",
+            "persistence": "Active View is a local workspace preference; results retain their Article and base Revision.",
+            "scenarioIds": [
+                "workspace.navigation.keyboard-tabs",
+                "workspace.navigation.persisted-view"
+            ]
+        },
+        {
+            "id": "workspace.editor.markdown-surface",
+            "area": "Article Editor",
+            "title": "Constrained Markdown writing surface with formatting toolbar and safe rich-text paste conversion",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/editor/ArticleRichEditor.tsx",
+                "packages/web/src/workspace/editor/paste.ts"
+            ],
+            "contract": "Article content is persisted as supported Markdown, never editor JSON or raw imported HTML.",
+            "persistence": "Draft lifecycle owns recoverable text persistence.",
+            "scenarioIds": [
+                "workspace.editor.safe-paste"
+            ]
+        },
+        {
+            "id": "workspace.draft.checkpoint",
+            "area": "Draft lifecycle",
+            "title": "Debounced current Draft checkpoints with switch, Settings-entry, and page-hide flushing",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/drafts/draft-lifecycle.ts",
+                "packages/web/src/workspace/drafts/useDraftLifecycle.ts"
+            ],
+            "contract": "A Current Draft is mutable, versioned, and never a Revision.",
+            "persistence": "Per-Article Draft checkpoint anchored to the current Revision.",
+            "stateModelIds": [
+                "draft.lifecycle"
+            ],
+            "scenarioIds": [
+                "workspace.draft.checkpoint-after-idle",
+                "workspace.draft.flush-before-context-change",
+                "workspace.draft.stale-completion"
+            ]
+        },
+        {
+            "id": "workspace.draft.promotion",
+            "area": "Draft lifecycle",
+            "title": "Explicit promotion of the exact Current Draft checkpoint into one immutable Revision",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/drafts/draft-lifecycle.ts",
+                "packages/web/src/workspace/drafts/useDraftLifecycle.ts"
+            ],
+            "contract": "Revision promotion clears only the matching Draft checkpoint and creates one Revision.",
+            "persistence": "Versioned Draft checkpoint and immutable Article Revision.",
+            "stateModelIds": [
+                "draft.lifecycle"
+            ],
+            "scenarioIds": [
+                "workspace.draft.promote-exact-checkpoint"
+            ]
+        },
+        {
+            "id": "workspace.draft.conflict-recovery",
+            "area": "Draft lifecycle",
+            "title": "Recoverable Draft and Revision conflict resolution without replacing local text implicitly",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/drafts/draft-lifecycle.ts",
+                "packages/web/src/workspace/drafts/useDraftLifecycle.ts",
+                "packages/web/src/workspace/components/DraftConflictDialog.tsx"
+            ],
+            "contract": "The author explicitly keeps local text, uses the retained Draft, or uses the current Revision.",
+            "persistence": "Conflict responses include current Article and retained Draft data when available.",
+            "stateModelIds": [
+                "draft.lifecycle"
+            ],
+            "scenarioIds": [
+                "workspace.draft.conflict-recovery"
+            ]
+        },
+        {
+            "id": "workspace.proposal.explicit-acceptance",
+            "area": "Proposal Review",
+            "title": "Selectable Proposal review with rejection, stale warning, and explicit immutable Revision acceptance",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/views/ProposalReviewView.tsx",
+                "packages/web/src/workspace/EditorialWorkspace.tsx"
+            ],
+            "contract": "AI-generated text never enters the Article without explicit acceptance; stale Proposals cannot be accepted.",
+            "persistence": "Proposal base Revision and accepted Revision provenance.",
+            "scenarioIds": [
+                "workspace.proposal.stale-blocked"
+            ]
+        },
+        {
+            "id": "workspace.revisions.history-and-restore",
+            "area": "Revision History",
+            "title": "Immutable newest-first Revision history, read-only preview, and confirmed restoration",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/views/RevisionHistoryView.tsx",
+                "packages/web/src/workspace/components/RestoreRevisionDialog.tsx"
+            ],
+            "contract": "Selecting a Revision is local-only and restoring creates a new Revision.",
+            "persistence": "Immutable Article Revisions and recoverable Draft checkpoints.",
+            "scenarioIds": [
+                "workspace.revisions.restore"
+            ]
+        },
+        {
+            "id": "workspace.findings.advisory-results",
+            "area": "Fact Check and Style Profile",
+            "title": "Revision-tied advisory Fact Check and local Style Profile results with stale indication",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/views/FactCheckView.tsx",
+                "packages/web/src/workspace/views/StyleProfileView.tsx"
+            ],
+            "contract": "Findings never modify Article text and raw style samples remain local.",
+            "persistence": "Completed Editorial artifacts and local Style corpus.",
+            "scenarioIds": [
+                "workspace.findings.advisory-only"
+            ]
+        },
+        {
+            "id": "workspace.translations.linked-article",
+            "area": "Translations",
+            "title": "Explicit creation of an independently recoverable linked translation Article",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/views/TranslationsView.tsx",
+                "packages/web/src/workspace/EditorialWorkspace.tsx"
+            ],
+            "contract": "A stale source blocks creation and translation text never overwrites its source Article.",
+            "persistence": "Independent Article with source Article and Revision linkage.",
+            "scenarioIds": [
+                "workspace.translations.stale-source"
+            ]
+        },
+        {
+            "id": "workspace.publishing.guidance",
+            "area": "Publishing Preview and Article Status Bar",
+            "title": "Article-specific profile selection and deterministic copy-ready character guidance",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/components/ArticleStatusBar.tsx",
+                "packages/web/src/workspace/views/PublishingPreviewView.tsx"
+            ],
+            "contract": "Character limits are guidance only and direct platform publishing is not performed.",
+            "persistence": "Article publishing-profile metadata with persisted default fallback.",
+            "scenarioIds": [
+                "workspace.publishing.over-guidance"
+            ]
+        }
+    ],
+    "scenarios": [
+        {
+            "id": "workspace.shell.responsive-collapse",
+            "title": "Constrained layout collapses supporting panels before narrowing the Article Workspace",
+            "capabilityIds": [
+                "workspace.shell.three-column-layout"
+            ],
+            "preconditions": [
+                "Desktop workspace with both supporting panels requested open"
+            ],
+            "event": "Viewport becomes narrower than the requested three-column layout.",
+            "expected": [
+                "Assistant Panel collapses before the Article Library Panel",
+                "Article Workspace remains first in keyboard and visual order"
+            ],
+            "forbidden": [
+                "Persisting temporary responsive collapse as a user preference"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/components/WorkspaceShell.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.shell.focus-mode",
+            "title": "Focus mode hides supporting panels without changing Article state",
+            "capabilityIds": [
+                "workspace.shell.focus-mode"
+            ],
+            "preconditions": [
+                "An Article is open in the workspace"
+            ],
+            "event": "Author enables focus mode.",
+            "expected": [
+                "Only the Article Workspace remains visible"
+            ],
+            "forbidden": [
+                "Changing Article content, metadata, Draft checkpoints, or Revisions"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/components/WorkspaceShell.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.library.create-and-select",
+            "title": "Article Library creates and selects Articles while preserving activity order",
+            "capabilityIds": [
+                "workspace.library.article-navigation"
+            ],
+            "preconditions": [
+                "The Article library is loaded"
+            ],
+            "event": "Author creates or selects an Article.",
+            "expected": [
+                "The current Article updates and local selection is persisted",
+                "Recent ordering uses Article or Draft-checkpoint activity"
+            ],
+            "forbidden": [
+                "Creating a Revision merely by selecting an Article"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.assistant.quick-action",
+            "title": "Quick action inserts a skill tag and Send remains the sole request trigger",
+            "capabilityIds": [
+                "workspace.assistant.explicit-request"
+            ],
+            "preconditions": [
+                "An Article is open and Assistant is idle"
+            ],
+            "event": "Author selects a Quick action then sends guidance.",
+            "expected": [
+                "The skill tag is inserted into the composer before the request"
+            ],
+            "forbidden": [
+                "Sending an Editorial Request when selecting a Quick action"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.empty.create-article",
+            "title": "Empty workspace creates a new Article with default language",
+            "capabilityIds": [
+                "workspace.empty.create-article"
+            ],
+            "preconditions": [
+                "No Article is selected"
+            ],
+            "event": "Author activates Create Article from the empty workspace.",
+            "expected": [
+                "A blank Article becomes current"
+            ],
+            "forbidden": [
+                "Creating an extra Revision"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.header.metadata-and-deletion",
+            "title": "Header metadata remains separate from Revision promotion and deletion requires confirmation",
+            "capabilityIds": [
+                "workspace.header.article-metadata"
+            ],
+            "preconditions": [
+                "An Article is current"
+            ],
+            "event": "Author updates title or requests deletion.",
+            "expected": [
+                "Title persists without a Revision",
+                "Deletion requires confirmation"
+            ],
+            "forbidden": [
+                "Deleting an Article without explicit confirmation"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.navigation.keyboard-tabs",
+            "title": "Every Workspace View has a tab-panel relationship and roving keyboard navigation",
+            "capabilityIds": [
+                "workspace.navigation.views"
+            ],
+            "preconditions": [
+                "Article Workspace tab bar is rendered"
+            ],
+            "event": "Author uses Arrow, Home, or End on a Workspace Tab.",
+            "expected": [
+                "The corresponding View becomes selected and focused"
+            ],
+            "forbidden": [
+                "Missing tab, panel, or stable identifier for a Workspace View"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/components/WorkspaceTabBar.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.navigation.persisted-view",
+            "title": "Current Article and Workspace View restore from versioned local preferences",
+            "capabilityIds": [
+                "workspace.navigation.views"
+            ],
+            "preconditions": [
+                "A valid versioned workspace preference exists"
+            ],
+            "event": "Workspace reloads.",
+            "expected": [
+                "The saved Article and Workspace View restore"
+            ],
+            "forbidden": [
+                "Persisting Workspace View into Article history"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.editor.safe-paste",
+            "title": "Rich-text paste retains supported Markdown and removes unsafe or unsupported content",
+            "capabilityIds": [
+                "workspace.editor.markdown-surface"
+            ],
+            "preconditions": [
+                "Article Editor is ready for paste"
+            ],
+            "event": "Author pastes rich text.",
+            "expected": [
+                "Supported semantic Markdown is retained"
+            ],
+            "forbidden": [
+                "Persisting raw HTML, executable elements, media, or unsafe links"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/editor/paste.test.ts"
+            }
+        },
+        {
+            "id": "workspace.draft.checkpoint-after-idle",
+            "title": "Editing creates a recoverable Draft checkpoint after idle time",
+            "capabilityIds": [
+                "workspace.draft.checkpoint"
+            ],
+            "preconditions": [
+                "Current Article is clean"
+            ],
+            "event": "Author edits the writing surface and the idle delay elapses.",
+            "expected": [
+                "The Draft becomes checkpointed against the current Revision"
+            ],
+            "forbidden": [
+                "Creating a Revision during ordinary checkpointing"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/drafts/draft-lifecycle.test.ts"
+            }
+        },
+        {
+            "id": "workspace.draft.flush-before-context-change",
+            "title": "Latest Draft text flushes before Article switch, Settings entry, and page hiding",
+            "capabilityIds": [
+                "workspace.draft.checkpoint"
+            ],
+            "preconditions": [
+                "Current Article has unsaved local Draft text"
+            ],
+            "event": "Author switches Article, enters Settings, or hides the page.",
+            "expected": [
+                "Latest text is checkpointed before the context changes"
+            ],
+            "forbidden": [
+                "Dropping recoverable Draft text"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/drafts/draft-lifecycle.test.ts"
+            }
+        },
+        {
+            "id": "workspace.draft.stale-completion",
+            "title": "Older checkpoint completion cannot overwrite a newer local Draft state",
+            "capabilityIds": [
+                "workspace.draft.checkpoint"
+            ],
+            "preconditions": [
+                "A checkpoint is in flight"
+            ],
+            "event": "Author makes another edit before the request completes.",
+            "expected": [
+                "The lifecycle remains dirty for the newer content"
+            ],
+            "forbidden": [
+                "Displaying the older content as the current checkpoint"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/drafts/draft-lifecycle.test.ts"
+            }
+        },
+        {
+            "id": "workspace.draft.promote-exact-checkpoint",
+            "title": "Explicit save promotes only the matching checkpoint into one Revision",
+            "capabilityIds": [
+                "workspace.draft.promotion"
+            ],
+            "preconditions": [
+                "A Current Draft checkpoint exists"
+            ],
+            "event": "Author saves the Article as a Revision.",
+            "expected": [
+                "One immutable Revision is created and the matching Draft clears"
+            ],
+            "forbidden": [
+                "Promoting a mismatched or stale Draft version"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/drafts/draft-lifecycle.test.ts"
+            }
+        },
+        {
+            "id": "workspace.draft.conflict-recovery",
+            "title": "Draft conflict retains local text until author chooses a recovery path",
+            "capabilityIds": [
+                "workspace.draft.conflict-recovery"
+            ],
+            "preconditions": [
+                "A checkpoint or promotion conflicts with newer persisted state"
+            ],
+            "event": "Server returns Draft or Revision conflict data.",
+            "expected": [
+                "The author can keep local text, use retained Draft text, or use the current Revision"
+            ],
+            "forbidden": [
+                "Replacing local Draft text without author choice"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/drafts/draft-lifecycle.test.ts"
+            }
+        },
+        {
+            "id": "workspace.proposal.stale-blocked",
+            "title": "Stale Proposals remain reviewable but cannot be accepted",
+            "capabilityIds": [
+                "workspace.proposal.explicit-acceptance"
+            ],
+            "preconditions": [
+                "Proposal base Revision is no longer current"
+            ],
+            "event": "Author attempts to accept selected changes.",
+            "expected": [
+                "The stale warning is visible and acceptance is disabled"
+            ],
+            "forbidden": [
+                "Applying AI-generated text to a newer Article Revision"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/views/ProposalReviewView.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.revisions.restore",
+            "title": "Restoring a Revision keeps history immutable and resolves uncommitted Drafts explicitly",
+            "capabilityIds": [
+                "workspace.revisions.history-and-restore"
+            ],
+            "preconditions": [
+                "An earlier Revision is selected"
+            ],
+            "event": "Author chooses restore and resolves any uncommitted Draft.",
+            "expected": [
+                "A new Revision is created without rewriting existing history"
+            ],
+            "forbidden": [
+                "Replacing history or silently discarding a Draft"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/views/RevisionHistoryView.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.findings.advisory-only",
+            "title": "Findings are Revision-tied advisory output",
+            "capabilityIds": [
+                "workspace.findings.advisory-results"
+            ],
+            "preconditions": [
+                "Completed finding output exists"
+            ],
+            "event": "Author reviews Fact Check or Style Profile output.",
+            "expected": [
+                "Findings retain freshness state and source context"
+            ],
+            "forbidden": [
+                "Changing Article text from advisory output"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/server/src/editorial.test.ts"
+            }
+        },
+        {
+            "id": "workspace.translations.stale-source",
+            "title": "Translation creation is blocked when its source Revision is stale",
+            "capabilityIds": [
+                "workspace.translations.linked-article"
+            ],
+            "preconditions": [
+                "Translation output is based on an older source Revision"
+            ],
+            "event": "Author attempts to create the linked translation Article.",
+            "expected": [
+                "The stale warning is visible and creation is disabled"
+            ],
+            "forbidden": [
+                "Overwriting the source Article or creating from stale source content"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/views/TranslationsView.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.publishing.over-guidance",
+            "title": "Over-guidance character state remains non-blocking and accessible",
+            "capabilityIds": [
+                "workspace.publishing.guidance"
+            ],
+            "preconditions": [
+                "Publishing text exceeds the selected profile guidance"
+            ],
+            "event": "Author views the Article Status Bar or Publishing Preview.",
+            "expected": [
+                "Over-guidance state is visible without disabling profile selection or copying"
+            ],
+            "forbidden": [
+                "Blocking Article editing or direct copy"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+            }
+        }
+    ]
+}

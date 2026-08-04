@@ -6,6 +6,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
 
+// Product scenario: workspace.findings.advisory-only
+
 import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine, type EditorialEngineEvent, type EditorialEngineRequest } from "./editorial/editorial-engine.js";
 import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";

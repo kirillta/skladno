@@ -1,20 +1,9 @@
 import type { KeyboardEvent } from "react";
-import { KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
+import type { KeyBindingOverrides } from "@skladno/shared";
 import { Tab, TabList } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
-import type { MessageId } from "../../i18n/messages.js";
-import type { WorkspaceView } from "../EditorialWorkspace.js";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
-
-const views: { id: WorkspaceView; label: MessageId }[] = [
-    { id: "write", label: "workspace.tabs.write" },
-    { id: "proposal", label: "workspace.tabs.proposal" },
-    { id: "revisions", label: "workspace.tabs.revisions" },
-    { id: "fact-check", label: "workspace.tabs.factCheck" },
-    { id: "style-profile", label: "workspace.tabs.styleProfile" },
-    { id: "translations", label: "workspace.tabs.translations" },
-    { id: "publish", label: "workspace.tabs.publish" },
-];
+import { workspaceViewDefinitions, type WorkspaceView } from "../workspace-views.js";
 
 export interface WorkspaceTabBadgeDescriptor {
     label: string;
@@ -35,23 +24,23 @@ export function WorkspaceTabBar({ view, setView, badges = {}, shortcutOverrides 
         let next: number;
 
         if (event.key === "ArrowRight")
-            next = (index + 1) % views.length;
+            next = (index + 1) % workspaceViewDefinitions.length;
         else if (event.key === "ArrowLeft")
-            next = (index + views.length - 1) % views.length;
+            next = (index + workspaceViewDefinitions.length - 1) % workspaceViewDefinitions.length;
         else if (event.key === "Home")
             next = 0;
         else if (event.key === "End")
-            next = views.length - 1;
+            next = workspaceViewDefinitions.length - 1;
         else
             return;
 
         event.preventDefault();
-        setView(views[next]!.id);
+        setView(workspaceViewDefinitions[next]!.id);
         tabs?.[next]?.focus();
     }
 
     return <TabList className="min-h-10 bg-surface px-3" aria-label={intl.formatMessage({ id: "workspace.tabs.ariaLabel" })}>
-        {views.map((item, index) => {
+        {workspaceViewDefinitions.map((item, index) => {
             const badge = badges[item.id];
             const label = intl.formatMessage({ id: item.label });
             const accessibleName = badge ? `${label}: ${badge.accessibleLabel}` : label;
@@ -67,7 +56,7 @@ export function WorkspaceTabBar({ view, setView, badges = {}, shortcutOverrides 
                 aria-label={accessibleName}
                 selected={view === item.id}
                 tabIndex={view === item.id ? 0 : -1}
-                title={shortcutHint(accessibleName, [KEY_BINDING_COMMAND.VIEW_WRITE, KEY_BINDING_COMMAND.VIEW_PROPOSAL, KEY_BINDING_COMMAND.VIEW_REVISIONS, KEY_BINDING_COMMAND.VIEW_FACT_CHECK, KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, KEY_BINDING_COMMAND.VIEW_PUBLISH][index]!, shortcutOverrides)}
+                title={shortcutHint(accessibleName, item.command, shortcutOverrides)}
                 onClick={() => setView(item.id)}
                 onKeyDown={(event) => handleKeyDown(event, index)}>{label}{badge && <span aria-hidden="true" className={`ml-1.5 inline-flex rounded-control border px-1.5 py-0.5 text-micro font-semibold ${badgeClassName}`}>{badge.label}</span>}</Tab>;
         })}

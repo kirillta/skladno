@@ -6,6 +6,8 @@ import { $convertToMarkdownString } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { $getRoot, createEditor } from "lexical";
 import { describe, expect, test } from "vitest";
+
+// Product scenario: workspace.editor.safe-paste
 import { articleMarkdownTransformers, exportArticleMarkdown, importArticleMarkdown } from "./markdown.js";
 import { sanitizeRichPasteDocument } from "./paste.js";
 

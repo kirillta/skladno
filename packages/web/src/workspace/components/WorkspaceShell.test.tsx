@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
 import { WorkspaceShell } from "./WorkspaceShell.js";
 
+// Product scenarios: workspace.shell.responsive-collapse, workspace.shell.focus-mode
 
 const originalViewportWidth = window.innerWidth;
 

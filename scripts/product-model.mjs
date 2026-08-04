@@ -1,0 +1,201 @@
+import { readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { resolve, relative } from "node:path";
+import process from "node:process";
+import { error as logError, log } from "node:console";
+import Ajv from "ajv";
+
+
+const root = process.cwd();
+const modelDirectory = resolve(root, "product-model", "areas");
+const schemaPath = resolve(root, "product-model", "schema", "article-workspace.schema.json");
+const generatedInventoryPath = resolve(root, "docs", "article-workspace-inventory.md");
+
+
+function relativePath(path) {
+    return relative(root, path).replaceAll("\\", "/");
+}
+
+
+async function readJson(path) {
+    return JSON.parse(await readFile(path, "utf8"));
+}
+
+
+async function areaFiles() {
+    const entries = await readdir(modelDirectory, { withFileTypes: true });
+
+    return entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+        .map((entry) => resolve(modelDirectory, entry.name));
+}
+
+
+function errorsFor(validator) {
+    return (validator.errors ?? [])
+        .map((error) => `${error.instancePath || "/"} ${error.message ?? "is invalid"}`)
+        .join("; ");
+}
+
+
+async function exists(path) {
+    try {
+        await stat(path);
+
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+
+async function validateArea(area, path, validator) {
+    const failures = [];
+    if (!validator(area))
+        failures.push(`${relativePath(path)}: ${errorsFor(validator)}`);
+
+    const capabilityIds = new Set();
+    const scenarioIds = new Set();
+    for (const capability of area.capabilities ?? []) {
+        if (capabilityIds.has(capability.id))
+            failures.push(`${relativePath(path)}: duplicate capability ID ${capability.id}`);
+
+        capabilityIds.add(capability.id);
+        if (capability.status === "partial" && capability.limitations?.length === 0)
+            failures.push(`${relativePath(path)}: partial capability ${capability.id} needs a concrete limitation`);
+
+        if (capability.status === "deferred" && !capability.tracking)
+            failures.push(`${relativePath(path)}: deferred capability ${capability.id} needs tracking`);
+
+        if (capability.status === "retired" && !capability.decision)
+            failures.push(`${relativePath(path)}: retired capability ${capability.id} needs a decision`);
+
+        for (const owner of capability.owners ?? []) {
+            if (!await exists(resolve(root, owner)))
+                failures.push(`${relativePath(path)}: ${capability.id} references missing owner ${owner}`);
+        }
+    }
+
+    for (const scenario of area.scenarios ?? []) {
+        if (scenarioIds.has(scenario.id))
+            failures.push(`${relativePath(path)}: duplicate scenario ID ${scenario.id}`);
+
+        scenarioIds.add(scenario.id);
+        for (const capabilityId of scenario.capabilityIds ?? []) {
+            if (!capabilityIds.has(capabilityId))
+                failures.push(`${relativePath(path)}: scenario ${scenario.id} references unknown capability ${capabilityId}`);
+        }
+
+        const evidencePath = resolve(root, scenario.evidence?.path ?? "");
+        if (!await exists(evidencePath)) {
+            failures.push(`${relativePath(path)}: scenario ${scenario.id} references missing evidence ${scenario.evidence?.path}`);
+            continue;
+        }
+
+        if (scenario.evidence?.kind === "automated") {
+            const evidence = await readFile(evidencePath, "utf8");
+            if (!evidence.includes(scenario.id))
+                failures.push(`${relativePath(path)}: automated scenario ${scenario.id} is not marked in ${scenario.evidence.path}`);
+        }
+    }
+
+    for (const capability of area.capabilities ?? []) {
+        for (const scenarioId of capability.scenarioIds ?? []) {
+            if (!scenarioIds.has(scenarioId))
+                failures.push(`${relativePath(path)}: capability ${capability.id} references unknown scenario ${scenarioId}`);
+        }
+    }
+
+    return failures;
+}
+
+
+function titleCaseStatus(status) {
+    return `${status[0].toUpperCase()}${status.slice(1)}`;
+}
+
+
+function renderInventory(area) {
+    const rows = area.capabilities.map((capability) => [
+        capability.id,
+        capability.area,
+        capability.title,
+        titleCaseStatus(capability.status),
+        `${capability.owners.join(", ")}; ${capability.contract} ${capability.persistence}`,
+    ].map((value) => value.replaceAll("|", "\\|")).join(" | "));
+
+    return [
+        "# Article Workspace inventory",
+        "",
+        "This file is generated from `product-model/areas/article-workspace.json`. Edit the canonical product model, then run `npm run product:docs`.",
+        "",
+        "| ID | Area | Feature | Status | Owner / contract |",
+        "|---|---|---|---|---|",
+        ...rows.map((row) => `| ${row} |`),
+        "",
+    ].join("\n");
+}
+
+
+async function loadAreas() {
+    return Promise.all((await areaFiles()).map(readJson));
+}
+
+
+async function check() {
+    const schema = await readJson(schemaPath);
+    const validator = new Ajv({ allErrors: true, strict: true }).compile(schema);
+    const files = await areaFiles();
+    const areas = await Promise.all(files.map(readJson));
+    const failures = (await Promise.all(areas.map((area, index) => validateArea(area, files[index], validator)))).flat();
+    const area = areas.find((candidate) => candidate.area === "article-workspace");
+    if (!area) {
+        failures.push("No Article Workspace product model exists.");
+    } else {
+        const generated = renderInventory(area);
+        const existing = await exists(generatedInventoryPath) ? await readFile(generatedInventoryPath, "utf8") : "";
+        if (existing !== generated)
+            failures.push(`${relativePath(generatedInventoryPath)} is out of date; run npm run product:docs`);
+    }
+
+    if (failures.length > 0) {
+        for (const failure of failures)
+            logError(failure);
+
+        process.exitCode = 1;
+        return;
+    }
+
+    log(`Validated ${areas.length} product-model area${areas.length === 1 ? "" : "s"}.`);
+}
+
+
+async function generate() {
+    const areas = await loadAreas();
+    const area = areas.find((candidate) => candidate.area === "article-workspace");
+    if (!area)
+        throw new Error("No Article Workspace product model exists.");
+
+    await writeFile(generatedInventoryPath, renderInventory(area), "utf8");
+    log(`Generated ${relativePath(generatedInventoryPath)}.`);
+}
+
+
+async function impact() {
+    const paths = process.argv.slice(3).map((path) => path.replaceAll("\\", "/"));
+    const areas = await loadAreas();
+    const matches = areas.flatMap((area) => area.capabilities.filter((capability) => capability.owners.some((owner) => paths.some((path) => path === owner || path.startsWith(`${owner}/`)))));
+
+    for (const capability of matches)
+        log(`${capability.id}: ${capability.title}`);
+}
+
+
+const command = process.argv[2] ?? "check";
+if (command === "check")
+    await check();
+else if (command === "generate")
+    await generate();
+else if (command === "impact")
+    await impact();
+else
+    throw new Error(`Unknown product-model command: ${command}`);

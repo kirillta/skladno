@@ -19,7 +19,7 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 8. Before handoff, compare the final diff and rendered result with the preservation baseline. Verify every affected baseline capability alongside the new behavior; do not downgrade inventory status merely to make an incomplete implementation appear consistent.
 9. Run the narrowest relevant tests and typecheck. Visually inspect every changed responsive or collapsed state before handoff.
 
-Read [references/article-workspace-inventory.md](references/article-workspace-inventory.md) before changing the Article Workspace, Article Header, Workspace Tab Bar, Workspace View, or Article Status Bar. Update the inventory in the same change when an implemented workspace feature or contract changes.
+Read [`../../../product-model/areas/article-workspace.json`](../../../product-model/areas/article-workspace.json) and [`../../../docs/article-workspace-inventory.md`](../../../docs/article-workspace-inventory.md) before changing the Article Workspace, Article Header, Workspace Tab Bar, Workspace View, or Article Status Bar. Update the canonical product model in the same change when an implemented workspace feature or contract changes, then run `npm run product:docs` and `npm run product:check`.
 
 ## Decision rules
 

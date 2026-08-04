@@ -26,7 +26,7 @@ import {
     KEY_BINDING_COMMAND,
     type KeyBindingOverrides,
 } from "@skladno/shared";
-import { ApplicationClientError, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleDraft } from "@skladno/shared";
+import { ApplicationClientError, ArticleDraftConflictError, ArticleRevisionConflictError } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Banner } from "../ui/primitives.js";
 import { EditorialAssistantPanel as ExtractedEditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
@@ -39,30 +39,23 @@ import { DraftConflictDialog } from "./components/DraftConflictDialog.js";
 import type { KeyBindingDispatcher } from "../key-bindings/dispatcher.js";
 import { errorMessageId } from "../i18n/errors.js";
 import { useNotifications } from "../notifications/NotificationProvider.js";
+import {
+    draftPresentationState,
+    hasUncommittedDraftChanges,
+    hydrateDraftLifecycle,
+    type DraftPresentationState,
+} from "./drafts/draft-lifecycle.js";
+import { useDraftLifecycle } from "./drafts/useDraftLifecycle.js";
+import { isWorkspaceView, type WorkspaceView } from "./workspace-views.js";
 
-export type WorkspaceView = "write" | "proposal" | "revisions" | "fact-check" | "style-profile" | "translations" | "publish";
-export type SaveState = "saved" | "unsaved" | "saving" | "draft-saved" | "error" | "conflict";
+export type { DraftConflict, DraftPresentationState as SaveState } from "./drafts/draft-lifecycle.js";
+export type { WorkspaceView } from "./workspace-views.js";
 type ProposalState = "idle" | "streaming" | "error";
 interface EditorialResult<T> {
     articleId: string;
     baseRevisionId: string;
     value: T;
 }
-
-export interface DraftConflict {
-    article: Article;
-    draft?: ArticleDraft;
-    localContent: string;
-}
-
-
-const workspaceViews: readonly WorkspaceView[] = ["write", "proposal", "revisions", "fact-check", "style-profile", "translations", "publish"];
-
-
-function isWorkspaceView(value: unknown): value is WorkspaceView {
-    return typeof value === "string" && workspaceViews.includes(value as WorkspaceView);
-}
-
 
 function articleActivityTimestamp(article: Article): string {
     return article.draft && article.draft.updatedAt > article.updatedAt ? article.draft.updatedAt : article.updatedAt;
@@ -94,19 +87,14 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
     const { notifyError } = useNotifications();
     const [articles, setArticles] = useState<Article[]>([]);
     const [selectedArticleId, setSelectedArticleId] = useState<string>();
-    const [drafts, setDrafts] = useState<Record<string, string>>({});
-    const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
-    const [conflicts, setConflicts] = useState<Record<string, DraftConflict | undefined>>({});
+    const draftLifecycle = useDraftLifecycle();
+    const replaceDraftLifecycle = draftLifecycle.replace;
     const [comparisonArticleId, setComparisonArticleId] = useState<string>();
     const [state, setState] = useState<"loading" | "ready" | "error">("loading");
     const [message, setMessage] = useState(() => intl.formatMessage({ id: "workspace.loadingArticles" }));
     const articlesRef = useRef<Article[]>([]);
-    const draftsRef = useRef<Record<string, string>>({});
-    const revisions = useRef(new Map<string, string>());
-    const versions = useRef(new Map<string, number>());
     const queues = useRef(new Map<string, Promise<void>>());
     const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-    const generations = useRef(new Map<string, number>());
     const checkpointRef = useRef<(articleId: string) => Promise<void>>(() => Promise.resolve());
     const preferredSelectedArticleIdRef = useRef(preferredSelectedArticleId);
     const setPersistedSelectedArticleIdRef = useRef(setPersistedSelectedArticleId);
@@ -125,29 +113,14 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
     }
 
 
-    function replaceDraft(articleId: string, content: string) {
-        draftsRef.current = { ...draftsRef.current, [articleId]: content };
-        setDrafts(draftsRef.current);
-    }
-
-
-    function setSaveState(articleId: string, value: SaveState) {
-        setSaveStates((items) => ({ ...items, [articleId]: value }));
-    }
-
-
     useEffect(() => {
         client.listArticles().then((loaded) => {
             const sorted = sortArticlesByActivity(loaded);
             const preferredArticleId = preferredSelectedArticleIdRef.current;
             const selectedArticleId = sorted.some((article) => article.id === preferredArticleId) ? preferredArticleId : sorted[0]?.id;
             articlesRef.current = sorted;
-            draftsRef.current = Object.fromEntries(sorted.map((article) => [article.id, articleContentForWorkspace(article)]));
             setArticles(sorted);
-            setDrafts(draftsRef.current);
-            setSaveStates(Object.fromEntries(sorted.map((article) => [article.id, article.draft ? "draft-saved" : "saved"])));
-            revisions.current = new Map(sorted.map((article) => [article.id, article.currentRevisionId]));
-            versions.current = new Map(sorted.flatMap((article) => article.draft ? [[article.id, article.draft.version]] : []));
+            replaceDraftLifecycle(Object.fromEntries(sorted.map((article) => [article.id, hydrateDraftLifecycle(article)])));
             setSelectedArticleId(selectedArticleId);
             setPersistedSelectedArticleIdRef.current(selectedArticleId);
             setState("ready");
@@ -155,55 +128,64 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
             setState("error");
             setMessage(intl.formatMessage({ id: "workspace.serviceUnavailable" }));
         });
-    }, [client, intl]);
+    }, [client, intl, replaceDraftLifecycle]);
 
 
     function recordConflict(articleId: string, error: ArticleDraftConflictError | ArticleRevisionConflictError, localContent: string) {
         const persistedDraft = error instanceof ArticleDraftConflictError ? error.draft : error.article.draft;
-        setConflicts((items) => ({ ...items, [articleId]: { article: error.article, draft: persistedDraft, localContent } }));
-        setSaveState(articleId, "conflict");
+        draftLifecycle.send({
+            articleId,
+            event: {
+                type: "conflicted",
+                conflict: {
+                    article: error.article,
+                    draft: persistedDraft,
+                    localContent,
+                },
+            },
+        });
     }
 
 
-    function checkpoint(articleId: string, content = draftsRef.current[articleId] ?? ""): Promise<void> {
+    function checkpoint(articleId: string, content = draftLifecycle.sessionsRef.current[articleId]?.content ?? ""): Promise<void> {
         clearTimeout(timers.current.get(articleId));
-        const generation = generations.current.get(articleId) ?? 0;
+        const session = draftLifecycle.sessionsRef.current[articleId];
+        if (!session)
+            return Promise.resolve();
+
+        const generation = session.generation;
         const preceding = queues.current.get(articleId) ?? Promise.resolve();
         const task = preceding.then(async () => {
             const current = articlesRef.current.find((article) => article.id === articleId);
-            const baseRevisionId = revisions.current.get(articleId);
-            if (!current || !baseRevisionId)
+            const latest = draftLifecycle.sessionsRef.current[articleId];
+            if (!current || !latest)
                 return;
 
-            setSaveState(articleId, "saving");
-            const expectedDraftVersion = versions.current.get(articleId);
+            draftLifecycle.send({ articleId, event: { type: "checkpoint-started", generation } });
+            const expectedDraftVersion = latest.draftVersion;
             if (content === current.currentRevision.content) {
                 if (expectedDraftVersion !== undefined) {
                     await client.discardArticleDraft(articleId, expectedDraftVersion);
-                    versions.current.delete(articleId);
                     replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
                 }
 
-                if (generations.current.get(articleId) === generation)
-                    setSaveState(articleId, "saved");
+                draftLifecycle.send({ articleId, event: { type: "checkpoint-discarded", generation } });
 
                 return;
             }
 
             const savedDraft = await client.saveArticleDraft(articleId, {
                 content,
-                baseRevisionId,
+                baseRevisionId: latest.baseRevisionId,
                 ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion }),
             });
-            versions.current.set(articleId, savedDraft.version);
             replaceArticles((items) => items.map((article) => article.id === articleId ? { ...article, draft: savedDraft } : article));
-            if (generations.current.get(articleId) === generation)
-                setSaveState(articleId, "draft-saved");
+            draftLifecycle.send({ articleId, event: { type: "checkpointed", generation, draftVersion: savedDraft.version } });
         }).catch((error: unknown) => {
             if (error instanceof ArticleDraftConflictError || error instanceof ArticleRevisionConflictError)
-                recordConflict(articleId, error, draftsRef.current[articleId] ?? content);
+                recordConflict(articleId, error, draftLifecycle.sessionsRef.current[articleId]?.content ?? content);
             else
-                setSaveState(articleId, "error");
+                draftLifecycle.send({ articleId, event: { type: "failed", operation: "checkpoint", generation } });
 
             throw error;
         });
@@ -235,16 +217,13 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
 
 
     function updateRevision(articleId: string, revision: ArticleRevision) {
-        revisions.current.set(articleId, revision.id);
-        versions.current.delete(articleId);
-        replaceDraft(articleId, revision.content);
+        draftLifecycle.send({ articleId, event: { type: "promoted", revisionId: revision.id, content: revision.content } });
         replaceArticles((items) => items.map((article) => article.id === articleId ? {
             ...withoutDraft(article),
             updatedAt: revision.createdAt,
             currentRevisionId: revision.id,
             currentRevision: revision,
         } : article));
-        setSaveState(articleId, "saved");
     }
 
 
@@ -252,25 +231,35 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
         if (!articleId)
             return undefined;
 
-        const content = draftsRef.current[articleId] ?? "";
+        const session = draftLifecycle.sessionsRef.current[articleId];
         const current = articlesRef.current.find((article) => article.id === articleId);
-        const baseRevisionId = revisions.current.get(articleId);
-        if (!current || !baseRevisionId || current.currentRevision.content === content && versions.current.get(articleId) === undefined)
+        if (!current || !session || current.currentRevision.content === session.content && session.draftVersion === undefined)
             return undefined;
 
         try {
+            const content = session.content;
             await checkpoint(articleId, content);
-            const expectedDraftVersion = versions.current.get(articleId);
-            if (expectedDraftVersion === undefined)
+            const checkpointed = draftLifecycle.sessionsRef.current[articleId];
+            if (!checkpointed || checkpointed.content !== content || checkpointed.draftVersion === undefined)
                 return undefined;
 
-            setSaveState(articleId, "saving");
-            const revision = await client.saveArticleRevision(articleId, { content, baseRevisionId, expectedDraftVersion });
+            draftLifecycle.send({ articleId, event: { type: "promotion-started" } });
+            const revision = await client.saveArticleRevision(articleId, {
+                content,
+                baseRevisionId: checkpointed.baseRevisionId,
+                expectedDraftVersion: checkpointed.draftVersion,
+            });
             updateRevision(articleId, revision);
             return revision;
         } catch (error) {
             if (!(error instanceof ArticleDraftConflictError) && !(error instanceof ArticleRevisionConflictError))
                 notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
+
+            if (!(error instanceof ArticleDraftConflictError) && !(error instanceof ArticleRevisionConflictError)) {
+                const currentSession = draftLifecycle.sessionsRef.current[articleId];
+                if (currentSession)
+                    draftLifecycle.send({ articleId, event: { type: "failed", operation: "promotion", generation: currentSession.generation } });
+            }
 
             throw error;
         }
@@ -281,37 +270,48 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
         if (!comparisonArticleId)
             return;
 
-        const conflict = conflicts[comparisonArticleId];
+        const session = draftLifecycle.sessionsRef.current[comparisonArticleId];
+        const conflict = session?.conflict;
         if (!conflict)
             return;
 
         try {
             if (mode === "keep") {
-                revisions.current.set(comparisonArticleId, conflict.article.currentRevisionId);
-                if (conflict.draft)
-                    versions.current.set(comparisonArticleId, conflict.draft.version);
-                else
-                    versions.current.delete(comparisonArticleId);
-
+                draftLifecycle.send({
+                    articleId: comparisonArticleId,
+                    event: {
+                        type: "keep-local",
+                        baseRevisionId: conflict.article.currentRevisionId,
+                        ...(conflict.draft ? { draftVersion: conflict.draft.version } : {}),
+                    },
+                });
                 await checkpoint(comparisonArticleId, conflict.localContent);
             } else if (mode === "draft" && conflict.draft) {
-                revisions.current.set(comparisonArticleId, conflict.article.currentRevisionId);
-                versions.current.set(comparisonArticleId, conflict.draft.version);
-                replaceDraft(comparisonArticleId, conflict.draft.content);
+                draftLifecycle.send({
+                    articleId: comparisonArticleId,
+                    event: {
+                        type: "use-retained-draft",
+                        content: conflict.draft.content,
+                        baseRevisionId: conflict.article.currentRevisionId,
+                        draftVersion: conflict.draft.version,
+                    },
+                });
                 replaceArticles((items) => items.map((article) => article.id === comparisonArticleId ? conflict.article : article));
-                setSaveState(comparisonArticleId, "draft-saved");
             } else if (mode === "revision") {
                 if (conflict.draft)
                     await client.discardArticleDraft(comparisonArticleId, conflict.draft.version);
 
-                revisions.current.set(comparisonArticleId, conflict.article.currentRevisionId);
-                versions.current.delete(comparisonArticleId);
-                replaceDraft(comparisonArticleId, conflict.article.currentRevision.content);
+                draftLifecycle.send({
+                    articleId: comparisonArticleId,
+                    event: {
+                        type: "use-current-revision",
+                        content: conflict.article.currentRevision.content,
+                        revisionId: conflict.article.currentRevisionId,
+                    },
+                });
                 replaceArticles((items) => items.map((article) => article.id === comparisonArticleId ? withoutDraft(conflict.article) : article));
-                setSaveState(comparisonArticleId, "saved");
             }
 
-            setConflicts((items) => ({ ...items, [comparisonArticleId]: undefined }));
             setComparisonArticleId(undefined);
         } catch (error) {
             if (error instanceof ArticleDraftConflictError || error instanceof ArticleRevisionConflictError)
@@ -324,10 +324,11 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
 
     async function create(input: { title: string; content: string; language?: string; audience?: string; publishingProfileId?: string; sourceArticleId?: string; sourceRevisionId?: string }) {
         const article = await client.createArticle(input);
-        revisions.current.set(article.id, article.currentRevisionId);
         replaceArticles((items) => [article, ...items]);
-        replaceDraft(article.id, article.currentRevision.content);
-        setSaveState(article.id, "saved");
+        draftLifecycle.replace({
+            ...draftLifecycle.sessionsRef.current,
+            [article.id]: hydrateDraftLifecycle(article),
+        });
         setSelectedArticleId(article.id);
         setPersistedSelectedArticleId(article.id);
         return article;
@@ -358,21 +359,29 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
         if (!articleId)
             return;
 
-        const expectedDraftVersion = versions.current.get(articleId);
+        const session = draftLifecycle.sessionsRef.current[articleId];
+        const expectedDraftVersion = session?.draftVersion;
         if (expectedDraftVersion !== undefined)
             await client.discardArticleDraft(articleId, expectedDraftVersion);
 
-        versions.current.delete(articleId);
         const current = articlesRef.current.find((article) => article.id === articleId);
         if (current) {
-            replaceDraft(articleId, current.currentRevision.content);
+            draftLifecycle.send({
+                articleId,
+                event: {
+                    type: "use-current-revision",
+                    content: current.currentRevision.content,
+                    revisionId: current.currentRevisionId,
+                },
+            });
             replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
         }
     }
 
 
     const selectedArticle = articles.find((article) => article.id === selectedArticleId);
-    const content = selectedArticleId ? drafts[selectedArticleId] ?? "" : "";
+    const selectedDraft = selectedArticleId ? draftLifecycle.sessions[selectedArticleId] : undefined;
+    const content = selectedDraft?.content ?? "";
     return {
         articles,
         selectedArticle,
@@ -389,20 +398,18 @@ function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelected
             if (!selectedArticleId)
                 return;
 
-            replaceDraft(selectedArticleId, value);
-            generations.current.set(selectedArticleId, (generations.current.get(selectedArticleId) ?? 0) + 1);
-            setSaveState(selectedArticleId, "unsaved");
+            draftLifecycle.send({ articleId: selectedArticleId, event: { type: "edit", content: value } });
             scheduleCheckpoint(selectedArticleId, value);
         },
         state,
         message,
-        saveState: selectedArticleId ? saveStates[selectedArticleId] ?? "saved" : "saved",
+        saveState: selectedDraft ? draftPresentationState(selectedDraft) : "saved" as DraftPresentationState,
         save,
         retry: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(),
         flushSelected: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(),
         discardDraft,
-        hasUncommittedChanges: Boolean(selectedArticle && content !== selectedArticle.currentRevision.content),
-        conflict: selectedArticleId ? conflicts[selectedArticleId] : undefined,
+        hasUncommittedChanges: Boolean(selectedArticle && selectedDraft && hasUncommittedDraftChanges(selectedDraft, selectedArticle.currentRevision.content)),
+        conflict: selectedDraft?.conflict,
         comparisonArticleId,
         openComparison: () => selectedArticleId && setComparisonArticleId(selectedArticleId),
         closeComparison: () => setComparisonArticleId(undefined),

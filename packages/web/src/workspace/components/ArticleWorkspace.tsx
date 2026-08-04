@@ -1,6 +1,6 @@
 import { Banner, Button, EmptyState } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
-import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState, WorkspaceLayoutState, WorkspaceView } from "../EditorialWorkspace.js";
+import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState, WorkspaceLayoutState } from "../EditorialWorkspace.js";
 import { ArticleHeader } from "./ArticleHeader.js";
 import { ArticleStatusBar } from "./ArticleStatusBar.js";
 import { WorkspaceTabBar, type WorkspaceTabBadgeDescriptor } from "./WorkspaceTabBar.js";
@@ -9,6 +9,7 @@ import { useNotifications } from "../../notifications/NotificationProvider.js";
 import type { GeneralSettings, KeyBindingOverrides } from "@skladno/shared";
 import { KEY_BINDING_COMMAND } from "@skladno/shared";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
+import type { WorkspaceView } from "../workspace-views.js";
 
 export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, shortcutOverrides, onSelectionChange, assistantSelection }: {
     workspace: ArticleWorkspaceState;

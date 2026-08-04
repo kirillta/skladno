@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import type { Article, GeneralSettings } from "@skladno/shared";
-import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState, WorkspaceView } from "../EditorialWorkspace.js";
+import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState } from "../EditorialWorkspace.js";
 import { ArticleEditorView } from "../views/ArticleEditorView.js";
 import { FactCheckView } from "../views/FactCheckView.js";
 import { ProposalReviewView } from "../views/ProposalReviewView.js";
 import { PublishingPreviewView } from "../views/PublishingPreviewView.js";
+import type { WorkspaceView } from "../workspace-views.js";
 import { RevisionHistoryView } from "../views/RevisionHistoryView.js";
 import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
