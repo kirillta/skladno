@@ -56,6 +56,67 @@ describe("ApplicationSettings", () => {
         await waitFor(() => expect(updateGeneralSettings).toHaveBeenLastCalledWith(defaultGeneralSettings));
     });
 
+
+    it("offers system and explicit date formats and resets only the date preference", async () => {
+        const user = userEvent.setup();
+        const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            updateGeneralSettings,
+            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        const heading = await screen.findByText("Date format");
+        const select = heading.parentElement?.querySelector("select") as HTMLSelectElement;
+
+        expect(select.getAttribute("aria-describedby")).toBeTruthy();
+        expect([...select.options].map((option) => option.value)).toEqual(["system", "day-first", "day-first-dots", "month-first", "iso"]);
+        expect(select.options[0]?.textContent).toMatch(/^System date format \(.+\)$/);
+
+        await user.selectOptions(select, "day-first-dots");
+
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({
+            ...defaultGeneralSettings,
+            dateFormat: "day-first-dots",
+        }));
+
+        const reset = screen.getByRole("button", { name: "Use system date format" });
+        expect((reset as HTMLButtonElement).disabled).toBe(false);
+        await user.click(reset);
+
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenLastCalledWith(defaultGeneralSettings));
+        expect((reset as HTMLButtonElement).disabled).toBe(true);
+    });
+
+
+    it("resets an explicit time format without changing date or time-zone preferences", async () => {
+        const user = userEvent.setup();
+        const general = {
+            ...defaultGeneralSettings,
+            dateFormat: "day-first-dots" as const,
+            timeFormat: "24-hour" as const,
+            timeZone: "America/Buenos_Aires",
+        };
+        const updateGeneralSettings = vi.fn().mockResolvedValue(general);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), general }),
+            updateGeneralSettings,
+            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await screen.findByText("Time format");
+        await user.click(screen.getByRole("button", { name: "Use system time format" }));
+
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({
+            ...general,
+            timeFormat: "system",
+        }));
+    });
+
     it("allows entering an environment-variable name for a new AI connection", async () => {
         const user = userEvent.setup();
         const addOpenAiConnection = vi.fn().mockResolvedValue({

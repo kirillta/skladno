@@ -129,11 +129,11 @@ test("article API supports CRUD and revision-aware saves", async () => {
 });
 
 
-test("General settings preserve valid time zones and reject invalid updates", async () => {
+test("General settings preserve valid formatting preferences and reject invalid updates", async () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-settings-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
-    repositories.setSetting("application-general", { ...defaultGeneralSettings, timeZone: "America/Argentina/Buenos_Aires" });
+    repositories.setSetting("application-general", { ...defaultGeneralSettings, dateFormat: "day-first-dots", timeZone: "America/Argentina/Buenos_Aires" });
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -153,7 +153,10 @@ test("General settings preserve valid time zones and reject invalid updates", as
     try {
         const loaded = await fetch(settingsUrl);
         assert.equal(loaded.status, HTTP_STATUS.OK);
-        assert.equal((await loaded.json() as { general: GeneralSettings }).general.timeZone, "America/Argentina/Buenos_Aires");
+        assert.equal((await loaded.json() as { general: GeneralSettings }).general.dateFormat, "day-first-dots");
+
+        const loadedTimeZone = await fetch(settingsUrl);
+        assert.equal((await loadedTimeZone.json() as { general: GeneralSettings }).general.timeZone, "America/Argentina/Buenos_Aires");
 
         repositories.setSetting("application-general", {});
         const legacy = await fetch(settingsUrl);
@@ -169,9 +172,24 @@ test("General settings preserve valid time zones and reject invalid updates", as
         assert.equal((await invalid.json() as { error: { code: string } }).error.code, "invalid_request");
         assert.equal((repositories.getSetting("application-general")?.value as GeneralSettings).timeZone, "America/Argentina/Buenos_Aires");
 
-        repositories.setSetting("application-general", { ...defaultGeneralSettings, timeZone: "invalid-zone" });
+        const invalidDateFormat = await fetch(`${settingsUrl}/general`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ...defaultGeneralSettings, dateFormat: "dashes" }),
+        });
+        assert.equal(invalidDateFormat.status, HTTP_STATUS.BAD_REQUEST);
+        assert.equal((repositories.getSetting("application-general")?.value as GeneralSettings).timeZone, "America/Argentina/Buenos_Aires");
+
+        const invalidTimeFormat = await fetch(`${settingsUrl}/general`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ...defaultGeneralSettings, timeFormat: "military" }),
+        });
+        assert.equal(invalidTimeFormat.status, HTTP_STATUS.BAD_REQUEST);
+
+        repositories.setSetting("application-general", { ...defaultGeneralSettings, dateFormat: "dashes", timeFormat: "military", timeZone: "invalid-zone" });
         const recovered = await fetch(settingsUrl);
-        assert.equal((await recovered.json() as { general: GeneralSettings }).general.timeZone, "system");
+        assert.deepEqual((await recovered.json() as { general: GeneralSettings }).general, defaultGeneralSettings);
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));
         database.close();

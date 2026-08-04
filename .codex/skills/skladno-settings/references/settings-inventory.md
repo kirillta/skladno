@@ -2,7 +2,7 @@
 
 | Section | Setting | Persistence | Status |
 |---|---|---|---|
-| General | Appearance, locale, date/time/time-zone, Article and translation language defaults | `app_settings.application-general` | Persisted; General Settings supports device-local or explicit IANA time zones and its timestamp preview and Revision History honor the saved preference. Relative Article Library activity remains intentionally time-zone independent. |
+| General | Appearance, locale, date/time/time-zone, Article and translation language defaults | `app_settings.application-general` | Persisted; General Settings supports device-local or explicit IANA time zones, device-local date and time formatting (including Windows regional patterns), and explicit `DD.MM.YYYY`, `DD/MM/YYYY`, `MM/DD/YYYY`, `YYYY-MM-DD`, 12-hour, and 24-hour preferences. Its timestamp preview and Revision History honor the saved preference. Relative Article Library activity remains intentionally time-zone independent. |
 | Key bindings | Configurable application shortcuts | `app_settings.application-key-bindings` | Persisted; command dispatch infrastructure is implemented, workspace action wiring is tracked separately |
 | AI | OpenAI connections and active connection | `app_settings.application-ai-connections` | Persisted; add, duplicate prevention, active selection, test, and confirmed deletion are implemented. |
 | AI | Default model and per-skill overrides | `app_settings.application-model-preferences` | Persisted for six built-in skills; legacy operation overrides normalize on read without exposing unknown keys. |

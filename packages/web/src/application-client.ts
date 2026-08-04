@@ -51,6 +51,7 @@ import {
     type ModelPreferences,
     type OpenAiConnection,
 } from "@skladno/shared";
+import { configureSystemDateTimeFormat } from "./i18n/formatting.js";
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
 export interface EditorialWorkspaceClient extends ApplicationClient, ArticleLibraryClient, EditorialClient, StyleCorpusClient, PublishingClient, ApplicationSettingsClient { }
@@ -78,7 +79,10 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     }
 
     async getApplicationSettings(): Promise<ApplicationSettingsSnapshot> {
-        return this.request<ApplicationSettingsSnapshot>(applicationSettingsPath);
+        const settings = await this.request<ApplicationSettingsSnapshot>(applicationSettingsPath);
+        configureSystemDateTimeFormat(settings.systemDateTimeFormat);
+
+        return settings;
     }
 
     async updateGeneralSettings(input: GeneralSettings): Promise<GeneralSettings> {

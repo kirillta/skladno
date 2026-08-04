@@ -415,7 +415,7 @@ describe("Editorial Workspace", () => {
     it("formats Assistant timeline timestamps with the configured preferences", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" generalSettings={{ ...defaultGeneralSettings, dateFormat: "iso", timeFormat: "24-hour", timeZone: "America/New_York" }} assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} />);
 
-        expect(within(panel.container).getByText("12/31/2025, 19:00")).toBeTruthy();
+        expect(within(panel.container).getByText("2025-12-31, 19:00")).toBeTruthy();
     });
 
 

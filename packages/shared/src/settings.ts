@@ -15,9 +15,23 @@ export const INTERFACE_LOCALE = {
 export type InterfaceLocale = typeof INTERFACE_LOCALE[keyof typeof INTERFACE_LOCALE];
 export const defaultInterfaceLocale: InterfaceLocale = INTERFACE_LOCALE.EN;
 export type ThemePreference = "system" | "light" | "dark";
-export type DateFormatPreference = "system" | "day-first" | "month-first" | "iso";
+export type DateFormatPreference = "system" | "day-first" | "day-first-dots" | "month-first" | "iso";
 export type TimeFormatPreference = "system" | "12-hour" | "24-hour";
 export type TimeZonePreference = "system" | string;
+
+
+export function isDateFormatPreference(value: unknown): value is DateFormatPreference {
+    return value === "system"
+        || value === "day-first"
+        || value === "day-first-dots"
+        || value === "month-first"
+        || value === "iso";
+}
+
+
+export function isTimeFormatPreference(value: unknown): value is TimeFormatPreference {
+    return value === "system" || value === "12-hour" || value === "24-hour";
+}
 
 
 export function isTimeZonePreference(value: unknown): value is TimeZonePreference {
@@ -46,6 +60,12 @@ export interface GeneralSettings {
     defaultTranslationLanguages: string[];
 }
 
+export interface SystemDateTimeFormat {
+    locale?: string;
+    datePattern?: string;
+    timePattern?: string;
+}
+
 export interface OpenAiConnection {
     id: string;
     provider: "openai";
@@ -69,6 +89,7 @@ export interface BackupPolicy {
 
 export interface ApplicationSettingsSnapshot {
     general: GeneralSettings;
+    systemDateTimeFormat?: SystemDateTimeFormat;
     connections: OpenAiConnection[];
     activeConnectionId?: string;
     modelPreferences: ModelPreferences;

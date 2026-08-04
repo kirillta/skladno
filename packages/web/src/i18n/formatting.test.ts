@@ -1,22 +1,53 @@
 import { describe, expect, it } from "vitest";
-import { formatDateTime, formatTimeZoneLabel, resolveTimeZone, systemTimeZone, timeZoneOptions } from "./formatting.js";
+import { configureSystemDateTimeFormat, formatDate, formatDateTime, formatTime, formatTimeZoneLabel, resolveTimeZone, systemLocale, systemTimeZone, timeZoneOptions } from "./formatting.js";
 
 
-describe("time-zone formatting", () => {
-    it("uses the device time zone for the system preference", () => {
+describe("date and time formatting", () => {
+    it("uses device locale and time zone for system preferences", () => {
         const value = "2026-01-01T15:45:00.000Z";
-        const expected = new Intl.DateTimeFormat("en", {
+        const expected = new Intl.DateTimeFormat(systemLocale(), {
             year: "numeric",
             month: "numeric",
             day: "numeric",
             hour: "2-digit",
             minute: "2-digit",
-            hourCycle: "h23",
             ...(systemTimeZone() ? { timeZone: systemTimeZone() } : {}),
         }).format(new Date(value));
 
         expect(resolveTimeZone("system")).toBe(systemTimeZone());
-        expect(formatDateTime(value, "en", "system", "24-hour", "system")).toBe(expected);
+        expect(formatDateTime(value, "en", "system", "system", "system")).toBe(expected);
+    });
+
+
+    it("formats each explicit date preference exactly", () => {
+        const value = "2026-01-02T15:45:00.000Z";
+
+        expect(formatDate(value, "day-first", "UTC")).toBe("02/01/2026");
+        expect(formatDate(value, "day-first-dots", "UTC")).toBe("02.01.2026");
+        expect(formatDate(value, "month-first", "UTC")).toBe("01/02/2026");
+        expect(formatDate(value, "iso", "UTC")).toBe("2026-01-02");
+    });
+
+
+    it("honors Windows system date and time patterns when supplied by the local service", () => {
+        configureSystemDateTimeFormat({
+            locale: "ru-RU",
+            datePattern: "dd.MM.yyyy",
+            timePattern: "H:mm:ss",
+        });
+
+        expect(formatDateTime("2026-08-03T00:31:32.000Z", "en", "system", "system", "UTC")).toBe("03.08.2026, 0:31:32");
+
+        configureSystemDateTimeFormat(undefined);
+    });
+
+
+    it("keeps date and time preferences independent", () => {
+        const value = "2026-01-02T15:45:00.000Z";
+
+        expect(formatDateTime(value, "en", "day-first-dots", "24-hour", "UTC")).toBe("02.01.2026, 15:45");
+        expect(formatTime(value, "en", "12-hour", "UTC")).toContain("03:45");
+        expect(formatTime(value, "en", "12-hour", "UTC")).toMatch(/PM/);
     });
 
 

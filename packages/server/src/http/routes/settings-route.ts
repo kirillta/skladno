@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, isKeyBindingCommandId, isTimeZonePreference, keyBindingsPath, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, isDateFormatPreference, isKeyBindingCommandId, isTimeFormatPreference, isTimeZonePreference, keyBindingsPath, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 import { Repositories } from "../../persistence/index.js";
+import { readSystemDateTimeFormat } from "../../system-date-time-format.js";
 import { object, readJson, writeJson } from "../json.js";
 import { ApplicationServiceError } from "../application-error.js";
 
@@ -11,15 +12,21 @@ const aiConnectionsKey = "application-ai-connections";
 const modelPreferencesKey = "application-model-preferences";
 const keyBindingsKey = "application-key-bindings";
 
-function general(value: unknown, rejectInvalidTimeZone = false): GeneralSettings {
+function general(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
     const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
-    if (rejectInvalidTimeZone && candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
+    if (rejectInvalidPreferences && (
+        (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
+        || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
+        || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
+    ))
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
     return {
         ...defaultGeneralSettings,
         ...candidate,
         interfaceLocale: candidate.interfaceLocale === INTERFACE_LOCALE.EN ? candidate.interfaceLocale : defaultInterfaceLocale,
+        dateFormat: isDateFormatPreference(candidate.dateFormat) ? candidate.dateFormat : defaultGeneralSettings.dateFormat,
+        timeFormat: isTimeFormatPreference(candidate.timeFormat) ? candidate.timeFormat : defaultGeneralSettings.timeFormat,
         timeZone: isTimeZonePreference(candidate.timeZone) ? candidate.timeZone : defaultGeneralSettings.timeZone,
         defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages)
             ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))]
@@ -133,6 +140,7 @@ export async function handleSettingsRoute(request: IncomingMessage, response: Se
     if (pathname === applicationSettingsPath && request.method === HTTP_METHOD.GET) {
         writeJson(response, HTTP_STATUS.OK, {
             general: general(repositories.getSetting(generalKey)?.value),
+            systemDateTimeFormat: await readSystemDateTimeFormat(),
             ...connections(repositories.getSetting(aiConnectionsKey)?.value),
             modelPreferences: modelPreferences(repositories.getSetting(modelPreferencesKey)?.value),
             backupPolicy: backup(repositories.getSetting(backupKey)?.value),
