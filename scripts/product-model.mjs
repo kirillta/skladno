@@ -2,12 +2,15 @@ import { readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { resolve, relative } from "node:path";
 import process from "node:process";
 import { error as logError, log } from "node:console";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import Ajv from "ajv";
 
 
 const root = process.cwd();
 const modelDirectory = resolve(root, "product-model", "areas");
 const schemaPath = resolve(root, "product-model", "schema", "product-area.schema.json");
+const execFileAsync = promisify(execFile);
 
 
 function relativePath(path) {
@@ -196,6 +199,47 @@ async function impact() {
 }
 
 
+async function changedPaths(base, head) {
+    const { stdout } = await execFileAsync("git", ["diff", "--name-only", base, head], { cwd: root });
+
+    return stdout.split("\n").filter(Boolean).map((path) => path.replaceAll("\\", "/"));
+}
+
+
+function capabilitiesForPaths(areas, paths) {
+    const productPaths = paths.filter((path) => !/\.test\.[^/]+$/.test(path));
+
+    return areas.flatMap((area) => area.capabilities
+        .filter((capability) => capability.owners.some((owner) => productPaths.some((path) => path === owner || path.startsWith(`${owner}/`))))
+        .map((capability) => ({ area: area.area, capability })));
+}
+
+
+async function checkChanges() {
+    const [base, head] = process.argv.slice(3);
+    if (!base || !head)
+        throw new Error("check-changes requires a base and head Git revision.");
+
+    const paths = await changedPaths(base, head);
+    const matches = capabilitiesForPaths(await loadAreas(), paths);
+    const impactedAreas = [...new Set(matches.map(({ area }) => area))];
+    const failures = impactedAreas
+        .filter((area) => !paths.includes(`product-model/areas/${area}.json`))
+        .map((area) => `Changes affect ${area}, but product-model/areas/${area}.json was not updated.`);
+
+    for (const { capability } of matches)
+        log(`${capability.id}: ${capability.title}`);
+
+    if (failures.length === 0)
+        return;
+
+    for (const failure of failures)
+        logError(failure);
+
+    process.exitCode = 1;
+}
+
+
 const command = process.argv[2] ?? "check";
 if (command === "check")
     await check();
@@ -203,5 +247,7 @@ else if (command === "generate")
     await generate();
 else if (command === "impact")
     await impact();
+else if (command === "check-changes")
+    await checkChanges();
 else
     throw new Error(`Unknown product-model command: ${command}`);

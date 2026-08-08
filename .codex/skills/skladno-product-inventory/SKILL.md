@@ -1,6 +1,6 @@
 ---
 name: skladno-product-inventory
-description: Preserve and maintain Skladno's user-visible product capabilities and feature inventories while distinguishing implemented, partial, and deferred work. Use when adding, changing, removing, reviewing, or documenting Skladno features outside the detailed Settings and Article Workspace guardrails, especially when a change could regress, replace, hide, or narrow an existing capability.
+description: Preserve and maintain Skladno's user-visible product capabilities and feature inventories while distinguishing implemented, partial, and deferred work. Use before adding, changing, replacing, or removing a Skladno feature, including architectural hooks, reducers, providers, state machines, persistence boundaries, routes, clients, or shared contracts that serve a user-visible capability. Use especially when a change could regress, replace, hide, or narrow an existing capability outside the detailed Settings and Article Workspace guardrails.
 ---
 
 # Skladno Product Inventory
@@ -17,10 +17,14 @@ Use the canonical product-model area that matches the change:
 Application shell, Article Workspace, Editorial workflows, History and publishing, Cross-cutting, and Settings are registry-owned. Before changing any of those areas:
 
 1. Read its canonical JSON model and generated inventory in `../../../product-model/areas/` and `../../../docs/`.
-2. Run `npm run product:impact -- <changed paths>` to identify affected capability IDs.
+2. Run `npm run product:impact -- <changed paths>` to identify affected capability IDs. CI runs `npm run product:changed -- <base revision> <head revision>` and requires every impacted area's canonical JSON model to change in the same diff.
 3. Update the canonical JSON model and scenario evidence, then run `npm run product:docs` and `npm run product:check`.
 
 Do not edit generated inventories by hand. They are evidence for people and agents; the model is authoritative.
+
+## Architectural changes
+
+Invoke this skill before introducing, replacing, or removing a hook, reducer, provider, state machine, persistence boundary, route, client, or shared contract that supports a user-visible capability—even when visible UI copy is unchanged. Identify the affected capability IDs and preserve their state, persistence, error, and recovery contracts before changing the architecture.
 
 ## Preserve the baseline
 

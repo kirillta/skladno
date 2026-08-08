@@ -13,6 +13,7 @@
         "product:check": "node scripts/product-model.mjs check",
         "product:docs": "node scripts/product-model.mjs generate",
         "product:impact": "node scripts/product-model.mjs impact",
+        "product:changed": "node scripts/product-model.mjs check-changes",
         "build": "npm run build --workspaces --if-present",
         "postbuild": "npm run lint",
         "test": "npm run test --workspaces --if-present"
