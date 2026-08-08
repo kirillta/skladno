@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { loadServerConfig } from "./config.js";
 
+// product: cross-cutting.private-storage-opt-in
 
 function withConfigEnvironment(values: Record<string, string | undefined>, run: (environment: NodeJS.ProcessEnv) => void): void {
     const directory = mkdtempSync(join(tmpdir(), "skladno-config-"));

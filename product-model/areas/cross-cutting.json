@@ -1,0 +1,211 @@
+{
+    "schemaVersion": 1,
+    "area": "cross-cutting",
+    "capabilities": [
+        {
+            "id": "cross-cutting.internationalization",
+            "area": "Internationalization",
+            "title": "Typed, validated catalogs and English interface catalog",
+            "status": "implemented",
+            "owners": ["packages/web/src/i18n"],
+            "contract": "English is the only complete installed catalog. Application copy is catalog-validated, production surfaces inherit the root locale provider, and localized text is excluded from selectors and logic.",
+            "persistence": "Localized defaults become Article data only when author-editable content is created.",
+            "scenarioIds": ["cross-cutting.complete-catalog-required"]
+        },
+        {
+            "id": "cross-cutting.accessibility",
+            "area": "Accessibility",
+            "title": "Semantic controls, focus treatment, keyboard navigation, and non-color cues",
+            "status": "implemented",
+            "owners": ["packages/web/src/ui", "packages/web/src/workspace/components/WorkspaceShell.tsx", "packages/web/src/settings/ApplicationSettings.tsx"],
+            "contract": "Workspace and Settings controls expose semantic labels, keyboard access, visible focus, and non-color status conventions.",
+            "persistence": "Accessibility behavior is derived from rendered controls and does not persist sensitive state.",
+            "scenarioIds": ["cross-cutting.accessible-workspace-separators"]
+        },
+        {
+            "id": "cross-cutting.keyboard-control",
+            "area": "Keyboard control",
+            "title": "Shortcut hints, normalization, conflict detection, and command registration",
+            "status": "partial",
+            "owners": ["packages/shared/src/key-bindings.ts", "packages/web/src/key-bindings"],
+            "contract": "Key bindings normalize, resolve defaults, identify conflicts, and register commands.",
+            "persistence": "Author-selected overrides persist in Application Settings.",
+            "scenarioIds": ["cross-cutting.key-binding-conflicts"],
+            "limitations": ["Complete workspace-action wiring remains follow-up work."]
+        },
+        {
+            "id": "cross-cutting.notifications",
+            "area": "Notifications",
+            "title": "Shared success and error provider with viewport",
+            "status": "implemented",
+            "owners": ["packages/web/src/notifications"],
+            "contract": "Recoverable failures are presented through a shared notification API without exposing sensitive values.",
+            "persistence": "Notifications are transient renderer state.",
+            "scenarioIds": ["cross-cutting.redacted-notification-errors"]
+        },
+        {
+            "id": "cross-cutting.data-validation",
+            "area": "Data validation",
+            "title": "Shared contracts, HTTP constants, and transport-boundary validation",
+            "status": "implemented",
+            "owners": ["packages/shared/src", "packages/server/src/http"],
+            "contract": "Shared validation and HTTP constants reject malformed transport data before it reaches application behavior.",
+            "persistence": "Invalid provider or transport payloads are not persisted as valid application data.",
+            "scenarioIds": ["cross-cutting.malformed-health-rejected"]
+        },
+        {
+            "id": "cross-cutting.privacy",
+            "area": "Privacy",
+            "title": "Server-side secrets, local materials, minimal context, redacted diagnostics, and storage opt-in",
+            "status": "implemented",
+            "owners": ["packages/server/src/config.ts", "packages/server/src/editorial", "packages/web/src/notifications"],
+            "contract": "Secrets remain server-side, materials remain local, only necessary request context is sent, and provider response storage requires explicit opt-in.",
+            "persistence": "Private content is not logged or traced by default; provider-side response storage is disabled unless enabled.",
+            "scenarioIds": ["cross-cutting.private-storage-opt-in"]
+        },
+        {
+            "id": "cross-cutting.database-lifecycle",
+            "area": "Database lifecycle",
+            "title": "SQLite persistence and Article schema transition",
+            "status": "implemented",
+            "owners": ["packages/server/src/persistence/database.ts", "packages/server/src/persistence"],
+            "contract": "Startup performs the one-time legacy Documents-to-Articles schema transition, then preserves the resulting Article database.",
+            "persistence": "SQLite remains the durable local data store after migration.",
+            "scenarioIds": ["cross-cutting.database-transition-manual"]
+        },
+        {
+            "id": "cross-cutting.assistant-persistence",
+            "area": "Assistant persistence",
+            "title": "Local Article conversation records",
+            "status": "implemented",
+            "owners": ["packages/server/src/persistence/repositories/assistant-repository.ts", "packages/server/src/http/routes/assistant-route.ts"],
+            "contract": "Greetings, messages, request scope, completions, and safe failure or cancellation status are isolated per Article; author messages retain resolved skills and offsets.",
+            "persistence": "Conversation records are local and cascade with their Article; fixed application messages use stable templates while author and model content remain authored text.",
+            "scenarioIds": ["cross-cutting.assistant-records-local"]
+        },
+        {
+            "id": "cross-cutting.data-protection-activity-center",
+            "area": "Data-protection activity center",
+            "title": "Persistent application-level checkpoint, Revision, backup, and future sync activity",
+            "status": "deferred",
+            "owners": ["AGENTS.md"],
+            "contract": "A future activity center is distinct from popup-notification history and does not replace contextual recovery.",
+            "persistence": "Deferred until the post-MVP design and storage contract are approved.",
+            "scenarioIds": ["cross-cutting.data-protection-activity-center-deferred"],
+            "tracking": "#86, Future enhancements (post-MVP) milestone."
+        },
+        {
+            "id": "cross-cutting.deferred-mvp-boundary",
+            "area": "Deferred MVP",
+            "title": "Accounts, sync, teams, analytics, direct publishing, imports, exports, additional providers, and alternate clients",
+            "status": "deferred",
+            "owners": ["AGENTS.md"],
+            "contract": "These capabilities remain outside the validated MVP editorial loop.",
+            "persistence": "No persistence or network surface is introduced for deferred MVP work.",
+            "scenarioIds": ["cross-cutting.deferred-mvp-boundary-manual"],
+            "tracking": "Future enhancements (post-MVP) milestone in AGENTS.md."
+        }
+    ],
+    "scenarios": [
+        {
+            "id": "cross-cutting.complete-catalog-required",
+            "title": "Installed interface catalogs must be complete",
+            "capabilityIds": ["cross-cutting.internationalization"],
+            "preconditions": ["A locale catalog is registered for the application."],
+            "event": "The catalog validation suite runs.",
+            "expected": ["The complete English catalog validates and is the only installed catalog."],
+            "forbidden": ["Incomplete catalogs are not selectable."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/i18n/catalog-validation.test.ts" }
+        },
+        {
+            "id": "cross-cutting.accessible-workspace-separators",
+            "title": "Workspace layout controls remain accessible",
+            "capabilityIds": ["cross-cutting.accessibility"],
+            "preconditions": ["The desktop workspace is rendered."],
+            "event": "The author navigates or resizes workspace panels.",
+            "expected": ["Panel controls expose accessible labels and semantic separators."],
+            "forbidden": ["Panel behavior is not conveyed by color alone."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
+        },
+        {
+            "id": "cross-cutting.key-binding-conflicts",
+            "title": "Key bindings normalize and detect conflicts",
+            "capabilityIds": ["cross-cutting.keyboard-control"],
+            "preconditions": ["Default bindings and an author override are available."],
+            "event": "The binding resolver normalizes and compares key chords.",
+            "expected": ["Defaults, explicit unassignment, and duplicate chords are resolved deterministically."],
+            "forbidden": ["Conflicting effective chords are not silently accepted."],
+            "evidence": { "kind": "automated", "path": "packages/shared/src/key-bindings.test.ts" }
+        },
+        {
+            "id": "cross-cutting.redacted-notification-errors",
+            "title": "Notification errors remain recoverable and redacted",
+            "capabilityIds": ["cross-cutting.notifications"],
+            "preconditions": ["An application client error or unknown exception occurs."],
+            "event": "The notification provider presents the failure.",
+            "expected": ["A useful localized failure notification is shown."],
+            "forbidden": ["Private diagnostic detail is not displayed."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/notifications/NotificationProvider.test.tsx" }
+        },
+        {
+            "id": "cross-cutting.malformed-health-rejected",
+            "title": "Malformed health transport data is rejected",
+            "capabilityIds": ["cross-cutting.data-validation"],
+            "preconditions": ["A health response is received from the local service."],
+            "event": "The shared contract validates the response.",
+            "expected": ["Valid health data is accepted and malformed data is rejected."],
+            "forbidden": ["Malformed transport data does not become application state."],
+            "evidence": { "kind": "automated", "path": "packages/shared/src/health.test.ts" }
+        },
+        {
+            "id": "cross-cutting.private-storage-opt-in",
+            "title": "Provider response storage remains opt-in",
+            "capabilityIds": ["cross-cutting.privacy"],
+            "preconditions": ["Server configuration is loaded with or without storage settings."],
+            "event": "The configuration parser resolves privacy settings.",
+            "expected": ["Provider response storage is disabled by default and tracing is rejected."],
+            "forbidden": ["Ambiguous storage values or remote tracing are not enabled."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/config.test.ts" }
+        },
+        {
+            "id": "cross-cutting.database-transition-manual",
+            "title": "Database transition preserves the resulting Article database",
+            "capabilityIds": ["cross-cutting.database-lifecycle"],
+            "preconditions": ["A legacy Documents database exists before local service startup."],
+            "event": "The service starts for the first time after the Article migration.",
+            "expected": ["The legacy database and sidecars are replaced once with the Article schema."],
+            "forbidden": ["Future starts do not delete the resulting Article database."],
+            "evidence": { "kind": "manual", "path": "packages/server/src/persistence/database.ts" }
+        },
+        {
+            "id": "cross-cutting.assistant-records-local",
+            "title": "Assistant conversation records remain isolated per Article",
+            "capabilityIds": ["cross-cutting.assistant-persistence"],
+            "preconditions": ["An Article has an Assistant greeting and author request."],
+            "event": "The repository persists assistant records.",
+            "expected": ["Greeting templates and resolved author skill metadata remain available for the Article."],
+            "forbidden": ["Conversation state does not cross Article boundaries."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/persistence/repositories.test.ts" }
+        },
+        {
+            "id": "cross-cutting.data-protection-activity-center-deferred",
+            "title": "Data-protection activity center is explicitly deferred",
+            "capabilityIds": ["cross-cutting.data-protection-activity-center"],
+            "preconditions": ["The MVP scope is evaluated."],
+            "event": "A change proposes persistent activity-center work.",
+            "expected": ["The work is tracked as post-MVP rather than inferred into current scope."],
+            "forbidden": ["Popup notification history is not treated as the activity center."],
+            "evidence": { "kind": "manual", "path": "AGENTS.md" }
+        },
+        {
+            "id": "cross-cutting.deferred-mvp-boundary-manual",
+            "title": "Deferred MVP capabilities remain out of scope",
+            "capabilityIds": ["cross-cutting.deferred-mvp-boundary"],
+            "preconditions": ["A future-enhancement capability is considered."],
+            "event": "An MVP implementation change is planned.",
+            "expected": ["The capability remains deferred unless the active issue explicitly changes scope."],
+            "forbidden": ["Deferred product surface is not silently introduced."],
+            "evidence": { "kind": "manual", "path": "AGENTS.md" }
+        }
+    ]
+}

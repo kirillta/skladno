@@ -4,6 +4,7 @@ import { validateCatalog } from "./catalog-validation.js";
 import { en } from "./locales/en.js";
 import { messages } from "./messages.js";
 
+// product: cross-cutting.complete-catalog-required
 describe("locale catalogs", () => {
     it("validates the complete English catalog and installed registry", () => {
         expect(Object.keys(en).sort()).toEqual(Object.keys(messages).sort());

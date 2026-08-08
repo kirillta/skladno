@@ -7,7 +7,7 @@ import test from "node:test";
 import { openDatabase } from "./database.js";
 import { Repositories } from "./repositories.js";
 
-// Product scenarios: history-and-publishing.revision-restore-creates-new, history-and-publishing.style-corpus-local
+// Product scenarios: history-and-publishing.revision-restore-creates-new, history-and-publishing.style-corpus-local, cross-cutting.assistant-records-local
 
 function withRepository(run: (repositories: Repositories, close: () => void, database: ReturnType<typeof openDatabase>) => void): void {
     const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));

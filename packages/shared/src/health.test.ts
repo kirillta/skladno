@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { isHealthResponse, parseHealthResponse } from "./health.js";
 
+// product: cross-cutting.malformed-health-rejected
 test("accepts the health API contract", () => {
     const response = {
         status: "ok",

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { KEY_BINDING_COMMAND, findKeyBindingConflict, formatKeyBinding, normalizeKeyBinding, resolveKeyBindings } from "./key-bindings.js";
 
+// product: cross-cutting.key-binding-conflicts
 test("key bindings normalize, format, resolve defaults, and retain explicit unassignment", () => {
     const normalized = normalizeKeyBinding({ primary: true, shift: false, alt: true, key: " S " });
     assert.deepEqual(normalized, { primary: true, shift: false, alt: true, key: "s" });

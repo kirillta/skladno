@@ -4,10 +4,10 @@
         "application",
         "article-workspace",
         "editorial-workflows",
-        "history-and-publishing"
+        "history-and-publishing",
+        "cross-cutting"
     ],
     "legacyInventoryAreas": [
-        "cross-cutting",
         "settings"
     ]
 }
