@@ -13,6 +13,11 @@ import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";
 
 
+async function* noConversation(): AsyncIterable<EditorialEngineEvent> {
+    return;
+}
+
+
 class FixtureEngine implements EditorialEngine {
     requests: EditorialEngineRequest[] = [];
 
@@ -21,6 +26,11 @@ class FixtureEngine implements EditorialEngine {
     async *stream(request: EditorialEngineRequest): AsyncIterable<EditorialEngineEvent> {
         this.requests.push(request);
         yield* this.events;
+    }
+
+
+    async *streamConversation(): AsyncIterable<EditorialEngineEvent> {
+        yield* noConversation();
     }
 }
 
@@ -129,6 +139,7 @@ test("expired provider session is cleared and can be retried as a fresh session"
         async *stream(): AsyncIterable<EditorialEngineEvent> {
             throw new EditorialEngineError("session_expired", "The saved editorial session is no longer available. Retry to start a fresh session.");
         },
+        streamConversation: noConversation,
     };
 
     await withService(engine, async (baseUrl, repositories) => {
@@ -151,6 +162,7 @@ test("provider errors are actionable and leave the article unchanged", async () 
         async *stream(): AsyncIterable<EditorialEngineEvent> {
             throw new Error("OpenAI could not complete this request (429). Check your connection and API settings, then retry.");
         },
+        streamConversation: noConversation,
     };
 
     await withService(engine, async (baseUrl, repositories) => {
@@ -177,6 +189,7 @@ test("cancelling an editorial stream does not change the article or session", as
             yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial" };
             await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
         },
+        streamConversation: noConversation,
     };
 
     await withService(engine, async (baseUrl, repositories) => {
@@ -399,6 +412,7 @@ test("assistant streams include a stable failure code", async () => {
         async *stream(): AsyncIterable<EditorialEngineEvent> {
             throw new EditorialEngineError("network", "OpenAI could not be reached. Check your connection and API settings, then retry.");
         },
+        streamConversation: noConversation,
     };
 
     await withService(engine, async (baseUrl, repositories) => {

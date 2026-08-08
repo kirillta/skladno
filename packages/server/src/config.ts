@@ -1,6 +1,7 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface ServerConfig {
     host: string;
@@ -11,6 +12,15 @@ export interface ServerConfig {
     openAiModel: string;
     openAiStoreResponses: boolean;
     databasePath: string;
+}
+
+
+const projectEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
+
+
+export function loadServerEnvironment(path = projectEnvironmentFile): void {
+    if (existsSync(path))
+        process.loadEnvFile(path);
 }
 
 

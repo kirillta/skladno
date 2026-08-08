@@ -70,7 +70,7 @@
             "title": "Active data directory",
             "status": "partial",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/config.ts"],
-            "contract": "The active local data directory is determined by startup configuration and displayed in Settings.",
+            "contract": "The active local data directory and server-only environment values are determined at startup; project .env values are loaded before the local service starts and Settings displays the active data directory.",
             "persistence": "Startup configuration rather than a Settings-managed value.",
             "scenarioIds": ["settings.active-data-directory-manual"],
             "limitations": ["The data-directory UI is incomplete."]

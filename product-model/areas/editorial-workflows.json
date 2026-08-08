@@ -47,8 +47,8 @@
             "area": "Editorial operations",
             "title": "Fact-check request",
             "status": "implemented",
-            "owners": ["packages/server/src/editorial/langgraph-fact-check.ts", "packages/server/src/http/routes/editorial-route.ts"],
-            "contract": "Fact checks create advisory, Revision-tied findings with their own freshness state.",
+            "owners": ["packages/server/src/editorial/create-editorial-engine.ts", "packages/server/src/http/routes/editorial-route.ts"],
+            "contract": "A fixed server-side fact-check workflow creates advisory, Revision-tied findings with their own freshness state.",
             "persistence": "Findings and citations are stored locally without changing Article text.",
             "scenarioIds": ["editorial-workflows.finding-operations-preserve-article"]
         },

@@ -1,7 +1,9 @@
-import { loadServerConfig } from "./config.js";
+import { loadServerConfig, loadServerEnvironment } from "./config.js";
 import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";
 import { closeLocalService, listenForLocalService } from "./service-lifecycle.js";
+
+loadServerEnvironment();
 
 const config = loadServerConfig();
 const database = openDatabase(config.databasePath);

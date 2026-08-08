@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage } from "node:http";
 import { APPLICATION_ERROR, HTTP_METHOD, HTTP_STATUS, resolveBuiltInSkillId, type EditorialOperation, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 
 import type { ServerConfig } from "./config.js";
-import { LangChainEditorialEngine } from "./editorial/langchain-editorial-engine.js";
+import { createEditorialEngine } from "./editorial/create-editorial-engine.js";
 import type { EditorialEngine } from "./editorial/editorial-engine.js";
 import { handleArticlesRoute } from "./http/routes/articles-route.js";
 import { handleAssistantRoute } from "./http/routes/assistant-route.js";
@@ -36,7 +36,7 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
         const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
         const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || config.openAiModel;
 
-        return new LangChainEditorialEngine({ apiKey, model, storeResponses: config.openAiStoreResponses });
+        return createEditorialEngine({ apiKey, model, storeResponses: config.openAiStoreResponses });
     }
 
     return createServer(async (request, response) => {

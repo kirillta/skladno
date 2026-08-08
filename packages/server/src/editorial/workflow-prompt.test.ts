@@ -5,15 +5,15 @@ import { EDITORIAL_OPERATION } from "@skladno/shared";
 import { createEditorialMessages } from "./workflow-prompt.js";
 
 
-async function promptText(input: Parameters<typeof createEditorialMessages>[0]): Promise<string> {
-    const messages = await createEditorialMessages(input);
+function promptText(input: Parameters<typeof createEditorialMessages>[0]): string {
+    const messages = createEditorialMessages(input);
 
-    return messages.map((message) => message.text).join("\n");
+    return messages.map((message) => typeof message.content === "string" ? message.content : "").join("\n");
 }
 
 
 test("thesis-to-narrative prompt preserves author control and supplied theses", async () => {
-    const prompt = await promptText({
+    const prompt = promptText({
         operation: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
         article: "Current draft.",
         authorContext: "Explain Kubernetes retries for senior engineers.",
@@ -29,7 +29,7 @@ test("thesis-to-narrative prompt preserves author control and supplied theses", 
 
 
 test("flow-revision prompt asks for a full-text proposal rather than feedback", async () => {
-    const prompt = await promptText({
+    const prompt = promptText({
         operation: EDITORIAL_OPERATION.FLOW_REVISION,
         article: "Current draft.",
         authorContext: "Keep the opening sentence.",
@@ -43,7 +43,7 @@ test("flow-revision prompt asks for a full-text proposal rather than feedback", 
 
 
 test("style review sends a compact profile rather than raw corpus text", async () => {
-    const prompt = await promptText({
+    const prompt = promptText({
         operation: EDITORIAL_OPERATION.STYLE_REVIEW,
         article: "Current draft.",
         authorContext: "",
@@ -63,7 +63,7 @@ test("style review sends a compact profile rather than raw corpus text", async (
 
 
 test("translation prompt names the target language and preserves protected tokens", async () => {
-    const prompt = await promptText({
+    const prompt = promptText({
         operation: EDITORIAL_OPERATION.TRANSLATION,
         article: "Use [[SKLADNO_PROTECTED_0]].",
         authorContext: "Keep the direct tone.",

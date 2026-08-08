@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { loadServerConfig } from "./config.js";
+import { loadServerConfig, loadServerEnvironment } from "./config.js";
 
 // product: cross-cutting.private-storage-opt-in
 
@@ -35,6 +35,28 @@ test("response storage is disabled unless explicitly enabled", () => {
     withConfigEnvironment({ OPENAI_STORE_RESPONSES: "false" }, (environment) => {
         assert.equal(loadServerConfig(environment).openAiStoreResponses, false);
     });
+});
+
+
+test("the local service loads custom named keys from the project environment file", () => {
+    const directory = mkdtempSync(join(tmpdir(), "skladno-environment-"));
+    const environmentFile = join(directory, ".env");
+    const variableName = "SKLADNO_TEST_OPENAI_KEY";
+    const previous = process.env[variableName];
+    writeFileSync(environmentFile, `${variableName}=test-key\n`);
+
+    try {
+        delete process.env[variableName];
+        loadServerEnvironment(environmentFile);
+        assert.equal(process.env[variableName], "test-key");
+    } finally {
+        if (previous === undefined)
+            delete process.env[variableName];
+        else
+            process.env[variableName] = previous;
+
+        rmSync(directory, { recursive: true, force: true });
+    }
 });
 
 

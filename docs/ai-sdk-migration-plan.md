@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed. This document evaluates and plans a transition from LangChain.js and LangGraph to the Vercel AI SDK. It does not authorize a product-behavior change.
+Implemented on August 8, 2026. The migration replaced LangChain.js and LangGraph with the Vercel AI SDK without changing product behavior.
 
 The evaluation was performed on August 8, 2026 against `ai` 7.0.58 and `@ai-sdk/openai` 4.0.36. Recheck the installed package documentation and current versions immediately before implementation because the AI SDK changes frequently.
 

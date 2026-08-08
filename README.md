@@ -79,7 +79,7 @@ React SPA
 local Node.js service
     ├── SQLite persistence and migrations
     ├── immutable document revisions
-    ├── LangChain.js orchestration over OpenAI Responses API
+    ├── Skladno editorial AI facade over the OpenAI Responses API
     ├── typed SSE streaming to the renderer
     ├── web search for fact-checking
     └── local configuration and secrets
@@ -164,7 +164,7 @@ Skladno processes unpublished writing and style samples, so privacy is a product
 - Private content and credentials must not appear in logs by default.
 - Model requests contain only the context required for the requested operation.
 - Style corpus articles remain local; style review sends a compact derived profile rather than the raw corpus.
-- LangChain is server-side only. LangGraph is introduced with the later fact-check workflow, where stateful orchestration is needed.
+- The Vercel AI SDK is server-side only. Fact checking uses a bounded, fixed workflow rather than an autonomous agent or graph runtime.
 - Provider-side response storage is disabled by default. `OPENAI_STORE_RESPONSES=true` is an explicit opt-in for response-ID continuation and may retain response state with OpenAI.
 - LangSmith tracing is disabled for private editorial content.
 - Network-dependent actions are visible and initiated by the author.
