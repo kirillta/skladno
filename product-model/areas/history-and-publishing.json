@@ -1,0 +1,149 @@
+{
+    "schemaVersion": 1,
+    "area": "history-and-publishing",
+    "capabilities": [
+        {
+            "id": "history-and-publishing.revision-history",
+            "area": "Revision history",
+            "title": "Immutable Revision timeline and read-only preview",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/persistence/repositories/articles-repository.ts"],
+            "contract": "The timeline distinguishes initial, manual, AI-assisted, and restored Revisions. Selecting a Revision is local-only and does not alter the Article or Draft.",
+            "persistence": "Revisions are immutable local records ordered by creation.",
+            "scenarioIds": ["history-and-publishing.revision-history-browsing"]
+        },
+        {
+            "id": "history-and-publishing.revision-restore",
+            "area": "Revision history",
+            "title": "Restore a prior Revision",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/server/src/persistence/repositories/articles-repository.ts"],
+            "contract": "Restoring a prior Revision creates a new Revision and never rewrites history; uncommitted Drafts require an explicit choice.",
+            "persistence": "Restoration appends a new immutable local Revision.",
+            "scenarioIds": ["history-and-publishing.revision-restore-creates-new"]
+        },
+        {
+            "id": "history-and-publishing.style-corpus",
+            "area": "Style corpus",
+            "title": "Local writing samples and compact style profile",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/views/StyleProfileView.tsx", "packages/server/src/persistence/repositories/style-corpus-repository.ts"],
+            "contract": "Authors can add or remove local writing samples and derive a compact style profile.",
+            "persistence": "Raw samples and their derived local profile remain local.",
+            "scenarioIds": ["history-and-publishing.style-corpus-local"]
+        },
+        {
+            "id": "history-and-publishing.fact-check-findings",
+            "area": "Fact Check",
+            "title": "Revision-tied findings, citations, uncertainty, and stale indication",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/views/FactCheckView.tsx", "packages/server/src/editorial/langgraph-fact-check.ts", "packages/server/src/persistence/repositories/workflow-artifacts-repository.ts"],
+            "contract": "Findings are advisory, tied to their reviewed Revision, include source links and uncertainty, and indicate staleness.",
+            "persistence": "Findings and citations persist locally without modifying Article text.",
+            "scenarioIds": ["history-and-publishing.fact-findings-advisory"]
+        },
+        {
+            "id": "history-and-publishing.translations",
+            "area": "Translations",
+            "title": "Linked translation Articles with source freshness protection",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/views/TranslationsView.tsx", "packages/server/src/editorial/translation.ts", "packages/server/src/persistence/repositories/articles-repository.ts"],
+            "contract": "A translation is an independently recoverable linked Article. Stale source content is warned about and cannot start creation.",
+            "persistence": "Source Article and Revision linkage persist on the independently recoverable translation Article.",
+            "scenarioIds": ["history-and-publishing.translation-stale-source"]
+        },
+        {
+            "id": "history-and-publishing.publishing-preview",
+            "area": "Publishing preview",
+            "title": "Plain-text preparation, profile selection, character guidance, and copy-ready preview",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/views/PublishingPreviewView.tsx", "packages/shared/src/publishing.ts"],
+            "contract": "The preview prepares derived copy with Article-specific profile selection and shared character guidance; direct publishing is not performed.",
+            "persistence": "Preview output is derived from local Article and profile data.",
+            "scenarioIds": ["history-and-publishing.publishing-guidance"]
+        },
+        {
+            "id": "history-and-publishing.publishing-profiles",
+            "area": "Publishing profiles",
+            "title": "Named profiles with configurable limits",
+            "status": "partial",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/publish-settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "contract": "An Article may select a named publishing profile that supplies character-limit guidance.",
+            "persistence": "The selected profile persists locally.",
+            "scenarioIds": ["history-and-publishing.publishing-profile-persistence"],
+            "limitations": ["The current UI exposes fixed legacy profile selection; custom profile management is incomplete."]
+        }
+    ],
+    "scenarios": [
+        {
+            "id": "history-and-publishing.revision-history-browsing",
+            "title": "Revision history is browsable without changing Article content",
+            "capabilityIds": ["history-and-publishing.revision-history"],
+            "preconditions": ["An Article has initial and subsequent Revisions."],
+            "event": "The author selects an earlier Revision in history.",
+            "expected": ["A formatted read-only preview and distinct provenance timeline icon are shown."],
+            "forbidden": ["Selecting history does not alter the current Article or Draft."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/RevisionHistoryView.test.tsx" }
+        },
+        {
+            "id": "history-and-publishing.revision-restore-creates-new",
+            "title": "Restoring preserves immutable Revision history",
+            "capabilityIds": ["history-and-publishing.revision-restore"],
+            "preconditions": ["An author has selected an earlier Revision."],
+            "event": "The author requests restoration.",
+            "expected": ["The restore request identifies the selected Revision and the repository creates a new Revision."],
+            "forbidden": ["Existing Revision records are not rewritten."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/persistence/repositories.test.ts" }
+        },
+        {
+            "id": "history-and-publishing.style-corpus-local",
+            "title": "Style corpus stays local while a compact profile is derived",
+            "capabilityIds": ["history-and-publishing.style-corpus"],
+            "preconditions": ["The author adds a writing sample."],
+            "event": "The style corpus changes.",
+            "expected": ["A derived profile reflects the local sample and is removed when the corpus becomes empty."],
+            "forbidden": ["Raw style samples are not treated as remote application data."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/persistence/repositories.test.ts" }
+        },
+        {
+            "id": "history-and-publishing.fact-findings-advisory",
+            "title": "Fact findings remain advisory and Revision-tied",
+            "capabilityIds": ["history-and-publishing.fact-check-findings"],
+            "preconditions": ["The author requests a fact check for the current Revision."],
+            "event": "The fact-check operation completes.",
+            "expected": ["Findings retain source citations, uncertainty, and the reviewed Revision identifier."],
+            "forbidden": ["Fact-check output does not modify Article text."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+        },
+        {
+            "id": "history-and-publishing.translation-stale-source",
+            "title": "Stale source content blocks linked translation creation",
+            "capabilityIds": ["history-and-publishing.translations"],
+            "preconditions": ["A translation proposal's source Revision is stale."],
+            "event": "The author opens Translations.",
+            "expected": ["The stale-source warning is shown."],
+            "forbidden": ["Creating a translation Article is disabled until a current translation is generated."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/TranslationsView.test.tsx" }
+        },
+        {
+            "id": "history-and-publishing.publishing-guidance",
+            "title": "Publishing preview offers guidance rather than direct publishing",
+            "capabilityIds": ["history-and-publishing.publishing-preview"],
+            "preconditions": ["The current Article has a selected publishing profile."],
+            "event": "The author opens Publishing Preview.",
+            "expected": ["Prepared plain text and character-limit guidance are available for review and copying."],
+            "forbidden": ["The application does not publish directly to a platform."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
+        },
+        {
+            "id": "history-and-publishing.publishing-profile-persistence",
+            "title": "Publishing profile selection persists locally",
+            "capabilityIds": ["history-and-publishing.publishing-profiles"],
+            "preconditions": ["A supported publishing profile is selected."],
+            "event": "The service saves and reloads that selection.",
+            "expected": ["The selected profile is returned after reload."],
+            "forbidden": ["Unknown profiles are not accepted."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/http.test.ts" }
+        }
+    ]
+}

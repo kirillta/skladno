@@ -2,12 +2,12 @@
     "schemaVersion": 1,
     "registryOwnedAreas": [
         "application",
-        "article-workspace"
+        "article-workspace",
+        "editorial-workflows",
+        "history-and-publishing"
     ],
     "legacyInventoryAreas": [
         "cross-cutting",
-        "editorial-workflows",
-        "history-and-publishing",
         "settings"
     ]
 }

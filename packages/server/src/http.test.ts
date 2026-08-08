@@ -9,6 +9,8 @@ import { aiConnectionsPath, applicationSettingsPath, defaultGeneralSettings, HTT
 import { createLocalService } from "./http.js";
 import { openDatabase, Repositories } from "./persistence/index.js";
 
+// Product scenarios: editorial-workflows.ai-connection-management, editorial-workflows.ai-model-preferences, history-and-publishing.publishing-profile-persistence
+
 test("article API supports CRUD and revision-aware saves", async () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-http-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));

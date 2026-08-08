@@ -8,13 +8,13 @@ description: Preserve and maintain Skladno's user-visible product capabilities a
 Use the canonical product-model area that matches the change:
 
 - Read `../../../product-model/areas/application.json` and generated `../../../docs/application-inventory.md` for application-shell contracts.
-- Read `references/editorial-workflows-inventory.md` for the assistant, AI operations, proposals, and editorial safety.
-- Read `references/history-and-publishing-inventory.md` for Revisions, evidence, translations, and publishing preview.
+- Read `../../../product-model/areas/editorial-workflows.json` and generated `../../../docs/editorial-workflows-inventory.md` for the assistant, AI operations, proposals, and editorial safety.
+- Read `../../../product-model/areas/history-and-publishing.json` and generated `../../../docs/history-and-publishing-inventory.md` for Revisions, evidence, translations, and publishing preview.
 - Read `references/cross-cutting-inventory.md` for internationalization, accessibility, keyboard control, notifications, privacy, validation, and database lifecycle.
 
 ## Registry-owned product areas
 
-Application shell and Article Workspace are registry-owned. Before changing either area:
+Application shell, Article Workspace, Editorial workflows, and History and publishing are registry-owned. Before changing any of those areas:
 
 1. Read its canonical JSON model and generated inventory in `../../../product-model/areas/` and `../../../docs/`.
 2. Run `npm run product:impact -- <changed paths>` to identify affected capability IDs.

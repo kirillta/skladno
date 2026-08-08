@@ -5,6 +5,7 @@ import type { Article } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
 import { TranslationsView } from "./TranslationsView.js";
 
+// product: history-and-publishing.translation-stale-source
 
 const article: Article = {
     id: "article-1",

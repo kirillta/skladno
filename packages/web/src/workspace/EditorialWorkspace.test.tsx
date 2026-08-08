@@ -13,7 +13,7 @@ import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
 
-// Product scenarios: workspace.library.create-and-select, workspace.assistant.quick-action, workspace.empty.create-article, workspace.header.metadata-and-deletion, workspace.navigation.persisted-view, workspace.publishing.over-guidance
+// Product scenarios: workspace.library.create-and-select, workspace.assistant.quick-action, workspace.empty.create-article, workspace.header.metadata-and-deletion, workspace.navigation.persisted-view, workspace.publishing.over-guidance, history-and-publishing.publishing-guidance
 
 function article(id: string, title: string): Article {
     const revision: ArticleRevision = { id: `${id}-revision`, articleId: id, content: "Draft", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" } };

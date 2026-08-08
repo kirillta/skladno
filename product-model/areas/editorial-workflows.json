@@ -1,0 +1,199 @@
+{
+    "schemaVersion": 1,
+    "area": "editorial-workflows",
+    "capabilities": [
+        {
+            "id": "editorial-workflows.assistant-foundation",
+            "area": "Assistant foundation",
+            "title": "Durable local conversation and built-in skill registry",
+            "status": "implemented",
+            "owners": ["packages/server/src/http/routes/assistant-route.ts", "packages/server/src/persistence/repositories/assistant-repository.ts", "packages/shared/src/editorial.ts"],
+            "contract": "Every Article has one persisted greeting and stable contracts for six skills. Assistant requests are revision-bound, resolve one eligible explicit or inferred skill, and retain completed local messages and review artifacts.",
+            "persistence": "Assistant messages, requests, and completed artifacts persist locally. Workflow Stage persistence is retired; legacy values remain untouched.",
+            "scenarioIds": ["editorial-workflows.assistant-request-proposal"]
+        },
+        {
+            "id": "editorial-workflows.assistant-panel-streaming",
+            "area": "Assistant panel",
+            "title": "Streamed responses, progress, cancellation, and error recovery",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/components/EditorialAssistantPanel.tsx", "packages/web/src/application-client.ts", "packages/server/src/http/routes/assistant-route.ts"],
+            "contract": "Assistant requests stream typed status and response events; incomplete streams do not modify an Article.",
+            "persistence": "Only valid completed request output becomes local message or review-artifact state.",
+            "scenarioIds": ["editorial-workflows.assistant-stream-failure-safe"]
+        },
+        {
+            "id": "editorial-workflows.thesis-composition",
+            "area": "Editorial operations",
+            "title": "Thesis-to-narrative composition",
+            "status": "implemented",
+            "owners": ["packages/server/src/editorial", "packages/server/src/http/routes/editorial-route.ts"],
+            "contract": "The server creates a composition Proposal from author-supplied theses; it remains reviewable until acceptance.",
+            "persistence": "Completed proposal artifacts are local and revision-bound.",
+            "scenarioIds": ["editorial-workflows.proposal-operations-remain-separate"]
+        },
+        {
+            "id": "editorial-workflows.flow-revision",
+            "area": "Editorial operations",
+            "title": "Flow revision",
+            "status": "implemented",
+            "owners": ["packages/server/src/editorial", "packages/server/src/http/routes/editorial-route.ts"],
+            "contract": "Flow revision generates a full-text Proposal rather than silently editing the Article.",
+            "persistence": "Completed proposal artifacts are local and revision-bound.",
+            "scenarioIds": ["editorial-workflows.proposal-operations-remain-separate"]
+        },
+        {
+            "id": "editorial-workflows.fact-check-request",
+            "area": "Editorial operations",
+            "title": "Fact-check request",
+            "status": "implemented",
+            "owners": ["packages/server/src/editorial/langgraph-fact-check.ts", "packages/server/src/http/routes/editorial-route.ts"],
+            "contract": "Fact checks create advisory, Revision-tied findings with their own freshness state.",
+            "persistence": "Findings and citations are stored locally without changing Article text.",
+            "scenarioIds": ["editorial-workflows.finding-operations-preserve-article"]
+        },
+        {
+            "id": "editorial-workflows.style-review",
+            "area": "Editorial operations",
+            "title": "Style review",
+            "status": "implemented",
+            "owners": ["packages/server/src/editorial", "packages/server/src/persistence/repositories/style-corpus-repository.ts"],
+            "contract": "Style review uses a compact derived profile; raw style samples remain local and review findings retain freshness state.",
+            "persistence": "Raw style corpus and derived review artifacts stay local.",
+            "scenarioIds": ["editorial-workflows.finding-operations-preserve-article"]
+        },
+        {
+            "id": "editorial-workflows.translation-request",
+            "area": "Editorial operations",
+            "title": "Translation request",
+            "status": "implemented",
+            "owners": ["packages/server/src/editorial/translation.ts", "packages/server/src/http/routes/editorial-route.ts"],
+            "contract": "Translation requests prepare linked Article content; the source Article is never overwritten.",
+            "persistence": "Translation review metadata is local and source linkage remains recoverable.",
+            "scenarioIds": ["editorial-workflows.translation-preserves-source"]
+        },
+        {
+            "id": "editorial-workflows.proposal-lifecycle",
+            "area": "Proposal lifecycle",
+            "title": "Diff review, selection, acceptance, rejection, and stale protection",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/server/src/persistence/repositories/articles-repository.ts"],
+            "contract": "Authors may review diffs, select changes, accept or reject proposals, and cannot accept a stale proposal.",
+            "persistence": "Acceptance creates one immutable Revision; rejection leaves Article history unchanged.",
+            "scenarioIds": ["editorial-workflows.stale-proposal-blocked"]
+        },
+        {
+            "id": "editorial-workflows.ai-safety",
+            "area": "AI safety",
+            "title": "Explicit request and explicit proposal approval",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/EditorialWorkspace.tsx", "packages/server/src/http/routes/editorial-route.ts", "packages/server/src/persistence/repositories/articles-repository.ts"],
+            "contract": "AI operations require an author request; generated text remains separate until explicit author acceptance.",
+            "persistence": "Only accepted content creates a Revision.",
+            "scenarioIds": ["editorial-workflows.proposal-operations-remain-separate", "editorial-workflows.stale-proposal-blocked"]
+        },
+        {
+            "id": "editorial-workflows.ai-connections",
+            "area": "AI connection",
+            "title": "Named OpenAI connections and environment-variable references",
+            "status": "partial",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "contract": "Authors configure named OpenAI connections, active selection, testing, and environment-variable names without exposing secret values.",
+            "persistence": "Connection metadata and active selection persist locally; credentials remain environment-provided.",
+            "scenarioIds": ["editorial-workflows.ai-connection-management"],
+            "limitations": ["Connection management and provider breadth remain incomplete."]
+        },
+        {
+            "id": "editorial-workflows.ai-model-selection",
+            "area": "AI model selection",
+            "title": "Refreshed model list, default model, and skill-specific overrides",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http.ts", "packages/server/src/http/routes/settings-route.ts"],
+            "contract": "A default model and built-in-skill overrides determine new editorial requests.",
+            "persistence": "Model preferences persist locally; refreshed provider model lists are not persisted.",
+            "scenarioIds": ["editorial-workflows.ai-model-preferences"]
+        }
+    ],
+    "scenarios": [
+        {
+            "id": "editorial-workflows.assistant-request-proposal",
+            "title": "Assistant request produces a revision-bound proposal",
+            "capabilityIds": ["editorial-workflows.assistant-foundation"],
+            "preconditions": ["The author has an Article and requests a selected-text improvement."],
+            "event": "The Assistant resolves an eligible skill and completes its request." ,
+            "expected": ["The request, messages, and revision-bound Proposal artifact are retained locally."],
+            "forbidden": ["The source Article text is not silently changed."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.assistant-stream-failure-safe",
+            "title": "Failed or cancelled Assistant work remains recoverable",
+            "capabilityIds": ["editorial-workflows.assistant-panel-streaming"],
+            "preconditions": ["An Assistant or editorial stream is in progress."],
+            "event": "The stream fails, is incomplete, or is cancelled." ,
+            "expected": ["A stable error can be shown and unfinished output is not persisted as valid work."],
+            "forbidden": ["The Article is not modified by incomplete output."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.proposal-operations-remain-separate",
+            "title": "Composition and flow revision remain proposals",
+            "capabilityIds": ["editorial-workflows.thesis-composition", "editorial-workflows.flow-revision", "editorial-workflows.ai-safety"],
+            "preconditions": ["The author explicitly requests an editorial operation."],
+            "event": "The server completes a composition or flow-revision operation." ,
+            "expected": ["A reviewable Proposal is produced with the source Article unchanged."],
+            "forbidden": ["Generated text is not applied without author approval."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.finding-operations-preserve-article",
+            "title": "Fact and style review preserve Article text",
+            "capabilityIds": ["editorial-workflows.fact-check-request", "editorial-workflows.style-review"],
+            "preconditions": ["The author explicitly requests a fact or style review."],
+            "event": "The review operation completes." ,
+            "expected": ["Revision-tied advisory findings and citations are retained."],
+            "forbidden": ["Review output does not overwrite Article text or send raw style corpus text."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.translation-preserves-source",
+            "title": "Translation retains source independence",
+            "capabilityIds": ["editorial-workflows.translation-request"],
+            "preconditions": ["The author explicitly requests a translation target language."],
+            "event": "The translation operation completes and the author creates its linked Article." ,
+            "expected": ["The linked translation retains source metadata and protected spans."],
+            "forbidden": ["The source Article is not overwritten."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.stale-proposal-blocked",
+            "title": "Stale proposal remains reviewable but cannot be accepted",
+            "capabilityIds": ["editorial-workflows.proposal-lifecycle", "editorial-workflows.ai-safety"],
+            "preconditions": ["A Proposal base Revision is no longer current."],
+            "event": "The author opens Proposal Review." ,
+            "expected": ["The stale warning is shown and rejection remains available."],
+            "forbidden": ["Acceptance cannot create a Revision from a stale Proposal."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/ProposalReviewView.test.tsx" }
+        },
+        {
+            "id": "editorial-workflows.ai-connection-management",
+            "title": "Connection metadata stays distinct from secrets",
+            "capabilityIds": ["editorial-workflows.ai-connections"],
+            "preconditions": ["The author configures OpenAI connection metadata."],
+            "event": "The author adds, selects, or removes a connection." ,
+            "expected": ["Only environment-variable references and active connection metadata persist."],
+            "forbidden": ["Secret values are not stored or exposed."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/http.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.ai-model-preferences",
+            "title": "Model preferences resolve for new requests",
+            "capabilityIds": ["editorial-workflows.ai-model-selection"],
+            "preconditions": ["A default model or skill-specific override is configured."],
+            "event": "A new editorial request resolves its model." ,
+            "expected": ["The applicable override or default model is selected."],
+            "forbidden": ["A refreshed provider list is not treated as persisted preference data."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/http.test.ts" }
+        }
+    ]
+}

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
 import { ProposalReviewView } from "./ProposalReviewView.js";
 
+// product: editorial-workflows.stale-proposal-blocked
 
 describe("ProposalReviewView", () => {
     it("workspace.proposal.stale-blocked keeps a stale Proposal reviewable while blocking acceptance", () => {

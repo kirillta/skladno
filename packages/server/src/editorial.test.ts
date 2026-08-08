@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
 
-// Product scenario: workspace.findings.advisory-only
+// Product scenarios: workspace.findings.advisory-only, editorial-workflows.assistant-request-proposal, editorial-workflows.assistant-stream-failure-safe, editorial-workflows.proposal-operations-remain-separate, editorial-workflows.finding-operations-preserve-article, editorial-workflows.translation-preserves-source, history-and-publishing.fact-findings-advisory
 
 import { EDITORIAL_ENGINE_EVENT, EditorialEngineError, type EditorialEngine, type EditorialEngineEvent, type EditorialEngineRequest } from "./editorial/editorial-engine.js";
 import { createLocalService } from "./http.js";
