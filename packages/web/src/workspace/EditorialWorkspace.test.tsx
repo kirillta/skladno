@@ -56,6 +56,7 @@ describe("Editorial Workspace", () => {
         expect(articleContentForWorkspace(restored)).toBe("one\ntwo\nthree");
     });
 
+    // product: application.desktop-shell-layout
     it("migrates legacy panel choices into the versioned workspace layout preference", async () => {
         localStorage.clear();
         localStorage.setItem("skladno-navigation-collapsed", "true");
@@ -265,6 +266,7 @@ describe("Editorial Workspace", () => {
     });
 
 
+    // product: application.open-settings-without-empty-workspace
     it("opens Application Settings without replacing the workspace with an empty view", async () => {
         const user = userEvent.setup();
         render(<App client={fakeClient()} />);

@@ -196,6 +196,7 @@ test("Article metadata updates preserve the current Revision", () => withReposit
 }));
 
 
+// product: application.local-persistence-reopens
 test("materials, settings, artifacts and citations persist through reopening", () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
     const filename = join(directory, "skladno.sqlite");

@@ -25,6 +25,7 @@ describe("HttpApplicationClient", () => {
     afterEach(() => vi.unstubAllGlobals());
 
 
+    // product: application.local-service-client-contract
     it("maps a Draft conflict response to the typed renderer-safe error", async () => {
         vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
             error: { code: "draft_conflict" },
@@ -59,6 +60,7 @@ describe("HttpApplicationClient", () => {
     });
 
 
+    // product: application.recoverable-client-error
     it("maps a streamed Assistant failure to its stable error code", async () => {
         vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("event: assistant\ndata: {\"type\":\"error\",\"requestId\":\"request-1\",\"errorCode\":\"editorial_provider_failed\",\"retryable\":true}\n\n")));
 

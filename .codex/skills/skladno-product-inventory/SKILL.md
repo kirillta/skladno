@@ -5,22 +5,22 @@ description: Preserve and maintain Skladno's user-visible product capabilities a
 
 # Skladno Product Inventory
 
-Use the feature-area reference that matches the change:
+Use the canonical product-model area that matches the change:
 
-- Read `references/application-inventory.md` for application-shell contracts.
+- Read `../../../product-model/areas/application.json` and generated `../../../docs/application-inventory.md` for application-shell contracts.
 - Read `references/editorial-workflows-inventory.md` for the assistant, AI operations, proposals, and editorial safety.
 - Read `references/history-and-publishing-inventory.md` for Revisions, evidence, translations, and publishing preview.
 - Read `references/cross-cutting-inventory.md` for internationalization, accessibility, keyboard control, notifications, privacy, validation, and database lifecycle.
 
-## Registry-owned Article Workspace
+## Registry-owned product areas
 
-The Article Workspace is the first registry-owned product area. Before changing it:
+Application shell and Article Workspace are registry-owned. Before changing either area:
 
-1. Read `../../../product-model/areas/article-workspace.json` and the generated `../../../docs/article-workspace-inventory.md`.
+1. Read its canonical JSON model and generated inventory in `../../../product-model/areas/` and `../../../docs/`.
 2. Run `npm run product:impact -- <changed paths>` to identify affected capability IDs.
 3. Update the canonical JSON model and scenario evidence, then run `npm run product:docs` and `npm run product:check`.
 
-Do not edit `docs/article-workspace-inventory.md` by hand. It is generated evidence for people and agents; the model is authoritative.
+Do not edit generated inventories by hand. They are evidence for people and agents; the model is authoritative.
 
 ## Preserve the baseline
 

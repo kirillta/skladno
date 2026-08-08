@@ -8,7 +8,6 @@ import Ajv from "ajv";
 const root = process.cwd();
 const modelDirectory = resolve(root, "product-model", "areas");
 const schemaPath = resolve(root, "product-model", "schema", "article-workspace.schema.json");
-const generatedInventoryPath = resolve(root, "docs", "article-workspace-inventory.md");
 
 
 function relativePath(path) {
@@ -114,6 +113,16 @@ function titleCaseStatus(status) {
 }
 
 
+function titleCaseArea(area) {
+    return area.split("-").map((part) => `${part[0].toUpperCase()}${part.slice(1)}`).join(" ");
+}
+
+
+function generatedInventoryPath(area) {
+    return resolve(root, "docs", `${area.area}-inventory.md`);
+}
+
+
 function renderInventory(area) {
     const rows = area.capabilities.map((capability) => [
         capability.id,
@@ -124,9 +133,9 @@ function renderInventory(area) {
     ].map((value) => value.replaceAll("|", "\\|")).join(" | "));
 
     return [
-        "# Article Workspace inventory",
+        `# ${titleCaseArea(area.area)} inventory`,
         "",
-        "This file is generated from `product-model/areas/article-workspace.json`. Edit the canonical product model, then run `npm run product:docs`.",
+        `This file is generated from \`product-model/areas/${area.area}.json\`. Edit the canonical product model, then run \`npm run product:docs\`.`,
         "",
         "| ID | Area | Feature | Status | Owner / contract |",
         "|---|---|---|---|---|",
@@ -147,14 +156,12 @@ async function check() {
     const files = await areaFiles();
     const areas = await Promise.all(files.map(readJson));
     const failures = (await Promise.all(areas.map((area, index) => validateArea(area, files[index], validator)))).flat();
-    const area = areas.find((candidate) => candidate.area === "article-workspace");
-    if (!area) {
-        failures.push("No Article Workspace product model exists.");
-    } else {
+    for (const area of areas) {
         const generated = renderInventory(area);
-        const existing = await exists(generatedInventoryPath) ? await readFile(generatedInventoryPath, "utf8") : "";
+        const inventoryPath = generatedInventoryPath(area);
+        const existing = await exists(inventoryPath) ? await readFile(inventoryPath, "utf8") : "";
         if (existing !== generated)
-            failures.push(`${relativePath(generatedInventoryPath)} is out of date; run npm run product:docs`);
+            failures.push(`${relativePath(inventoryPath)} is out of date; run npm run product:docs`);
     }
 
     if (failures.length > 0) {
@@ -171,12 +178,11 @@ async function check() {
 
 async function generate() {
     const areas = await loadAreas();
-    const area = areas.find((candidate) => candidate.area === "article-workspace");
-    if (!area)
-        throw new Error("No Article Workspace product model exists.");
-
-    await writeFile(generatedInventoryPath, renderInventory(area), "utf8");
-    log(`Generated ${relativePath(generatedInventoryPath)}.`);
+    for (const area of areas) {
+        const inventoryPath = generatedInventoryPath(area);
+        await writeFile(inventoryPath, renderInventory(area), "utf8");
+        log(`Generated ${relativePath(inventoryPath)}.`);
+    }
 }
 
 

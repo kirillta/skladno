@@ -1,0 +1,195 @@
+{
+    "schemaVersion": 1,
+    "area": "application",
+    "capabilities": [
+        {
+            "id": "application.local-service-client",
+            "area": "Application shell",
+            "title": "Local React application with loopback service and typed client",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/App.tsx",
+                "packages/web/src/application-client.ts",
+                "packages/server/src/http.ts",
+                "packages/shared/src"
+            ],
+            "contract": "The renderer uses a typed application client against the local Node.js service; credentials and privileged operations remain server-side.",
+            "persistence": "No renderer access to secrets, files, or SQLite.",
+            "scenarioIds": [
+                "application.local-service-client-contract"
+            ]
+        },
+        {
+            "id": "application.health-and-recoverable-errors",
+            "area": "Application shell",
+            "title": "Health reporting and recoverable client errors",
+            "status": "implemented",
+            "owners": [
+                "packages/server/src/http/routes/health-route.ts",
+                "packages/web/src/application-client.ts",
+                "packages/web/src/notifications"
+            ],
+            "contract": "Health and stable error codes allow the renderer to present recoverable failures without exposing secrets or full Article bodies.",
+            "persistence": "Errors are transient UI state; sensitive values are not included in the transport contract.",
+            "scenarioIds": [
+                "application.recoverable-client-error"
+            ]
+        },
+        {
+            "id": "application.workspace-and-settings-screens",
+            "area": "Application shell",
+            "title": "Separate Editorial Workspace and Application Settings screens",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/App.tsx",
+                "packages/web/src/workspace/EditorialWorkspace.tsx",
+                "packages/web/src/settings/ApplicationSettings.tsx"
+            ],
+            "contract": "Application Settings is a workspace-level screen and never belongs to Article Revision history.",
+            "persistence": "Screen selection is renderer state; Application Settings persist through their dedicated service contracts.",
+            "scenarioIds": [
+                "application.open-settings-without-empty-workspace"
+            ]
+        },
+        {
+            "id": "application.local-first-single-user",
+            "area": "Application shell",
+            "title": "Single-user, local-first operation",
+            "status": "implemented",
+            "owners": [
+                "packages/server/src/persistence",
+                "packages/server/src/http.ts"
+            ],
+            "contract": "Articles, Draft checkpoints, materials, style samples, and settings persist in local SQLite storage.",
+            "persistence": "SQLite is the active data store; private author data is not delegated to a remote application database.",
+            "scenarioIds": [
+                "application.local-persistence-reopens"
+            ]
+        },
+        {
+            "id": "application.desktop-responsive-shell",
+            "area": "Application shell",
+            "title": "Desktop-ready responsive shell",
+            "status": "partial",
+            "owners": [
+                "packages/web/src/workspace/components/WorkspaceShell.tsx",
+                "packages/web/src/workspace/EditorialWorkspace.tsx"
+            ],
+            "contract": "The desktop shell supports collapsed panels and responsive workspace layout.",
+            "persistence": "Workspace layout preferences are persisted locally in browser storage.",
+            "scenarioIds": [
+                "application.desktop-shell-layout"
+            ],
+            "limitations": [
+                "Electron, mobile, and offline modes remain deferred."
+            ]
+        }
+    ],
+    "scenarios": [
+        {
+            "id": "application.local-service-client-contract",
+            "title": "Typed client translates service conflicts safely",
+            "capabilityIds": [
+                "application.local-service-client"
+            ],
+            "preconditions": [
+                "The local service responds with a Draft conflict."
+            ],
+            "event": "The renderer saves a Draft through HttpApplicationClient.",
+            "expected": [
+                "The client throws the typed renderer-safe conflict error."
+            ],
+            "forbidden": [
+                "The renderer does not receive server internals or credentials."
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/application-client.test.ts"
+            }
+        },
+        {
+            "id": "application.recoverable-client-error",
+            "title": "Client-visible failures use stable error codes",
+            "capabilityIds": [
+                "application.health-and-recoverable-errors"
+            ],
+            "preconditions": [
+                "An Assistant request fails before or during streaming."
+            ],
+            "event": "The application client receives the service response.",
+            "expected": [
+                "The client exposes a stable error code for recoverable UI handling."
+            ],
+            "forbidden": [
+                "Raw provider details are not rendered as the user-facing failure."
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/application-client.test.ts"
+            }
+        },
+        {
+            "id": "application.open-settings-without-empty-workspace",
+            "title": "Opening Settings preserves the workspace context",
+            "capabilityIds": [
+                "application.workspace-and-settings-screens"
+            ],
+            "preconditions": [
+                "An Article is open in the Editorial Workspace."
+            ],
+            "event": "The author opens Application Settings.",
+            "expected": [
+                "Application Settings is displayed without creating an empty Article workspace."
+            ],
+            "forbidden": [
+                "Opening Settings does not alter Article Revision history."
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+            }
+        },
+        {
+            "id": "application.local-persistence-reopens",
+            "title": "Local data survives reopening SQLite",
+            "capabilityIds": [
+                "application.local-first-single-user"
+            ],
+            "preconditions": [
+                "An Article, Draft checkpoint, material, setting, artifact, and citation exist."
+            ],
+            "event": "The SQLite database is closed and reopened.",
+            "expected": [
+                "The persisted local data can be read after reopening."
+            ],
+            "forbidden": [
+                "Persistence does not require a remote application database."
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/server/src/persistence/repositories.test.ts"
+            }
+        },
+        {
+            "id": "application.desktop-shell-layout",
+            "title": "Desktop shell restores panel layout preferences",
+            "capabilityIds": [
+                "application.desktop-responsive-shell"
+            ],
+            "preconditions": [
+                "Stored workspace layout settings are present."
+            ],
+            "event": "The Editorial Workspace loads.",
+            "expected": [
+                "The desktop shell restores its panel layout and clears migrated legacy keys."
+            ],
+            "forbidden": [
+                "A missing preference does not prevent the workspace from rendering."
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+            }
+        }
+    ]
+}

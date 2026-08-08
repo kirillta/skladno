@@ -1,10 +1,10 @@
 {
     "schemaVersion": 1,
     "registryOwnedAreas": [
+        "application",
         "article-workspace"
     ],
     "legacyInventoryAreas": [
-        "application",
         "cross-cutting",
         "editorial-workflows",
         "history-and-publishing",

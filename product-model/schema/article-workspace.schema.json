@@ -13,7 +13,8 @@
             "const": 1
         },
         "area": {
-            "const": "article-workspace"
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
         },
         "capabilities": {
             "type": "array",
