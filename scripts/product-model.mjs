@@ -7,7 +7,7 @@ import Ajv from "ajv";
 
 const root = process.cwd();
 const modelDirectory = resolve(root, "product-model", "areas");
-const schemaPath = resolve(root, "product-model", "schema", "article-workspace.schema.json");
+const schemaPath = resolve(root, "product-model", "schema", "product-area.schema.json");
 
 
 function relativePath(path) {
