@@ -1,6 +1,6 @@
 # Skladno feature inventories
 
-The product inventory is separated by responsibility. Registry-owned areas are generated from their canonical JSON model; other areas remain maintained in their skill references.
+The product inventory is separated by responsibility. Each inventory below is generated from its canonical JSON model in `product-model/areas/`.
 
 - [Application](application-inventory.md)
 - [Editorial workflows](editorial-workflows-inventory.md)

@@ -5,9 +5,9 @@
         "article-workspace",
         "editorial-workflows",
         "history-and-publishing",
-        "cross-cutting"
+        "cross-cutting",
+        "settings"
     ],
     "legacyInventoryAreas": [
-        "settings"
     ]
 }

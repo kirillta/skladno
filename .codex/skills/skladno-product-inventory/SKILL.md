@@ -14,7 +14,7 @@ Use the canonical product-model area that matches the change:
 
 ## Registry-owned product areas
 
-Application shell, Article Workspace, Editorial workflows, History and publishing, and Cross-cutting are registry-owned. Before changing any of those areas:
+Application shell, Article Workspace, Editorial workflows, History and publishing, Cross-cutting, and Settings are registry-owned. Before changing any of those areas:
 
 1. Read its canonical JSON model and generated inventory in `../../../product-model/areas/` and `../../../docs/`.
 2. Run `npm run product:impact -- <changed paths>` to identify affected capability IDs.
@@ -63,4 +63,4 @@ After implementation:
 4. Update inventory rows additively where possible; do not collapse distinct capabilities into a vague row that conceals loss.
 5. Report preserved capabilities, intentional status changes, and any verification that remains.
 
-When a change affects Application Settings, also read and update the authoritative `skladno-settings` reference. For the Article Workspace, use the registry-owned model above and the focused visual guidance in `skladno-ui-guardrails`.
+When a change affects Application Settings, also follow the `skladno-settings` workflow and update the canonical model. For the Article Workspace, use the registry-owned model above and the focused visual guidance in `skladno-ui-guardrails`.

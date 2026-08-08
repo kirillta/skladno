@@ -5,11 +5,11 @@ description: Implement, review, or repair Skladno Application Settings, includin
 
 # Skladno Settings
 
-Read `references/settings-inventory.md` before changing Settings.
+Read `../../../product-model/areas/settings.json` and generated `../../../docs/settings-inventory.md` before changing Settings. Update the canonical model, then run `npm run product:docs` and `npm run product:check` when a Settings capability or contract changes.
 
 ## Workflow
 
-1. Treat every implemented or partial row in `references/settings-inventory.md` as a preservation requirement. Before editing, identify the affected settings capabilities and how the change preserves, extends, replaces, or intentionally removes each one.
+1. Treat every implemented or partial capability in `../../../product-model/areas/settings.json` as a preservation requirement. Before editing, identify the affected settings capabilities and how the change preserves, extends, replaces, or intentionally removes each one.
 2. Preserve Application Settings as a separate application screen, never a Workspace View.
 3. Inspect the client, shared contract, route, repository, migration, workspace integration, tests, and working-tree diff before editing.
 4. Give every control a visible label, persistent plain-language hint, and `aria-describedby` connection. Do not rely on placeholders or tooltips as instructions.

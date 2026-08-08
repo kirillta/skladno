@@ -8,6 +8,7 @@ import { messages } from "../i18n/messages.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
 
+// Product scenarios: settings.general-time-zone-preferences, settings.ai-connection-lifecycle
 
 function settingsSnapshot(): ApplicationSettingsSnapshot {
     return {

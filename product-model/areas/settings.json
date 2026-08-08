@@ -1,0 +1,172 @@
+{
+    "schemaVersion": 1,
+    "area": "settings",
+    "capabilities": [
+        {
+            "id": "settings.general-preferences",
+            "area": "General",
+            "title": "Appearance, locale, date/time/time-zone, and Article language defaults",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "contract": "General Settings supports device-local or explicit IANA time zones, device-local date and time formatting, explicit date and time formats, and Article and translation language defaults. Revision History honors saved formatting while relative Article Library activity remains time-zone independent.",
+            "persistence": "app_settings.application-general",
+            "scenarioIds": ["settings.general-time-zone-preferences"]
+        },
+        {
+            "id": "settings.key-bindings",
+            "area": "Key bindings",
+            "title": "Configurable application shortcuts",
+            "status": "partial",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/key-bindings", "packages/server/src/http/routes/settings-route.ts"],
+            "contract": "Settings can persist command overrides and expose conflict-aware shortcut configuration.",
+            "persistence": "app_settings.application-key-bindings",
+            "scenarioIds": ["settings.key-binding-overrides"],
+            "limitations": ["Complete workspace-action wiring remains tracked separately."]
+        },
+        {
+            "id": "settings.ai-connections",
+            "area": "AI",
+            "title": "OpenAI connections and active connection",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "contract": "Authors can add connections, prevent duplicate environment-variable names, choose an active connection, test it, and confirm deletion without exposing secret values.",
+            "persistence": "app_settings.application-ai-connections",
+            "scenarioIds": ["settings.ai-connection-lifecycle"]
+        },
+        {
+            "id": "settings.model-preferences",
+            "area": "AI",
+            "title": "Default model and per-skill overrides",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http.ts", "packages/server/src/http/routes/settings-route.ts"],
+            "contract": "A default model and per-skill overrides apply to six built-in skills; legacy operation overrides normalize on read without exposing unknown keys.",
+            "persistence": "app_settings.application-model-preferences",
+            "scenarioIds": ["settings.model-preferences-manual"]
+        },
+        {
+            "id": "settings.available-model-list",
+            "area": "AI",
+            "title": "Available model list refresh",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts"],
+            "contract": "The active OpenAI connection can refresh its available model list for model selection.",
+            "persistence": "Server-side OpenAI refresh only; the resulting list is not persisted.",
+            "scenarioIds": ["settings.available-model-list-manual"]
+        },
+        {
+            "id": "settings.publishing-profiles",
+            "area": "Publishing",
+            "title": "Built-in profiles and persisted default for new Articles",
+            "status": "partial",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/publish-settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "contract": "Built-in profiles supply character-limit guidance and the selected default applies to new Articles; Article-specific selection is supported.",
+            "persistence": "app_settings.publish-limit-profile",
+            "scenarioIds": ["settings.publish-profile-default"],
+            "limitations": ["Custom profile management remains deferred."]
+        },
+        {
+            "id": "settings.active-data-directory",
+            "area": "Data",
+            "title": "Active data directory",
+            "status": "partial",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/config.ts"],
+            "contract": "The active local data directory is determined by startup configuration and displayed in Settings.",
+            "persistence": "Startup configuration rather than a Settings-managed value.",
+            "scenarioIds": ["settings.active-data-directory-manual"],
+            "limitations": ["The data-directory UI is incomplete."]
+        },
+        {
+            "id": "settings.backup-policy",
+            "area": "Backups",
+            "title": "Backup destination, schedule, and retention",
+            "status": "partial",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "contract": "Authors can save a backup destination, schedule, and retention policy.",
+            "persistence": "app_settings.application-backup-policy",
+            "scenarioIds": ["settings.backup-policy-manual"],
+            "limitations": ["Validation, backup snapshots, and retention execution remain incomplete."]
+        }
+    ],
+    "scenarios": [
+        {
+            "id": "settings.general-time-zone-preferences",
+            "title": "General time-zone preferences persist with accessible guidance",
+            "capabilityIds": ["settings.general-preferences"],
+            "preconditions": ["The author opens General Settings."],
+            "event": "The author selects an explicit IANA time zone or restores the system setting.",
+            "expected": ["The preference is saved with an accessible label, hint, and timestamp preview."],
+            "forbidden": ["Changing display preferences does not rewrite saved timestamps or Revision history."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+        },
+        {
+            "id": "settings.key-binding-overrides",
+            "title": "Key-binding overrides remain conflict-aware",
+            "capabilityIds": ["settings.key-bindings"],
+            "preconditions": ["The author configures an application shortcut."],
+            "event": "A key binding is normalized and checked against effective commands.",
+            "expected": ["The override can be persisted and conflicts are identified."],
+            "forbidden": ["An override does not silently replace a conflicting command."],
+            "evidence": { "kind": "automated", "path": "packages/shared/src/key-bindings.test.ts" }
+        },
+        {
+            "id": "settings.ai-connection-lifecycle",
+            "title": "AI connection metadata is managed without secrets",
+            "capabilityIds": ["settings.ai-connections"],
+            "preconditions": ["The author is in the AI Settings section."],
+            "event": "The author adds, selects, or confirms removal of a connection.",
+            "expected": ["Only connection labels and environment-variable names are managed; duplicate names are blocked."],
+            "forbidden": ["API key values are not shown or persisted."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+        },
+        {
+            "id": "settings.model-preferences-manual",
+            "title": "Model preferences resolve for built-in skills",
+            "capabilityIds": ["settings.model-preferences"],
+            "preconditions": ["A default model or skill override is saved."],
+            "event": "A new editorial request is prepared.",
+            "expected": ["The applicable built-in-skill override or default model is resolved."],
+            "forbidden": ["Unknown legacy override keys are not exposed."],
+            "evidence": { "kind": "manual", "path": "packages/server/src/http.ts" }
+        },
+        {
+            "id": "settings.available-model-list-manual",
+            "title": "Available models can be refreshed without becoming settings data",
+            "capabilityIds": ["settings.available-model-list"],
+            "preconditions": ["An active AI connection is configured."],
+            "event": "The author refreshes the available model list.",
+            "expected": ["The current provider list is offered for selection."],
+            "forbidden": ["The refreshed list is not persisted as a model preference."],
+            "evidence": { "kind": "manual", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
+        },
+        {
+            "id": "settings.publish-profile-default",
+            "title": "Built-in publishing profile default survives reload",
+            "capabilityIds": ["settings.publishing-profiles"],
+            "preconditions": ["The author selects a supported built-in profile."],
+            "event": "The service saves and reloads the profile default.",
+            "expected": ["The selected default is returned for new Articles."],
+            "forbidden": ["Unknown profiles are not accepted."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/http.test.ts" }
+        },
+        {
+            "id": "settings.active-data-directory-manual",
+            "title": "Settings show the configured local data location",
+            "capabilityIds": ["settings.active-data-directory"],
+            "preconditions": ["The local service starts with a configured data directory."],
+            "event": "The author opens Data & backups Settings.",
+            "expected": ["The active local data location is shown."],
+            "forbidden": ["The UI does not imply that the directory can already be changed in Settings."],
+            "evidence": { "kind": "manual", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
+        },
+        {
+            "id": "settings.backup-policy-manual",
+            "title": "Backup policy preferences are persisted separately from backups",
+            "capabilityIds": ["settings.backup-policy"],
+            "preconditions": ["The author opens Data & backups Settings."],
+            "event": "The author changes destination, schedule, or retention preferences.",
+            "expected": ["The local backup policy is saved through Settings."],
+            "forbidden": ["Saving policy preferences does not claim that backup snapshots or retention execution are complete."],
+            "evidence": { "kind": "manual", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
+        }
+    ]
+}
