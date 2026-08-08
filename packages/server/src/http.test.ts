@@ -19,8 +19,8 @@ test("article API supports CRUD and revision-aware saves", async () => {
         port: 0,
         webOrigin: "http://localhost:5173",
         databasePath: "unused",
-        openAiModel: "gpt-5",
-        openAiStoreResponses: false,
+        aiModel: "gpt-5",
+        aiSessionContinuationEnabled: false,
     }, new Repositories(database));
 
     service.listen(0, "127.0.0.1");
@@ -141,8 +141,8 @@ test("General settings preserve valid formatting preferences and reject invalid 
         port: 0,
         webOrigin: "http://localhost:5173",
         databasePath: "unused",
-        openAiModel: "gpt-5",
-        openAiStoreResponses: false,
+        aiModel: "gpt-5",
+        aiSessionContinuationEnabled: false,
     }, repositories);
 
     service.listen(0, "127.0.0.1");
@@ -208,8 +208,8 @@ test("AI connections reject duplicate environment-variable names and persist act
         port: 0,
         webOrigin: "http://localhost:5173",
         databasePath: "unused",
-        openAiModel: "gpt-5",
-        openAiStoreResponses: false,
+        aiModel: "gpt-5",
+        aiSessionContinuationEnabled: false,
     }, new Repositories(database));
 
     service.listen(0, "127.0.0.1");

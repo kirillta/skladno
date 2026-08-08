@@ -74,8 +74,8 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
     const signal = controller.signal;
     const isFactCheck = operation === EDITORIAL_OPERATION.FACT_CHECK;
     const isTranslation = operation === EDITORIAL_OPERATION.TRANSLATION;
-    const session = !isFactCheck && !isTranslation && config.openAiStoreResponses ? repositories.getEditorialSession(articleId) : undefined;
-    if (!config.openAiStoreResponses)
+    const session = !isFactCheck && !isTranslation && config.aiSessionContinuationEnabled ? repositories.getEditorialSession(articleId) : undefined;
+    if (!config.aiSessionContinuationEnabled)
         repositories.removeEditorialSession(articleId);
 
     const styleProfile = operation === EDITORIAL_OPERATION.STYLE_REVIEW ? repositories.getStyleCorpus().profile : undefined;
@@ -99,7 +99,7 @@ export async function handleEditorialRoute(request: IncomingMessage, response: S
         }, signal)) {
             if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
                 completed = true;
-                if (!isFactCheck && !isTranslation && config.openAiStoreResponses)
+                if (!isFactCheck && !isTranslation && config.aiSessionContinuationEnabled)
                     repositories.saveEditorialSession(articleId, event.responseId);
 
                 const artifactInput = {

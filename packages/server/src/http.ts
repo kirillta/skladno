@@ -28,15 +28,15 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
 
         const savedConnections = repositories.getSetting("application-ai-connections")?.value as { connections?: OpenAiConnection[]; activeConnectionId?: string } | undefined;
         const active = savedConnections?.connections?.find((connection) => connection.id === savedConnections.activeConnectionId);
-        const apiKey = active ? process.env[active.environmentVariableName] : config.openAiApiKey;
+        const apiKey = active ? process.env[active.environmentVariableName] : config.aiApiKey;
         if (!apiKey)
             return undefined;
 
         const preferences = repositories.getSetting("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
         const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
-        const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || config.openAiModel;
+        const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || config.aiModel;
 
-        return createEditorialEngine({ apiKey, model, storeResponses: config.openAiStoreResponses });
+        return createEditorialEngine({ apiKey, model, storeResponses: config.aiSessionContinuationEnabled });
     }
 
     return createServer(async (request, response) => {

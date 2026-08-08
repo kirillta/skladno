@@ -23,17 +23,17 @@ function withConfigEnvironment(values: Record<string, string | undefined>, run: 
 }
 
 
-test("response storage is disabled unless explicitly enabled", () => {
+test("AI session continuation is disabled unless explicitly enabled", () => {
     withConfigEnvironment({}, (environment) => {
-        assert.equal(loadServerConfig(environment).openAiStoreResponses, false);
+        assert.equal(loadServerConfig(environment).aiSessionContinuationEnabled, false);
     });
 
-    withConfigEnvironment({ OPENAI_STORE_RESPONSES: "true" }, (environment) => {
-        assert.equal(loadServerConfig(environment).openAiStoreResponses, true);
+    withConfigEnvironment({ SKLADNO_AI_SESSION_CONTINUATION: "true" }, (environment) => {
+        assert.equal(loadServerConfig(environment).aiSessionContinuationEnabled, true);
     });
 
-    withConfigEnvironment({ OPENAI_STORE_RESPONSES: "false" }, (environment) => {
-        assert.equal(loadServerConfig(environment).openAiStoreResponses, false);
+    withConfigEnvironment({ SKLADNO_AI_SESSION_CONTINUATION: "false" }, (environment) => {
+        assert.equal(loadServerConfig(environment).aiSessionContinuationEnabled, false);
     });
 });
 
@@ -41,7 +41,7 @@ test("response storage is disabled unless explicitly enabled", () => {
 test("the local service loads custom named keys from the project environment file", () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-environment-"));
     const environmentFile = join(directory, ".env");
-    const variableName = "SKLADNO_TEST_OPENAI_KEY";
+    const variableName = "SKLADNO_TEST_AI_KEY";
     const previous = process.env[variableName];
     writeFileSync(environmentFile, `${variableName}=test-key\n`);
 
@@ -60,19 +60,8 @@ test("the local service loads custom named keys from the project environment fil
 });
 
 
-test("response storage configuration rejects ambiguous values", () => {
-    withConfigEnvironment({ OPENAI_STORE_RESPONSES: "yes" }, (environment) => {
-        assert.throws(() => loadServerConfig(environment), /OPENAI_STORE_RESPONSES must be either true or false/);
-    });
-});
-
-
-test("remote LangSmith tracing is rejected for private editorial content", () => {
-    withConfigEnvironment({ LANGSMITH_TRACING: "true" }, (environment) => {
-        assert.throws(() => loadServerConfig(environment), /LangSmith tracing is disabled/);
-    });
-
-    withConfigEnvironment({ LANGCHAIN_TRACING_V2: "true" }, (environment) => {
-        assert.throws(() => loadServerConfig(environment), /LangSmith tracing is disabled/);
+test("AI session continuation configuration rejects ambiguous values", () => {
+    withConfigEnvironment({ SKLADNO_AI_SESSION_CONTINUATION: "yes" }, (environment) => {
+        assert.throws(() => loadServerConfig(environment), /SKLADNO_AI_SESSION_CONTINUATION must be either true or false/);
     });
 });

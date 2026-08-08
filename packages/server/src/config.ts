@@ -7,10 +7,10 @@ export interface ServerConfig {
     host: string;
     port: number;
     webOrigin: string;
-    /** Reserved for explicit server-side model operations; never pass it to the UI. */
-    openAiApiKey?: string;
-    openAiModel: string;
-    openAiStoreResponses: boolean;
+    /** Reserved for explicit server-side AI operations; never pass it to the UI. */
+    aiApiKey?: string;
+    aiModel: string;
+    aiSessionContinuationEnabled: boolean;
     databasePath: string;
 }
 
@@ -50,15 +50,7 @@ function readBoolean(value: string | undefined, name: string): boolean {
 }
 
 
-function rejectRemoteTracing(environment: NodeJS.ProcessEnv): void {
-    if (environment.LANGSMITH_TRACING === "true" || environment.LANGCHAIN_TRACING_V2 === "true")
-        throw new Error("LangSmith tracing is disabled because Skladno handles private editorial content.");
-}
-
-
 export function loadServerConfig(environment = process.env): ServerConfig {
-    rejectRemoteTracing(environment);
-
     const dataDirectory = environment.SKLADNO_DATA_DIR || join(homedir(), ".skladno");
     mkdirSync(dataDirectory, { recursive: true });
 
@@ -66,9 +58,9 @@ export function loadServerConfig(environment = process.env): ServerConfig {
         host: environment.SKLADNO_SERVER_HOST || "127.0.0.1",
         port: readPort(environment.SKLADNO_SERVER_PORT),
         webOrigin: environment.SKLADNO_WEB_ORIGIN || "http://localhost:5173",
-        openAiApiKey: environment.OPENAI_API_KEY || undefined,
-        openAiModel: environment.OPENAI_MODEL || "gpt-5",
-        openAiStoreResponses: readBoolean(environment.OPENAI_STORE_RESPONSES, "OPENAI_STORE_RESPONSES"),
+        aiApiKey: environment.SKLADNO_AI_API_KEY || undefined,
+        aiModel: environment.SKLADNO_AI_MODEL || "gpt-5",
+        aiSessionContinuationEnabled: readBoolean(environment.SKLADNO_AI_SESSION_CONTINUATION, "SKLADNO_AI_SESSION_CONTINUATION"),
         databasePath: join(dataDirectory, "skladno.sqlite"),
     };
 }

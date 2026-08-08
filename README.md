@@ -141,7 +141,7 @@ These features are intentionally held until the core editorial loop has been val
 
 Requirements: Node.js 22 or later and npm 10 or later.
 
-1. Copy `.env.example` to `.env` and adjust local ports only if required. `OPENAI_API_KEY` remains server-side. `OPENAI_STORE_RESPONSES` is `false` by default; enable it only if you explicitly accept OpenAI-held response state for multi-turn continuation.
+1. Copy `.env.example` to `.env` and adjust local ports only if required. `SKLADNO_AI_API_KEY` remains server-side. `SKLADNO_AI_SESSION_CONTINUATION` is `false` by default; enable it only if you explicitly accept provider-held state for multi-turn continuation.
 2. Run `npm install`.
 3. Run `npm run dev`.
 4. Open `http://localhost:5173`. The page reports whether it can reach the local service at `http://127.0.0.1:8787/api/health`.
@@ -165,8 +165,7 @@ Skladno processes unpublished writing and style samples, so privacy is a product
 - Model requests contain only the context required for the requested operation.
 - Style corpus articles remain local; style review sends a compact derived profile rather than the raw corpus.
 - The Vercel AI SDK is server-side only. Fact checking uses a bounded, fixed workflow rather than an autonomous agent or graph runtime.
-- Provider-side response storage is disabled by default. `OPENAI_STORE_RESPONSES=true` is an explicit opt-in for response-ID continuation and may retain response state with OpenAI.
-- LangSmith tracing is disabled for private editorial content.
+- Provider-side session continuation is disabled by default. `SKLADNO_AI_SESSION_CONTINUATION=true` is an explicit opt-in and may retain provider-held state.
 - Network-dependent actions are visible and initiated by the author.
 
 ## Status
