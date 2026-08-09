@@ -151,6 +151,13 @@ export class ArticlesRepository {
     }
 
 
+    getRevision(articleId: string, revisionId: string): ArticleRevision | undefined {
+        const row = this.database.prepare("SELECT * FROM article_revisions WHERE id = ? AND article_id = ?").get(revisionId, articleId) as Row | undefined;
+
+        return row && revision(row);
+    }
+
+
     saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft {
         this.database.exec("BEGIN IMMEDIATE;");
         try {
@@ -256,15 +263,15 @@ export class ArticlesRepository {
 
 
     restoreRevision(articleId: string, historicalRevisionId: string): ArticleRevision {
-        const historical = this.database.prepare("SELECT * FROM article_revisions WHERE id = ? AND article_id = ?").get(historicalRevisionId, articleId) as Row | undefined;
+        const historical = this.getRevision(articleId, historicalRevisionId);
         if (!historical)
             throw new Error("Revision not found for this article.");
 
-        return this.appendRevision(articleId, String(historical.content), { kind: "restore", restoredFromRevisionId: historicalRevisionId }, historicalRevisionId);
+        return this.appendRevision(articleId, historical.content, { kind: "restore", restoredFromRevisionId: historicalRevisionId }, historicalRevisionId);
     }
 
 
-    private appendRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision {
+    appendRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision {
         if (!this.get(articleId))
             throw new Error("Article not found.");
 

@@ -1,4 +1,4 @@
-import type { AcceptedChange, AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
+import type { Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
 
 export interface ArticleStore {
@@ -11,9 +11,8 @@ export interface ArticleStore {
     discardDraft(articleId: string, expectedDraftVersion: number): void;
     saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision;
     listRevisions(articleId: string): ArticleRevision[];
-    acceptChange(articleId: string, change: AcceptedChange): ArticleRevision;
-    acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision;
-    restoreRevision(articleId: string, revisionId: string): ArticleRevision;
+    getRevision(articleId: string, revisionId: string): ArticleRevision | undefined;
+    appendRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision;
 }
 
 
