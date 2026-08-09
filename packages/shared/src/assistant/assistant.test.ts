@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { BUILT_IN_SKILL, legacyEditorialOperationSkillMap, resolveBuiltInSkillId } from "./index.js";
+import { BUILT_IN_SKILL, legacyEditorialOperationSkillMap, resolveBuiltInSkillId } from "../index.js";
 
 test("resolves current skill IDs and legacy editorial operations through one compatibility seam", () => {
     assert.equal(resolveBuiltInSkillId(BUILT_IN_SKILL.TALKING_POINTS), BUILT_IN_SKILL.TALKING_POINTS);

@@ -116,10 +116,10 @@ export interface AssistantMessage {
 
 export interface AssistantEditorialResult {
     proposal?: string;
-    factCheck?: import("./editorial.js").FactCheck;
-    styleReview?: import("./editorial.js").StyleReview;
+    factCheck?: import("../editorial/editorial.js").FactCheck;
+    styleReview?: import("../editorial/editorial.js").StyleReview;
     translation?: {
-        metadata: import("./editorial.js").TranslationMetadata;
+        metadata: import("../editorial/editorial.js").TranslationMetadata;
         content: string;
     };
 }
@@ -144,7 +144,7 @@ export type AssistantEvent =
     | { type: "text_delta"; requestId: string; delta: string }
     | { type: "tool_status"; requestId: string; tool: string; status: "started" | "completed" }
     | { type: "completed"; requestId: string; responseKind: AssistantResponseKind; messageId: string; editorialArtifactId?: string; result?: AssistantEditorialResult }
-    | { type: "error"; requestId: string; errorCode: import("./errors.js").ApplicationErrorCode; retryable: boolean };
+    | { type: "error"; requestId: string; errorCode: import("../cross-cutting/errors.js").ApplicationErrorCode; retryable: boolean };
 
 export interface AssistantClient {
     streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void>;

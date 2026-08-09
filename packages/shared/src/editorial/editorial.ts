@@ -116,7 +116,7 @@ export interface EditorialErrorEvent {
     type: "error";
     requestId: string;
     code: typeof EDITORIAL_ERROR_CATEGORY[keyof typeof EDITORIAL_ERROR_CATEGORY];
-    errorCode: import("./errors.js").ApplicationErrorCode;
+    errorCode: import("../cross-cutting/errors.js").ApplicationErrorCode;
     parameters?: Record<string, string | number>;
     retryable: boolean;
 }

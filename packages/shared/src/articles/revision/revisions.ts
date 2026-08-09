@@ -1,4 +1,4 @@
-import type { ArticleRevision } from "./persistence/articles.js";
+import type { ArticleRevision } from "./revision.js";
 
 
 export interface ProposalChange {

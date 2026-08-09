@@ -57,7 +57,7 @@
             "area": "Publishing preview",
             "title": "Plain-text preparation, profile selection, character guidance, and copy-ready preview",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/PublishingPreviewView.tsx", "packages/shared/src/publishing.ts"],
+            "owners": ["packages/web/src/workspace/views/PublishingPreviewView.tsx", "packages/shared/src/publishing/publishing.ts"],
             "contract": "The preview prepares derived copy with Article-specific profile selection and shared character guidance; direct publishing is not performed.",
             "persistence": "Preview output is derived from local Article and profile data.",
             "scenarioIds": ["history-and-publishing.publishing-guidance"]

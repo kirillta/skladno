@@ -2,208 +2,238 @@
 
 - Status: Accepted
 - Date: 2026-08-08
+- Updated: 2026-08-09
 - Scope: `packages/server`, its shared contracts, and future Electron integration
 
 ## Context
 
-The server currently combines HTTP transport, application orchestration,
-persistence access, configuration, and AI-engine construction. This makes
-routes responsible for business decisions and makes a future Electron main
-process likely to duplicate server behavior.
+Skladno is a local-first editorial workspace. The server owns HTTP transport,
+application orchestration, persistence, configuration, and AI-engine
+construction, while the renderer must remain isolated from credentials,
+SQLite, and the filesystem. Electron is a future runtime, not a reason to
+expose Electron APIs or provider SDKs to application code.
 
-Skladno must remain local-first and preserve its existing Article, Draft,
-Revision, Proposal, Finding, Assistant, Settings, privacy, streaming, and
-recovery contracts. Electron is a future runtime, not a reason to expose
-Electron APIs or provider SDKs to application code.
-
-The codebase also needs predictable navigation. A developer should be able to
-find a class, interface, type, enum, or other independently named entity from
-its filename without searching through large mixed-purpose modules.
+The server refactor is incremental. The repository has already introduced
+application ports and focused application services, but several existing
+workflows still use repositories directly from presentation code. This ADR
+therefore documents both the architectural direction and the boundary that is
+actually implemented today.
 
 ## Decision
 
-Organize the server into three dependency-ordered layers:
+Organize the server around three dependency-ordered areas:
 
 ```text
-Presentation  ->  Application  ->  Ports/contracts
-                                      ^
-Infrastructure -----------------------+
+presentation  ->  application  ->  application ports
+      |                 ^
+      +------ infrastructure implementations
 ```
 
-### Presentation layer
+The intended dependency rule is that infrastructure implements application
+ports, application services depend on ports rather than implementations, and
+presentation adapts HTTP (or, later, Electron IPC) to the available services.
 
-Presentation adapts an external transport to application services. It owns:
+The current code does not enforce that rule everywhere yet. In particular,
+some presentation routes still receive infrastructure repositories, and
+`presentation/server.ts` constructs `EditorialService` and the configured
+engine resolver. These are migration seams, not a new permanent layer.
 
-- HTTP server setup, routing, CORS, and SSE formatting;
-- request parsing and transport-level validation;
-- HTTP status and response serialization;
-- mapping application errors to stable transport errors;
-- future Electron IPC handlers and preload-facing adapters.
+### Presentation
 
-Presentation must not call SQLite repositories, read environment variables,
-construct AI providers, or implement Article/editorial business rules.
+`presentation` owns the Node HTTP server, routing, request parsing, response
+serialization, CORS, SSE formatting, and transport-level error mapping. The
+route modules currently also contain the remaining Assistant and Settings
+orchestration and receive repository instances for those workflows.
 
-### Application layer
+The future Electron adapter belongs here and must expose the same application
+behavior through a typed, narrow IPC/preload contract.
 
-Application services own use cases and product invariants. They receive narrow
-ports and return domain results or application errors. Initial services are:
+### Application
 
-- Article service;
-- Editorial service;
-- Assistant service;
-- Settings service;
-- Style Corpus service;
-- Publishing service.
+`application` contains use-case services, product invariants, and transport-
+neutral ports. The implemented focused services are:
+
+- `ArticleService`;
+- `PublishingService`;
+- `StyleCorpusService`;
+- `EditorialService` for editorial streaming and completion persistence.
+
+`ApplicationServices` currently exposes only Article, Publishing, and Style
+Corpus services. Assistant and Application Settings orchestration remain in
+presentation routes, and EditorialService is wired by the presentation server
+until their next extraction slice.
 
 Application code must not import `node:http`, Electron, SQLite, filesystem
-APIs, or AI SDK/provider packages. It must remain usable from either an HTTP
-runtime or an Electron main process.
+APIs, or AI provider SDKs. Its ports are small contracts such as article,
+editorial, style-corpus, settings, and engine interfaces. New use cases should
+be added as focused services and ports rather than by expanding the compatibility
+repository facade.
 
-### Infrastructure layer
+### Infrastructure
 
-Infrastructure implements application ports and owns external systems:
+`infrastructure` owns external systems and their adapters:
 
-- SQLite database and repository implementations;
-- AI SDK/provider adapters behind the `EditorialEngine` façade;
-- environment and local configuration loading;
-- filesystem and backup adapters;
-- process and service lifecycle adapters.
+- configuration and environment loading;
+- SQLite database access and repository implementations;
+- AI SDK/provider adapters and configured engine resolution;
+- service startup and shutdown lifecycle.
 
-Infrastructure may depend on application ports, but application services must
-not depend on infrastructure implementations.
+`Repositories` is retained as a compatibility facade for tests and the
+remaining migration seams. The independently named repositories under
+`infrastructure/persistence/repositories` are the preferred integration
+points for new code.
 
 ### Composition roots
 
-Runtime wiring must be separate from use cases. A reusable composition function
-will construct the application runtime from infrastructure implementations.
+`packages/server/src/index.ts` is the current Node composition root. It loads
+the environment and configuration, opens SQLite, constructs repositories,
+creates the focused application services, and creates/listens to the local
+HTTP service.
 
-```text
-createApplicationRuntime()
-        ├── Node HTTP runtime
-        └── Electron main-process runtime
-```
+`presentation/server.ts` currently completes composition for the HTTP runtime:
+it resolves the configured editorial engine, constructs `EditorialService`,
+and creates the presentation router. A future Electron main process may become
+another composition root, but it must reuse the application services and ports
+instead of duplicating use-case behavior.
 
-The current Node entry point remains one composition root. Electron will later
-become another composition root that exposes the same application services
-through typed IPC.
+## Actual source structure
 
-The renderer continues to depend on a narrow application-client contract. Its
-implementation can remain HTTP-based for the web runtime and become a typed
-preload/IPC client for Electron without changing workspace features.
-
-## File organization rule
-
-Every independently named entity gets its own file:
-
-- one primary class per file;
-- one primary interface per file;
-- one primary type alias per file;
-- one primary enum or constant group per file;
-- one primary exported function or service factory per file.
-
-Files are named after the entity in kebab-case, for example:
-
-```text
-application/editorial/editorial-service.ts
-application/ports/editorial-engine.ts
-infrastructure/persistence/article-store.ts
-presentation/routes/editorial-route.ts
-```
-
-Small private helpers that are implementation details of the file's primary
-entity may remain co-located. If a helper gains a public name, a second caller,
-or an independent test contract, promote it to its own file.
-
-Do not create aggregate files that contain unrelated classes or interfaces.
-Barrel files may re-export entities, but must not contain their implementations.
-
-## Target structure
+The implemented source tree is:
 
 ```text
 packages/server/src/
-├── presentation/
-│   ├── server.ts
-│   ├── routes/
-│   ├── errors/
-│   └── transport/
+├── index.ts
 ├── application/
-│   ├── articles/
+│   ├── application-services.ts
+│   ├── create-application-services.ts
+│   ├── articles/article-service.ts
 │   ├── editorial/
-│   ├── assistant/
-│   ├── settings/
-│   ├── publishing/
-│   └── ports/
+│   │   ├── editorial-request.ts
+│   │   ├── editorial-service.ts
+│   │   ├── style-corpus-service.ts
+│   │   ├── translation.ts (+ test)
+│   │   └── workflow-prompt.ts (+ test)
+│   ├── errors/application-service-error.ts
+│   ├── ports/
+│   │   ├── article-store.ts
+│   │   ├── editorial-conversation-request.ts
+│   │   ├── editorial-engine*.ts
+│   │   ├── editorial-store.ts
+│   │   ├── settings-store.ts
+│   │   └── style-corpus-store.ts
+│   └── publishing/publishing-service.ts
 ├── infrastructure/
 │   ├── configuration/
-│   ├── persistence/
+│   │   ├── config.ts (+ test)
+│   │   └── system-date-time-format.ts
 │   ├── editorial/
-│   ├── filesystem/
-│   └── lifecycle/
-└── index.ts
+│   │   ├── ai-sdk-editorial-engine.ts (+ test)
+│   │   ├── available-models.ts
+│   │   ├── configured-editorial-engine-resolver.ts
+│   │   └── create-editorial-engine.ts
+│   ├── lifecycle/service-lifecycle.ts (+ test)
+│   └── persistence/
+│       ├── database.ts
+│       ├── index.ts
+│       ├── repositories.ts (+ test)
+│       ├── article-*-conflict-error.ts
+│       └── repositories/
+│           ├── articles-repository.ts
+│           ├── assistant-repository.ts
+│           ├── editorial-sessions-repository.ts
+│           ├── materials-repository.ts
+│           ├── repository-utils.ts
+│           ├── settings-repository.ts
+│           ├── style-corpus-repository.ts
+│           └── workflow-artifacts-repository.ts
+└── presentation/
+    ├── server.ts (+ test)
+    ├── router.ts (+ test)
+    ├── editorial-integration.test.ts
+    ├── errors/application-error.ts
+    ├── transport/json.ts
+    └── routes/
+        ├── create-presentation-router.ts
+        ├── articles-route.ts
+        ├── assistant-route.ts
+        ├── editorial-route.ts
+        ├── health-route.ts
+        ├── publish-settings-route.ts
+        ├── settings-route.ts
+        └── style-corpus-route.ts
 ```
 
-`packages/shared` remains the stable public contract surface for transport-
-neutral domain types, validation schemas, and client contracts. It must not
-import server infrastructure.
+Tests are colocated with the layer and feature they exercise. There are no
+`application/assistant`, `application/settings`, `infrastructure/filesystem`,
+or Electron directories in the current implementation; those directories
+must not be documented or created until the corresponding extraction is made.
+
+`packages/shared` remains the stable public contract surface for
+transport-neutral domain types, validation schemas, paths, status codes, and
+client contracts. It must not import server infrastructure.
+
+## File and dependency rules
+
+- Prefer one independently named exported entity per file: primary class,
+  interface, type alias, enum/constant group, function, or service factory.
+- Name files after their primary entity in kebab-case.
+- Keep small private helpers with their primary entity. Extract a helper when
+  it gains a public name, a second caller, or an independent test contract.
+- Barrels may re-export entities but must not contain their implementations.
+- Do not add aggregate files containing unrelated domain entities. The
+  `Repositories` facade is an explicitly temporary compatibility exception.
+- Keep transport concerns in `presentation`, external-system concerns in
+  `infrastructure`, and reusable use-case behavior in `application`.
+- New application code must depend on narrow ports. Do not pass a concrete
+  repository into a new application service unless the migration explicitly
+  records that seam.
+- Keep AI provider calls, configuration values, SQLite, filesystem access, and
+  secrets out of the renderer and application services.
+- Persist generated output only after a valid completed operation, and never
+  apply a Proposal to an Article without explicit author approval.
 
 ## Migration strategy
 
-This is an incremental refactor, not a rewrite:
+Continue the incremental refactor:
 
-1. Introduce application ports and the composition function.
-2. Extract Editorial and Assistant services first because they contain the
-   highest concentration of streaming, persistence, and safety rules.
-3. Adapt existing HTTP routes to call those services.
-4. Extract Article, Settings, Style Corpus, and Publishing services.
-5. Move SQLite and AI implementations behind infrastructure ports.
-6. Add import-boundary checks and entity-per-file checks.
-7. Add an Electron IPC adapter only after the HTTP runtime uses the same
-   application services.
+1. Extract Assistant orchestration into application services and focused ports.
+2. Extract Application Settings orchestration and its settings ports.
+3. Move EditorialService construction and engine resolution into the
+   composition root while keeping presentation responsible only for transport.
+4. Replace remaining presentation repository parameters with application
+   service contracts.
+5. Remove the compatibility `Repositories` facade when no runtime or test
+   seam requires it.
+6. Add import-boundary checks before introducing Electron IPC.
 
-Each phase must preserve existing HTTP contracts and pass the current tests.
-No permanent dual implementation, service locator, dependency-injection
-container, CQRS layer, or event bus is required for the current single-user
-local application.
+Each slice must preserve existing HTTP contracts, product inventories, SSE
+events, error codes, cancellation/retry behavior, and recovery semantics.
+No service locator, dependency-injection container, CQRS layer, event bus, or
+permanent dual implementation is required for the current single-user local
+application.
 
 ## Preserved product contracts
 
-The refactor must preserve, at minimum:
-
-- renderer isolation from credentials, SQLite, and filesystem access;
-- local Article, Draft, Revision, material, style, Settings, and artifact
-  persistence;
-- explicit Proposal approval and immutable Revision creation;
-- revision-bound Findings, citations, translations, and stale protection;
-- Assistant skill resolution, streaming, cancellation, and retry recovery;
-- provider-independent `EditorialEngine` contracts;
-- stable HTTP error codes and SSE event shapes;
-- Electron readiness without exposing Electron APIs to React or application
-  services.
+The refactor must preserve renderer isolation, local Article/Draft/Revision/
+material/style/Settings/artifact persistence, explicit Proposal approval,
+immutable Revision creation, revision-bound Findings and translations, stale
+protection, Assistant streaming/cancellation/retry recovery, provider-
+independent `EditorialEngine` contracts, stable HTTP error codes and SSE event
+shapes, and Electron readiness without exposing Electron APIs to React or
+application services.
 
 ## Consequences
 
-### Positive
-
-- HTTP and Electron can share the same application behavior.
-- Provider and database implementations can change without changing use cases.
-- Routes become smaller transport adapters.
-- Entity-per-file navigation makes ownership and dependencies easier to inspect.
-- Application services can be tested with fake ports and no network or SQLite.
-
-### Costs
-
-- More files and explicit constructor wiring.
-- Temporary adapters may wrap the existing broad `Repositories` class.
-- Some small private helpers remain local until they demonstrate independent
-  reuse.
-
-These costs are accepted because they directly support navigation, testing,
-runtime portability, and preservation of product invariants. More abstraction
-should be added only when a second real runtime or implementation requires it.
+The current structure gives focused services and ports where the first
+migration slices need them, while keeping the existing HTTP behavior working.
+The cost is temporary cross-layer wiring in presentation and a compatibility
+repository facade. Those seams are accepted only until Assistant, Settings,
+and Editorial composition are extracted. Additional abstraction requires a
+second real runtime, implementation, or test boundary.
 
 ## Verification
 
-Every migration phase should run:
+Run the repository checks for each migration slice:
 
 ```text
 npm run lint
@@ -211,22 +241,30 @@ npm run typecheck
 npm test
 ```
 
-Before introducing Electron IPC, verify that the same application-service test
-suite passes with the HTTP and Electron runtime adapters, and that no
-application-layer import reaches Node transport, Electron, SQLite, or an AI
-provider SDK.
+Before introducing Electron IPC, also verify that application imports do not
+reach Node transport, Electron, SQLite, filesystem, or AI provider modules,
+and that the same application-service tests pass through both runtime
+adapters.
 
 ## Implementation status
 
-The first migration slice is implemented:
+Implemented:
 
-- Article, publishing, and Style Corpus use focused application services.
-- Editorial streaming and completion persistence use `EditorialService`.
-- Configuration, database, lifecycle, and AI construction have infrastructure
-  entry points.
-- The Node entry point is an explicit composition root.
-- Existing HTTP contracts and product inventories remain intact.
+- focused Article, Publishing, and Style Corpus application services;
+- EditorialService for streaming and completed-output persistence;
+- application ports for article, editorial engine/store, settings, and style
+  corpus access;
+- infrastructure entry points for configuration, database, lifecycle, and AI
+  engine construction;
+- explicit Node composition in `index.ts`;
+- individually named persistence repositories and a temporary compatibility
+  facade;
+- existing HTTP contracts and product inventories remain intact.
 
-Assistant and Application Settings orchestration remain on the next migration
-slice. They continue to use the existing repository façade until their focused
-application ports and services are extracted.
+Deferred to later migration slices:
+
+- Assistant application service and ports;
+- Application Settings service and ports;
+- moving all engine/service construction out of presentation;
+- complete removal of presentation-to-infrastructure repository wiring;
+- Electron IPC adapter.

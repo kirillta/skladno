@@ -7,7 +7,7 @@
             "area": "Assistant foundation",
             "title": "Durable local conversation and built-in skill registry",
             "status": "implemented",
-            "owners": ["packages/server/src/presentation/routes/assistant-route.ts", "packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/shared/src/editorial.ts"],
+            "owners": ["packages/server/src/presentation/routes/assistant-route.ts", "packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/shared/src/assistant/assistant.ts"],
             "contract": "Every Article has one persisted greeting and stable contracts for six skills. Assistant requests are revision-bound, resolve one eligible explicit or inferred skill, and retain completed local messages and review artifacts.",
             "persistence": "Assistant messages, requests, and completed artifacts persist locally. Workflow Stage persistence is retired; legacy values remain untouched.",
             "scenarioIds": ["editorial-workflows.assistant-request-proposal"]

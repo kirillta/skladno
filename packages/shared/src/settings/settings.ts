@@ -1,5 +1,5 @@
-import type { BuiltInSkillId } from "./assistant.js";
-import type { KeyBindingOverrides } from "./key-bindings.js";
+import type { BuiltInSkillId } from "../assistant/assistant.js";
+import type { KeyBindingOverrides } from "../cross-cutting/key-bindings.js";
 
 export const applicationSettingsPath = "/api/settings";
 export const aiConnectionsPath = `${applicationSettingsPath}/ai/connections`;

@@ -27,7 +27,7 @@
             "area": "Keyboard control",
             "title": "Shortcut hints, normalization, conflict detection, and command registration",
             "status": "partial",
-            "owners": ["packages/shared/src/key-bindings.ts", "packages/web/src/key-bindings"],
+            "owners": ["packages/shared/src/cross-cutting/key-bindings.ts", "packages/web/src/key-bindings"],
             "contract": "Key bindings normalize, resolve defaults, identify conflicts, and register commands.",
             "persistence": "Author-selected overrides persist in Application Settings.",
             "scenarioIds": ["cross-cutting.key-binding-conflicts"],
@@ -135,7 +135,7 @@
             "event": "The binding resolver normalizes and compares key chords.",
             "expected": ["Defaults, explicit unassignment, and duplicate chords are resolved deterministically."],
             "forbidden": ["Conflicting effective chords are not silently accepted."],
-            "evidence": { "kind": "automated", "path": "packages/shared/src/key-bindings.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/shared/src/cross-cutting/key-bindings.test.ts" }
         },
         {
             "id": "cross-cutting.redacted-notification-errors",
@@ -155,7 +155,7 @@
             "event": "The shared contract validates the response.",
             "expected": ["Valid health data is accepted and malformed data is rejected."],
             "forbidden": ["Malformed transport data does not become application state."],
-            "evidence": { "kind": "automated", "path": "packages/shared/src/health.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/shared/src/application/health.test.ts" }
         },
         {
             "id": "cross-cutting.private-storage-opt-in",

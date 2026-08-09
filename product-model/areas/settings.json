@@ -106,7 +106,7 @@
             "event": "A key binding is normalized and checked against effective commands.",
             "expected": ["The override can be persisted and conflicts are identified."],
             "forbidden": ["An override does not silently replace a conflicting command."],
-            "evidence": { "kind": "automated", "path": "packages/shared/src/key-bindings.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/shared/src/cross-cutting/key-bindings.test.ts" }
         },
         {
             "id": "settings.ai-connection-lifecycle",

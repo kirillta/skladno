@@ -1,6 +1,8 @@
-import type { CreateArticleInput, UpdateArticleInput, Article, ArticleDraft, ArticleRevision, SaveArticleDraftInput, SaveArticleRevisionInput } from "./persistence/articles.js";
-import type { RevisionClient } from "./revisions.js";
-import type { AssistantClient, AssistantMessage } from "./assistant.js";
+import type { Article, CreateArticleInput, UpdateArticleInput } from "../article/article.js";
+import type { ArticleDraft, SaveArticleDraftInput } from "../draft/draft.js";
+import type { ArticleRevision, SaveArticleRevisionInput } from "../revision/revision.js";
+import type { RevisionClient } from "../revision/revisions.js";
+import type { AssistantClient, AssistantMessage } from "../../assistant/assistant.js";
 
 export const articlesPath = "/api/articles";
 
