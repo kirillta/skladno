@@ -1,4 +1,4 @@
-import { type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
+import { REVISION_PROVENANCE_KIND, type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
 import { ArticleRevisionConflictError } from "../../infrastructure/persistence/article-revision-conflict-error.js";
 
@@ -79,7 +79,7 @@ export class ArticleService {
         if (!revision)
             throw new Error("Revision not found for this article.");
 
-        return this.store.appendRevision(articleId, revision.content, { kind: "restore", restoredFromRevisionId: revisionId }, revisionId);
+        return this.store.appendRevision(articleId, revision.content, { kind: REVISION_PROVENANCE_KIND.RESTORE, restoredFromRevisionId: revisionId }, revisionId);
     }
 
 

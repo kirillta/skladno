@@ -1,4 +1,4 @@
-import { isArticleLanguage, isPublishLimitProfileId, type AcceptedChange, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type Article, type ArticleDraft, type ArticleRevision, type SaveArticleDraftInput, type SaveArticleRevisionInput } from "@skladno/shared";
+import { REVISION_PROVENANCE_KIND, isArticleLanguage, isPublishLimitProfileId, type AcceptedChange, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type Article, type ArticleDraft, type ArticleRevision, type SaveArticleDraftInput, type SaveArticleRevisionInput } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { ArticleDraftConflictError } from "../article-draft-conflict-error.js";
@@ -78,7 +78,7 @@ export class ArticlesRepository {
             this.database.prepare("INSERT INTO articles (id, title, language, audience, publishing_profile_id, source_article_id, source_revision_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 .run(articleId, required(input.title, "Article title"), language ?? null, input.audience ?? null, input.publishingProfileId ?? null, sourceArticleId ?? null, input.sourceRevisionId ?? null, timestamp, timestamp);
             this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
-                .run(revisionId, articleId, input.content, JSON.stringify(input.provenance ?? { kind: "initial" }), timestamp);
+                .run(revisionId, articleId, input.content, JSON.stringify(input.provenance ?? { kind: REVISION_PROVENANCE_KIND.INITIAL }), timestamp);
             this.database.prepare("UPDATE articles SET current_revision_id = ? WHERE id = ?").run(revisionId, articleId);
             this.database.exec("COMMIT;");
         } catch (error) {
@@ -242,7 +242,7 @@ export class ArticlesRepository {
             if (current.draft && current.draft.content !== input.content)
                 throw new ArticleDraftConflictError(current, current.draft);
 
-            const provenance = { kind: "author-draft", baseRevisionId: input.baseRevisionId };
+            const provenance = { kind: REVISION_PROVENANCE_KIND.AUTHOR_DRAFT, baseRevisionId: input.baseRevisionId };
             this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
                 .run(revisionId, articleId, input.content, JSON.stringify(provenance), timestamp);
             this.database.prepare("UPDATE articles SET current_revision_id = ?, updated_at = ? WHERE id = ?")
@@ -267,7 +267,7 @@ export class ArticlesRepository {
         if (!historical)
             throw new Error("Revision not found for this article.");
 
-        return this.appendRevision(articleId, historical.content, { kind: "restore", restoredFromRevisionId: historicalRevisionId }, historicalRevisionId);
+        return this.appendRevision(articleId, historical.content, { kind: REVISION_PROVENANCE_KIND.RESTORE, restoredFromRevisionId: historicalRevisionId }, historicalRevisionId);
     }
 
 

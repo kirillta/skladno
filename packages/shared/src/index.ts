@@ -104,8 +104,10 @@ export type {
 export type {
     AcceptedChange,
     ArticleRevision,
+    RevisionProvenanceKind,
     SaveArticleRevisionInput,
 } from "./articles/revision/revision.js";
+export { REVISION_PROVENANCE_KIND } from "./articles/revision/revision.js";
 export type {
     AppSetting,
     CreateMaterialInput,

@@ -1,3 +1,14 @@
+export const REVISION_PROVENANCE_KIND = {
+    INITIAL: "initial",
+    AUTHOR_DRAFT: "author-draft",
+    ACCEPTED_PROPOSAL: "accepted-proposal",
+    RESTORE: "restore",
+} as const;
+
+
+export type RevisionProvenanceKind = typeof REVISION_PROVENANCE_KIND[keyof typeof REVISION_PROVENANCE_KIND];
+
+
 export interface ArticleRevision {
     id: string;
     articleId: string;
