@@ -69,6 +69,8 @@ The MVP deliberately excludes accounts, cloud synchronization, direct publishing
 
 ## Planned architecture
 
+The server layering and Electron migration boundary are recorded in [ADR-001](docs/adr-001-three-layer-server-and-electron.md).
+
 The implementation will use a separated TypeScript architecture:
 
 ```text

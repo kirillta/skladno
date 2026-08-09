@@ -10,7 +10,8 @@
             "owners": [
                 "packages/web/src/App.tsx",
                 "packages/web/src/application-client.ts",
-                "packages/server/src/http.ts",
+                "packages/server/src/presentation/server.ts",
+                "packages/server/src/application",
                 "packages/shared/src"
             ],
             "contract": "The renderer uses a typed application client against the local Node.js service; credentials and privileged operations remain server-side.",
@@ -25,7 +26,7 @@
             "title": "Health reporting and recoverable client errors",
             "status": "implemented",
             "owners": [
-                "packages/server/src/http/routes/health-route.ts",
+                "packages/server/src/presentation/routes/health-route.ts",
                 "packages/web/src/application-client.ts",
                 "packages/web/src/notifications"
             ],
@@ -57,8 +58,9 @@
             "title": "Single-user, local-first operation",
             "status": "implemented",
             "owners": [
-                "packages/server/src/persistence",
-                "packages/server/src/http.ts"
+                "packages/server/src/infrastructure/persistence",
+                "packages/server/src/application",
+                "packages/server/src/presentation/server.ts"
             ],
             "contract": "Articles, Draft checkpoints, materials, style samples, and settings persist in local SQLite storage.",
             "persistence": "SQLite is the active data store; private author data is not delegated to a remote application database.",
@@ -167,7 +169,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/server/src/persistence/repositories.test.ts"
+                "path": "packages/server/src/infrastructure/persistence/repositories.test.ts"
             }
         },
         {

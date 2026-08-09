@@ -1,13 +1,16 @@
-import { loadServerConfig, loadServerEnvironment } from "./config.js";
-import { createLocalService } from "./http.js";
-import { openDatabase, Repositories } from "./persistence/index.js";
-import { closeLocalService, listenForLocalService } from "./service-lifecycle.js";
+import { loadServerConfig, loadServerEnvironment } from "./infrastructure/configuration/config.js";
+import { createLocalService } from "./presentation/server.js";
+import { createApplicationServices } from "./application/create-application-services.js";
+import { openDatabase } from "./infrastructure/persistence/database.js";
+import { Repositories } from "./infrastructure/persistence/repositories.js";
+import { closeLocalService, listenForLocalService } from "./infrastructure/lifecycle/service-lifecycle.js";
 
 loadServerEnvironment();
 
 const config = loadServerConfig();
 const database = openDatabase(config.databasePath);
-const service = createLocalService(config, new Repositories(database));
+const repositories = new Repositories(database);
+const service = createLocalService(config, repositories, undefined, createApplicationServices(repositories));
 let shuttingDown = false;
 
 

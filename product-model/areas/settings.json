@@ -7,7 +7,7 @@
             "area": "General",
             "title": "Appearance, locale, date/time/time-zone, and Article language defaults",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "General Settings supports device-local or explicit IANA time zones, device-local date and time formatting, explicit date and time formats, and Article and translation language defaults. Revision History honors saved formatting while relative Article Library activity remains time-zone independent.",
             "persistence": "app_settings.application-general",
             "scenarioIds": ["settings.general-time-zone-preferences"]
@@ -17,7 +17,7 @@
             "area": "Key bindings",
             "title": "Configurable application shortcuts",
             "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/key-bindings", "packages/server/src/http/routes/settings-route.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/key-bindings", "packages/server/src/presentation/routes/settings-route.ts"],
             "contract": "Settings can persist command overrides and expose conflict-aware shortcut configuration.",
             "persistence": "app_settings.application-key-bindings",
             "scenarioIds": ["settings.key-binding-overrides"],
@@ -28,7 +28,7 @@
             "area": "AI",
             "title": "OpenAI connections and active connection",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "Authors can add connections, prevent duplicate environment-variable names, choose an active connection, test it, and confirm deletion without exposing secret values.",
             "persistence": "app_settings.application-ai-connections",
             "scenarioIds": ["settings.ai-connection-lifecycle"]
@@ -38,7 +38,7 @@
             "area": "AI",
             "title": "Default model and per-skill overrides",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http.ts", "packages/server/src/http/routes/settings-route.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/server.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/application", "packages/server/src/infrastructure"],
             "contract": "A default model and per-skill overrides apply to six built-in skills; legacy operation overrides normalize on read without exposing unknown keys.",
             "persistence": "app_settings.application-model-preferences",
             "scenarioIds": ["settings.model-preferences-manual"]
@@ -48,7 +48,7 @@
             "area": "AI",
             "title": "Available model list refresh",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/routes/settings-route.ts"],
             "contract": "The active OpenAI connection can refresh its available model list for model selection.",
             "persistence": "Server-side OpenAI refresh only; the resulting list is not persisted.",
             "scenarioIds": ["settings.available-model-list-manual"]
@@ -58,7 +58,7 @@
             "area": "Publishing",
             "title": "Built-in profiles and persisted default for new Articles",
             "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/publish-settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/routes/publish-settings-route.ts", "packages/server/src/application/publishing", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "Built-in profiles supply character-limit guidance and the selected default applies to new Articles; Article-specific selection is supported.",
             "persistence": "app_settings.publish-limit-profile",
             "scenarioIds": ["settings.publish-profile-default"],
@@ -69,7 +69,7 @@
             "area": "Data",
             "title": "Active data directory",
             "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/config.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/infrastructure/configuration/config.ts"],
             "contract": "The active local data directory and server-only environment values are determined at startup; project .env values are loaded before the local service starts and Settings displays the active data directory.",
             "persistence": "Startup configuration rather than a Settings-managed value.",
             "scenarioIds": ["settings.active-data-directory-manual"],
@@ -80,7 +80,7 @@
             "area": "Backups",
             "title": "Backup destination, schedule, and retention",
             "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "Authors can save a backup destination, schedule, and retention policy.",
             "persistence": "app_settings.application-backup-policy",
             "scenarioIds": ["settings.backup-policy-manual"],
@@ -126,7 +126,7 @@
             "event": "A new editorial request is prepared.",
             "expected": ["The applicable built-in-skill override or default model is resolved."],
             "forbidden": ["Unknown legacy override keys are not exposed."],
-            "evidence": { "kind": "manual", "path": "packages/server/src/http.ts" }
+            "evidence": { "kind": "manual", "path": "packages/server/src/presentation/server.ts" }
         },
         {
             "id": "settings.available-model-list-manual",
@@ -146,7 +146,7 @@
             "event": "The service saves and reloads the profile default.",
             "expected": ["The selected default is returned for new Articles."],
             "forbidden": ["Unknown profiles are not accepted."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/http.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         },
         {
             "id": "settings.active-data-directory-manual",

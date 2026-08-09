@@ -1,6 +1,6 @@
 # ADR-001: Three-layer server architecture and Electron readiness
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-08
 - Scope: `packages/server`, its shared contracts, and future Electron integration
 
@@ -216,3 +216,17 @@ suite passes with the HTTP and Electron runtime adapters, and that no
 application-layer import reaches Node transport, Electron, SQLite, or an AI
 provider SDK.
 
+## Implementation status
+
+The first migration slice is implemented:
+
+- Article, publishing, and Style Corpus use focused application services.
+- Editorial streaming and completion persistence use `EditorialService`.
+- Configuration, database, lifecycle, and AI construction have infrastructure
+  entry points.
+- The Node entry point is an explicit composition root.
+- Existing HTTP contracts and product inventories remain intact.
+
+Assistant and Application Settings orchestration remain on the next migration
+slice. They continue to use the existing repository façade until their focused
+application ports and services are extracted.

@@ -612,7 +612,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/server/src/editorial.test.ts"
+                "path": "packages/server/src/presentation/editorial-integration.test.ts"
             }
         },
         {
