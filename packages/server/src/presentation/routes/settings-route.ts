@@ -4,7 +4,7 @@ import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, find
 
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
 import { listAvailableModels } from "../../infrastructure/editorial/available-models.js";
-import { Repositories } from "../../infrastructure/persistence/index.js";
+import { SettingsRepository } from "../../infrastructure/persistence/index.js";
 import { readSystemDateTimeFormat } from "../../infrastructure/configuration/system-date-time-format.js";
 import { object, readJson, writeJson } from "../transport/json.js";
 
@@ -126,52 +126,52 @@ function requestedKeyBindingOverrides(value: unknown): KeyBindingOverrides {
 }
 
 
-export async function handleSettingsSnapshotRoute(response: ServerResponse, repositories: Repositories): Promise<void> {
+export async function handleSettingsSnapshotRoute(response: ServerResponse, settings: SettingsRepository): Promise<void> {
     writeJson(response, HTTP_STATUS.OK, {
-        general: generalSettings(repositories.getSetting("application-general")?.value),
+        general: generalSettings(settings.get("application-general")?.value),
         systemDateTimeFormat: await readSystemDateTimeFormat(),
-        ...aiConnections(repositories.getSetting("application-ai-connections")?.value),
-        modelPreferences: modelPreferences(repositories.getSetting("application-model-preferences")?.value),
-        backupPolicy: backupPolicy(repositories.getSetting("application-backup-policy")?.value),
-        keyBindingOverrides: keyBindingOverrides(repositories.getSetting("application-key-bindings")?.value),
+        ...aiConnections(settings.get("application-ai-connections")?.value),
+        modelPreferences: modelPreferences(settings.get("application-model-preferences")?.value),
+        backupPolicy: backupPolicy(settings.get("application-backup-policy")?.value),
+        keyBindingOverrides: keyBindingOverrides(settings.get("application-key-bindings")?.value),
     });
 }
 
 
-export async function handleGeneralSettingsRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
+export async function handleGeneralSettingsRoute(request: IncomingMessage, response: ServerResponse, settings: SettingsRepository): Promise<void> {
     const value = generalSettings(object(await readJson(request)), true);
-    repositories.setSetting("application-general", value);
+    settings.set("application-general", value);
 
     writeJson(response, HTTP_STATUS.OK, value);
 }
 
 
-export async function handleBackupPolicyRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
+export async function handleBackupPolicyRoute(request: IncomingMessage, response: ServerResponse, settings: SettingsRepository): Promise<void> {
     const value = backupPolicy(object(await readJson(request)));
-    repositories.setSetting("application-backup-policy", value);
+    settings.set("application-backup-policy", value);
 
     writeJson(response, HTTP_STATUS.OK, value);
 }
 
 
-export async function handleKeyBindingsRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
+export async function handleKeyBindingsRoute(request: IncomingMessage, response: ServerResponse, settings: SettingsRepository): Promise<void> {
     const value = requestedKeyBindingOverrides(object(await readJson(request)));
-    repositories.setSetting("application-key-bindings", value);
+    settings.set("application-key-bindings", value);
 
     writeJson(response, HTTP_STATUS.OK, value);
 }
 
 
-export async function handleModelPreferencesRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
+export async function handleModelPreferencesRoute(request: IncomingMessage, response: ServerResponse, settings: SettingsRepository): Promise<void> {
     const value = modelPreferences(object(await readJson(request)));
-    repositories.setSetting("application-model-preferences", value);
+    settings.set("application-model-preferences", value);
 
     writeJson(response, HTTP_STATUS.OK, value);
 }
 
 
-function connectionState(repositories: Repositories, connectionId: string) {
-    const saved = aiConnections(repositories.getSetting("application-ai-connections")?.value);
+function connectionState(settings: SettingsRepository, connectionId: string) {
+    const saved = aiConnections(settings.get("application-ai-connections")?.value);
     const index = saved.connections.findIndex((connection) => connection.id === connectionId);
     if (index < 0)
         throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
@@ -180,32 +180,32 @@ function connectionState(repositories: Repositories, connectionId: string) {
 }
 
 
-export async function handleCreateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
+export async function handleCreateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, settings: SettingsRepository): Promise<void> {
     const body = object(await readJson(request));
-    const saved = aiConnections(repositories.getSetting("application-ai-connections")?.value);
+    const saved = aiConnections(settings.get("application-ai-connections")?.value);
     const requestedName = environmentVariableName(body.environmentVariableName);
     if (saved.connections.some((connection) => connection.environmentVariableName === requestedName))
         throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_AI_CONNECTION, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: requestedName });
 
     const connection: OpenAiConnection = { id: randomUUID(), provider: "openai", label: typeof body.label === "string" && body.label.trim() ? body.label.trim() : "OpenAI", environmentVariableName: requestedName, status: "unchecked" };
     saved.connections.push(connection);
-    repositories.setSetting("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
+    settings.set("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
 
     writeJson(response, HTTP_STATUS.CREATED, connection);
 }
 
 
-export function handleActivateAiConnectionRoute(response: ServerResponse, connectionId: string, repositories: Repositories): void {
-    const { saved } = connectionState(repositories, connectionId);
-    repositories.setSetting("application-ai-connections", { ...saved, activeConnectionId: connectionId });
+export function handleActivateAiConnectionRoute(response: ServerResponse, connectionId: string, settings: SettingsRepository): void {
+    const { saved } = connectionState(settings, connectionId);
+    settings.set("application-ai-connections", { ...saved, activeConnectionId: connectionId });
     response.writeHead(HTTP_STATUS.NO_CONTENT);
     response.end();
 
 }
 
 
-export async function handleTestAiConnectionRoute(response: ServerResponse, connectionId: string, repositories: Repositories): Promise<void> {
-    const { saved, index, connection } = connectionState(repositories, connectionId);
+export async function handleTestAiConnectionRoute(response: ServerResponse, connectionId: string, settings: SettingsRepository): Promise<void> {
+    const { saved, index, connection } = connectionState(settings, connectionId);
     try {
         await listAvailableModels(connection.provider, connection.environmentVariableName);
         saved.connections[index] = { ...connection, status: "connected", lastCheckedAt: new Date().toISOString(), diagnostic: undefined };
@@ -213,37 +213,37 @@ export async function handleTestAiConnectionRoute(response: ServerResponse, conn
         saved.connections[index] = { ...connection, status: "unavailable", lastCheckedAt: new Date().toISOString(), diagnostic: error instanceof Error ? error.message : "OpenAI could not verify this connection." };
     }
 
-    repositories.setSetting("application-ai-connections", saved);
+    settings.set("application-ai-connections", saved);
 
     writeJson(response, HTTP_STATUS.OK, saved.connections[index]);
 }
 
 
-export async function handleUpdateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, connectionId: string, repositories: Repositories): Promise<void> {
-    const { saved, index, connection } = connectionState(repositories, connectionId);
+export async function handleUpdateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, connectionId: string, settings: SettingsRepository): Promise<void> {
+    const { saved, index, connection } = connectionState(settings, connectionId);
     const body = object(await readJson(request));
     const updated = { ...connection, label: typeof body.label === "string" && body.label.trim() ? body.label.trim() : connection.label, environmentVariableName: environmentVariableName(body.environmentVariableName), status: "unchecked" as const, diagnostic: undefined, lastCheckedAt: undefined };
     saved.connections[index] = updated;
-    repositories.setSetting("application-ai-connections", saved);
+    settings.set("application-ai-connections", saved);
 
     writeJson(response, HTTP_STATUS.OK, updated);
 }
 
 
-export function handleDeleteAiConnectionRoute(response: ServerResponse, connectionId: string, repositories: Repositories): void {
-    const { saved, index } = connectionState(repositories, connectionId);
+export function handleDeleteAiConnectionRoute(response: ServerResponse, connectionId: string, settings: SettingsRepository): void {
+    const { saved, index } = connectionState(settings, connectionId);
     if (saved.activeConnectionId === connectionId)
         throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REMOVAL_BLOCKED, HTTP_STATUS.BAD_REQUEST);
 
     saved.connections.splice(index, 1);
-    repositories.setSetting("application-ai-connections", { connections: saved.connections, ...(saved.connections[0] ? { activeConnectionId: saved.connections[0].id } : {}) });
+    settings.set("application-ai-connections", { connections: saved.connections, ...(saved.connections[0] ? { activeConnectionId: saved.connections[0].id } : {}) });
     response.writeHead(HTTP_STATUS.NO_CONTENT);
     response.end();
 }
 
 
-export async function handleAiModelsRoute(response: ServerResponse, repositories: Repositories): Promise<void> {
-    const saved = aiConnections(repositories.getSetting("application-ai-connections")?.value);
+export async function handleAiModelsRoute(response: ServerResponse, settings: SettingsRepository): Promise<void> {
+    const saved = aiConnections(settings.get("application-ai-connections")?.value);
     const active = saved.connections.find((connection) => connection.id === saved.activeConnectionId);
     if (!active)
         throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED, HTTP_STATUS.BAD_REQUEST);

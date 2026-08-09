@@ -7,7 +7,6 @@ import { EDITORIAL_ENGINE_ERROR } from "../ports/editorial-engine-errors.js";
 import { EDITORIAL_ENGINE_EVENT } from "../ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../ports/editorial-engine-error.js";
 import type { EditorialEngineResolver } from "../ports/editorial-engine-resolver.js";
-import type { EditorialStore } from "../ports/editorial-store.js";
 import type { EditorialServiceRequest } from "./editorial-request.js";
 
 
@@ -21,21 +20,44 @@ interface EditorialStreamContext {
 }
 
 
-function prepareEditorialStream(store: EditorialStore, engines: EditorialEngineResolver, sessionContinuationEnabled: boolean, request: EditorialServiceRequest): EditorialStreamContext {
-    const article = store.getArticle(request.articleId);
+interface EditorialArticleStore {
+    get(articleId: string): Article | undefined;
+}
+
+
+interface EditorialSessionStore {
+    get(articleId: string): { previousResponseId?: string } | undefined;
+    save(articleId: string, responseId: string): void;
+    remove(articleId: string): void;
+}
+
+
+interface EditorialStyleCorpusStore {
+    get(): { profile?: StyleProfile };
+}
+
+
+interface EditorialArtifactsStore {
+    create(input: CreateEditorialArtifactInput): unknown;
+    createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<import("@skladno/shared").CreateSourceCitationInput, "editorialArtifactId">[]): unknown;
+}
+
+
+function prepareEditorialStream(articles: EditorialArticleStore, sessions: EditorialSessionStore, styleCorpus: EditorialStyleCorpusStore, engines: EditorialEngineResolver, sessionContinuationEnabled: boolean, request: EditorialServiceRequest): EditorialStreamContext {
+    const article = articles.get(request.articleId);
     if (!article)
         throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
     const factCheck = request.operation === EDITORIAL_OPERATION.FACT_CHECK;
     const translation = request.operation === EDITORIAL_OPERATION.TRANSLATION;
     const session = !factCheck && !translation && sessionContinuationEnabled
-        ? store.getEditorialSession(request.articleId)
+        ? sessions.get(request.articleId)
         : undefined;
 
     if (!sessionContinuationEnabled)
-        store.removeEditorialSession(request.articleId);
+        sessions.remove(request.articleId);
 
-    const styleProfile = request.operation === EDITORIAL_OPERATION.STYLE_REVIEW ? store.getStyleCorpus().profile : undefined;
+    const styleProfile = request.operation === EDITORIAL_OPERATION.STYLE_REVIEW ? styleCorpus.get().profile : undefined;
     if (request.operation === EDITORIAL_OPERATION.STYLE_REVIEW && !styleProfile)
         throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
@@ -105,15 +127,15 @@ function citationsFor(event: Extract<EditorialEngineEvent, { type: typeof EDITOR
 }
 
 
-function persistCompletedEditorialOutput(store: EditorialStore, request: EditorialServiceRequest, context: EditorialStreamContext, sessionContinuationEnabled: boolean, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): void {
+function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifacts: EditorialArtifactsStore, request: EditorialServiceRequest, context: EditorialStreamContext, sessionContinuationEnabled: boolean, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): void {
     if (!context.factCheck && !context.translation && sessionContinuationEnabled)
-        store.saveEditorialSession(request.articleId, event.responseId);
+        sessions.save(request.articleId, event.responseId);
 
     const input = artifactInput(request, context, event);
     if (context.factCheck)
-        store.createEditorialArtifactWithCitations(input, citationsFor(event));
+        artifacts.createWithCitations(input, citationsFor(event));
     else
-        store.createEditorialArtifact(input);
+        artifacts.create(input);
 }
 
 
@@ -135,25 +157,28 @@ async function* streamEditorialOperation(request: EditorialServiceRequest, conte
 
 export class EditorialService {
     constructor(
-        private readonly store: EditorialStore,
+        private readonly articles: EditorialArticleStore,
+        private readonly sessions: EditorialSessionStore,
+        private readonly styleCorpus: EditorialStyleCorpusStore,
+        private readonly artifacts: EditorialArtifactsStore,
         private readonly engines: EditorialEngineResolver,
         private readonly sessionContinuationEnabled: boolean,
     ) { }
 
 
     async *stream(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const context = prepareEditorialStream(this.store, this.engines, this.sessionContinuationEnabled, request);
+        const context = prepareEditorialStream(this.articles, this.sessions, this.styleCorpus, this.engines, this.sessionContinuationEnabled, request);
 
         try {
             yield* streamEditorialOperation(
                 request,
                 context,
                 signal,
-                (event) => persistCompletedEditorialOutput(this.store, request, context, this.sessionContinuationEnabled, event),
+                (event) => persistCompletedEditorialOutput(this.sessions, this.artifacts, request, context, this.sessionContinuationEnabled, event),
             );
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
-                this.store.removeEditorialSession(request.articleId);
+                this.sessions.remove(request.articleId);
 
             throw error;
         }

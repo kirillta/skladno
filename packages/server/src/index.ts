@@ -2,15 +2,22 @@ import { loadServerConfig, loadServerEnvironment } from "./infrastructure/config
 import { createLocalService } from "./presentation/server.js";
 import { createApplicationServices } from "./application/create-application-services.js";
 import { openDatabase } from "./infrastructure/persistence/database.js";
-import { Repositories } from "./infrastructure/persistence/repositories.js";
+import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, SettingsRepository, StyleCorpusRepository } from "./infrastructure/persistence/index.js";
 import { closeLocalService, listenForLocalService } from "./infrastructure/lifecycle/service-lifecycle.js";
 
 loadServerEnvironment();
 
 const config = loadServerConfig();
 const database = openDatabase(config.databasePath);
-const repositories = new Repositories(database);
-const service = createLocalService(config, repositories, undefined, createApplicationServices(repositories));
+const articles = new ArticlesRepository(database);
+const editorialArtifacts = new EditorialArtifactsRepository(database);
+const settings = new SettingsRepository(database);
+const editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.get(articleId)));
+const styleCorpus = new StyleCorpusRepository(database);
+const assistant = new AssistantRepository(database);
+assistant.seedGreetings();
+const services = createApplicationServices(articles, settings, styleCorpus, assistant);
+const service = createLocalService(config, articles, settings, styleCorpus, editorialSessions, editorialArtifacts, assistant, services);
 let shuttingDown = false;
 
 

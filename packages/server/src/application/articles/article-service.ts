@@ -1,54 +1,60 @@
 import type { AcceptedChange, AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
-import type { ArticleStore } from "../ports/article-store.js";
+import type { ArticleStore, AssistantGreetingStore } from "../ports/article-store.js";
 
 
 export class ArticleService {
-    constructor(private readonly store: ArticleStore) { }
+    constructor(
+        private readonly store: ArticleStore,
+        private readonly assistant: AssistantGreetingStore,
+    ) { }
 
 
     listArticles(): Article[] {
-        return this.store.listArticles();
+        return this.store.list();
     }
 
 
     createArticle(input: CreateArticleInput): Article {
-        return this.store.createArticle(input);
+        const article = this.store.create(input);
+        this.assistant.ensureGreeting(article.id);
+
+        return article;
     }
 
 
     getArticle(articleId: string): Article | undefined {
-        return this.store.getArticle(articleId);
+        return this.store.get(articleId);
     }
 
 
     updateArticle(articleId: string, input: UpdateArticleInput): Article {
-        return this.store.updateArticle(articleId, input);
+        return this.store.update(articleId, input);
     }
 
 
     deleteArticle(articleId: string): void {
-        this.store.deleteArticle(articleId);
+        this.store.delete(articleId);
     }
 
 
     saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft {
-        return this.store.saveArticleDraft(articleId, input);
+        return this.store.saveDraft(articleId, input);
     }
 
 
     discardDraft(articleId: string, expectedDraftVersion: number): void {
-        this.store.discardArticleDraft(articleId, expectedDraftVersion);
+        this.store.discardDraft(articleId, expectedDraftVersion);
     }
 
 
     saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision {
-        return this.store.saveArticleRevision(articleId, input);
+        return this.store.saveRevision(articleId, input);
     }
 
 
     listRevisions(articleId: string): ArticleRevision[] {
-        return this.store.listArticleRevisions(articleId);
+        return this.store.listRevisions(articleId);
     }
 
 

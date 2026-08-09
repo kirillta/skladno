@@ -11,13 +11,13 @@ export class PublishingService {
 
 
     getProfile(): PublishLimitProfileId {
-        const saved = this.store.getSetting(publishLimitProfileSettingKey)?.value;
+        const saved = this.store.get(publishLimitProfileSettingKey)?.value;
         return isPublishLimitProfileId(saved) ? saved : defaultPublishLimitProfileId;
     }
 
 
     setProfile(profileId: PublishLimitProfileId): PublishLimitProfileId {
-        this.store.setSetting(publishLimitProfileSettingKey, profileId);
+        this.store.set(publishLimitProfileSettingKey, profileId);
         return profileId;
     }
 }

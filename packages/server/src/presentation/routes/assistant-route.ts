@@ -5,11 +5,18 @@ import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
 import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
 import type { EditorialEngineEvent } from "../../application/ports/editorial-engine-event.js";
-import { Repositories } from "../../infrastructure/persistence/index.js";
+import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, StyleCorpusRepository } from "../../infrastructure/persistence/index.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
 import { object, readJson, string, writeJson } from "../transport/json.js";
 
 type ResolveEngine = (operation: EditorialOperation, skillId?: BuiltInSkillId) => EditorialEngine | undefined;
+
+interface AssistantRouteRepositories {
+    articles: ArticlesRepository;
+    assistant: AssistantRepository;
+    editorialArtifacts: EditorialArtifactsRepository;
+    styleCorpus: StyleCorpusRepository;
+}
 
 interface AssistantRequestInput {
     requestId: string;
@@ -117,8 +124,8 @@ function readAssistantRequest(body: Record<string, unknown>): AssistantRequestIn
 }
 
 
-function prepareAssistantRequest(articleId: string, input: AssistantRequestInput, repositories: Repositories, resolveEngine: ResolveEngine): PreparedAssistantRequest {
-    const article = repositories.getArticle(articleId);
+function prepareAssistantRequest(articleId: string, input: AssistantRequestInput, repositories: AssistantRouteRepositories, resolveEngine: ResolveEngine): PreparedAssistantRequest {
+    const article = repositories.articles.get(articleId);
     if (!article)
         throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
@@ -139,7 +146,7 @@ function prepareAssistantRequest(articleId: string, input: AssistantRequestInput
     if (resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !input.targetLanguage?.trim())
         throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
-    if (resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && !repositories.getStyleCorpus().profile)
+    if (resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && !repositories.styleCorpus.get().profile)
         throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
     const operation = operationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
@@ -151,7 +158,7 @@ function prepareAssistantRequest(articleId: string, input: AssistantRequestInput
 }
 
 
-function persistAcceptedRequest(request: PreparedAssistantRequest, repositories: Repositories): void {
+function persistAcceptedRequest(request: PreparedAssistantRequest, repositories: AssistantRouteRepositories): void {
     repositories.assistant.createRequest({ id: request.requestId, articleId: request.articleId, scope: request.scope, explicitSkillId: request.explicitSkillId, skillOffset: request.skillOffset, retryOfRequestId: request.retryOfRequestId });
     repositories.assistant.setAuthorMessage(request.requestId, request.authorMessage);
     repositories.assistant.resolveRequest(request.requestId, request.resolvedSkillId, request.explicitSkillId ? "explicit" : request.resolvedSkillId ? "inferred" : undefined);
@@ -174,12 +181,12 @@ function startResponseStream(response: ServerResponse, request: PreparedAssistan
 }
 
 
-function assistantStream(request: PreparedAssistantRequest, repositories: Repositories, controller: AbortController) {
+function assistantStream(request: PreparedAssistantRequest, repositories: AssistantRouteRepositories, controller: AbortController) {
     const excerpt = articleExcerpt(request);
     if (request.resolvedSkillId)
-        return request.engine.stream({ operation: request.operation, article: excerpt, authorContext: request.authorMessage, ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}), ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: repositories.getStyleCorpus().profile } : {}) }, controller.signal);
+        return request.engine.stream({ operation: request.operation, article: excerpt, authorContext: request.authorMessage, ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}), ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: repositories.styleCorpus.get().profile } : {}) }, controller.signal);
 
-    const history = repositories.listAssistantMessages(request.articleId)
+    const history = repositories.assistant.listMessages(request.articleId)
         .flatMap((message) => message.role === "author" || (message.role === "assistant" && message.kind === "response") ? message.content ? [{ role: message.role, content: message.content }] : [] : []);
 
     return request.engine.streamConversation({ message: request.authorMessage, article: excerpt, scope: request.scope.kind, history }, controller.signal);
@@ -194,11 +201,11 @@ function completedContent(request: PreparedAssistantRequest, text: string): stri
 }
 
 
-function persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>, repositories: Repositories): { messageId: string; artifactId?: string; responseKind: AssistantResponseKind; result?: AssistantEditorialResult } {
+function persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>, repositories: AssistantRouteRepositories): { messageId: string; artifactId?: string; responseKind: AssistantResponseKind; result?: AssistantEditorialResult } {
     const content = completedContent(request, event.text);
     const kind = responseKind(request.resolvedSkillId);
     const artifactId = request.resolvedSkillId
-        ? repositories.createEditorialArtifact({ articleId: request.articleId, revisionId: request.scope.baseRevisionId, kind: request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING ? "fact-check" : "assistant-proposal", content: JSON.stringify({ requestId: request.requestId, resolvedSkillId: request.resolvedSkillId, skillSource: request.explicitSkillId ? "explicit" : "inferred", authorGuidance: request.authorMessage, scope: request.scope, responseId: event.responseId, proposal: content, findings: event.factCheck ?? event.styleReview, translation: event.translation }) }).id
+        ? repositories.editorialArtifacts.create({ articleId: request.articleId, revisionId: request.scope.baseRevisionId, kind: request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING ? "fact-check" : "assistant-proposal", content: JSON.stringify({ requestId: request.requestId, resolvedSkillId: request.resolvedSkillId, skillSource: request.explicitSkillId ? "explicit" : "inferred", authorGuidance: request.authorMessage, scope: request.scope, responseId: event.responseId, proposal: content, findings: event.factCheck ?? event.styleReview, translation: event.translation }) }).id
         : undefined;
     const message = repositories.assistant.completeRequest({ requestId: request.requestId, articleId: request.articleId, skillId: request.resolvedSkillId, responseKind: kind, content: request.resolvedSkillId ? "" : content, editorialArtifactId: artifactId });
 
@@ -215,7 +222,7 @@ function persistCompletion(request: PreparedAssistantRequest, event: Extract<Edi
 }
 
 
-async function streamAssistantRequest(request: PreparedAssistantRequest, incomingRequest: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
+async function streamAssistantRequest(request: PreparedAssistantRequest, incomingRequest: IncomingMessage, response: ServerResponse, repositories: AssistantRouteRepositories): Promise<void> {
     persistAcceptedRequest(request, repositories);
     const controller = startResponseStream(response, request);
     incomingRequest.once("aborted", () => controller.abort());
@@ -253,14 +260,14 @@ async function streamAssistantRequest(request: PreparedAssistantRequest, incomin
 }
 
 
-export function listAssistantMessagesRoute(response: ServerResponse, articleId: string, repositories: Repositories): void {
-    if (!repositories.getArticle(articleId))
+export function listAssistantMessagesRoute(response: ServerResponse, articleId: string, repositories: AssistantRouteRepositories): void {
+    if (!repositories.articles.get(articleId))
         throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
-    writeJson(response, HTTP_STATUS.OK, repositories.listAssistantMessages(articleId));
+    writeJson(response, HTTP_STATUS.OK, repositories.assistant.listMessages(articleId));
 }
 
-export async function createAssistantRequestRoute(request: IncomingMessage, response: ServerResponse, articleId: string, repositories: Repositories, resolveEngine: ResolveEngine): Promise<void> {
+export async function createAssistantRequestRoute(request: IncomingMessage, response: ServerResponse, articleId: string, repositories: AssistantRouteRepositories, resolveEngine: ResolveEngine): Promise<void> {
     const input = readAssistantRequest(object(await readJson(request)));
     const prepared = prepareAssistantRequest(articleId, input, repositories, resolveEngine);
     await streamAssistantRequest(prepared, request, response, repositories);

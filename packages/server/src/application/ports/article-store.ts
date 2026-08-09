@@ -2,16 +2,21 @@ import type { AcceptedChange, AcceptProposalInput, Article, ArticleDraft, Articl
 
 
 export interface ArticleStore {
-    listArticles(): Article[];
-    createArticle(input: CreateArticleInput): Article;
-    getArticle(articleId: string): Article | undefined;
-    updateArticle(articleId: string, input: UpdateArticleInput): Article;
-    deleteArticle(articleId: string): void;
-    saveArticleDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft;
-    discardArticleDraft(articleId: string, expectedDraftVersion: number): void;
-    saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision;
-    listArticleRevisions(articleId: string): ArticleRevision[];
+    list(): Article[];
+    create(input: CreateArticleInput): Article;
+    get(articleId: string): Article | undefined;
+    update(articleId: string, input: UpdateArticleInput): Article;
+    delete(articleId: string): void;
+    saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft;
+    discardDraft(articleId: string, expectedDraftVersion: number): void;
+    saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision;
+    listRevisions(articleId: string): ArticleRevision[];
     acceptChange(articleId: string, change: AcceptedChange): ArticleRevision;
     acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision;
     restoreRevision(articleId: string, revisionId: string): ArticleRevision;
+}
+
+
+export interface AssistantGreetingStore {
+    ensureGreeting(articleId: string): void;
 }

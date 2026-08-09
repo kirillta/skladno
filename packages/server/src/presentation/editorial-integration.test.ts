@@ -14,7 +14,9 @@ import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-ev
 import { EditorialEngineError } from "../application/ports/editorial-engine-error.js";
 import type { EditorialEngineRequest } from "../application/ports/editorial-engine-request.js";
 import { createLocalService } from "./server.js";
-import { openDatabase, Repositories } from "../infrastructure/persistence/index.js";
+import { createApplicationServices } from "../application/create-application-services.js";
+import { openDatabase } from "../infrastructure/persistence/index.js";
+import { Repositories } from "../infrastructure/persistence/repositories.js";
 
 
 async function* noConversation(): AsyncIterable<EditorialEngineEvent> {
@@ -44,7 +46,23 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, repos
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
 
-    const service = createLocalService({ host: "127.0.0.1", port: 0, webOrigin: "http://localhost:5173", databasePath: "unused", aiModel: "gpt-5", aiSessionContinuationEnabled: storeResponses }, repositories, engine);
+    const service = createLocalService({ 
+            host: "127.0.0.1", 
+            port: 0, 
+            webOrigin: "http://localhost:5173", 
+            databasePath: "unused", 
+            aiModel: "gpt-5", 
+            aiSessionContinuationEnabled: storeResponses 
+        }, 
+        repositories.articles, 
+        repositories.settings, 
+        repositories.styleCorpus, 
+        repositories.editorialSessions, 
+        repositories.editorialArtifacts, 
+        repositories.assistant, 
+        createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant), 
+        engine
+    );
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
 

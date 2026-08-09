@@ -7,13 +7,16 @@ import test from "node:test";
 
 import { aiConnectionsPath, applicationSettingsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article, type GeneralSettings } from "@skladno/shared";
 import { createLocalService } from "./server.js";
-import { openDatabase, Repositories } from "../infrastructure/persistence/index.js";
+import { createApplicationServices } from "../application/create-application-services.js";
+import { openDatabase } from "../infrastructure/persistence/index.js";
+import { Repositories } from "../infrastructure/persistence/repositories.js";
 
 // Product scenarios: editorial-workflows.ai-connection-management, editorial-workflows.ai-model-preferences, history-and-publishing.publishing-profile-persistence, settings.publish-profile-default
 
 test("article API supports CRUD and revision-aware saves", async () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-http-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
+    const repositories = new Repositories(database);
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -21,7 +24,7 @@ test("article API supports CRUD and revision-aware saves", async () => {
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, new Repositories(database));
+    }, repositories.articles, repositories.settings, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, repositories.assistant, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant));
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -143,7 +146,7 @@ test("General settings preserve valid formatting preferences and reject invalid 
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, repositories);
+    }, repositories.articles, repositories.settings, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, repositories.assistant, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant));
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -203,6 +206,7 @@ test("General settings preserve valid formatting preferences and reject invalid 
 test("AI connections reject duplicate environment-variable names and persist active selection and deletion", async () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-ai-connections-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
+    const repositories = new Repositories(database);
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -210,7 +214,7 @@ test("AI connections reject duplicate environment-variable names and persist act
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, new Repositories(database));
+    }, repositories.articles, repositories.settings, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, repositories.assistant, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant));
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
