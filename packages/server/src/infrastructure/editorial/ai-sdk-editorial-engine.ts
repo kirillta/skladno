@@ -90,6 +90,17 @@ function isAcceptedFinish(reason: string): boolean {
 }
 
 
+export function responsesPrompt(messages: ModelMessage[]) {
+    return {
+        instructions: messages
+            .filter((message) => message.role === "system")
+            .map((message) => message.content)
+            .join("\n\n"),
+        messages: messages.filter((message) => message.role !== "system"),
+    };
+}
+
+
 function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StyleProfile): StyleReview {
     const availableTraits = new Set(profile.traits.map((trait) => trait.id));
     if (value.findings.some((finding) => finding.traitIds.some((traitId) => !availableTraits.has(traitId))))
@@ -173,7 +184,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
     private async *streamProposal(messages: ModelMessage[], signal: AbortSignal, previousResponseId?: string): AsyncIterable<EditorialEngineEvent> {
         const result = streamText({
             model: this.openai.responses(this.options.model),
-            messages,
+            ...responsesPrompt(messages),
             abortSignal: signal,
             telemetry: { isEnabled: false },
             providerOptions: this.providerOptions(previousResponseId),

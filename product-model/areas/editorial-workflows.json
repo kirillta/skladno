@@ -109,7 +109,7 @@
             "title": "Refreshed model list, default model, and skill-specific overrides",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/server.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/application", "packages/server/src/infrastructure"],
-            "contract": "A default model and built-in-skill overrides determine new editorial requests.",
+            "contract": "A default model and built-in-skill overrides determine new editorial requests, whose system guidance is sent through the provider's supported instructions channel.",
             "persistence": "Model preferences persist locally; refreshed provider model lists are not persisted.",
             "scenarioIds": ["editorial-workflows.ai-model-preferences"]
         }
