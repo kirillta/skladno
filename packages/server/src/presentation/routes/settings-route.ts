@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { APPLICATION_ERROR, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_METHOD, HTTP_STATUS, INTERFACE_LOCALE, isDateFormatPreference, isKeyBindingCommandId, isTimeFormatPreference, isTimeZonePreference, keyBindingsPath, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isDateFormatPreference, isKeyBindingCommandId, isTimeFormatPreference, isTimeZonePreference, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
 import { listAvailableModels } from "../../infrastructure/editorial/available-models.js";
@@ -126,10 +126,7 @@ function requestedKeyBindingOverrides(value: unknown): KeyBindingOverrides {
 }
 
 
-export async function handleSettingsSnapshotRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (pathname !== applicationSettingsPath || request.method !== HTTP_METHOD.GET)
-        return false;
-
+export async function handleSettingsSnapshotRoute(response: ServerResponse, repositories: Repositories): Promise<void> {
     writeJson(response, HTTP_STATUS.OK, {
         general: generalSettings(repositories.getSetting("application-general")?.value),
         systemDateTimeFormat: await readSystemDateTimeFormat(),
@@ -138,64 +135,38 @@ export async function handleSettingsSnapshotRoute(request: IncomingMessage, resp
         backupPolicy: backupPolicy(repositories.getSetting("application-backup-policy")?.value),
         keyBindingOverrides: keyBindingOverrides(repositories.getSetting("application-key-bindings")?.value),
     });
-    return true;
 }
 
 
-export async function handleGeneralSettingsRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (pathname !== `${applicationSettingsPath}/general` || request.method !== HTTP_METHOD.PUT)
-        return false;
-
+export async function handleGeneralSettingsRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
     const value = generalSettings(object(await readJson(request)), true);
     repositories.setSetting("application-general", value);
 
     writeJson(response, HTTP_STATUS.OK, value);
-    return true;
 }
 
 
-export async function handleBackupPolicyRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (pathname !== `${applicationSettingsPath}/backup-policy` || request.method !== HTTP_METHOD.PUT)
-        return false;
-
+export async function handleBackupPolicyRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
     const value = backupPolicy(object(await readJson(request)));
     repositories.setSetting("application-backup-policy", value);
 
     writeJson(response, HTTP_STATUS.OK, value);
-    return true;
 }
 
 
-export async function handleKeyBindingsRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (pathname !== keyBindingsPath || request.method !== HTTP_METHOD.PUT)
-        return false;
-
+export async function handleKeyBindingsRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
     const value = requestedKeyBindingOverrides(object(await readJson(request)));
     repositories.setSetting("application-key-bindings", value);
 
     writeJson(response, HTTP_STATUS.OK, value);
-    return true;
 }
 
 
-export async function handleModelPreferencesRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (pathname !== aiModelPreferencesPath || request.method !== HTTP_METHOD.PUT)
-        return false;
-
+export async function handleModelPreferencesRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
     const value = modelPreferences(object(await readJson(request)));
     repositories.setSetting("application-model-preferences", value);
 
     writeJson(response, HTTP_STATUS.OK, value);
-    return true;
-}
-
-
-function connectionMatch(pathname: string): { connectionId: string; action?: "active" | "test" } | undefined {
-    const match = new RegExp(`^${aiConnectionsPath}/([^/]+)(/(active|test))?$`).exec(pathname);
-    if (!match)
-        return undefined;
-
-    return { connectionId: decodeURIComponent(match[1]!), ...(match[3] ? { action: match[3] as "active" | "test" } : {}) };
 }
 
 
@@ -209,10 +180,7 @@ function connectionState(repositories: Repositories, connectionId: string) {
 }
 
 
-export async function handleCreateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (pathname !== aiConnectionsPath || request.method !== HTTP_METHOD.POST)
-        return false;
-
+export async function handleCreateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, repositories: Repositories): Promise<void> {
     const body = object(await readJson(request));
     const saved = aiConnections(repositories.getSetting("application-ai-connections")?.value);
     const requestedName = environmentVariableName(body.environmentVariableName);
@@ -224,30 +192,20 @@ export async function handleCreateAiConnectionRoute(request: IncomingMessage, re
     repositories.setSetting("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
 
     writeJson(response, HTTP_STATUS.CREATED, connection);
-    return true;
 }
 
 
-export async function handleActivateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    const match = connectionMatch(pathname);
-    if (!match?.action || match.action !== "active" || request.method !== HTTP_METHOD.PUT)
-        return false;
-
-    const { saved } = connectionState(repositories, match.connectionId);
-    repositories.setSetting("application-ai-connections", { ...saved, activeConnectionId: match.connectionId });
+export function handleActivateAiConnectionRoute(response: ServerResponse, connectionId: string, repositories: Repositories): void {
+    const { saved } = connectionState(repositories, connectionId);
+    repositories.setSetting("application-ai-connections", { ...saved, activeConnectionId: connectionId });
     response.writeHead(HTTP_STATUS.NO_CONTENT);
     response.end();
 
-    return true;
 }
 
 
-export async function handleTestAiConnectionRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    const match = connectionMatch(pathname);
-    if (!match?.action || match.action !== "test" || request.method !== HTTP_METHOD.POST)
-        return false;
-
-    const { saved, index, connection } = connectionState(repositories, match.connectionId);
+export async function handleTestAiConnectionRoute(response: ServerResponse, connectionId: string, repositories: Repositories): Promise<void> {
+    const { saved, index, connection } = connectionState(repositories, connectionId);
     try {
         await listAvailableModels(connection.provider, connection.environmentVariableName);
         saved.connections[index] = { ...connection, status: "connected", lastCheckedAt: new Date().toISOString(), diagnostic: undefined };
@@ -258,93 +216,37 @@ export async function handleTestAiConnectionRoute(request: IncomingMessage, resp
     repositories.setSetting("application-ai-connections", saved);
 
     writeJson(response, HTTP_STATUS.OK, saved.connections[index]);
-    return true;
 }
 
 
-export async function handleUpdateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    const match = connectionMatch(pathname);
-    if (!match || match.action || request.method !== HTTP_METHOD.PUT)
-        return false;
-
-    const { saved, index, connection } = connectionState(repositories, match.connectionId);
+export async function handleUpdateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, connectionId: string, repositories: Repositories): Promise<void> {
+    const { saved, index, connection } = connectionState(repositories, connectionId);
     const body = object(await readJson(request));
     const updated = { ...connection, label: typeof body.label === "string" && body.label.trim() ? body.label.trim() : connection.label, environmentVariableName: environmentVariableName(body.environmentVariableName), status: "unchecked" as const, diagnostic: undefined, lastCheckedAt: undefined };
     saved.connections[index] = updated;
     repositories.setSetting("application-ai-connections", saved);
 
     writeJson(response, HTTP_STATUS.OK, updated);
-    return true;
 }
 
 
-export async function handleDeleteAiConnectionRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    const match = connectionMatch(pathname);
-    if (!match || match.action || request.method !== HTTP_METHOD.DELETE)
-        return false;
-
-    const { saved, index } = connectionState(repositories, match.connectionId);
-    if (saved.activeConnectionId === match.connectionId)
+export function handleDeleteAiConnectionRoute(response: ServerResponse, connectionId: string, repositories: Repositories): void {
+    const { saved, index } = connectionState(repositories, connectionId);
+    if (saved.activeConnectionId === connectionId)
         throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REMOVAL_BLOCKED, HTTP_STATUS.BAD_REQUEST);
 
     saved.connections.splice(index, 1);
     repositories.setSetting("application-ai-connections", { connections: saved.connections, ...(saved.connections[0] ? { activeConnectionId: saved.connections[0].id } : {}) });
     response.writeHead(HTTP_STATUS.NO_CONTENT);
     response.end();
-
-    return true;
 }
 
 
-export async function handleAiConnectionsRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (await handleCreateAiConnectionRoute(request, response, pathname, repositories))
-        return true;
-
-    if (await handleActivateAiConnectionRoute(request, response, pathname, repositories))
-        return true;
-
-    if (await handleTestAiConnectionRoute(request, response, pathname, repositories))
-        return true;
-
-    if (await handleUpdateAiConnectionRoute(request, response, pathname, repositories))
-        return true;
-
-    return handleDeleteAiConnectionRoute(request, response, pathname, repositories);
-}
-
-
-export async function handleAiModelsRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (pathname !== aiModelsPath || request.method !== HTTP_METHOD.POST)
-        return false;
-
+export async function handleAiModelsRoute(response: ServerResponse, repositories: Repositories): Promise<void> {
     const saved = aiConnections(repositories.getSetting("application-ai-connections")?.value);
     const active = saved.connections.find((connection) => connection.id === saved.activeConnectionId);
     if (!active)
         throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
     writeJson(response, HTTP_STATUS.OK, await listAvailableModels(active.provider, active.environmentVariableName));
-    return true;
-}
-
-
-export async function handleSettingsRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories): Promise<boolean> {
-    if (await handleSettingsSnapshotRoute(request, response, pathname, repositories))
-        return true;
-
-    if (await handleGeneralSettingsRoute(request, response, pathname, repositories))
-        return true;
-
-    if (await handleBackupPolicyRoute(request, response, pathname, repositories))
-        return true;
-
-    if (await handleKeyBindingsRoute(request, response, pathname, repositories))
-        return true;
-
-    if (await handleModelPreferencesRoute(request, response, pathname, repositories))
-        return true;
-
-    if (await handleAiConnectionsRoute(request, response, pathname, repositories))
-        return true;
-
-    return handleAiModelsRoute(request, response, pathname, repositories);
 }

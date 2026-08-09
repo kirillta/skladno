@@ -1,23 +1,19 @@
 import { createServer, type IncomingMessage } from "node:http";
 import { APPLICATION_ERROR, HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 
-import type { ServerConfig } from "../infrastructure/configuration/config.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import type { ApplicationServices } from "../application/application-services.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import type { EditorialEngine } from "../application/ports/editorial-engine.js";
 import type { EditorialEngineResolver } from "../application/ports/editorial-engine-resolver.js";
+import type { ServerConfig } from "../infrastructure/configuration/config.js";
 import { ConfiguredEditorialEngineResolver } from "../infrastructure/editorial/configured-editorial-engine-resolver.js";
-import { handleArticlesRoute } from "./routes/articles-route.js";
-import { handleAssistantRoute } from "./routes/assistant-route.js";
-import { handleEditorialRoute } from "./routes/editorial-route.js";
-import { handleHealthRoute } from "./routes/health-route.js";
-import { handlePublishSettingsRoute } from "./routes/publish-settings-route.js";
-import { handleStyleCorpusRoute } from "./routes/style-corpus-route.js";
-import { handleSettingsRoute } from "./routes/settings-route.js";
-import { writeJson } from "./transport/json.js";
+import { ArticleDraftConflictError } from "../infrastructure/persistence/article-draft-conflict-error.js";
+import { ArticleRevisionConflictError } from "../infrastructure/persistence/article-revision-conflict-error.js";
+import { Repositories } from "../infrastructure/persistence/repositories.js";
 import { ApplicationServiceError } from "./errors/application-error.js";
-import { ArticleDraftConflictError, ArticleRevisionConflictError, Repositories } from "../infrastructure/persistence/index.js";
+import { createPresentationRouter } from "./routes/create-presentation-router.js";
+import { writeJson } from "./transport/json.js";
 
 
 function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): boolean {
@@ -26,13 +22,11 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 
 
 export function createLocalService(config: ServerConfig, repositories: Repositories, engine?: EditorialEngine, services: ApplicationServices = createApplicationServices(repositories)) {
-    const { articles, styleCorpus, publishing } = services;
-
     const engines: EditorialEngineResolver = engine
         ? { resolve: () => engine }
         : new ConfiguredEditorialEngineResolver(config, repositories);
-    const resolveEngine = engines.resolve.bind(engines);
     const editorial = new EditorialService(repositories, engines, config.aiSessionContinuationEnabled);
+    const router = createPresentationRouter(repositories, editorial, engines, services);
 
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {
@@ -54,27 +48,9 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
             return;
         }
 
-        if (handleHealthRoute(request, response))
-            return;
-
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         try {
-            if (await handleAssistantRoute(request, response, pathname, repositories, resolveEngine))
-                return;
-
-            if (await handleEditorialRoute(request, response, pathname, editorial))
-                return;
-
-            if (await handleStyleCorpusRoute(request, response, pathname, styleCorpus))
-                return;
-
-            if (await handleSettingsRoute(request, response, pathname, repositories))
-                return;
-
-            if (await handlePublishSettingsRoute(request, response, pathname, publishing))
-                return;
-
-            if (await handleArticlesRoute(request, response, pathname, articles))
+            if (await router.handle(request, response, pathname))
                 return;
         } catch (error) {
             if (error instanceof ArticleRevisionConflictError) {
@@ -98,7 +74,6 @@ export function createLocalService(config: ServerConfig, repositories: Repositor
             }
 
             writeJson(response, HTTP_STATUS.INTERNAL_SERVER_ERROR, { error: { code: APPLICATION_ERROR.EDITORIAL_REQUEST_FAILED } });
-
             return;
         }
 

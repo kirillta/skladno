@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, HTTP_METHOD, HTTP_STATUS, isBuiltInSkillId, type AssistantEditorialResult, type AssistantEvent, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, HTTP_STATUS, isBuiltInSkillId, type AssistantEditorialResult, type AssistantEvent, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation } from "@skladno/shared";
 
 import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
@@ -253,24 +253,15 @@ async function streamAssistantRequest(request: PreparedAssistantRequest, incomin
 }
 
 
-export async function handleAssistantRoute(request: IncomingMessage, response: ServerResponse, pathname: string, repositories: Repositories, resolveEngine: ResolveEngine): Promise<boolean> {
-    const messagesMatch = /^\/api\/articles\/([^/]+)\/assistant\/messages$/.exec(pathname);
-    if (messagesMatch && request.method === HTTP_METHOD.GET) {
-        const articleId = decodeURIComponent(messagesMatch[1]);
-        if (!repositories.getArticle(articleId))
-            throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+export function listAssistantMessagesRoute(response: ServerResponse, articleId: string, repositories: Repositories): void {
+    if (!repositories.getArticle(articleId))
+        throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
-        writeJson(response, HTTP_STATUS.OK, repositories.listAssistantMessages(articleId));
-        return true;
-    }
+    writeJson(response, HTTP_STATUS.OK, repositories.listAssistantMessages(articleId));
+}
 
-    const requestsMatch = /^\/api\/articles\/([^/]+)\/assistant\/requests$/.exec(pathname);
-    if (!requestsMatch || request.method !== HTTP_METHOD.POST)
-        return false;
-
+export async function createAssistantRequestRoute(request: IncomingMessage, response: ServerResponse, articleId: string, repositories: Repositories, resolveEngine: ResolveEngine): Promise<void> {
     const input = readAssistantRequest(object(await readJson(request)));
-    const prepared = prepareAssistantRequest(decodeURIComponent(requestsMatch[1]), input, repositories, resolveEngine);
+    const prepared = prepareAssistantRequest(articleId, input, repositories, resolveEngine);
     await streamAssistantRequest(prepared, request, response, repositories);
-
-    return true;
 }

@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, HTTP_METHOD, HTTP_STATUS, type ApplicationErrorCode, type EditorialEvent, type EditorialOperation } from "@skladno/shared";
+import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, HTTP_STATUS, type ApplicationErrorCode, type EditorialEvent, type EditorialOperation } from "@skladno/shared";
 
 import { EditorialService } from "../../application/editorial/editorial-service.js";
 import type { EditorialServiceRequest } from "../../application/editorial/editorial-request.js";
@@ -20,16 +20,12 @@ function writeEditorialEvent(response: ServerResponse, event: EditorialEvent): v
 }
 
 
-async function readEditorialRequest(request: IncomingMessage, pathname: string): Promise<EditorialServiceRequest | undefined> {
-    const match = /^\/api\/articles\/([^/]+)\/editorial$/.exec(pathname);
-    if (request.method !== HTTP_METHOD.POST || !match)
-        return undefined;
-
+async function readEditorialRequest(request: IncomingMessage, articleId: string): Promise<EditorialServiceRequest> {
     const body = object(await readJson(request));
     const operation = string(body.operation, "operation");
 
     return {
-        articleId: decodeURIComponent(match[1]),
+        articleId,
         requestId: string(body.requestId, "requestId"),
         operation: operation as EditorialOperation,
         authorContext: body.authorContext === undefined ? "" : string(body.authorContext, "authorContext"),
@@ -118,17 +114,13 @@ async function streamEditorialEvents(response: ServerResponse, editorial: Editor
 }
 
 
-export async function handleEditorialRoute(request: IncomingMessage, response: ServerResponse, pathname: string, editorial: EditorialService): Promise<boolean> {
-    const editorialRequest = await readEditorialRequest(request, pathname);
-    if (!editorialRequest)
-        return false;
+export async function handleEditorialRoute(request: IncomingMessage, response: ServerResponse, articleId: string, editorial: EditorialService): Promise<void> {
+    const editorialRequest = await readEditorialRequest(request, articleId);
 
     const controller = openEditorialStream(request, response);
     if (rejectUnsupportedOperation(response, editorialRequest) || rejectMissingTargetLanguage(response, editorialRequest))
-        return true;
+        return;
 
     await streamEditorialEvents(response, editorial, editorialRequest, controller);
     response.end();
-
-    return true;
 }

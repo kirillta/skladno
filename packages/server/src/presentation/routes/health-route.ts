@@ -1,13 +1,10 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { healthPath, HTTP_METHOD, HTTP_STATUS, type HealthResponse } from "@skladno/shared";
+import type { ServerResponse } from "node:http";
+import { HTTP_STATUS, type HealthResponse } from "@skladno/shared";
 
 import { writeJson } from "../transport/json.js";
 
 
-export function handleHealthRoute(request: IncomingMessage, response: ServerResponse): boolean {
-    if (request.method !== HTTP_METHOD.GET || request.url !== healthPath)
-        return false;
-
+export function handleHealthRoute(response: ServerResponse): void {
     const body: HealthResponse = {
         status: "ok",
         service: "skladno-local-service",
@@ -15,5 +12,4 @@ export function handleHealthRoute(request: IncomingMessage, response: ServerResp
     };
 
     writeJson(response, HTTP_STATUS.OK, body);
-    return true;
 }
