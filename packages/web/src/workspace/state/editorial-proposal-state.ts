@@ -156,7 +156,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         }
     }
 
-    
+
     function applyAssistantResult(articleId: string, baseRevisionId: string, result: AssistantEditorialResult) {
         const article = workspace.articles.find((item) => item.id === articleId);
         if (!article)

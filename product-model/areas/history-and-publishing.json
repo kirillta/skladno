@@ -67,7 +67,7 @@
             "area": "Publishing profiles",
             "title": "Named profiles with configurable limits",
             "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/routes/publish-settings-route.ts", "packages/server/src/application/publishing", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/PublishingSettingsSection.tsx", "packages/server/src/presentation/routes/publish-settings-route.ts", "packages/server/src/application/publishing", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "An Article may select a named publishing profile that supplies character-limit guidance.",
             "persistence": "The selected profile persists locally.",
             "scenarioIds": ["history-and-publishing.publishing-profile-persistence"],

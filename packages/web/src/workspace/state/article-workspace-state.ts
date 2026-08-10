@@ -332,7 +332,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
                     revisionId: current.currentRevisionId,
                 },
             });
-            
+
             replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
         }
     }

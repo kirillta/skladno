@@ -97,7 +97,7 @@
             "area": "AI connection",
             "title": "Named OpenAI connections and environment-variable references",
             "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "Authors configure named OpenAI connections, active selection, testing, and environment-variable names without exposing secret values.",
             "persistence": "Connection metadata and active selection persist locally; credentials remain environment-provided.",
             "scenarioIds": ["editorial-workflows.ai-connection-management"],
@@ -108,7 +108,7 @@
             "area": "AI model selection",
             "title": "Refreshed model list, default model, and skill-specific overrides",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/presentation/server.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/application", "packages/server/src/infrastructure"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/presentation/server.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/application", "packages/server/src/infrastructure"],
             "contract": "A default model and built-in-skill overrides determine new editorial requests, whose system guidance is sent through the provider's supported instructions channel.",
             "persistence": "Model preferences persist locally; refreshed provider model lists are not persisted.",
             "scenarioIds": ["editorial-workflows.ai-model-preferences"]

@@ -167,11 +167,12 @@ Implemented in this slice:
 - focused Revision History navigation and details components;
 - workspace orchestration hooks extracted into focused `workspace/state`
   modules, with `EditorialWorkspace.tsx` retained as the composition boundary;
+- Application Settings sections extracted into focused components, with
+  `ApplicationSettings.tsx` retained as the persistence and screen composition
+  boundary;
 - view-local extracted rendering pieces without changing callbacks or
   product contracts.
 
 Deferred to later slices:
 
-- splitting Application Settings sections where the current file still has a
-  cohesive screen-level interaction contract;
 - adding automated import-boundary checks after the layout settles.

@@ -17,7 +17,7 @@
             "area": "Accessibility",
             "title": "Semantic controls, focus treatment, keyboard navigation, and non-color cues",
             "status": "implemented",
-            "owners": ["packages/web/src/ui", "packages/web/src/workspace/components/WorkspaceShell.tsx", "packages/web/src/settings/ApplicationSettings.tsx"],
+            "owners": ["packages/web/src/ui", "packages/web/src/workspace/components/WorkspaceShell.tsx", "packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/SettingRow.tsx", "packages/web/src/settings/components/KeyBindingSettings.tsx"],
             "contract": "Workspace and Settings controls expose semantic labels, keyboard access, visible focus, and non-color status conventions.",
             "persistence": "Accessibility behavior is derived from rendered controls and does not persist sensitive state.",
             "scenarioIds": ["cross-cutting.accessible-workspace-separators"]
