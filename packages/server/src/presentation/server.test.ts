@@ -8,6 +8,7 @@ import test from "node:test";
 
 import { aiConnectionsPath, applicationSettingsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article, type GeneralSettings } from "@skladno/shared";
 import { createLocalService } from "./server.js";
+import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
 import { Repositories } from "../infrastructure/persistence/repositories.js";
@@ -23,6 +24,7 @@ test("article API supports CRUD and revision-aware saves", async () => {
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
     const engines = { resolve: () => undefined };
+    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, false);
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -30,7 +32,7 @@ test("article API supports CRUD and revision-aware saves", async () => {
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, repositories.articles, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId), engines);
+    }, repositories.articles, repositories.styleCorpus, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId));
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -145,6 +147,7 @@ test("General settings preserve valid formatting preferences and reject invalid 
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
     const engines = { resolve: () => undefined };
+    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, false);
     repositories.setSetting("application-general", { ...defaultGeneralSettings, dateFormat: "day-first-dots", timeZone: "America/Argentina/Buenos_Aires" });
     const service = createLocalService({
         host: "127.0.0.1",
@@ -153,7 +156,7 @@ test("General settings preserve valid formatting preferences and reject invalid 
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, repositories.articles, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId), engines);
+    }, repositories.articles, repositories.styleCorpus, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId));
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -215,6 +218,7 @@ test("AI connections reject duplicate environment-variable names and persist act
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
     const engines = { resolve: () => undefined };
+    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, false);
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -222,7 +226,7 @@ test("AI connections reject duplicate environment-variable names and persist act
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, repositories.articles, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId), engines);
+    }, repositories.articles, repositories.styleCorpus, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId));
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");

@@ -14,6 +14,7 @@ import type { EditorialEngineResolver } from "../application/ports/editorial-eng
 import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../application/ports/editorial-engine-error.js";
 import type { EditorialEngineRequest } from "../application/ports/editorial-engine-request.js";
+import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
@@ -48,20 +49,21 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, repos
     const repositories = new Repositories(database);
     const engines: EditorialEngineResolver = { resolve: () => engine };
 
-    const service = createLocalService({
+    const config = {
         host: "127.0.0.1",
         port: 0,
         webOrigin: "http://localhost:5173",
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: storeResponses
-    },
-    repositories.articles,
-    repositories.styleCorpus,
-    repositories.editorialSessions,
-    repositories.editorialArtifacts,
-    createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection"),
-    engines
+    };
+    const services = createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection");
+    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, storeResponses);
+    const service = createLocalService(config,
+        repositories.articles,
+        repositories.styleCorpus,
+        editorial,
+        services
     );
     service.listen(0, "127.0.0.1");
     await once(service, "listening");

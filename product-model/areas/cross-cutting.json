@@ -48,7 +48,7 @@
             "area": "Data validation",
             "title": "Shared contracts, HTTP constants, and transport-boundary validation",
             "status": "implemented",
-            "owners": ["packages/shared/src", "packages/server/src/presentation", "packages/server/src/application", "packages/server/src/infrastructure", "packages/server/src/application/assistant", "packages/server/src/application/settings/application-settings-service.ts"],
+            "owners": ["packages/shared/src", "packages/server/src/presentation", "packages/server/src/application", "packages/server/src/infrastructure", "packages/server/src/index.ts", "packages/server/src/application/assistant", "packages/server/src/application/settings/application-settings-service.ts"],
             "contract": "Shared validation and HTTP constants reject malformed transport data before it reaches application behavior; provider-specific prompt roles are normalized at the provider boundary.",
             "persistence": "Invalid provider or transport payloads are not persisted as valid application data.",
             "scenarioIds": ["cross-cutting.malformed-health-rejected"]
@@ -58,7 +58,7 @@
             "area": "Privacy",
             "title": "Server-side secrets, local materials, minimal context, redacted diagnostics, and storage opt-in",
             "status": "implemented",
-            "owners": ["packages/server/src/infrastructure/configuration/config.ts", "packages/server/src/application/editorial", "packages/web/src/notifications"],
+            "owners": ["packages/server/src/infrastructure/configuration/config.ts", "packages/server/src/index.ts", "packages/server/src/application/editorial", "packages/web/src/notifications"],
             "contract": "Secrets remain server-side, including custom-named values loaded from the project .env file before local-service startup; materials remain local, only necessary request context is sent, and provider response storage requires explicit opt-in.",
             "persistence": "Private content is not logged or traced by default; provider-side response storage is disabled unless enabled.",
             "scenarioIds": ["cross-cutting.private-storage-opt-in"]

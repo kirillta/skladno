@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { loadServerConfig, loadServerEnvironment } from "./infrastructure/configuration/config.js";
 import { createLocalService } from "./presentation/server.js";
 import { createApplicationServices } from "./application/create-application-services.js";
+import { EditorialService } from "./application/editorial/editorial-service.js";
 import { openDatabase } from "./infrastructure/persistence/database.js";
 import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/configured-editorial-engine-resolver.js";
 import { listAvailableModels } from "./infrastructure/editorial/available-models.js";
@@ -23,7 +24,8 @@ const engines = new ConfiguredEditorialEngineResolver(config, settings);
 
 assistant.seedGreetings();
 const services = createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: listAvailableModels }, randomUUID);
-const service = createLocalService(config, articles, styleCorpus, editorialSessions, editorialArtifacts, services, engines);
+const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled);
+const service = createLocalService(config, articles, styleCorpus, editorial, services);
 let shuttingDown = false;
 
 

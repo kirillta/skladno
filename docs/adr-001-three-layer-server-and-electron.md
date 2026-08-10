@@ -34,9 +34,8 @@ ports, application services depend on ports rather than implementations, and
 presentation adapts HTTP (or, later, Electron IPC) to the available services.
 
 The current code does not enforce that rule everywhere yet. In particular,
-some presentation routes still receive infrastructure repositories, and
-`presentation/server.ts` constructs `EditorialService`. These are migration
-seams, not a new permanent layer.
+some presentation routes still receive infrastructure repositories. These are
+migration seams, not a new permanent layer.
 
 ### Presentation
 
@@ -61,8 +60,9 @@ neutral ports. The implemented focused services are:
 - `EditorialService` for editorial streaming and completion persistence.
 
 `ApplicationServices` exposes Article, Assistant, Application Settings,
-Publishing, and Style Corpus services. EditorialService is wired by the
-presentation server until its next extraction slice.
+Publishing, and Style Corpus services. `EditorialService` is composed by the
+Node root alongside those services and passed to presentation as a ready
+application dependency.
 
 Application code must not import `node:http`, Electron, SQLite, filesystem
 APIs, or AI provider SDKs. Its ports are small contracts such as article,
@@ -88,15 +88,15 @@ points for new code.
 
 `packages/server/src/index.ts` is the current Node composition root. It loads
 the environment and configuration, opens SQLite, constructs repositories,
-creates the focused application services, and creates/listens to the local
-HTTP service.
+creates the focused application services and `EditorialService`, and
+creates/listens to the local HTTP service.
 
-`presentation/server.ts` currently completes composition for the HTTP runtime:
-it constructs `EditorialService` and creates the presentation router. The Node
-composition root passes the configured engine resolver into both the
-application services and HTTP runtime. A future Electron main process may
-become another composition root, but it must reuse the application services
-and ports instead of duplicating use-case behavior.
+`presentation/server.ts` completes only HTTP runtime setup and creates the
+presentation router from ready application dependencies. The Node composition
+root passes the configured engine resolver into the application services and
+constructs `EditorialService`. A future Electron main process may become
+another composition root, but it must reuse the application services and ports
+instead of duplicating use-case behavior.
 
 ## Actual source structure
 
@@ -206,8 +206,8 @@ Continue the incremental refactor:
 
 1. Extract Assistant orchestration into application services and focused ports.
 2. Extract Application Settings orchestration and its settings ports.
-3. Move EditorialService construction and engine resolution into the
-   composition root while keeping presentation responsible only for transport.
+3. Keep EditorialService construction and engine resolution in the composition
+   root while keeping presentation responsible only for transport.
 4. Replace remaining presentation repository parameters with application
    service contracts.
 5. Remove the compatibility `Repositories` facade when no runtime or test
@@ -234,10 +234,10 @@ application services.
 
 The current structure gives focused services and ports where the first
 migration slices need them, while keeping the existing HTTP behavior working.
-The cost is temporary cross-layer wiring in presentation and a compatibility
-repository facade. Those seams are accepted only until Settings and Editorial
-composition are extracted. Additional abstraction requires a second real
-runtime, implementation, or test boundary.
+The cost is temporary cross-layer repository wiring in presentation and a
+compatibility repository facade. Those seams are accepted only until the
+remaining presentation repository parameters are replaced. Additional
+abstraction requires a second real runtime, implementation, or test boundary.
 
 ## Verification
 
@@ -272,6 +272,5 @@ Implemented:
 
 Deferred to later migration slices:
 
-- moving all engine/service construction out of presentation;
 - complete removal of presentation-to-infrastructure repository wiring;
 - Electron IPC adapter.
