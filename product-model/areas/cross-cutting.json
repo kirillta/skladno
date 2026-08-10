@@ -69,7 +69,7 @@
             "title": "SQLite persistence and Article schema transition",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/persistence/database.ts", "packages/server/src/infrastructure/persistence"],
-            "contract": "Startup performs the one-time legacy Documents-to-Articles schema transition, then preserves the resulting Article database.",
+            "contract": "Startup performs the one-time legacy Documents-to-Articles schema transition, then preserves the resulting Article database; persistence composition uses focused repositories directly.",
             "persistence": "SQLite remains the durable local data store after migration.",
             "scenarioIds": ["cross-cutting.database-transition-manual"]
         },

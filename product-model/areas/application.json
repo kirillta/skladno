@@ -70,7 +70,7 @@
                 "packages/server/src/application/settings/application-settings-service.ts",
                 "packages/server/src/application/editorial/editorial-service.ts"
             ],
-            "contract": "Articles, Draft checkpoints, materials, style samples, and settings persist in local SQLite storage through domain-specific repositories wired at local-service startup.",
+            "contract": "Articles, Draft checkpoints, materials, style samples, and settings persist in local SQLite storage through focused domain-specific repositories wired at local-service startup; no aggregate repository facade is required.",
             "persistence": "SQLite is the active data store; private author data is not delegated to a remote application database.",
             "scenarioIds": [
                 "application.local-persistence-reopens"

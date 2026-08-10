@@ -78,9 +78,10 @@ repository facade.
 - AI SDK/provider adapters and configured engine resolution;
 - service startup and shutdown lifecycle.
 
-`Repositories` is retained as a compatibility facade for tests. The
-independently named repositories under `infrastructure/persistence/repositories`
-are the preferred integration points for composition roots and ports.
+The independently named repositories under
+`infrastructure/persistence/repositories` are the integration points for
+composition roots, application ports, and test setup. No aggregate repository
+facade remains.
 
 ### Composition roots
 
@@ -142,7 +143,7 @@ packages/server/src/
 │   └── persistence/
 │       ├── database.ts
 │       ├── index.ts
-│       ├── repositories.ts (+ test)
+│       ├── repositories.test.ts
 │       ├── article-*-conflict-error.ts
 │       └── repositories/
 │           ├── articles-repository.ts
@@ -192,7 +193,8 @@ client contracts. It must not import server infrastructure.
   it gains a public name, a second caller, or an independent test contract.
 - Barrels may re-export entities but must not contain their implementations.
 - Do not add aggregate files containing unrelated domain entities. The
-  `Repositories` facade is an explicitly temporary compatibility exception.
+  test-support composition helpers are test-only and do not expose a runtime
+  aggregate repository API.
 - Keep transport concerns in `presentation`, external-system concerns in
   `infrastructure`, and reusable use-case behavior in `application`.
 - New application code must depend on narrow ports. Do not pass a concrete
@@ -214,8 +216,8 @@ Continue the incremental refactor:
 4. Replace remaining presentation repository parameters with application
    service contracts. **Completed 2026-08-10:** presentation factories now
    receive only application services; conflict errors are application-owned.
-5. Remove the compatibility `Repositories` facade when no test
-   seam requires it.
+5. **Completed 2026-08-10:** remove the compatibility `Repositories` facade;
+   tests construct focused repositories through test-only composition setup.
 6. Add import-boundary checks before introducing Electron IPC.
 
 Each slice must preserve existing HTTP contracts, product inventories, SSE
@@ -237,9 +239,10 @@ application services.
 ## Consequences
 
 The current structure gives focused services and ports where the migration
-slices need them while keeping the existing HTTP behavior working. The
-remaining compatibility repository facade is test-only. Additional
-abstraction requires a second real runtime, implementation, or test boundary.
+slices need them while keeping the existing HTTP behavior working. Test-only
+composition setup keeps persistence tests concise without recreating a runtime
+aggregate repository API. Additional abstraction requires a second real
+runtime, implementation, or test boundary.
 
 ## Verification
 
@@ -272,11 +275,9 @@ Implemented:
 - explicit Node composition in `index.ts`;
 - presentation factories that accept application services rather than concrete
   persistence repositories;
-- individually named persistence repositories and a temporary compatibility
-  facade;
+- individually named persistence repositories and test-only composition setup;
 - existing HTTP contracts and product inventories remain intact.
 
 Deferred to later migration slices:
 
-- removal of the compatibility `Repositories` facade;
 - Electron IPC adapter.

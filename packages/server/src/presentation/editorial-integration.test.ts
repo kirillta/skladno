@@ -18,7 +18,7 @@ import { EditorialService } from "../application/editorial/editorial-service.js"
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
-import { Repositories } from "../infrastructure/persistence/repositories.js";
+import { createTestPersistence, type TestPersistence } from "../test-support/test-persistence.js";
 
 
 async function* noConversation(): AsyncIterable<EditorialEngineEvent> {
@@ -43,10 +43,10 @@ class FixtureEngine implements EditorialEngine {
 }
 
 
-async function withService(engine: EditorialEngine, run: (baseUrl: string, repositories: Repositories) => Promise<void>, storeResponses = true): Promise<void> {
+async function withService(engine: EditorialEngine, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
-    const repositories = new Repositories(database);
+    const persistence = createTestPersistence(database);
     const engines: EditorialEngineResolver = { resolve: () => engine };
 
     const config = {
@@ -57,8 +57,8 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, repos
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: storeResponses
     };
-    const services = createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection");
-    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, storeResponses);
+    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection");
+    const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses);
     const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -67,7 +67,7 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, repos
     assert.ok(address && typeof address !== "string");
 
     try {
-        await run(`http://127.0.0.1:${address.port}`, repositories);
+        await run(`http://127.0.0.1:${address.port}`, persistence);
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));
         database.close();
@@ -85,7 +85,7 @@ test("editorial endpoint streams a typed proposal and saves context only after c
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -95,12 +95,12 @@ test("editorial endpoint streams a typed proposal and saves context only after c
 
         assert.match(body, /"type":"text_delta","delta":"A "/);
         assert.match(body, /"type":"completed","responseId":"resp-1","text":"A proposal"/);
-        assert.equal(repositories.getEditorialSession(article.id)?.previousResponseId, "resp-1");
-        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");
+        assert.equal(repositories.editorialSessions.get(article.id)?.previousResponseId, "resp-1");
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
         assert.equal(engine.requests[0]?.article, "Original article");
         assert.equal(engine.requests[0]?.operation, EDITORIAL_OPERATION.FLOW_REVISION);
         assert.equal(engine.requests[0]?.authorContext, "Keep the direct tone.");
-        assert.deepEqual(JSON.parse(repositories.listEditorialArtifacts(article.id)[0]!.content), {
+        assert.deepEqual(JSON.parse(repositories.editorialArtifacts.list(article.id)[0]!.content), {
             requestId: "request-1",
             operation: EDITORIAL_OPERATION.FLOW_REVISION,
             authorContext: "Keep the direct tone.",
@@ -115,7 +115,7 @@ test("failed or incomplete editorial streams leave the Article and session uncha
     const engine = new FixtureEngine([{ type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial" }]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -125,9 +125,9 @@ test("failed or incomplete editorial streams leave the Article and session uncha
 
         assert.match(body, /"type":"text_delta"/);
         assert.match(body, /"type":"error","requestId":"request-2","code":"malformed_stream"/);
-        assert.equal(repositories.getEditorialSession(article.id), undefined);
-        assert.deepEqual(repositories.listEditorialArtifacts(article.id), []);
-        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");
+        assert.equal(repositories.editorialSessions.get(article.id), undefined);
+        assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
     });
 });
 
@@ -138,8 +138,8 @@ test("storage-disabled editorial requests clear hidden session continuation", as
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
-        repositories.saveEditorialSession(article.id, "resp-old");
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
+        repositories.editorialSessions.save(article.id, "resp-old");
 
         await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
@@ -148,7 +148,7 @@ test("storage-disabled editorial requests clear hidden session continuation", as
         });
 
         assert.equal(engine.requests[0]?.previousResponseId, undefined);
-        assert.equal(repositories.getEditorialSession(article.id), undefined);
+        assert.equal(repositories.editorialSessions.get(article.id), undefined);
     }, false);
 });
 
@@ -162,8 +162,8 @@ test("expired provider session is cleared and can be retried as a fresh session"
     };
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
-        repositories.saveEditorialSession(article.id, "resp-expired");
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
+        repositories.editorialSessions.save(article.id, "resp-expired");
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -171,7 +171,7 @@ test("expired provider session is cleared and can be retried as a fresh session"
         });
 
         assert.match(await response.text(), /"code":"session_expired"/);
-        assert.equal(repositories.getEditorialSession(article.id), undefined);
+        assert.equal(repositories.editorialSessions.get(article.id), undefined);
     });
 });
 
@@ -185,7 +185,7 @@ test("provider errors are actionable and leave the article unchanged", async () 
     };
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -195,9 +195,9 @@ test("provider errors are actionable and leave the article unchanged", async () 
 
         assert.match(body, /"type":"error","requestId":"request-provider-error","code":"network"/);
         assert.match(body, /"errorCode":"editorial_provider_failed"/);
-        assert.equal(repositories.getEditorialSession(article.id), undefined);
-        assert.deepEqual(repositories.listEditorialArtifacts(article.id), []);
-        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");
+        assert.equal(repositories.editorialSessions.get(article.id), undefined);
+        assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
     });
 });
 
@@ -212,7 +212,7 @@ test("cancelling an editorial stream does not change the article or session", as
     };
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
         const controller = new AbortController();
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
@@ -226,9 +226,9 @@ test("cancelling an editorial stream does not change the article or session", as
         controller.abort();
 
         await new Promise((resolve) => setTimeout(resolve, 10));
-        assert.equal(repositories.getEditorialSession(article.id), undefined);
-        assert.deepEqual(repositories.listEditorialArtifacts(article.id), []);
-        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "Original article");
+        assert.equal(repositories.editorialSessions.get(article.id), undefined);
+        assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
     });
 });
 
@@ -250,15 +250,15 @@ test("style review uses a compact local profile and saves cited findings as a pr
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        repositories.addStyleCorpusItem({ name: "Published sample", content: "I write short sentences.\n\nI keep paragraphs brief." });
-        const article = repositories.createArticle({ title: "Draft", content: "A long draft" });
+        repositories.styleCorpus.add({ name: "Published sample", content: "I write short sentences.\n\nI keep paragraphs brief." });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "A long draft" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "style-request", operation: EDITORIAL_OPERATION.STYLE_REVIEW }),
         });
         const body = await response.text();
-        const artifact = repositories.listEditorialArtifacts(article.id)[0]!;
+        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
 
         assert.match(body, /"text":"A concise proposal."/);
         assert.match(body, /"traitIds":\["paragraphing"\]/);
@@ -268,7 +268,7 @@ test("style review uses a compact local profile and saves cited findings as a pr
             suggestion: "Split the opening paragraph.",
             traitIds: ["paragraphing"],
         }]);
-        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "A long draft");
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "A long draft");
     });
 });
 
@@ -285,15 +285,15 @@ test("translation carries its target language, preserves the source, and records
     }]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const source = repositories.createArticle({ title: "Source", content: "Run `npm test` at https://example.com." });
+        const source = repositories.articleService.createArticle({ title: "Source", content: "Run `npm test` at https://example.com." });
         const response = await fetch(`${baseUrl}/api/articles/${source.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "translation-request", operation: EDITORIAL_OPERATION.TRANSLATION, targetLanguage: "Spanish" }),
         });
         const body = await response.text();
-        const artifact = repositories.listEditorialArtifacts(source.id)[0]!;
-        const translated = repositories.createArticle({
+        const artifact = repositories.editorialArtifacts.list(source.id)[0]!;
+        const translated = repositories.articleService.createArticle({
             title: "Source — Spanish",
             content: "Ejecuta `npm test` en https://example.com.",
             language: "es",
@@ -304,14 +304,14 @@ test("translation carries its target language, preserves the source, and records
 
         assert.match(body, /"targetLanguage":"Spanish"/);
         assert.equal(engine.requests[0]?.targetLanguage, "Spanish");
-        assert.equal(repositories.getArticle(source.id)?.currentRevision.content, "Run `npm test` at https://example.com.");
+        assert.equal(repositories.articles.get(source.id)?.currentRevision.content, "Run `npm test` at https://example.com.");
         assert.deepEqual(JSON.parse(artifact.content).translation, {
             targetLanguage: "Spanish",
             protectedSpans: ["`npm test`", "https://example.com"],
         });
         assert.equal(translated.language, "es");
         assert.equal(translated.sourceArticleId, source.id);
-        assert.equal(repositories.restoreRevision(translated.id, translated.currentRevisionId).content, translated.currentRevision.content);
+        assert.equal(repositories.articles.restoreRevision(translated.id, translated.currentRevisionId).content, translated.currentRevision.content);
     });
 });
 
@@ -345,21 +345,21 @@ test("fact checks persist completed findings and citations against the reviewed 
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "An article" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "An article" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "fact-request", operation: EDITORIAL_OPERATION.FACT_CHECK }),
         });
         const body = await response.text();
-        const artifact = repositories.listEditorialArtifacts(article.id)[0]!;
+        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
 
         assert.match(body, /"type":"tool_status","tool":"claim_extraction"/);
         assert.match(body, /"status":"unverifiable"/);
         assert.equal(artifact.kind, "fact-check");
         assert.equal(artifact.revisionId, article.currentRevisionId);
-        assert.equal(repositories.listSourceCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
-        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "An article");
+        assert.equal(repositories.editorialArtifacts.listCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "An article");
     });
 });
 
@@ -371,7 +371,7 @@ test("assistant requests persist a revision-bound proposal and splice only the s
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "before selected after" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "before selected after" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -382,17 +382,17 @@ test("assistant requests persist a revision-bound proposal and splice only the s
             }),
         });
         const body = await response.text();
-        const artifact = repositories.listEditorialArtifacts(article.id)[0]!;
+        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
 
         assert.match(body, /"type":"accepted"/);
         assert.match(body, /"type":"skill_resolved".*"skillId":"flow_and_clarity"/);
         assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
         assert.equal(engine.requests[0]?.article, "selected");
         assert.equal(JSON.parse(artifact.content).proposal, "before improved after");
-        assert.equal(repositories.getArticle(article.id)?.currentRevision.content, "before selected after");
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "before selected after");
         assert.equal(repositories.assistant.getRequest("assistant-request-1")?.status, "completed");
-        assert.equal(repositories.listAssistantMessages(article.id).filter((message) => message.requestId === "assistant-request-1").length, 2);
-        assert.equal(repositories.listAssistantMessages(article.id).find((message) => message.role === "author")?.selectionText, "selected");
+        assert.equal(repositories.assistant.listMessages(article.id).filter((message) => message.requestId === "assistant-request-1").length, 2);
+        assert.equal(repositories.assistant.listMessages(article.id).find((message) => message.role === "author")?.selectionText, "selected");
     });
 });
 
@@ -410,7 +410,7 @@ test("conversational Assistant requests send only the selected Article context",
     };
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "before selected after" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "before selected after" });
         await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -435,7 +435,7 @@ test("assistant streams include a stable failure code", async () => {
     };
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.createArticle({ title: "Draft", content: "Original article" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
