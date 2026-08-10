@@ -151,6 +151,7 @@ Run the repository checks for each migration slice:
 npm run lint
 npm run typecheck
 npm test
+npm run check:imports
 npm run product:impact -- <changed paths>
 npm run product:check
 ```
@@ -171,8 +172,6 @@ Implemented in this slice:
   `ApplicationSettings.tsx` retained as the persistence and screen composition
   boundary;
 - view-local extracted rendering pieces without changing callbacks or
-  product contracts.
-
-Deferred to later slices:
-
-- adding automated import-boundary checks after the layout settles.
+  product contracts;
+- automated import-boundary checks for cross-cutting modules, feature state,
+  feature rendering, and composition roots.

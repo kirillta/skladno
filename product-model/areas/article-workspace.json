@@ -100,7 +100,8 @@
             "owners": [
                 "packages/web/src/workspace/workspace-views.ts",
                 "packages/web/src/workspace/components/WorkspaceTabBar.tsx",
-                "packages/web/src/workspace/components/WorkspaceViewRouter.tsx"
+                "packages/web/src/workspace/components/WorkspaceViewRouter.tsx",
+                "scripts/web-import-boundaries.mjs"
             ],
             "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation.",
             "persistence": "Active View is a local workspace preference; results retain their Article and base Revision.",

@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import type { Article, GeneralSettings } from "@skladno/shared";
-import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState } from "../EditorialWorkspace.js";
+import type { ArticleRevisionsState } from "../state/article-revisions-state.js";
+import type { ArticleWorkspaceState } from "../state/article-workspace-state.js";
+import type { EditorialProposalState } from "../state/editorial-proposal-state.js";
+import type { PublishingState } from "../state/publishing-state.js";
+import type { StyleCorpusState } from "../state/style-corpus-state.js";
 import { ArticleEditorView } from "../views/ArticleEditorView.js";
 import { FactCheckView } from "../views/FactCheckView.js";
 import { ProposalReviewView } from "../views/ProposalReviewView.js";
