@@ -59,12 +59,7 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, repos
     };
     const services = createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection");
     const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, storeResponses);
-    const service = createLocalService(config,
-        repositories.articles,
-        repositories.styleCorpus,
-        editorial,
-        services
-    );
+    const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
 

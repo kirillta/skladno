@@ -2,11 +2,10 @@ import { createServer, type IncomingMessage } from "node:http";
 import { APPLICATION_ERROR, HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 
 import type { ApplicationServices } from "../application/application-services.js";
+import { ArticleDraftConflictError } from "../application/errors/article-draft-conflict-error.js";
+import { ArticleRevisionConflictError } from "../application/errors/article-revision-conflict-error.js";
 import type { EditorialService } from "../application/editorial/editorial-service.js";
 import type { ServerConfig } from "../infrastructure/configuration/config.js";
-import { ArticleDraftConflictError } from "../infrastructure/persistence/article-draft-conflict-error.js";
-import { ArticleRevisionConflictError } from "../infrastructure/persistence/article-revision-conflict-error.js";
-import type { ArticlesRepository, StyleCorpusRepository } from "../infrastructure/persistence/index.js";
 import { ApplicationServiceError } from "./errors/application-error.js";
 import { createPresentationRouter } from "./routes/create-presentation-router.js";
 import { writeJson } from "./transport/json.js";
@@ -17,8 +16,8 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 }
 
 
-export function createLocalService(config: ServerConfig, articles: ArticlesRepository, styleCorpus: StyleCorpusRepository, editorial: EditorialService, services: ApplicationServices) {
-    const router = createPresentationRouter(articles, styleCorpus, editorial, services);
+export function createLocalService(config: ServerConfig, editorial: EditorialService, services: ApplicationServices) {
+    const router = createPresentationRouter(editorial, services);
 
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {

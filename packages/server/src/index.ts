@@ -25,7 +25,7 @@ const engines = new ConfiguredEditorialEngineResolver(config, settings);
 assistant.seedGreetings();
 const services = createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: listAvailableModels }, randomUUID);
 const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled);
-const service = createLocalService(config, articles, styleCorpus, editorial, services);
+const service = createLocalService(config, editorial, services);
 let shuttingDown = false;
 
 

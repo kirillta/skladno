@@ -1,6 +1,6 @@
 import { REVISION_PROVENANCE_KIND, type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
-import { ArticleRevisionConflictError } from "../../infrastructure/persistence/article-revision-conflict-error.js";
+import { ArticleRevisionConflictError } from "../errors/article-revision-conflict-error.js";
 
 import type { ArticleStore, AssistantGreetingStore } from "../ports/article-store.js";
 

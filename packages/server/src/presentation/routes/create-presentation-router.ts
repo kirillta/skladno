@@ -2,7 +2,6 @@ import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModels
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
-import type { ArticlesRepository, StyleCorpusRepository } from "../../infrastructure/persistence/index.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, updateArticleRoute } from "./articles-route.js";
 import { createAssistantRequestRoute, listAssistantMessagesRoute } from "./assistant-route.js";
@@ -35,7 +34,7 @@ const ACTIVE_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PAR
 const TEST_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/test`);
 
 
-export function createPresentationRouter(articlesRepository: ArticlesRepository, styleCorpusRepository: StyleCorpusRepository, editorial: EditorialService, services: ApplicationServices): Router {
+export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices): Router {
     const { articles, assistant, publishing, settings, styleCorpus } = services;
     const router = new Router();
 

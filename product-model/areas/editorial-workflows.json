@@ -78,7 +78,7 @@
             "title": "Diff review, selection, acceptance, rejection, and stale protection",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may review diffs, select changes, accept or reject proposals, and cannot accept a stale proposal.",
+            "contract": "Authors may review diffs, select changes, accept or reject proposals, and cannot accept a stale proposal; the conflict contract is application-owned and transport-neutral.",
             "persistence": "Acceptance creates one immutable Revision; rejection leaves Article history unchanged.",
             "scenarioIds": ["editorial-workflows.stale-proposal-blocked"]
         },
@@ -88,7 +88,7 @@
             "title": "Explicit request and explicit proposal approval",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/EditorialWorkspace.tsx", "packages/web/src/workspace/state/editorial-proposal-state.ts", "packages/web/src/workspace/state/assistant-messages-state.ts", "packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "AI operations require an author request; generated text remains separate until explicit author acceptance.",
+            "contract": "AI operations require an author request; generated text remains separate until explicit author acceptance, with stale-acceptance conflicts handled by the application service.",
             "persistence": "Only accepted content creates a Revision.",
             "scenarioIds": ["editorial-workflows.proposal-operations-remain-separate", "editorial-workflows.stale-proposal-blocked"]
         },

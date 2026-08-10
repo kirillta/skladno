@@ -8,7 +8,7 @@
             "title": "Immutable Revision timeline and read-only preview",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "The timeline distinguishes initial, manual, AI-assisted, and restored Revisions. Selecting a Revision is local-only and does not alter the Article or Draft.",
+            "contract": "The timeline distinguishes initial, manual, AI-assisted, and restored Revisions. Selecting a Revision is local-only and does not alter the Article or Draft; revision conflicts use an application contract rather than persistence types.",
             "persistence": "Revisions are immutable local records ordered by creation.",
             "scenarioIds": ["history-and-publishing.revision-history-browsing"]
         },
@@ -18,7 +18,7 @@
             "title": "Restore a prior Revision",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Restoring a prior Revision creates a new Revision and never rewrites history; uncommitted Drafts require an explicit choice.",
+            "contract": "Restoring a prior Revision creates a new Revision and never rewrites history; uncommitted Drafts require an explicit choice, and stale revision conflicts remain application-owned.",
             "persistence": "Restoration appends a new immutable local Revision.",
             "scenarioIds": ["history-and-publishing.revision-restore-creates-new"]
         },

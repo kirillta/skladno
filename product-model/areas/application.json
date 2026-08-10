@@ -17,7 +17,7 @@
                 "packages/server/src/application/editorial/editorial-service.ts",
                 "packages/shared/src"
             ],
-            "contract": "The renderer uses a typed application client against the local Node.js service; credentials and privileged operations remain server-side.",
+            "contract": "The renderer uses a typed application client against the local Node.js service; presentation receives application services, while credentials and privileged operations remain server-side.",
             "persistence": "No renderer access to secrets, files, or SQLite.",
             "scenarioIds": [
                 "application.local-service-client-contract"

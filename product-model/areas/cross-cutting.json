@@ -49,7 +49,7 @@
             "title": "Shared contracts, HTTP constants, and transport-boundary validation",
             "status": "implemented",
             "owners": ["packages/shared/src", "packages/server/src/presentation", "packages/server/src/application", "packages/server/src/infrastructure", "packages/server/src/index.ts", "packages/server/src/application/assistant", "packages/server/src/application/settings/application-settings-service.ts"],
-            "contract": "Shared validation and HTTP constants reject malformed transport data before it reaches application behavior; provider-specific prompt roles are normalized at the provider boundary.",
+            "contract": "Shared validation and HTTP constants reject malformed transport data before it reaches application behavior; application-owned conflicts are mapped at the transport boundary, and provider-specific prompt roles are normalized at the provider boundary.",
             "persistence": "Invalid provider or transport payloads are not persisted as valid application data.",
             "scenarioIds": ["cross-cutting.malformed-health-rejected"]
         },
