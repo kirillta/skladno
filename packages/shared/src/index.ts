@@ -4,8 +4,22 @@ export {
     parseHealthResponse,
     type ApplicationClient,
     type HealthResponse,
-} from "./health.js";
-export { HTTP_METHOD, HTTP_STATUS } from "./http.js";
+} from "./application/health.js";
+export type { EditorialWorkspaceClient } from "./application/client.js";
+export {
+    ELECTRON_APPLICATION_METHOD,
+    ELECTRON_IPC_CHANNEL,
+    isElectronApplicationMethod,
+    type ElectronApplicationMethod,
+    type ElectronApplicationOperationMap,
+    type ElectronCancelRequest,
+    type ElectronIpcError,
+    type ElectronInvokeRequest,
+    type ElectronInvokeResult,
+    type ElectronStreamEvent,
+    type ElectronStreamRequest,
+} from "./application/electron-ipc.js";
+export { HTTP_METHOD, HTTP_STATUS } from "./transport/http.js";
 export {
     applicationSettingsPath,
     aiConnectionsPath,
@@ -32,7 +46,7 @@ export {
     type ThemePreference,
     type TimeFormatPreference,
     type TimeZonePreference,
-} from "./settings.js";
+} from "./settings/settings.js";
 export {
     KEY_BINDING_COMMAND,
     findKeyBindingConflict,
@@ -48,8 +62,8 @@ export {
     type KeyBindingCommandId,
     type KeyBindingOverrides,
     type KeyBindingScope,
-} from "./key-bindings.js";
-export { APPLICATION_ERROR, ApplicationClientError, type ApplicationErrorCode, type ApplicationErrorPayload } from "./errors.js";
+} from "./cross-cutting/key-bindings.js";
+export { APPLICATION_ERROR, ApplicationClientError, type ApplicationErrorCode, type ApplicationErrorPayload } from "./cross-cutting/errors.js";
 export {
     EDITORIAL_OPERATION,
     EDITORIAL_ERROR_CATEGORY,
@@ -70,7 +84,7 @@ export {
     type FactCheckSource,
     type StartEditorialRequest,
     type TranslationMetadata,
-} from "./editorial.js";
+} from "./editorial/editorial.js";
 export {
     styleCorpusPath,
     type CreateStyleCorpusItemInput,
@@ -79,7 +93,7 @@ export {
     type StyleCorpusItem,
     type StyleProfile,
     type StyleTrait,
-} from "./style.js";
+} from "./style/style.js";
 export {
     acceptProposalPath,
     applyProposalChanges,
@@ -91,28 +105,36 @@ export {
     type ProposalChange,
     type RevisionClient,
     type TextProposal,
-} from "./revisions.js";
+} from "./articles/revision/revisions.js";
 export type {
-    AcceptedChange,
-    AppSetting,
+    Article,
     CreateArticleInput,
     UpdateArticleInput,
+} from "./articles/article/article.js";
+export type {
+    ArticleDraft,
+    SaveArticleDraftInput,
+} from "./articles/draft/draft.js";
+export type {
+    AcceptedChange,
+    ArticleRevision,
+    RevisionProvenanceKind,
+    SaveArticleRevisionInput,
+} from "./articles/revision/revision.js";
+export { REVISION_PROVENANCE_KIND } from "./articles/revision/revision.js";
+export type {
+    AppSetting,
     CreateMaterialInput,
     CreateSourceCitationInput,
     CreateEditorialArtifactInput,
-    Article,
-    ArticleDraft,
-    ArticleRevision,
     Material,
     SourceCitation,
     UpdateMaterialInput,
-    SaveArticleRevisionInput,
-    SaveArticleDraftInput,
     EditorialArtifact,
 } from "./persistence/index.js";
-export { articlesPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./workspace.js";
-export { BUILT_IN_SKILL, assistantMessagesPath, assistantRequestsPath, builtInSkills, builtInSkillScopeCompatibility, isBuiltInSkillId, legacyEditorialOperationSkillMap, resolveBuiltInSkillId, type AssistantClient, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantMessageTemplate, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId, type StartAssistantRequest } from "./assistant.js";
-export { ARTICLE_LANGUAGE, articleLanguages, isArticleLanguage, type ArticleLanguage } from "./languages.js";
+export { articlesPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./articles/workspace/workspace.js";
+export { BUILT_IN_SKILL, assistantMessagesPath, assistantRequestsPath, builtInSkills, builtInSkillScopeCompatibility, isBuiltInSkillId, legacyEditorialOperationSkillMap, resolveBuiltInSkillId, type AssistantClient, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantMessageTemplate, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId, type StartAssistantRequest } from "./assistant/assistant.js";
+export { ARTICLE_LANGUAGE, articleLanguages, isArticleLanguage, type ArticleLanguage } from "./cross-cutting/languages.js";
 export {
     countPublishingCharacters,
     defaultPublishLimitProfileId,
@@ -128,4 +150,4 @@ export {
     type PublishingLength,
     type PublishingLengthState,
     type PublishingClient,
-} from "./publishing.js";
+} from "./publishing/publishing.js";

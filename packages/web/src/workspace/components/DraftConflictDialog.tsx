@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useIntl } from "react-intl";
-import type { DraftConflict } from "../EditorialWorkspace.js";
+import type { DraftConflict } from "../drafts/draft-lifecycle.js";
 import { Button, Diff } from "../../ui/primitives.js";
 
 

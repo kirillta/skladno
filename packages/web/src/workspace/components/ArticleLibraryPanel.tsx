@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { KEY_BINDING_COMMAND, type Article, type KeyBindingOverrides } from "@skladno/shared";
-import type { SaveState } from "../EditorialWorkspace.js";
+import type { DraftPresentationState as SaveState } from "../drafts/draft-lifecycle.js";
 import { Button, Field, IconButton } from "../../ui/primitives.js";
 import { ArticleIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";

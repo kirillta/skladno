@@ -1,0 +1,9 @@
+import type { ApplicationClient } from "./health.js";
+import type { ArticleLibraryClient } from "../articles/workspace/workspace.js";
+import type { EditorialClient } from "../editorial/editorial.js";
+import type { ApplicationSettingsClient } from "../settings/settings.js";
+import type { PublishingClient } from "../publishing/publishing.js";
+import type { StyleCorpusClient } from "../style/style.js";
+
+
+export interface EditorialWorkspaceClient extends ApplicationClient, ArticleLibraryClient, EditorialClient, StyleCorpusClient, PublishingClient, ApplicationSettingsClient { }

@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@skladno/shared": [
+                "../shared/src/index.ts"
+            ]
+        },
+        "composite": true,
+        "declaration": true,
+        "outDir": "dist",
+        "rootDir": "src",
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "skipLibCheck": true,
+        "lib": ["ES2022", "DOM"]
+    },
+    "references": [
+        {
+            "path": "../shared"
+        }
+    ],
+    "include": [
+        "src"
+    ]
+}

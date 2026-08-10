@@ -7,7 +7,7 @@
             "area": "Assistant foundation",
             "title": "Durable local conversation and built-in skill registry",
             "status": "implemented",
-            "owners": ["packages/server/src/http/routes/assistant-route.ts", "packages/server/src/persistence/repositories/assistant-repository.ts", "packages/shared/src/editorial.ts"],
+            "owners": ["packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/ports/assistant-store.ts", "packages/server/src/application/ports/assistant-artifact-store.ts", "packages/server/src/presentation/routes/assistant-route.ts", "packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/shared/src/assistant/assistant.ts"],
             "contract": "Every Article has one persisted greeting and stable contracts for six skills. Assistant requests are revision-bound, resolve one eligible explicit or inferred skill, and retain completed local messages and review artifacts.",
             "persistence": "Assistant messages, requests, and completed artifacts persist locally. Workflow Stage persistence is retired; legacy values remain untouched.",
             "scenarioIds": ["editorial-workflows.assistant-request-proposal"]
@@ -17,7 +17,7 @@
             "area": "Assistant panel",
             "title": "Streamed responses, progress, cancellation, and error recovery",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/components/EditorialAssistantPanel.tsx", "packages/web/src/application-client.ts", "packages/server/src/http/routes/assistant-route.ts"],
+            "owners": ["packages/web/src/workspace/components/EditorialAssistantPanel.tsx", "packages/web/src/application-client.ts", "packages/electron/src/preload-bridge.ts", "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/presentation/routes/assistant-route.ts"],
             "contract": "Assistant requests stream typed status and response events; incomplete streams do not modify an Article.",
             "persistence": "Only valid completed request output becomes local message or review-artifact state.",
             "scenarioIds": ["editorial-workflows.assistant-stream-failure-safe"]
@@ -27,7 +27,7 @@
             "area": "Editorial operations",
             "title": "Thesis-to-narrative composition",
             "status": "implemented",
-            "owners": ["packages/server/src/editorial", "packages/server/src/http/routes/editorial-route.ts"],
+            "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
             "contract": "The server creates a composition Proposal from author-supplied theses; it remains reviewable until acceptance.",
             "persistence": "Completed proposal artifacts are local and revision-bound.",
             "scenarioIds": ["editorial-workflows.proposal-operations-remain-separate"]
@@ -37,7 +37,7 @@
             "area": "Editorial operations",
             "title": "Flow revision",
             "status": "implemented",
-            "owners": ["packages/server/src/editorial", "packages/server/src/http/routes/editorial-route.ts"],
+            "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
             "contract": "Flow revision generates a full-text Proposal rather than silently editing the Article.",
             "persistence": "Completed proposal artifacts are local and revision-bound.",
             "scenarioIds": ["editorial-workflows.proposal-operations-remain-separate"]
@@ -47,7 +47,7 @@
             "area": "Editorial operations",
             "title": "Fact-check request",
             "status": "implemented",
-            "owners": ["packages/server/src/editorial/create-editorial-engine.ts", "packages/server/src/http/routes/editorial-route.ts"],
+            "owners": ["packages/server/src/infrastructure/editorial/create-editorial-engine.ts", "packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
             "contract": "A fixed server-side fact-check workflow creates advisory, Revision-tied findings with their own freshness state.",
             "persistence": "Findings and citations are stored locally without changing Article text.",
             "scenarioIds": ["editorial-workflows.finding-operations-preserve-article"]
@@ -57,7 +57,7 @@
             "area": "Editorial operations",
             "title": "Style review",
             "status": "implemented",
-            "owners": ["packages/server/src/editorial", "packages/server/src/persistence/repositories/style-corpus-repository.ts"],
+            "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
             "contract": "Style review uses a compact derived profile; raw style samples remain local and review findings retain freshness state.",
             "persistence": "Raw style corpus and derived review artifacts stay local.",
             "scenarioIds": ["editorial-workflows.finding-operations-preserve-article"]
@@ -67,7 +67,7 @@
             "area": "Editorial operations",
             "title": "Translation request",
             "status": "implemented",
-            "owners": ["packages/server/src/editorial/translation.ts", "packages/server/src/http/routes/editorial-route.ts"],
+            "owners": ["packages/server/src/application/editorial/translation.ts", "packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
             "contract": "Translation requests prepare linked Article content; the source Article is never overwritten.",
             "persistence": "Translation review metadata is local and source linkage remains recoverable.",
             "scenarioIds": ["editorial-workflows.translation-preserves-source"]
@@ -77,8 +77,8 @@
             "area": "Proposal lifecycle",
             "title": "Diff review, selection, acceptance, rejection, and stale protection",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/server/src/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may review diffs, select changes, accept or reject proposals, and cannot accept a stale proposal.",
+            "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "contract": "Authors may review diffs, select changes, accept or reject proposals, and cannot accept a stale proposal; the conflict contract is application-owned and transport-neutral.",
             "persistence": "Acceptance creates one immutable Revision; rejection leaves Article history unchanged.",
             "scenarioIds": ["editorial-workflows.stale-proposal-blocked"]
         },
@@ -87,8 +87,8 @@
             "area": "AI safety",
             "title": "Explicit request and explicit proposal approval",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/EditorialWorkspace.tsx", "packages/server/src/http/routes/editorial-route.ts", "packages/server/src/persistence/repositories/articles-repository.ts"],
-            "contract": "AI operations require an author request; generated text remains separate until explicit author acceptance.",
+            "owners": ["packages/web/src/workspace/EditorialWorkspace.tsx", "packages/web/src/workspace/state/editorial-proposal-state.ts", "packages/web/src/workspace/state/assistant-messages-state.ts", "packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "contract": "AI operations require an author request; generated text remains separate until explicit author acceptance, with stale-acceptance conflicts handled by the application service.",
             "persistence": "Only accepted content creates a Revision.",
             "scenarioIds": ["editorial-workflows.proposal-operations-remain-separate", "editorial-workflows.stale-proposal-blocked"]
         },
@@ -97,7 +97,7 @@
             "area": "AI connection",
             "title": "Named OpenAI connections and environment-variable references",
             "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/available-models-provider.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "Authors configure named OpenAI connections, active selection, testing, and environment-variable names without exposing secret values.",
             "persistence": "Connection metadata and active selection persist locally; credentials remain environment-provided.",
             "scenarioIds": ["editorial-workflows.ai-connection-management"],
@@ -108,8 +108,8 @@
             "area": "AI model selection",
             "title": "Refreshed model list, default model, and skill-specific overrides",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http.ts", "packages/server/src/http/routes/settings-route.ts"],
-            "contract": "A default model and built-in-skill overrides determine new editorial requests.",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/electron/src/preload-bridge.ts", "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts", "packages/server/src/index.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/server.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/application", "packages/server/src/infrastructure"],
+            "contract": "A default model and built-in-skill overrides determine new editorial requests, whose system guidance is sent through the provider's supported instructions channel; test composition uses focused persistence dependencies directly.",
             "persistence": "Model preferences persist locally; refreshed provider model lists are not persisted.",
             "scenarioIds": ["editorial-workflows.ai-model-preferences"]
         }
@@ -123,7 +123,7 @@
             "event": "The Assistant resolves an eligible skill and completes its request." ,
             "expected": ["The request, messages, and revision-bound Proposal artifact are retained locally."],
             "forbidden": ["The source Article text is not silently changed."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
             "id": "editorial-workflows.assistant-stream-failure-safe",
@@ -133,7 +133,7 @@
             "event": "The stream fails, is incomplete, or is cancelled." ,
             "expected": ["A stable error can be shown and unfinished output is not persisted as valid work."],
             "forbidden": ["The Article is not modified by incomplete output."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
             "id": "editorial-workflows.proposal-operations-remain-separate",
@@ -143,7 +143,7 @@
             "event": "The server completes a composition or flow-revision operation." ,
             "expected": ["A reviewable Proposal is produced with the source Article unchanged."],
             "forbidden": ["Generated text is not applied without author approval."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
             "id": "editorial-workflows.finding-operations-preserve-article",
@@ -153,7 +153,7 @@
             "event": "The review operation completes." ,
             "expected": ["Revision-tied advisory findings and citations are retained."],
             "forbidden": ["Review output does not overwrite Article text or send raw style corpus text."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
             "id": "editorial-workflows.translation-preserves-source",
@@ -163,7 +163,7 @@
             "event": "The translation operation completes and the author creates its linked Article." ,
             "expected": ["The linked translation retains source metadata and protected spans."],
             "forbidden": ["The source Article is not overwritten."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
             "id": "editorial-workflows.stale-proposal-blocked",
@@ -183,7 +183,7 @@
             "event": "The author adds, selects, or removes a connection." ,
             "expected": ["Only environment-variable references and active connection metadata persist."],
             "forbidden": ["Secret values are not stored or exposed."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/http.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         },
         {
             "id": "editorial-workflows.ai-model-preferences",
@@ -193,7 +193,7 @@
             "event": "A new editorial request resolves its model." ,
             "expected": ["The applicable override or default model is selected."],
             "forbidden": ["A refreshed provider list is not treated as persisted preference data."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/http.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         }
     ]
 }

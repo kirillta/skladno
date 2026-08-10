@@ -7,8 +7,9 @@
     ],
     "scripts": {
         "dev": "concurrently -n server,web -c blue,green \"npm run dev --workspace @skladno/server\" \"npm run dev --workspace @skladno/web\"",
-        "lint": "eslint . --max-warnings 0",
+        "lint": "npm run check:imports && eslint . --max-warnings 0",
         "lint:fix": "eslint . --fix --max-warnings 0",
+        "check:imports": "node scripts/web-import-boundaries.mjs",
         "typecheck": "tsc -b",
         "product:check": "node scripts/product-model.mjs check",
         "product:docs": "node scripts/product-model.mjs generate",

@@ -7,8 +7,8 @@
             "area": "Revision history",
             "title": "Immutable Revision timeline and read-only preview",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/persistence/repositories/articles-repository.ts"],
-            "contract": "The timeline distinguishes initial, manual, AI-assisted, and restored Revisions. Selecting a Revision is local-only and does not alter the Article or Draft.",
+            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "contract": "The timeline distinguishes initial, manual, AI-assisted, and restored Revisions. Selecting a Revision is local-only and does not alter the Article or Draft; revision conflicts use an application contract rather than persistence types.",
             "persistence": "Revisions are immutable local records ordered by creation.",
             "scenarioIds": ["history-and-publishing.revision-history-browsing"]
         },
@@ -17,8 +17,8 @@
             "area": "Revision history",
             "title": "Restore a prior Revision",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/server/src/persistence/repositories/articles-repository.ts"],
-            "contract": "Restoring a prior Revision creates a new Revision and never rewrites history; uncommitted Drafts require an explicit choice.",
+            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "contract": "Restoring a prior Revision creates a new Revision and never rewrites history; uncommitted Drafts require an explicit choice, and stale revision conflicts remain application-owned.",
             "persistence": "Restoration appends a new immutable local Revision.",
             "scenarioIds": ["history-and-publishing.revision-restore-creates-new"]
         },
@@ -27,7 +27,7 @@
             "area": "Style corpus",
             "title": "Local writing samples and compact style profile",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/StyleProfileView.tsx", "packages/server/src/persistence/repositories/style-corpus-repository.ts"],
+            "owners": ["packages/web/src/workspace/views/StyleProfileView.tsx", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
             "contract": "Authors can add or remove local writing samples and derive a compact style profile.",
             "persistence": "Raw samples and their derived local profile remain local.",
             "scenarioIds": ["history-and-publishing.style-corpus-local"]
@@ -37,8 +37,8 @@
             "area": "Fact Check",
             "title": "Revision-tied findings, citations, uncertainty, and stale indication",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/FactCheckView.tsx", "packages/server/src/editorial/ai-sdk-editorial-engine.ts", "packages/server/src/persistence/repositories/workflow-artifacts-repository.ts"],
-            "contract": "Findings are advisory, tied to their reviewed Revision, include source links and uncertainty, and indicate staleness.",
+            "owners": ["packages/web/src/workspace/views/FactCheckView.tsx", "packages/server/src/infrastructure/editorial/ai-sdk-editorial-engine.ts", "packages/server/src/infrastructure/persistence/repositories/workflow-artifacts-repository.ts"],
+            "contract": "Findings are advisory, tied to their reviewed Revision, include source links and uncertainty, indicate staleness, and use provider-compatible editorial instructions.",
             "persistence": "Findings and citations persist locally without modifying Article text.",
             "scenarioIds": ["history-and-publishing.fact-findings-advisory"]
         },
@@ -47,7 +47,7 @@
             "area": "Translations",
             "title": "Linked translation Articles with source freshness protection",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/TranslationsView.tsx", "packages/server/src/editorial/translation.ts", "packages/server/src/persistence/repositories/articles-repository.ts"],
+            "owners": ["packages/web/src/workspace/views/TranslationsView.tsx", "packages/server/src/application/editorial/translation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
             "contract": "A translation is an independently recoverable linked Article. Stale source content is warned about and cannot start creation.",
             "persistence": "Source Article and Revision linkage persist on the independently recoverable translation Article.",
             "scenarioIds": ["history-and-publishing.translation-stale-source"]
@@ -57,7 +57,7 @@
             "area": "Publishing preview",
             "title": "Plain-text preparation, profile selection, character guidance, and copy-ready preview",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/PublishingPreviewView.tsx", "packages/shared/src/publishing.ts"],
+            "owners": ["packages/web/src/workspace/views/PublishingPreviewView.tsx", "packages/shared/src/publishing/publishing.ts"],
             "contract": "The preview prepares derived copy with Article-specific profile selection and shared character guidance; direct publishing is not performed.",
             "persistence": "Preview output is derived from local Article and profile data.",
             "scenarioIds": ["history-and-publishing.publishing-guidance"]
@@ -67,7 +67,7 @@
             "area": "Publishing profiles",
             "title": "Named profiles with configurable limits",
             "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/server/src/http/routes/publish-settings-route.ts", "packages/server/src/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/PublishingSettingsSection.tsx", "packages/server/src/presentation/routes/publish-settings-route.ts", "packages/server/src/application/publishing", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "An Article may select a named publishing profile that supplies character-limit guidance.",
             "persistence": "The selected profile persists locally.",
             "scenarioIds": ["history-and-publishing.publishing-profile-persistence"],
@@ -93,7 +93,7 @@
             "event": "The author requests restoration.",
             "expected": ["The restore request identifies the selected Revision and the repository creates a new Revision."],
             "forbidden": ["Existing Revision records are not rewritten."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/persistence/repositories.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.test.ts" }
         },
         {
             "id": "history-and-publishing.style-corpus-local",
@@ -103,7 +103,7 @@
             "event": "The style corpus changes.",
             "expected": ["A derived profile reflects the local sample and is removed when the corpus becomes empty."],
             "forbidden": ["Raw style samples are not treated as remote application data."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/persistence/repositories.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.test.ts" }
         },
         {
             "id": "history-and-publishing.fact-findings-advisory",
@@ -113,7 +113,7 @@
             "event": "The fact-check operation completes.",
             "expected": ["Findings retain source citations, uncertainty, and the reviewed Revision identifier."],
             "forbidden": ["Fact-check output does not modify Article text."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/editorial.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
             "id": "history-and-publishing.translation-stale-source",
@@ -143,7 +143,7 @@
             "event": "The service saves and reloads that selection.",
             "expected": ["The selected profile is returned after reload."],
             "forbidden": ["Unknown profiles are not accepted."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/http.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         }
     ]
 }

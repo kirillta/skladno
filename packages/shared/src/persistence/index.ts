@@ -1,16 +1,4 @@
 export type {
-    AcceptedChange,
-    CreateArticleInput,
-    UpdateArticleInput,
-    Article,
-    ArticleDraft,
-    ArticleRevision,
-    SaveArticleDraftInput,
-    SaveArticleRevisionInput,
-} from "./articles.js";
-
-
-export type {
     CreateMaterialInput,
     Material,
     UpdateMaterialInput,

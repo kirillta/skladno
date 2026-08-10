@@ -1,6 +1,11 @@
 import { Banner, Button, EmptyState } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
-import type { ArticleRevisionsState, ArticleWorkspaceState, EditorialProposalState, PublishingState, StyleCorpusState, WorkspaceLayoutState } from "../EditorialWorkspace.js";
+import type { ArticleRevisionsState } from "../state/article-revisions-state.js";
+import type { ArticleWorkspaceState } from "../state/article-workspace-state.js";
+import type { EditorialProposalState } from "../state/editorial-proposal-state.js";
+import type { PublishingState } from "../state/publishing-state.js";
+import type { StyleCorpusState } from "../state/style-corpus-state.js";
+import type { WorkspaceLayoutState } from "../state/useWorkspaceLayout.js";
 import { ArticleHeader } from "./ArticleHeader.js";
 import { ArticleStatusBar } from "./ArticleStatusBar.js";
 import { WorkspaceTabBar, type WorkspaceTabBadgeDescriptor } from "./WorkspaceTabBar.js";
