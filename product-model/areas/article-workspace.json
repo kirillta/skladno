@@ -37,7 +37,8 @@
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/ArticleLibraryPanel.tsx",
-                "packages/web/src/workspace/EditorialWorkspace.tsx"
+                "packages/web/src/workspace/EditorialWorkspace.tsx",
+                "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
             "contract": "Selected Article is restored locally and Article activity includes retained Draft checkpoints.",
             "persistence": "Article service plus local workspace preferences.",
@@ -52,7 +53,8 @@
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/EditorialAssistantPanel.tsx",
-                "packages/web/src/workspace/EditorialWorkspace.tsx"
+                "packages/web/src/workspace/EditorialWorkspace.tsx",
+                "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
             "contract": "A skill tag never sends a request; generated text remains a Proposal until accepted.",
             "persistence": "Per-Article Assistant records and explicit Editorial Requests.",
@@ -67,7 +69,8 @@
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/ArticleWorkspace.tsx",
-                "packages/web/src/workspace/EditorialWorkspace.tsx"
+                "packages/web/src/workspace/EditorialWorkspace.tsx",
+                "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
             "contract": "Creation does not create a Revision outside Article creation.",
             "persistence": "New Article service request.",
@@ -185,7 +188,8 @@
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/views/ProposalReviewView.tsx",
-                "packages/web/src/workspace/EditorialWorkspace.tsx"
+                "packages/web/src/workspace/EditorialWorkspace.tsx",
+                "packages/web/src/workspace/state/editorial-proposal-state.ts"
             ],
             "contract": "AI-generated text never enters the Article without explicit acceptance; stale Proposals cannot be accepted.",
             "persistence": "Proposal base Revision and accepted Revision provenance.",
@@ -230,7 +234,9 @@
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/views/TranslationsView.tsx",
-                "packages/web/src/workspace/EditorialWorkspace.tsx"
+                "packages/web/src/workspace/EditorialWorkspace.tsx",
+                "packages/web/src/workspace/state/editorial-proposal-state.ts",
+                "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
             "contract": "A stale source blocks creation and translation text never overwrites its source Article.",
             "persistence": "Independent Article with source Article and Revision linkage.",

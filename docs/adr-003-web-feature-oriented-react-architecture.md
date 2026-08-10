@@ -165,12 +165,13 @@ Implemented in this slice:
 - the feature-oriented renderer boundary documented above;
 - focused Assistant panel subcomponents for timeline and composer behavior;
 - focused Revision History navigation and details components;
+- workspace orchestration hooks extracted into focused `workspace/state`
+  modules, with `EditorialWorkspace.tsx` retained as the composition boundary;
 - view-local extracted rendering pieces without changing callbacks or
   product contracts.
 
 Deferred to later slices:
 
-- extracting every workspace orchestration hook into `workspace/state`;
 - splitting Application Settings sections where the current file still has a
   cohesive screen-level interaction contract;
 - adding automated import-boundary checks after the layout settles.

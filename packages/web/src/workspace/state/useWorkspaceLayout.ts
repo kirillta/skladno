@@ -75,3 +75,6 @@ export function useWorkspaceLayout() {
         setTargetLanguage,
     };
 }
+
+
+export type WorkspaceLayoutState = ReturnType<typeof useWorkspaceLayout>;
