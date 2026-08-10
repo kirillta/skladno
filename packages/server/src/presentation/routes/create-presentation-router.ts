@@ -2,8 +2,7 @@ import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModels
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
-import type { EditorialEngineResolver } from "../../application/ports/editorial-engine-resolver.js";
-import type { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, SettingsRepository, StyleCorpusRepository } from "../../infrastructure/persistence/index.js";
+import type { ArticlesRepository, StyleCorpusRepository } from "../../infrastructure/persistence/index.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, updateArticleRoute } from "./articles-route.js";
 import { createAssistantRequestRoute, listAssistantMessagesRoute } from "./assistant-route.js";
@@ -36,15 +35,13 @@ const ACTIVE_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PAR
 const TEST_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/test`);
 
 
-export function createPresentationRouter(articlesRepository: ArticlesRepository, settings: SettingsRepository, styleCorpusRepository: StyleCorpusRepository, editorialArtifacts: EditorialArtifactsRepository, assistant: AssistantRepository, editorial: EditorialService, engines: EditorialEngineResolver, services: ApplicationServices): Router {
-    const { articles, publishing, styleCorpus } = services;
-    const resolveEngine = engines.resolve.bind(engines);
+export function createPresentationRouter(articlesRepository: ArticlesRepository, styleCorpusRepository: StyleCorpusRepository, editorial: EditorialService, services: ApplicationServices): Router {
+    const { articles, assistant, publishing, settings, styleCorpus } = services;
     const router = new Router();
 
     router.register(HTTP_METHOD.GET, healthPath, (_request, response) => handleHealthRoute(response));
-    const assistantRepositories = { articles: articlesRepository, assistant, editorialArtifacts, styleCorpus: styleCorpusRepository };
-    router.register(HTTP_METHOD.GET, ASSISTANT_MESSAGES_PATH, (_request, response, parameters) => listAssistantMessagesRoute(response, parameters[0]!, assistantRepositories));
-    router.register(HTTP_METHOD.POST, ASSISTANT_REQUESTS_PATH, (request, response, parameters) => createAssistantRequestRoute(request, response, parameters[0]!, assistantRepositories, resolveEngine));
+    router.register(HTTP_METHOD.GET, ASSISTANT_MESSAGES_PATH, (_request, response, parameters) => listAssistantMessagesRoute(response, parameters[0]!, assistant));
+    router.register(HTTP_METHOD.POST, ASSISTANT_REQUESTS_PATH, (request, response, parameters) => createAssistantRequestRoute(request, response, parameters[0]!, assistant));
     router.register(HTTP_METHOD.POST, EDITORIAL_PATH, (request, response, parameters) => handleEditorialRoute(request, response, parameters[0]!, editorial));
     router.register(HTTP_METHOD.GET, styleCorpusPath, (_request, response) => handleStyleCorpusRoute(response, styleCorpus));
     router.register(HTTP_METHOD.POST, styleCorpusPath, (request, response) => createStyleCorpusItemRoute(request, response, styleCorpus));

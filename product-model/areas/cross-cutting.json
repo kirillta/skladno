@@ -48,7 +48,7 @@
             "area": "Data validation",
             "title": "Shared contracts, HTTP constants, and transport-boundary validation",
             "status": "implemented",
-            "owners": ["packages/shared/src", "packages/server/src/presentation", "packages/server/src/application", "packages/server/src/infrastructure"],
+            "owners": ["packages/shared/src", "packages/server/src/presentation", "packages/server/src/application", "packages/server/src/infrastructure", "packages/server/src/application/assistant", "packages/server/src/application/settings/application-settings-service.ts"],
             "contract": "Shared validation and HTTP constants reject malformed transport data before it reaches application behavior; provider-specific prompt roles are normalized at the provider boundary.",
             "persistence": "Invalid provider or transport payloads are not persisted as valid application data.",
             "scenarioIds": ["cross-cutting.malformed-health-rejected"]
@@ -78,7 +78,7 @@
             "area": "Assistant persistence",
             "title": "Local Article conversation records",
             "status": "implemented",
-            "owners": ["packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/server/src/presentation/routes/assistant-route.ts"],
+            "owners": ["packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/ports/assistant-store.ts", "packages/server/src/presentation/routes/assistant-route.ts"],
             "contract": "Greetings, messages, request scope, completions, and safe failure or cancellation status are isolated per Article; author messages retain resolved skills and offsets.",
             "persistence": "Conversation records are local and cascade with their Article; fixed application messages use stable templates while author and model content remain authored text.",
             "scenarioIds": ["cross-cutting.assistant-records-local"]

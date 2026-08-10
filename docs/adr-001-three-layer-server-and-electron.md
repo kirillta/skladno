@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-08
-- Updated: 2026-08-09
+- Updated: 2026-08-10
 - Scope: `packages/server`, its shared contracts, and future Electron integration
 
 ## Context
@@ -35,15 +35,15 @@ presentation adapts HTTP (or, later, Electron IPC) to the available services.
 
 The current code does not enforce that rule everywhere yet. In particular,
 some presentation routes still receive infrastructure repositories, and
-`presentation/server.ts` constructs `EditorialService` and the configured
-engine resolver. These are migration seams, not a new permanent layer.
+`presentation/server.ts` constructs `EditorialService`. These are migration
+seams, not a new permanent layer.
 
 ### Presentation
 
 `presentation` owns the Node HTTP server, routing, request parsing, response
 serialization, CORS, SSE formatting, and transport-level error mapping. The
-route modules currently also contain the remaining Assistant and Settings
-orchestration and receive repository instances for those workflows.
+route modules adapt these transports to application services and retain the
+remaining publishing-profile transport seam.
 
 The future Electron adapter belongs here and must expose the same application
 behavior through a typed, narrow IPC/preload contract.
@@ -54,18 +54,19 @@ behavior through a typed, narrow IPC/preload contract.
 neutral ports. The implemented focused services are:
 
 - `ArticleService`;
+- `AssistantService` for Assistant skill resolution, streaming, and persistence;
+- `ApplicationSettingsService` for Settings normalization, persistence, and provider operations;
 - `PublishingService`;
 - `StyleCorpusService`;
 - `EditorialService` for editorial streaming and completion persistence.
 
-`ApplicationServices` currently exposes only Article, Publishing, and Style
-Corpus services. Assistant and Application Settings orchestration remain in
-presentation routes, and EditorialService is wired by the presentation server
-until their next extraction slice.
+`ApplicationServices` exposes Article, Assistant, Application Settings,
+Publishing, and Style Corpus services. EditorialService is wired by the
+presentation server until its next extraction slice.
 
 Application code must not import `node:http`, Electron, SQLite, filesystem
 APIs, or AI provider SDKs. Its ports are small contracts such as article,
-editorial, style-corpus, settings, and engine interfaces. New use cases should
+assistant, editorial, style-corpus, settings, and engine interfaces. New use cases should
 be added as focused services and ports rather than by expanding the compatibility
 repository facade.
 
@@ -91,10 +92,11 @@ creates the focused application services, and creates/listens to the local
 HTTP service.
 
 `presentation/server.ts` currently completes composition for the HTTP runtime:
-it resolves the configured editorial engine, constructs `EditorialService`,
-and creates the presentation router. A future Electron main process may become
-another composition root, but it must reuse the application services and ports
-instead of duplicating use-case behavior.
+it constructs `EditorialService` and creates the presentation router. The Node
+composition root passes the configured engine resolver into both the
+application services and HTTP runtime. A future Electron main process may
+become another composition root, but it must reuse the application services
+and ports instead of duplicating use-case behavior.
 
 ## Actual source structure
 
@@ -107,6 +109,8 @@ packages/server/src/
 │   ├── application-services.ts
 │   ├── create-application-services.ts
 │   ├── articles/article-service.ts
+│   ├── assistant/assistant-service.ts
+│   ├── settings/application-settings-service.ts
 │   ├── editorial/
 │   │   ├── editorial-request.ts
 │   │   ├── editorial-service.ts
@@ -116,10 +120,14 @@ packages/server/src/
 │   ├── errors/application-service-error.ts
 │   ├── ports/
 │   │   ├── article-store.ts
+│   │   ├── assistant-artifact-store.ts
+│   │   ├── assistant-store.ts
+│   │   ├── available-models-provider.ts
 │   │   ├── editorial-conversation-request.ts
 │   │   ├── editorial-engine*.ts
 │   │   ├── editorial-store.ts
 │   │   ├── settings-store.ts
+│   │   ├── system-date-time-format-provider.ts
 │   │   └── style-corpus-store.ts
 │   └── publishing/publishing-service.ts
 ├── infrastructure/
@@ -164,9 +172,9 @@ packages/server/src/
 ```
 
 Tests are colocated with the layer and feature they exercise. There are no
-`application/assistant`, `application/settings`, `infrastructure/filesystem`,
-or Electron directories in the current implementation; those directories
-must not be documented or created until the corresponding extraction is made.
+`infrastructure/filesystem` or Electron directories in the current
+implementation; those directories must not be documented or created until
+the corresponding extraction is made.
 
 `packages/shared` remains the stable public contract surface for
 transport-neutral domain types, validation schemas, paths, status codes, and
@@ -227,9 +235,9 @@ application services.
 The current structure gives focused services and ports where the first
 migration slices need them, while keeping the existing HTTP behavior working.
 The cost is temporary cross-layer wiring in presentation and a compatibility
-repository facade. Those seams are accepted only until Assistant, Settings,
-and Editorial composition are extracted. Additional abstraction requires a
-second real runtime, implementation, or test boundary.
+repository facade. Those seams are accepted only until Settings and Editorial
+composition are extracted. Additional abstraction requires a second real
+runtime, implementation, or test boundary.
 
 ## Verification
 
@@ -251,6 +259,7 @@ adapters.
 Implemented:
 
 - focused Article, Publishing, and Style Corpus application services;
+- ApplicationSettingsService with settings, system-format, and model-provider ports;
 - EditorialService for streaming and completed-output persistence;
 - application ports for article, editorial engine/store, settings, and style
   corpus access;
@@ -263,8 +272,6 @@ Implemented:
 
 Deferred to later migration slices:
 
-- Assistant application service and ports;
-- Application Settings service and ports;
 - moving all engine/service construction out of presentation;
 - complete removal of presentation-to-infrastructure repository wiring;
 - Electron IPC adapter.

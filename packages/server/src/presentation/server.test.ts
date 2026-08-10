@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { once } from "node:events";
@@ -13,10 +14,15 @@ import { Repositories } from "../infrastructure/persistence/repositories.js";
 
 // Product scenarios: editorial-workflows.ai-connection-management, editorial-workflows.ai-model-preferences, history-and-publishing.publishing-profile-persistence, settings.publish-profile-default
 
+const testDateTimeFormat = { read: async () => ({ locale: "en" }) };
+const testModels = { list: async () => [] as string[] };
+const testConnectionId = () => randomUUID();
+
 test("article API supports CRUD and revision-aware saves", async () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-http-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
+    const engines = { resolve: () => undefined };
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -24,7 +30,7 @@ test("article API supports CRUD and revision-aware saves", async () => {
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, repositories.articles, repositories.settings, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, repositories.assistant, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant));
+    }, repositories.articles, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId), engines);
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -138,6 +144,7 @@ test("General settings preserve valid formatting preferences and reject invalid 
     const directory = mkdtempSync(join(tmpdir(), "skladno-settings-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
+    const engines = { resolve: () => undefined };
     repositories.setSetting("application-general", { ...defaultGeneralSettings, dateFormat: "day-first-dots", timeZone: "America/Argentina/Buenos_Aires" });
     const service = createLocalService({
         host: "127.0.0.1",
@@ -146,7 +153,7 @@ test("General settings preserve valid formatting preferences and reject invalid 
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, repositories.articles, repositories.settings, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, repositories.assistant, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant));
+    }, repositories.articles, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId), engines);
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -207,6 +214,7 @@ test("AI connections reject duplicate environment-variable names and persist act
     const directory = mkdtempSync(join(tmpdir(), "skladno-ai-connections-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
+    const engines = { resolve: () => undefined };
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -214,7 +222,7 @@ test("AI connections reject duplicate environment-variable names and persist act
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, repositories.articles, repositories.settings, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, repositories.assistant, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant));
+    }, repositories.articles, repositories.styleCorpus, repositories.editorialSessions, repositories.editorialArtifacts, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId), engines);
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");

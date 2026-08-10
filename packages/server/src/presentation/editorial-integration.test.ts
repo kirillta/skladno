@@ -10,6 +10,7 @@ import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
 
 import type { EditorialEngine } from "../application/ports/editorial-engine.js";
 import type { EditorialEngineEvent } from "../application/ports/editorial-engine-event.js";
+import type { EditorialEngineResolver } from "../application/ports/editorial-engine-resolver.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../application/ports/editorial-engine-error.js";
 import type { EditorialEngineRequest } from "../application/ports/editorial-engine-request.js";
@@ -45,6 +46,7 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, repos
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = new Repositories(database);
+    const engines: EditorialEngineResolver = { resolve: () => engine };
 
     const service = createLocalService({
         host: "127.0.0.1",
@@ -55,13 +57,11 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, repos
         aiSessionContinuationEnabled: storeResponses
     },
     repositories.articles,
-    repositories.settings,
     repositories.styleCorpus,
     repositories.editorialSessions,
     repositories.editorialArtifacts,
-    repositories.assistant,
-    createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant),
-    engine
+    createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection"),
+    engines
     );
     service.listen(0, "127.0.0.1");
     await once(service, "listening");

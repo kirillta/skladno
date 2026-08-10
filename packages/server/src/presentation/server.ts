@@ -3,13 +3,11 @@ import { APPLICATION_ERROR, HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 
 import type { ApplicationServices } from "../application/application-services.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
-import type { EditorialEngine } from "../application/ports/editorial-engine.js";
 import type { EditorialEngineResolver } from "../application/ports/editorial-engine-resolver.js";
 import type { ServerConfig } from "../infrastructure/configuration/config.js";
-import { ConfiguredEditorialEngineResolver } from "../infrastructure/editorial/configured-editorial-engine-resolver.js";
 import { ArticleDraftConflictError } from "../infrastructure/persistence/article-draft-conflict-error.js";
 import { ArticleRevisionConflictError } from "../infrastructure/persistence/article-revision-conflict-error.js";
-import type { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, SettingsRepository, StyleCorpusRepository } from "../infrastructure/persistence/index.js";
+import type { ArticlesRepository, EditorialArtifactsRepository, EditorialSessionsRepository, StyleCorpusRepository } from "../infrastructure/persistence/index.js";
 import { ApplicationServiceError } from "./errors/application-error.js";
 import { createPresentationRouter } from "./routes/create-presentation-router.js";
 import { writeJson } from "./transport/json.js";
@@ -20,12 +18,9 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 }
 
 
-export function createLocalService(config: ServerConfig, articles: ArticlesRepository, settings: SettingsRepository, styleCorpus: StyleCorpusRepository, editorialSessions: EditorialSessionsRepository, editorialArtifacts: EditorialArtifactsRepository, assistant: AssistantRepository, services: ApplicationServices, engine?: EditorialEngine) {
-    const engines: EditorialEngineResolver = engine
-        ? { resolve: () => engine }
-        : new ConfiguredEditorialEngineResolver(config, settings);
+export function createLocalService(config: ServerConfig, articles: ArticlesRepository, styleCorpus: StyleCorpusRepository, editorialSessions: EditorialSessionsRepository, editorialArtifacts: EditorialArtifactsRepository, services: ApplicationServices, engines: EditorialEngineResolver) {
     const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled);
-    const router = createPresentationRouter(articles, settings, styleCorpus, editorialArtifacts, assistant, editorial, engines, services);
+    const router = createPresentationRouter(articles, styleCorpus, editorial, services);
 
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {
