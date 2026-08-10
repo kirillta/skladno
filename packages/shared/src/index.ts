@@ -5,6 +5,20 @@ export {
     type ApplicationClient,
     type HealthResponse,
 } from "./application/health.js";
+export type { EditorialWorkspaceClient } from "./application/client.js";
+export {
+    ELECTRON_APPLICATION_METHOD,
+    ELECTRON_IPC_CHANNEL,
+    isElectronApplicationMethod,
+    type ElectronApplicationMethod,
+    type ElectronApplicationOperationMap,
+    type ElectronCancelRequest,
+    type ElectronIpcError,
+    type ElectronInvokeRequest,
+    type ElectronInvokeResult,
+    type ElectronStreamEvent,
+    type ElectronStreamRequest,
+} from "./application/electron-ipc.js";
 export { HTTP_METHOD, HTTP_STATUS } from "./transport/http.js";
 export {
     applicationSettingsPath,

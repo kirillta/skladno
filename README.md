@@ -92,7 +92,7 @@ shared packages
     └── transport-neutral contracts
 ```
 
-This boundary keeps credentials and privileged operations out of the browser renderer. The workspace depends on a transport-neutral `EditorialWorkspaceClient`; a future Electron main/preload layer can implement that same client without rewriting the React interface or domain logic.
+This boundary keeps credentials and privileged operations out of the browser renderer. The workspace depends on a transport-neutral `EditorialWorkspaceClient`; the typed Electron main/preload adapter implements that same client without rewriting the React interface or domain logic.
 
 The exact workspace layout, package manager, framework configuration, and development commands will be established by [issue #1](https://github.com/kirillta/skladno/issues/1).
 
@@ -156,7 +156,7 @@ Use `npm run lint` for source and code-style checks, `npm run lint:fix` to apply
 - `packages/server`: the loopback-only Node local service and server-side configuration.
 - `packages/web`: the React renderer and the HTTP implementation of `ApplicationClient`.
 
-Electron can later provide another `ApplicationClient` implementation through a narrow preload bridge; neither the React UI nor shared contracts need to change.
+Electron now provides the narrow preload bridge and main-process adapter for another `ApplicationClient` implementation; neither the React UI nor shared contracts need to change. Electron window/bootstrap composition and packaged distribution remain deferred.
 
 ## Privacy
 

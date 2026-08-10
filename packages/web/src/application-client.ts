@@ -14,7 +14,6 @@ import {
     HTTP_METHOD,
     HTTP_STATUS,
     parseHealthResponse,
-    type ApplicationClient,
     type CreateArticleInput,
     type Article,
     type HealthResponse,
@@ -26,20 +25,16 @@ import {
     type AssistantMessage,
     type AssistantEvent,
     type StartAssistantRequest,
-    type ArticleLibraryClient,
-    type EditorialClient,
     type EditorialEvent,
     type StartEditorialRequest,
     restoreRevisionPath,
     styleCorpusPath,
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
-    type StyleCorpusClient,
     publishSettingsPath,
     type PublishLimitProfileId,
-    type PublishingClient,
     applicationSettingsPath,
-    type ApplicationSettingsClient,
+    type EditorialWorkspaceClient,
     type ApplicationSettingsSnapshot,
     type BackupPolicy,
     type GeneralSettings,
@@ -53,8 +48,9 @@ import {
 } from "@skladno/shared";
 import { configureSystemDateTimeFormat } from "./i18n/formatting.js";
 
+export type { EditorialWorkspaceClient } from "@skladno/shared";
+
 /** HTTP implementation of the UI's transport-neutral application boundary. */
-export interface EditorialWorkspaceClient extends ApplicationClient, ArticleLibraryClient, EditorialClient, StyleCorpusClient, PublishingClient, ApplicationSettingsClient { }
 
 
 function applicationClientError(payload: unknown, status: number): ApplicationClientError {

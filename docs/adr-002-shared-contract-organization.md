@@ -8,7 +8,7 @@
 ## Context
 
 `packages/shared` is the stable contract surface used by the renderer, the
-local service, and a future Electron preload client. It currently contains a
+local service, and the Electron preload client. It contains a
 mix of transport constants, application-client interfaces, domain records,
 feature algorithms, validation helpers, errors, and persistence types at one
 directory level. The public barrel keeps imports stable, but the source layout
@@ -167,7 +167,7 @@ decision and the relevant canonical product model update.
 
 - Feature ownership and dependency direction are visible from the tree.
 - Shared contracts are easier to find and safer to reuse from HTTP or future
-  Electron adapters.
+  Electron adapters, including the typed IPC operation and stream contracts.
 - The root public API remains stable while internals can evolve.
 - Pure domain helpers can be tested without server or browser infrastructure.
 

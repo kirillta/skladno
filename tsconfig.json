@@ -9,6 +9,9 @@
         },
         {
             "path": "./packages/web"
+        },
+        {
+            "path": "./packages/electron"
         }
     ]
 }

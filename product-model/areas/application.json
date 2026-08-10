@@ -15,7 +15,9 @@
                 "packages/server/src/application",
                 "packages/server/src/application/settings/application-settings-service.ts",
                 "packages/server/src/application/editorial/editorial-service.ts",
-                "packages/shared/src"
+                "packages/shared/src",
+                "packages/electron/src/preload-bridge.ts",
+                "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts"
             ],
             "contract": "The renderer uses a typed application client against the local Node.js service; presentation receives application services, while credentials and privileged operations remain server-side.",
             "persistence": "No renderer access to secrets, files, or SQLite.",
@@ -31,7 +33,9 @@
             "owners": [
                 "packages/server/src/presentation/routes/health-route.ts",
                 "packages/web/src/application-client.ts",
-                "packages/web/src/notifications"
+                "packages/web/src/notifications",
+                "packages/electron/src/preload-bridge.ts",
+                "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts"
             ],
             "contract": "Health and stable error codes allow the renderer to present recoverable failures without exposing secrets or full Article bodies.",
             "persistence": "Errors are transient UI state; sensitive values are not included in the transport contract.",

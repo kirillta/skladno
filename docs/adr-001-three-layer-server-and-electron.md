@@ -30,7 +30,7 @@ presentation  ->  application  ->  application ports
 
 The intended dependency rule is that infrastructure implements application
 ports, application services depend on ports rather than implementations, and
-presentation adapts HTTP (or, later, Electron IPC) to the available services.
+presentation adapts HTTP and Electron IPC to the available services.
 
 The current Node runtime now enforces this rule at its presentation boundary:
 presentation receives application services and transport configuration, while
@@ -43,8 +43,10 @@ serialization, CORS, SSE formatting, and transport-level error mapping. The
 route modules adapt these transports to application services and do not accept
 concrete persistence repositories.
 
-The future Electron adapter belongs here and must expose the same application
-behavior through a typed, narrow IPC/preload contract.
+The Electron main-process adapter belongs here and exposes the same application
+behavior through a typed, narrow IPC/preload contract. The adapter is transport
+code only: it delegates to the existing application services, serializes
+renderer-safe errors, and forwards cancellable Assistant and Editorial streams.
 
 ### Application
 
@@ -96,7 +98,9 @@ repository parameters. The Node composition root passes the configured engine
 resolver into the application services and constructs `EditorialService`. A
 future Electron main process may become another composition root, but it must
 reuse the application services and ports instead of duplicating use-case
-behavior.
+behavior. The current adapter seam is
+`infrastructure/electron/electron-ipc-application-adapter.ts`; the
+context-isolated preload bridge is `packages/electron/src/preload-bridge.ts`.
 
 ## Actual source structure
 
@@ -171,10 +175,9 @@ packages/server/src/
         └── style-corpus-route.ts
 ```
 
-Tests are colocated with the layer and feature they exercise. There are no
-`infrastructure/filesystem` or Electron directories in the current
-implementation; those directories must not be documented or created until
-the corresponding extraction is made.
+Tests are colocated with the layer and feature they exercise. There is no
+Electron window/bootstrap or packaged desktop runtime yet; the implemented
+Electron code is limited to the typed main-process adapter and preload bridge.
 
 The application `errors` directory also contains the Article Draft and
 Revision conflict errors. Persistence repositories import those application
@@ -183,6 +186,12 @@ errors directly; persistence does not re-export them.
 `packages/shared` remains the stable public contract surface for
 transport-neutral domain types, validation schemas, paths, status codes, and
 client contracts. It must not import server infrastructure.
+
+The Electron transport contracts are defined in
+`packages/shared/src/application/electron-ipc.ts`. The preload package exposes
+only `EditorialWorkspaceClient` methods through a context-isolated bridge; the
+main-process adapter is tested against the same application services used by
+the HTTP composition.
 
 ## File and dependency rules
 
@@ -218,7 +227,9 @@ Continue the incremental refactor:
    receive only application services; conflict errors are application-owned.
 5. **Completed 2026-08-10:** remove the compatibility `Repositories` facade;
    tests construct focused repositories through test-only composition setup.
-6. Add import-boundary checks before introducing Electron IPC.
+6. **Completed 2026-08-10:** add the typed Electron main-process adapter and
+   context-isolated preload bridge. Keep Electron window/bootstrap composition
+   for the desktop runtime integration slice.
 
 Each slice must preserve existing HTTP contracts, product inventories, SSE
 events, error codes, cancellation/retry behavior, and recovery semantics.
@@ -254,10 +265,10 @@ npm run typecheck
 npm test
 ```
 
-Before introducing Electron IPC, also verify that application imports do not
-reach Node transport, Electron, SQLite, filesystem, or AI provider modules,
-and that the same application-service tests pass through both runtime
-adapters.
+For Electron IPC, verify that shared and application imports do not reach Node
+transport, Electron, SQLite, filesystem, or AI provider modules, and that
+application-service behavior remains covered through the HTTP and Electron
+adapter boundaries.
 
 ## Implementation status
 
@@ -277,7 +288,9 @@ Implemented:
   persistence repositories;
 - individually named persistence repositories and test-only composition setup;
 - existing HTTP contracts and product inventories remain intact.
+- typed Electron IPC operation and stream contracts in `packages/shared`;
+- Electron main-process application adapter and context-isolated preload bridge.
 
 Deferred to later migration slices:
 
-- Electron IPC adapter.
+- Electron window/bootstrap composition and packaged desktop runtime.
