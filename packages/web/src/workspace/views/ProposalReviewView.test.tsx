@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
@@ -15,7 +15,7 @@ describe("ProposalReviewView", () => {
                 baseContent: "Original",
                 proposedContent: "Proposed",
                 changes: [{ id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] }],
-            }} stale={false} decisions={{}} summaries={{ "change-1": "Clarifies the opening statement." }} summaryState="idle" setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
+            }} stale={false} decisions={{}} summaries={{ "change-1": "Clarifies the opening statement." }} summaryState="idle" setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} dismissProposal={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
         expect(screen.getByText("Clarifies the opening statement.")).toBeTruthy();
@@ -25,6 +25,8 @@ describe("ProposalReviewView", () => {
     });
 
     it("workspace.proposal.stale-blocked warns before the review controls while blocking acceptance", () => {
+        const dismissProposal = vi.fn();
+
         render(<IntlProvider locale="en" messages={messages}>
             <ProposalReviewView review={{
                 baseContent: "Original\nSecond original",
@@ -33,7 +35,7 @@ describe("ProposalReviewView", () => {
                     { id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] },
                     { id: "change-2", baseStart: 1, baseEnd: 2, baseLines: ["Second original"], proposalLines: ["Second proposed"] },
                 ],
-            }} stale decisions={{ "change-1": "accepted" }} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
+            }} stale decisions={{ "change-1": "accepted" }} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} dismissProposal={dismissProposal} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
         const warning = screen.getByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.");
@@ -42,7 +44,10 @@ describe("ProposalReviewView", () => {
         expect(warning.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         expect(screen.getByText("Complete proposal · 2 changes")).toBeTruthy();
         expect(screen.getByRole("button", { name: "Accept all" }).hasAttribute("disabled")).toBe(true);
-        expect(screen.getByRole("button", { name: "Reject all" }).hasAttribute("disabled")).toBe(false);
+        expect(screen.getByRole("button", { name: "Reject all" }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("button", { name: "Review current article" })).toBeTruthy();
+        fireEvent.click(screen.getByRole("button", { name: "Dismiss proposal" }));
+        expect(dismissProposal).toHaveBeenCalledOnce();
     });
 
     it("uses labelled chevron buttons to navigate between changes", () => {
@@ -54,10 +59,29 @@ describe("ProposalReviewView", () => {
                     { id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] },
                     { id: "change-2", baseStart: 1, baseEnd: 2, baseLines: ["Second original"], proposalLines: ["Second proposed"] },
                 ],
-            }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
+            }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} dismissProposal={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
         expect(screen.getByRole("button", { name: "Previous change" }).querySelector("svg")).toBeTruthy();
         expect(screen.getByRole("button", { name: "Next change" }).querySelector("svg")).toBeTruthy();
+    });
+
+    it("selects every change as rejected without dismissing the Proposal", () => {
+        const rejectAll = vi.fn();
+        const dismissProposal = vi.fn();
+
+        render(<IntlProvider locale="en" messages={messages}>
+            <ProposalReviewView review={{
+                baseContent: "Original",
+                proposedContent: "Proposed",
+                changes: [{ id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] }],
+            }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={rejectAll} dismissProposal={dismissProposal} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
+        </IntlProvider>);
+
+        fireEvent.click(screen.getByRole("button", { name: "Reject all" }));
+
+        expect(rejectAll).toHaveBeenCalledOnce();
+        expect(dismissProposal).not.toHaveBeenCalled();
+        expect(screen.getByRole("heading", { name: "Proposal Review" })).toBeTruthy();
     });
 });

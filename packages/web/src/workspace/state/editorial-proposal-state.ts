@@ -267,7 +267,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         request,
         acceptAll: () => accept(new Set(review ? review.changes.map((change) => change.id) : []), true),
         applyAccepted: () => accept(new Set(Object.entries(decisions).filter(([, decision]) => decision === "accepted").map(([id]) => id)), false),
-        reject: () => {
+        rejectAll: () => setDecisions(Object.fromEntries((review?.changes ?? []).map((change) => [change.id, "rejected"]))),
+        dismissProposal: () => {
             if (base)
                 restoredArticleIds.current.add(base.articleId);
 
