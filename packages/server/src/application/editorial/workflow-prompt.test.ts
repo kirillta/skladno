@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { BUILT_IN_SKILL, EDITORIAL_OPERATION } from "@skladno/shared";
 
-import { createEditorialMessages } from "./workflow-prompt.js";
+import { authorControlInstruction, createEditorialMessages } from "./workflow-prompt.js";
 
 
 function promptText(input: Parameters<typeof createEditorialMessages>[0]): string {
@@ -24,7 +24,7 @@ test("thesis-to-narrative prompt preserves author control and supplied theses", 
     assert.match(prompt, /Current draft/);
     assert.match(prompt, /Preserve the author's claims, numbers, URLs, code, technical terms/);
     assert.match(prompt, /Do not invent facts, examples, or sources/);
-    assert.match(prompt, /never say that you saved or changed the article/);
+    assert.ok(prompt.includes(authorControlInstruction));
 });
 
 

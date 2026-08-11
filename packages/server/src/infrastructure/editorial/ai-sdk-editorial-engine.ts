@@ -11,7 +11,7 @@ import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
 import type { EditorialEngineRequest } from "../../application/ports/editorial-engine-request.js";
 import { protectArticleSpans, restoreProtectedSpans } from "../../application/editorial/translation.js";
-import { createEditorialMessages } from "../../application/editorial/workflow-prompt.js";
+import { authorControlInstruction, createEditorialMessages } from "../../application/editorial/workflow-prompt.js";
 
 
 const styleReviewSchema = z.object({
@@ -155,7 +155,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
 
     async *streamConversation(request: EditorialConversationRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const messages: ModelMessage[] = [{ role: "system", content: "You are Skladno's editorial assistant. Answer conversationally and help the author decide what to do next. Do not claim to have changed or saved the Article. Do not turn the Article into a proposal unless the author explicitly asks for an editorial operation." }];
+        const messages: ModelMessage[] = [{ role: "system", content: `You are Skladno's editorial assistant. Answer conversationally and help the author decide what to do next. ${authorControlInstruction} Do not turn the Article into a proposal unless the author explicitly asks for an editorial operation.` }];
         if (request.article)
             messages.push({ role: "system", content: `${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}` });
 
