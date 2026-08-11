@@ -8,7 +8,7 @@
             "title": "Typed, validated catalogs and English interface catalog",
             "status": "implemented",
             "owners": ["packages/web/src/i18n"],
-            "contract": "English is the only complete installed catalog. Application copy, including skill-specific Assistant completion labels, is catalog-validated, production surfaces inherit the root locale provider, localized text is excluded from selectors and logic, and generated supporting UI text requests the active Interface locale independently of Article language.",
+            "contract": "English is the only complete installed catalog. Application copy, including skill-specific Assistant completion labels and fallback Proposal summaries, is catalog-validated, production surfaces inherit the root locale provider, localized text is excluded from selectors and logic, and generated supporting UI text requests the active Interface locale independently of Article language.",
             "persistence": "Localized defaults become Article data only when author-editable content is created.",
             "scenarioIds": ["cross-cutting.complete-catalog-required"]
         },

@@ -193,7 +193,7 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/editorial-proposal-state.ts"
             ],
-            "contract": "AI-generated text never enters the Article without explicit acceptance; each reliable change may show a non-authoritative supporting summary in the Interface locale whose failure does not block review; per-change decisions remain local until one acceptance request, stale or unreliable Proposals cannot be partially accepted, stale and preservation warnings precede a compact review-control band with labelled icon change navigation and diff, and the author may persistently dismiss the advisory preservation warning.",
+            "contract": "AI-generated text never enters the Article without explicit acceptance; each reliable change may show a non-authoritative supporting summary in the Interface locale whose failure does not block review; per-change decisions remain local until one acceptance request, stale or unreliable Proposals cannot be partially accepted, stale and preservation warnings precede a compact review-control band with labelled icon change navigation and diff, and fallback presentation identifies one complete Proposal while disclosing its underlying change count.",
             "persistence": "Completed Proposal content, localized summaries, and the base Revision are recovered from local Assistant and editorial artifact records; accepted Revision provenance records accepted changes or whole-proposal fallback, and dismissal is a local workspace preference.",
             "scenarioIds": [
                 "workspace.proposal.stale-blocked"

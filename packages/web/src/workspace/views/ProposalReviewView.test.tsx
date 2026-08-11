@@ -27,9 +27,12 @@ describe("ProposalReviewView", () => {
     it("workspace.proposal.stale-blocked warns before the review controls while blocking acceptance", () => {
         render(<IntlProvider locale="en" messages={messages}>
             <ProposalReviewView review={{
-                baseContent: "Original",
-                proposedContent: "Proposed",
-                changes: [{ id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] }],
+                baseContent: "Original\nSecond original",
+                proposedContent: "Proposed\nSecond proposed",
+                changes: [
+                    { id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] },
+                    { id: "change-2", baseStart: 1, baseEnd: 2, baseLines: ["Second original"], proposalLines: ["Second proposed"] },
+                ],
             }} stale decisions={{ "change-1": "accepted" }} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
@@ -37,6 +40,7 @@ describe("ProposalReviewView", () => {
         const heading = screen.getByRole("heading", { name: "Proposal Review" });
 
         expect(warning.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByText("Complete proposal · 2 changes")).toBeTruthy();
         expect(screen.getByRole("button", { name: "Accept all" }).hasAttribute("disabled")).toBe(true);
         expect(screen.getByRole("button", { name: "Reject all" }).hasAttribute("disabled")).toBe(false);
     });

@@ -46,7 +46,9 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 className="font-semibold">{intl.formatMessage({ id: "views.proposalReview" })}</h2>
-                    <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: "views.proposalCounts" }, { total: presentation.changes.length, pending: counts.pending, accepted: counts.accepted, rejected: counts.rejected })}</p>
+                    <p className="mt-1 text-xs text-muted">{stale || !presentation.reliable
+                        ? intl.formatMessage({ id: "views.proposalWhole" }, { changes: presentation.changes.length })
+                        : intl.formatMessage({ id: "views.proposalCounts" }, { total: presentation.changes.length, pending: counts.pending, accepted: counts.accepted, rejected: counts.rejected })}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {presentation.changes.length > 1 && <nav className="flex gap-2" aria-label={intl.formatMessage({ id: "views.changeNavigation" })}>
