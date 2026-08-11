@@ -5,6 +5,7 @@ import { BUILT_IN_SKILL, EDITORIAL_OPERATION, type BuiltInSkillId, type Editoria
 interface EditorialPromptInput {
     operation: EditorialOperation;
     article: string;
+    articleSelection?: boolean;
     authorContext: string;
     skillId?: BuiltInSkillId;
     styleProfile?: StyleProfile;
@@ -35,12 +36,13 @@ export function isEditorialOperation(value: string): value is EditorialOperation
 export function createEditorialMessages(input: EditorialPromptInput): ModelMessage[] {
     if (input.skillId === BUILT_IN_SKILL.TALKING_POINTS) {
         const authorMessage = input.authorContext.trim();
-        const source = authorMessage || input.article.trim();
-        const sourceLabel = authorMessage ? "Author's message" : "Article content";
+        const source = input.articleSelection ? input.article.trim() : authorMessage || input.article.trim();
+        const sourceLabel = input.articleSelection ? "Article selection" : authorMessage ? "Author's message" : "Article content";
+        const guidance = input.articleSelection && authorMessage ? `\n\nAuthor message (supplementary direction or material that may extend the selection):\n${authorMessage}` : "";
 
         return [
             { role: "system", content: "You are an editorial assistant helping an author discover an article's central theses. Preserve the author's intent, claims, numbers, URLs, code, and technical terms. Do not invent facts or say that you saved or changed the article." },
-            { role: "user", content: `Workflow: talking points. Suggest concise, distinct theses based only on the ${sourceLabel.toLowerCase()} below. Prefer the Author's message whenever it is present; use Article content only when the message is empty. Unless the Author requests another count, suggest between 3 and 5 theses. Return a Markdown list. If the source is missing or its direction is genuinely ambiguous, ask the Author only the focused questions needed to choose a direction instead of guessing.\n\n${sourceLabel}:\n${source || "No source content was provided."}` },
+            { role: "user", content: `Workflow: talking points. Suggest concise, distinct theses from the source below. An Article selection is the primary source when present. The Author's message may guide or explicitly extend that selection; never use unselected whole Article content alongside it. Without a selection, prefer the Author's message whenever it is present; use Article content only when the message is empty. Unless the Author requests another count, suggest between 3 and 5 theses. Return a Markdown list. Base counts and derived details on the Article selection plus any supplementary material the Author explicitly provides in the message. If the source is missing or its direction is genuinely ambiguous, ask the Author only the focused questions needed to choose a direction instead of guessing.\n\n${sourceLabel}:\n${source || "No source content was provided."}${guidance}` },
         ];
     }
 

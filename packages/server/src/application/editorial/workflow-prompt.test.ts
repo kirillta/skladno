@@ -56,6 +56,22 @@ test("talking-points prompt falls back to Article content when the composer is e
 });
 
 
+test("talking-points prompt uses an Article selection as primary and allows the Author's message to extend it", async () => {
+    const prompt = promptText({
+        operation: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
+        article: "Selected evidence with two concrete claims.",
+        articleSelection: true,
+        authorContext: "Find ideas across the whole Article.",
+        skillId: BUILT_IN_SKILL.TALKING_POINTS,
+    });
+
+    assert.match(prompt, /Article selection:\nSelected evidence with two concrete claims/);
+    assert.match(prompt, /Author message \(supplementary direction or material that may extend the selection\)/);
+    assert.match(prompt, /never use unselected whole Article content alongside it/);
+    assert.match(prompt, /selection plus any supplementary material the Author explicitly provides/);
+});
+
+
 test("flow-revision prompt asks for a full-text proposal rather than feedback", async () => {
     const prompt = promptText({
         operation: EDITORIAL_OPERATION.FLOW_REVISION,

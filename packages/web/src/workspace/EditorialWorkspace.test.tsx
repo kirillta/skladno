@@ -375,7 +375,7 @@ describe("Editorial Workspace", () => {
     });
 
 
-    it("removes an incompatible selected skill when an Article selection becomes active", async () => {
+    it("keeps Talking points active when an Article selection becomes the priority source", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} />);
@@ -388,10 +388,10 @@ describe("Editorial Workspace", () => {
 
         panel.rerender(<IntlProvider locale="en" messages={messages}><EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection="Selected Article text" clearSelection={vi.fn()} /></IntlProvider>);
 
-        await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeNull());
+        await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy());
         await user.click(within(panel.container).getByRole("button", { name: "Send editorial request" }));
 
-        expect(onRequest).toHaveBeenCalledWith("Review this selection.", undefined, undefined, undefined);
+        expect(onRequest).toHaveBeenCalledWith("Review this selection.", "talking_points", undefined, "Review this selection.".length);
     });
 
 

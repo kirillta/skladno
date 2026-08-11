@@ -139,6 +139,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             yield* this.streamProposal(createEditorialMessages({
                 operation: request.operation,
                 article: boundedArticleContext(request.article),
+                articleSelection: request.articleSelection,
                 authorContext: request.authorContext,
                 skillId: request.skillId,
             }), signal, request.previousResponseId);

@@ -22,7 +22,7 @@ export const builtInSkills: readonly BuiltInSkillId[] = [
 
 
 export const builtInSkillScopeCompatibility: Record<BuiltInSkillId, readonly ("article" | "selection")[]> = {
-    talking_points: ["article"],
+    talking_points: ["article", "selection"],
     narrative_draft: ["article"],
     flow_and_clarity: ["article", "selection"],
     fact_checking: ["article", "selection"],

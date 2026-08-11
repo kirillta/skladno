@@ -180,6 +180,7 @@ export class AssistantService {
             return request.engine.stream({
                 operation: request.operation,
                 article: excerpt,
+                ...(request.scope.kind === "selection" ? { articleSelection: true } : {}),
                 authorContext: request.authorMessage,
                 skillId: request.resolvedSkillId,
                 ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),

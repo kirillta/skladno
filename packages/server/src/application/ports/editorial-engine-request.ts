@@ -5,6 +5,7 @@ export interface EditorialEngineRequest {
     operation: EditorialOperation;
     article: string;
     authorContext: string;
+    articleSelection?: boolean;
     skillId?: BuiltInSkillId;
     styleProfile?: StyleProfile;
     previousResponseId?: string;
