@@ -103,7 +103,7 @@
                 "packages/web/src/workspace/components/WorkspaceViewRouter.tsx",
                 "scripts/web-import-boundaries.mjs"
             ],
-            "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation.",
+            "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation; Proposal Review uses the shared quiet scrollbar.",
             "persistence": "Active View is a local workspace preference; results retain their Article and base Revision.",
             "scenarioIds": [
                 "workspace.navigation.keyboard-tabs",
@@ -193,7 +193,7 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/editorial-proposal-state.ts"
             ],
-            "contract": "AI-generated text never enters the Article without explicit acceptance; each reliable change may show a non-authoritative supporting summary in the Interface locale whose failure does not block review; per-change decisions remain local until one acceptance request, stale or unreliable Proposals cannot be partially accepted, and the author may persistently dismiss the advisory preservation warning.",
+            "contract": "AI-generated text never enters the Article without explicit acceptance; each reliable change may show a non-authoritative supporting summary in the Interface locale whose failure does not block review; per-change decisions remain local until one acceptance request, stale or unreliable Proposals cannot be partially accepted, stale and preservation warnings precede a compact review-control band with labelled icon change navigation and diff, and the author may persistently dismiss the advisory preservation warning.",
             "persistence": "Completed Proposal content, localized summaries, and the base Revision are recovered from local Assistant and editorial artifact records; accepted Revision provenance records accepted changes or whole-proposal fallback, and dismissal is a local workspace preference.",
             "scenarioIds": [
                 "workspace.proposal.stale-blocked"
@@ -252,10 +252,11 @@
             "title": "Article-specific profile selection and deterministic copy-ready character guidance",
             "status": "implemented",
             "owners": [
+                "packages/web/src/workspace/components/ArticleWorkspace.tsx",
                 "packages/web/src/workspace/components/ArticleStatusBar.tsx",
                 "packages/web/src/workspace/views/PublishingPreviewView.tsx"
             ],
-            "contract": "Character limits are guidance only and direct platform publishing is not performed.",
+            "contract": "Character limits are guidance only and direct platform publishing is not performed; near-limit and over-limit workspace badges both use warning treatment.",
             "persistence": "Article publishing-profile metadata with persisted default fallback.",
             "scenarioIds": [
                 "workspace.publishing.over-guidance"
@@ -572,7 +573,7 @@
             ],
             "event": "Author attempts to accept selected changes.",
             "expected": [
-                "The stale warning is visible and acceptance is disabled"
+                "The stale warning is visible before the review controls and diff, and acceptance is disabled"
             ],
             "forbidden": [
                 "Applying AI-generated text to a newer Article Revision"

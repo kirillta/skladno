@@ -20,7 +20,7 @@ describe("WorkspaceTabBar", () => {
                 proposal: { label: "Review", accessibleLabel: "Review", tone: "default" },
                 "fact-check": { label: "2 findings", accessibleLabel: "2 findings", tone: "default" },
                 translations: { label: "Stale", accessibleLabel: "Stale", tone: "warning" },
-                publish: { label: "Over limit", accessibleLabel: "Over limit", tone: "error" },
+                publish: { label: "Over limit", accessibleLabel: "Over limit", tone: "warning" },
             }} />
         </IntlProvider>);
 
@@ -35,6 +35,7 @@ describe("WorkspaceTabBar", () => {
         expect(factCheck.textContent).toContain("2 findings");
         expect(translations.textContent).toContain("Stale");
         expect(publish.textContent).toContain("Over limit");
+        expect(publish.querySelector("span")?.className).toContain("border-warning");
         expect(screen.getByRole("tab", { name: "Revisions" }).textContent).toBe("Revisions");
 
         write.focus();

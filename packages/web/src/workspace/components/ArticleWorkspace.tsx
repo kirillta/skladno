@@ -64,7 +64,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
 
     if (publishing.length.state !== "within-limit") {
         const messageId = publishing.length.state === "over-limit" ? "workspace.badges.overLimit" : "workspace.badges.nearLimit";
-        badges.publish = { label: intl.formatMessage({ id: messageId }), accessibleLabel: intl.formatMessage({ id: messageId }), tone: publishing.length.state === "over-limit" ? "error" : "warning" };
+        badges.publish = { label: intl.formatMessage({ id: messageId }), accessibleLabel: intl.formatMessage({ id: messageId }), tone: "warning" };
     }
 
     return <div className="flex h-full min-h-0 flex-col overflow-hidden" data-article-workspace tabIndex={-1}>
