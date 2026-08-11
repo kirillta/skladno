@@ -16,5 +16,8 @@ export default defineConfig({
             "@skladno/shared": fileURLToPath(new URL("../shared/src/index.ts", import.meta.url)),
         },
     },
-    server: { port: 5173 },
+    server: {
+        port: 5173,
+        strictPort: true,
+    },
 });

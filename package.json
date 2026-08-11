@@ -6,7 +6,7 @@
         "packages/*"
     ],
     "scripts": {
-        "dev": "concurrently -n server,web -c blue,green \"npm run dev --workspace @skladno/server\" \"npm run dev --workspace @skladno/web\"",
+        "dev": "concurrently --kill-others -n server,web -c blue,green \"npm run dev --workspace @skladno/server\" \"npm run dev --workspace @skladno/web\"",
         "lint": "npm run check:imports && eslint . --max-warnings 0",
         "lint:fix": "eslint . --fix --max-warnings 0",
         "check:imports": "node scripts/web-import-boundaries.mjs",
