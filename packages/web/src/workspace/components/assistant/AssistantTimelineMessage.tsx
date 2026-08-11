@@ -8,7 +8,7 @@ import { responseMessages, selectionPreview, skillMessages } from "./assistant-m
 export function AssistantTimelineMessage({ message, openView, generalSettings, skillByRequest }: { message: AssistantMessage; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, BuiltInSkillId> }) {
     const intl = useIntl();
     const authorMessage = message.role === "author";
-    const skillId = message.skillId ?? (authorMessage && message.requestId ? skillByRequest.get(message.requestId) : undefined);
+    const skillId = message.skillId ?? (message.requestId ? skillByRequest.get(message.requestId) : undefined);
     const label = message.responseKind === "proposal_prepared" && skillId === BUILT_IN_SKILL.TALKING_POINTS
         ? intl.formatMessage({ id: "assistant.response.talkingPointsProposal" })
         : message.responseKind === "proposal_prepared" && skillId === BUILT_IN_SKILL.NARRATIVE_DRAFT
