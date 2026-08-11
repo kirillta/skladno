@@ -155,13 +155,16 @@ export function EditorialAssistantPanel({ state, message, errorDetails, onReques
     const selectSkill = useCallback((skill: BuiltInSkillId) => {
         const insertionOffset = selectedSkill ? skillOffset : slashTriggerOffset ?? composerOffset;
         const slashOffset = guidance[insertionOffset - 1] === "/" ? insertionOffset - 1 : undefined;
-        const nextGuidance = slashOffset === undefined ? guidance : `${guidance.slice(0, slashOffset)}${guidance.slice(insertionOffset)}`;
+        const beforeSkill = guidance.slice(0, slashOffset ?? insertionOffset);
+        const afterSkill = guidance.slice(insertionOffset);
+        const skillOffsetAfterSpace = beforeSkill.endsWith(" ") ? beforeSkill.length - 1 : beforeSkill.length;
+        const nextGuidance = `${beforeSkill.slice(0, skillOffsetAfterSpace)}${afterSkill.startsWith(" ") ? "" : " "}${afterSkill}`;
         setQuickActionsOpen(false);
         setSelectedSkill(skill);
-        setSkillOffset(slashOffset ?? insertionOffset);
+        setSkillOffset(skillOffsetAfterSpace);
         setSlashTriggerOffset(undefined);
         setGuidance(nextGuidance);
-        renderComposerContent(nextGuidance, skill, slashOffset ?? insertionOffset);
+        renderComposerContent(nextGuidance, skill, skillOffsetAfterSpace);
         composer.current?.focus();
         if (composer.current)
             placeCaretAfterSkill(composer.current);

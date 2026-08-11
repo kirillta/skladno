@@ -333,17 +333,17 @@ describe("Editorial Workspace", () => {
         await user.keyboard("{ArrowDown}{Enter}");
         await user.type(composer, "focused.");
 
-        expect(composer.textContent).toContain("Keep this ");
+        expect(composer.textContent).toContain("Talking points focused.");
         expect(composer.textContent).not.toContain("/");
         expect(composer.textContent).toContain("Talking points");
-        expect(composer.childNodes[0]?.textContent).toBe("Keep this ");
+        expect(composer.childNodes[0]?.textContent).toBe("Keep this");
         expect((composer.childNodes[1] as HTMLElement | undefined)?.dataset.assistantSkillChip).toBe("");
         expect((composer.childNodes[1] as HTMLElement | undefined)?.contentEditable).toBe("false");
-        expect([...composer.childNodes].slice(2).map((node) => node.textContent).join("")).toBe("focused.");
+        expect([...composer.childNodes].slice(2).map((node) => node.textContent).join("")).toBe(" focused.");
 
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
-        expect(onRequest).toHaveBeenCalledWith("Keep this focused.", "talking_points", undefined, "Keep this ".length);
+        expect(onRequest).toHaveBeenCalledWith("Keep this focused.", "talking_points", undefined, "Keep this".length);
     });
 
 

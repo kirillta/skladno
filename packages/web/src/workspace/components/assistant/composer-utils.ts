@@ -60,7 +60,12 @@ export function placeCaretAfterSkill(composer: HTMLDivElement): void {
         return;
 
     const range = document.createRange();
-    range.setStartAfter(skill);
+    const afterSkill = skill.nextSibling;
+    if (afterSkill?.nodeType === Node.TEXT_NODE && afterSkill.textContent?.startsWith(" "))
+        range.setStart(afterSkill, 1);
+    else
+        range.setStartAfter(skill);
+
     range.collapse(true);
 
     const selection = window.getSelection();
