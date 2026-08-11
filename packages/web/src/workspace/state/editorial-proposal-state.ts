@@ -87,7 +87,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             });
 
         return () => controller.abort();
-    }, [base?.editorialArtifactId, client, intl.locale, proposal, proposalSummaries, proposalSummaryLocale, review, selectedArticleId, stale, state]);
+    }, [base?.editorialArtifactId, client, intl.locale, proposal, proposalSummaryLocale, review, selectedArticleId, stale, state]);
 
 
     async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string) {
