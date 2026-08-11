@@ -185,7 +185,7 @@
         {
             "id": "workspace.proposal.explicit-acceptance",
             "area": "Proposal Review",
-            "title": "Decision-based Proposal review with bulk actions, preservation warnings, fallback, and explicit immutable Revision acceptance",
+            "title": "Summarized decision-based Proposal review with bulk actions, preservation warnings, fallback, and explicit immutable Revision acceptance",
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/views/ProposalReviewView.tsx",
@@ -193,7 +193,7 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/editorial-proposal-state.ts"
             ],
-            "contract": "AI-generated text never enters the Article without explicit acceptance; per-change decisions remain local until one acceptance request, stale or unreliable Proposals cannot be partially accepted, and the author may persistently dismiss the advisory preservation warning.",
+            "contract": "AI-generated text never enters the Article without explicit acceptance; each reliable change may show a non-authoritative supporting summary whose failure does not block review; per-change decisions remain local until one acceptance request, stale or unreliable Proposals cannot be partially accepted, and the author may persistently dismiss the advisory preservation warning.",
             "persistence": "Completed Proposal content and its base Revision are recovered from local Assistant records; accepted Revision provenance records accepted changes or whole-proposal fallback, and dismissal is a local workspace preference.",
             "scenarioIds": [
                 "workspace.proposal.stale-blocked"

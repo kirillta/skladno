@@ -78,6 +78,7 @@ export interface OpenAiConnection {
 
 export interface ModelPreferences {
     defaultModel: string;
+    textGenerationModel?: string;
     skillOverrides: Partial<Record<BuiltInSkillId, string>>;
 }
 

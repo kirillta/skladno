@@ -5,6 +5,12 @@ import type { EditorialEngine } from "../../application/ports/editorial-engine.j
 import type { SettingsStore } from "../../application/ports/settings-store.js";
 import type { ServerConfig } from "../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
+import { AiSdkProposalSummaryGenerator } from "./ai-sdk-proposal-summary-generator.js";
+
+
+export function resolveTextGenerationModel(preferences: Partial<ModelPreferences> | undefined, fallback: string): string {
+    return preferences?.textGenerationModel || preferences?.defaultModel || fallback;
+}
 
 
 export class ConfiguredEditorialEngineResolver implements EditorialEngineResolver {
@@ -26,5 +32,19 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || this.config.aiModel;
 
         return createEditorialEngine({ apiKey, model, storeResponses: this.config.aiSessionContinuationEnabled });
+    }
+
+
+    resolveProposalSummaryGenerator() {
+        const savedConnections = this.settings.get("application-ai-connections")?.value as { connections?: OpenAiConnection[]; activeConnectionId?: string } | undefined;
+        const active = savedConnections?.connections?.find((connection) => connection.id === savedConnections.activeConnectionId);
+        const apiKey = active ? process.env[active.environmentVariableName] : this.config.aiApiKey;
+        if (!apiKey)
+            return undefined;
+
+        const preferences = this.settings.get("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
+        const model = resolveTextGenerationModel(preferences, this.config.aiModel);
+
+        return new AiSdkProposalSummaryGenerator(apiKey, model);
     }
 }

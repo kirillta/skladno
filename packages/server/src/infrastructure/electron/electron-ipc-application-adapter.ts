@@ -92,6 +92,8 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
             return services.articles.listRevisions(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.acceptProposal:
             return services.articles.acceptProposal(String(args[0]), args[1] as import("@skladno/shared").AcceptProposalInput);
+        case ELECTRON_APPLICATION_METHOD.summarizeProposal:
+            return services.proposalSummaries.summarize(args[1], new AbortController().signal);
         case ELECTRON_APPLICATION_METHOD.restoreRevision:
             return services.articles.restoreRevision(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.listAssistantMessages:

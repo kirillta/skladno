@@ -3,6 +3,7 @@ import type { AssistantService } from "./assistant/assistant-service.js";
 import type { ApplicationSettingsService } from "./settings/application-settings-service.js";
 import type { PublishingService } from "./publishing/publishing-service.js";
 import type { StyleCorpusService } from "./editorial/style-corpus-service.js";
+import type { ProposalSummaryService } from "./editorial/proposal-summary-service.js";
 
 
 export interface ApplicationServices {
@@ -11,4 +12,5 @@ export interface ApplicationServices {
     settings: ApplicationSettingsService;
     publishing: PublishingService;
     styleCorpus: StyleCorpusService;
+    proposalSummaries: ProposalSummaryService;
 }

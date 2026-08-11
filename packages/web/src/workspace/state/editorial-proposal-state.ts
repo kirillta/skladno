@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
@@ -14,6 +14,7 @@ import {
     type FactCheck,
     type StyleReview,
     type TranslationMetadata,
+    type ProposalChangeSummary,
 } from "@skladno/shared";
 import { ApplicationClientError } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
@@ -43,6 +44,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const [factCheckResult, setFactCheckResult] = useState<EditorialResult<FactCheck>>();
     const [styleReviewResult, setStyleReviewResult] = useState<EditorialResult<StyleReview>>();
     const [translationResult, setTranslationResult] = useState<EditorialResult<{ metadata: TranslationMetadata; content: string }>>();
+    const [proposalSummaries, setProposalSummaries] = useState<Record<string, string>>({});
+    const [proposalSummaryState, setProposalSummaryState] = useState<"idle" | "loading" | "unavailable">("idle");
     const controller = useRef<AbortController>();
     const restoredArticleIds = useRef(new Set<string>());
     const review = useMemo(() => base && base.articleId === workspace.selectedArticle?.id ? createTextProposal(base.content, proposal) : undefined, [base, proposal, workspace.selectedArticle?.id]);
@@ -54,6 +57,32 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const factCheckStale = factCheckResult?.articleId === selectedArticleId && factCheckResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
     const styleReviewStale = styleReviewResult?.articleId === selectedArticleId && styleReviewResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
     const translationStale = translationResult?.articleId === selectedArticleId && translationResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
+
+
+    useEffect(() => {
+        if (state !== "idle" || stale || !review || !selectedArticleId || review.changes.length === 0) {
+            setProposalSummaries({});
+            setProposalSummaryState("idle");
+            return;
+        }
+
+        const controller = new AbortController();
+        setProposalSummaryState("loading");
+        void client.summarizeProposal(selectedArticleId, { changes: review.changes })
+            .then((summaries: ProposalChangeSummary[]) => {
+                if (controller.signal.aborted)
+                    return;
+
+                setProposalSummaries(Object.fromEntries(summaries.map((summary) => [summary.changeId, summary.summary])));
+                setProposalSummaryState(summaries.length > 0 ? "idle" : "unavailable");
+            })
+            .catch(() => {
+                if (!controller.signal.aborted)
+                    setProposalSummaryState("unavailable");
+            });
+
+        return () => controller.abort();
+    }, [client, proposal, review, selectedArticleId, stale, state]);
 
 
     async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string) {
@@ -210,6 +239,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         stale,
         proposalStale: stale,
         decisions,
+        proposalSummaries,
+        proposalSummaryState,
         setDecision: (id: string, decision: ProposalDecision) => setDecisions((current) => ({ ...current, [id]: decision })),
         state,
         message,

@@ -67,7 +67,13 @@ function modelPreferences(value: unknown): ModelPreferences {
         return normalized && typeof model === "string" ? [[normalized, model.trim()]] : [];
     })) as ModelPreferences["skillOverrides"];
 
-    return { defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "", skillOverrides };
+    const textGenerationModel = typeof candidate.textGenerationModel === "string" ? candidate.textGenerationModel.trim() : "";
+
+    return {
+        defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "",
+        ...(textGenerationModel ? { textGenerationModel } : {}),
+        skillOverrides,
+    };
 }
 
 

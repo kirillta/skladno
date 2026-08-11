@@ -4,12 +4,15 @@ import { Banner, Button, Diff, EmptyState, IconButton, Status } from "../../ui/p
 import { useIntl } from "react-intl";
 import { presentProposalReview, type ProposalDecision } from "./proposal-review-presentation.js";
 import { CloseIcon } from "../../ui/icons.js";
+import { AssistantIcon } from "../../ui/icons.js";
 
 
-export function ProposalReviewView({ review, stale, decisions, setDecision, acceptAll, applyAccepted, rejectAll, warningsDismissed, dismissWarnings, openWrite, openAssistant }: {
+export function ProposalReviewView({ review, stale, decisions, summaries, summaryState, setDecision, acceptAll, applyAccepted, rejectAll, warningsDismissed, dismissWarnings, openWrite, openAssistant }: {
     review: TextProposal | undefined;
     stale: boolean;
     decisions: Record<string, ProposalDecision>;
+    summaries?: Record<string, string>;
+    summaryState?: "idle" | "loading" | "unavailable";
     setDecision: (id: string, decision: ProposalDecision) => void;
     acceptAll: () => Promise<void>;
     applyAccepted: () => Promise<void>;
@@ -65,6 +68,10 @@ export function ProposalReviewView({ review, stale, decisions, setDecision, acce
                 cards.current[index] = element;
             }} tabIndex={-1} className={`rounded-panel border p-4 ${decisionClasses}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-semibold">{intl.formatMessage({ id: `views.changeType.${change.kind}` as never }, { index: index + 1, total: presentation.changes.length })}</h3><p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: `views.decision.${decision}` as never })}</p></div><div className="flex gap-2"><Button variant="secondary" state={decision === "rejected" ? "error" : "default"} disabled={stale} onClick={() => setDecision(change.id, "rejected")}>{intl.formatMessage({ id: "views.rejectChange" })}</Button><Button state={decision === "accepted" ? "success" : "default"} disabled={stale} onClick={() => setDecision(change.id, "accepted")}>{intl.formatMessage({ id: "views.acceptChange" })}</Button></div></div>
+                <div className="mt-4 flex min-h-9 items-start gap-2 border-y border-border py-3 text-sm" aria-live="polite">
+                    <AssistantIcon className="mt-0.5 size-4 shrink-0 text-brand" />
+                    <p>{summaries?.[change.id] ?? (summaryState === "loading" ? intl.formatMessage({ id: "views.proposalSummaryLoading" }) : intl.formatMessage({ id: "views.proposalSummaryUnavailable" }))}</p>
+                </div>
                 <div className="mt-4"><Diff layout="columns" state={decision} removed={change.baseLines.join("\n")} added={change.proposalLines.join("\n")} /></div>
             </article>;
         })}</div>}

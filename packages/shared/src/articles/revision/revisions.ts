@@ -16,6 +16,15 @@ export interface TextProposal {
     changes: ProposalChange[];
 }
 
+export interface ProposalChangeSummary {
+    changeId: string;
+    summary: string;
+}
+
+export interface SummarizeProposalInput {
+    changes: ProposalChange[];
+}
+
 
 export interface AcceptProposalInput {
     baseRevisionId: string;
@@ -27,6 +36,7 @@ export interface AcceptProposalInput {
 export const articleRevisionsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/revisions`;
 export const articleDraftPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/draft`;
 export const acceptProposalPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/proposal-acceptances`;
+export const proposalSummariesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/proposal-summaries`;
 export const restoreRevisionPath = (articleId: string, revisionId: string) => `${articleRevisionsPath(articleId)}/${encodeURIComponent(revisionId)}/restorations`;
 
 
@@ -120,4 +130,5 @@ export interface RevisionClient {
     listArticleRevisions(articleId: string): Promise<ArticleRevision[]>;
     acceptProposal(articleId: string, input: AcceptProposalInput): Promise<ArticleRevision>;
     restoreRevision(articleId: string, revisionId: string): Promise<ArticleRevision>;
+    summarizeProposal(articleId: string, input: SummarizeProposalInput): Promise<ProposalChangeSummary[]>;
 }

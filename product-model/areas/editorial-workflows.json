@@ -75,10 +75,10 @@
         {
             "id": "editorial-workflows.proposal-lifecycle",
             "area": "Proposal lifecycle",
-            "title": "Decision-based diff review, bulk acceptance or rejection, fallback, and stale protection",
+            "title": "Summarized diff review, bulk acceptance or rejection, fallback, and stale protection",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may accept or reject each change locally, apply the accepted subset in one Revision, accept a complete proposal in one Revision, or reject it without Article changes; stale and unreliable proposals cannot be partially accepted.",
+            "contract": "Authors may review a non-authoritative summary for each change, accept or reject each change locally, apply the accepted subset in one Revision, accept a complete proposal in one Revision, or reject it without Article changes; summary failure does not block review, and stale and unreliable proposals cannot be partially accepted.",
             "persistence": "Completed Proposal content and its base Revision remain locally recoverable; acceptance creates one immutable Revision and rejection leaves Article history unchanged.",
             "scenarioIds": ["editorial-workflows.stale-proposal-blocked"]
         },
@@ -106,10 +106,10 @@
         {
             "id": "editorial-workflows.ai-model-selection",
             "area": "AI model selection",
-            "title": "Refreshed model list, default model, and skill-specific overrides",
+            "title": "Refreshed model list and purpose-specific model preferences",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/electron/src/preload-bridge.ts", "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts", "packages/server/src/index.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/server.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/application", "packages/server/src/infrastructure"],
-            "contract": "A default model and built-in-skill overrides determine new editorial requests, whose system guidance is sent through the provider's supported instructions channel; test composition uses focused persistence dependencies directly.",
+            "contract": "A default model and built-in-skill overrides determine new editorial requests, while an optional text generation model handles supporting text such as Proposal-change summaries with default-model fallback; provider-side storage is disabled for summaries.",
             "persistence": "Model preferences persist locally; refreshed provider model lists are not persisted.",
             "scenarioIds": ["editorial-workflows.ai-model-preferences"]
         }
@@ -209,9 +209,9 @@
             "id": "editorial-workflows.ai-model-preferences",
             "title": "Model preferences resolve for new requests",
             "capabilityIds": ["editorial-workflows.ai-model-selection"],
-            "preconditions": ["A default model or skill-specific override is configured."],
+            "preconditions": ["A default model, text generation model, or skill-specific override is configured."],
             "event": "A new editorial request resolves its model." ,
-            "expected": ["The applicable override or default model is selected."],
+            "expected": ["The applicable editorial override, supporting-text preference, or default model is selected."],
             "forbidden": ["A refreshed provider list is not treated as persisted preference data."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         }
