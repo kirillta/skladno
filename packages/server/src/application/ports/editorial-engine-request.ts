@@ -7,7 +7,9 @@ export interface EditorialEngineRequest {
     authorContext: string;
     articleSelection?: boolean;
     skillId?: BuiltInSkillId;
+    surroundingArticleCharacterCount?: number;
     styleProfile?: StyleProfile;
+    targetArticleCharacterLimit?: number;
     previousResponseId?: string;
     targetLanguage?: string;
 }

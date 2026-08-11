@@ -10,4 +10,5 @@ test("resolves current skill IDs and legacy editorial operations through one com
     assert.equal(resolveBuiltInSkillId("unknown"), undefined);
     assert.equal(legacyEditorialOperationSkillMap.translation, BUILT_IN_SKILL.TRANSLATION);
     assert.deepEqual(builtInSkillScopeCompatibility.talking_points, ["article", "selection"]);
+    assert.deepEqual(builtInSkillScopeCompatibility.narrative_draft, ["article", "selection"]);
 });

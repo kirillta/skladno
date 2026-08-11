@@ -389,6 +389,8 @@ describe("Editorial Workspace", () => {
         panel.rerender(<IntlProvider locale="en" messages={messages}><EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection="Selected Article text" clearSelection={vi.fn()} /></IntlProvider>);
 
         await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy());
+        await user.click(within(panel.container).getByRole("button", { name: "Quick actions" }));
+        expect(within(panel.container).getByRole("button", { name: "Narrative draft" })).toBeTruthy();
         await user.click(within(panel.container).getByRole("button", { name: "Send editorial request" }));
 
         expect(onRequest).toHaveBeenCalledWith("Review this selection.", "talking_points", undefined, "Review this selection.".length);

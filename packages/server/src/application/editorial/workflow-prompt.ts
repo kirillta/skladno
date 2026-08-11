@@ -8,7 +8,9 @@ interface EditorialPromptInput {
     articleSelection?: boolean;
     authorContext: string;
     skillId?: BuiltInSkillId;
+    surroundingArticleCharacterCount?: number;
     styleProfile?: StyleProfile;
+    targetArticleCharacterLimit?: number;
     targetLanguage?: string;
 }
 
@@ -43,6 +45,23 @@ export function createEditorialMessages(input: EditorialPromptInput): ModelMessa
         return [
             { role: "system", content: "You are an editorial assistant helping an author discover an article's central theses. Preserve the author's intent, claims, numbers, URLs, code, and technical terms. Do not invent facts or say that you saved or changed the article." },
             { role: "user", content: `Workflow: talking points. Suggest concise, distinct theses from the source below. An Article selection is the primary source when present. The Author's message may guide or explicitly extend that selection; never use unselected whole Article content alongside it. Without a selection, prefer the Author's message whenever it is present; use Article content only when the message is empty. Unless the Author requests another count, suggest between 3 and 5 theses. Return a Markdown list. Base counts and derived details on the Article selection plus any supplementary material the Author explicitly provides in the message. If the source is missing or its direction is genuinely ambiguous, ask the Author only the focused questions needed to choose a direction instead of guessing.\n\n${sourceLabel}:\n${source || "No source content was provided."}${guidance}` },
+        ];
+    }
+
+    if (input.skillId === BUILT_IN_SKILL.NARRATIVE_DRAFT) {
+        const authorMessage = input.authorContext.trim();
+        const sourceLabel = input.articleSelection ? "Article selection" : "Article content";
+        const authorDirection = authorMessage ? `\n\nAuthor message (highest-priority direction and supplementary material):\n${authorMessage}` : "";
+        const lengthHint = input.targetArticleCharacterLimit
+            ? `\n\nAdvisory target for the resulting complete Article: about ${input.targetArticleCharacterLimit} characters. This is a composition hint, not a hard limit on your response.${input.articleSelection ? ` The unchanged surrounding Article currently contains ${input.surroundingArticleCharacterCount ?? 0} characters; size this replacement with the complete Article in mind.` : ""}`
+            : "";
+        const proposalForm = input.articleSelection
+            ? "Return only valid Markdown replacement text for the selected passage; do not return a complete Article because the replacement will remain inside the surrounding Article."
+            : "Return only a valid Markdown proposed full-text Article.";
+
+        return [
+            { role: "system", content: `You are an editorial assistant, not the Article's author. Help the Author develop their own material into a simple, coherent narrative. Prefer straightforward structure and ideas unless the Author explicitly asks for greater depth or complexity. Preserve the Author's claims, numbers, URLs, code, technical terms, requested tone, intent, and existing Markdown formatting. Do not invent facts, examples, sources, or arguments. ${proposalForm} This is a proposal for Author review; never say that you saved or changed the Article.` },
+            { role: "user", content: `Workflow: narrative draft. Extend the source into a coherent technical-article narrative. Follow the Author's message as the highest-priority direction when present. An Article selection is the primary Article source when present, and the Author's message may guide or explicitly extend it; never use unselected Article content as source material. Without a selection, use the current Article content and let the Author's message guide or extend it. Keep the Author in control: develop supplied ideas conservatively and do not introduce unsupported arguments.\n\n${sourceLabel}:\n${input.article.trim() || "No Article content was provided."}${authorDirection}${lengthHint}` },
         ];
     }
 

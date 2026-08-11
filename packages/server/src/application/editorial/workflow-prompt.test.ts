@@ -72,6 +72,31 @@ test("talking-points prompt uses an Article selection as primary and allows the 
 });
 
 
+// Product scenario: editorial-workflows.narrative-draft-source
+test("narrative-draft prompt follows Author direction, selection priority, and the resulting Article size hint", async () => {
+    const prompt = promptText({
+        operation: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
+        article: "Selected theses.",
+        articleSelection: true,
+        authorContext: "Add one simple example.",
+        skillId: BUILT_IN_SKILL.NARRATIVE_DRAFT,
+        surroundingArticleCharacterCount: 800,
+        targetArticleCharacterLimit: 1_300,
+    });
+
+    assert.match(prompt, /Author message \(highest-priority direction and supplementary material\):\nAdd one simple example/);
+    assert.match(prompt, /Article selection:\nSelected theses/);
+    assert.match(prompt, /never use unselected Article content as source material/);
+    assert.match(prompt, /resulting complete Article: about 1300 characters/);
+    assert.match(prompt, /not a hard limit on your response/);
+    assert.match(prompt, /unchanged surrounding Article currently contains 800 characters/);
+    assert.match(prompt, /replacement text for the selected passage/);
+    assert.doesNotMatch(prompt, /proposed full-text Article/);
+    assert.match(prompt, /not the Article's author/);
+    assert.match(prompt, /Prefer straightforward structure and ideas/);
+});
+
+
 test("flow-revision prompt asks for a full-text proposal rather than feedback", async () => {
     const prompt = promptText({
         operation: EDITORIAL_OPERATION.FLOW_REVISION,

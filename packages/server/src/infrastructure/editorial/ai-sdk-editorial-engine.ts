@@ -142,6 +142,8 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 articleSelection: request.articleSelection,
                 authorContext: request.authorContext,
                 skillId: request.skillId,
+                surroundingArticleCharacterCount: request.surroundingArticleCharacterCount,
+                targetArticleCharacterLimit: request.targetArticleCharacterLimit,
             }), signal, request.previousResponseId);
         } catch (error) {
             if (error instanceof EditorialEngineError || signal.aborted)

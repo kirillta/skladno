@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, HTTP_STATUS, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type StartAssistantRequest } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleStore } from "../ports/article-store.js";
@@ -20,6 +20,7 @@ export interface AssistantServiceRequest extends StartAssistantRequest {
 
 export interface PreparedAssistantRequest extends AssistantServiceRequest {
     articleContent: string;
+    publishingCharacterLimit?: number;
     resolvedSkillId?: BuiltInSkillId;
     operation: EditorialOperation;
     engine: EditorialEngine;
@@ -135,7 +136,11 @@ export class AssistantService {
         if (!engine)
             throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 
-        return { ...request, articleContent, resolvedSkillId, operation, engine };
+        const publishingCharacterLimit = isPublishLimitProfileId(article.publishingProfileId)
+            ? getPublishLimitProfile(article.publishingProfileId).characterLimit
+            : undefined;
+
+        return { ...request, articleContent, ...(publishingCharacterLimit ? { publishingCharacterLimit } : {}), resolvedSkillId, operation, engine };
     }
 
 
@@ -183,6 +188,8 @@ export class AssistantService {
                 ...(request.scope.kind === "selection" ? { articleSelection: true } : {}),
                 authorContext: request.authorMessage,
                 skillId: request.resolvedSkillId,
+                ...(request.scope.kind === "selection" ? { surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
+                ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
                 ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile } : {})
             }, signal);

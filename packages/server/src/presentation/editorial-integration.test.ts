@@ -398,27 +398,28 @@ test("assistant requests persist a revision-bound proposal and splice only the s
 });
 
 
-test("a selected Assistant skill without guidance runs on the whole Article", async () => {
+test("Narrative Draft without guidance uses the whole Article and its selected character limit", async () => {
     const engine = new FixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-whole-article", text: "improved Article" },
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.articleService.createArticle({ title: "Draft", content: "The whole Article" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "The whole Article", publishingProfileId: "linkedin-short" });
         await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
                 requestId: "assistant-whole-article",
                 authorMessage: "",
-                explicitSkillId: "talking_points",
+                explicitSkillId: "narrative_draft",
                 scope: { kind: "article", baseRevisionId: article.currentRevisionId },
             }),
         });
 
         assert.equal(engine.requests[0]?.article, "The whole Article");
         assert.equal(engine.requests[0]?.authorContext, "");
-        assert.equal(engine.requests[0]?.skillId, "talking_points");
+        assert.equal(engine.requests[0]?.skillId, "narrative_draft");
+        assert.equal(engine.requests[0]?.targetArticleCharacterLimit, 1_300);
     });
 });
 
