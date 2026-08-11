@@ -68,6 +68,44 @@ test("Assistant author messages retain their resolved skill", () => withReposito
 }));
 
 
+test("Proposal summaries remain recoverable with their Assistant Proposal", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Summaries", content: "Before" });
+    const request = repositories.assistant.createRequest({
+        id: "summary-request",
+        articleId: article.id,
+        scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+        explicitSkillId: "flow_and_clarity",
+    });
+    repositories.assistant.setAuthorMessage(request.id, "Improve the flow.");
+    repositories.assistant.resolveRequest(request.id, "flow_and_clarity", "explicit");
+    const artifact = repositories.editorialArtifacts.create({
+        articleId: article.id,
+        revisionId: article.currentRevisionId,
+        kind: "assistant-proposal",
+        content: JSON.stringify({ proposal: "After" }),
+    });
+    repositories.assistant.completeRequest({
+        requestId: request.id,
+        articleId: article.id,
+        skillId: "flow_and_clarity",
+        responseKind: "proposal_prepared",
+        content: "",
+        proposalContent: "After",
+        editorialArtifactId: artifact.id,
+    });
+    repositories.editorialArtifacts.updateContent(artifact.id, article.id, JSON.stringify({
+        proposal: "After",
+        proposalSummaries: [{ changeId: "change-1", summary: "Improves the transition." }],
+        proposalSummaryLocale: "en",
+    }));
+
+    const proposal = repositories.assistant.listMessages(article.id).find((message) => message.editorialArtifactId === artifact.id);
+
+    assert.deepEqual(proposal?.proposalSummaries, [{ changeId: "change-1", summary: "Improves the transition." }]);
+    assert.equal(proposal?.proposalSummaryLocale, "en");
+}));
+
+
 test("proposal acceptance requires the reviewed Revision to still be current", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Proposal", content: "before" });
     const accepted = repositories.articleService.acceptProposal(article.id, {

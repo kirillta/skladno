@@ -98,13 +98,16 @@ export {
     acceptProposalPath,
     applyProposalChanges,
     createTextProposal,
+    proposalSummariesPath,
     articleRevisionsPath,
     articleDraftPath,
     restoreRevisionPath,
     type AcceptProposalInput,
     type ProposalChange,
+    type ProposalChangeSummary,
     type RevisionClient,
     type TextProposal,
+    type SummarizeProposalInput,
 } from "./articles/revision/revisions.js";
 export type {
     Article,

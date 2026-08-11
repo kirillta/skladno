@@ -29,7 +29,7 @@ function renderLocalized(element: ReactElement) {
 function fakeClient(): EditorialWorkspaceClient {
     const created = article("new", "New Article");
     return {
-        getHealth: vi.fn(), listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]), createArticle: vi.fn().mockResolvedValue(created), updateArticle: vi.fn(), deleteArticle: vi.fn(), saveArticleDraft: vi.fn(), discardArticleDraft: vi.fn(), saveArticleRevision: vi.fn(), listArticleRevisions: vi.fn().mockResolvedValue([]), listAssistantMessages: vi.fn().mockResolvedValue([]), streamAssistantRequest: vi.fn(), acceptProposal: vi.fn(), restoreRevision: vi.fn(), streamEditorial: vi.fn(), getStyleCorpus: vi.fn().mockResolvedValue({ items: [] }), addStyleCorpusItem: vi.fn(), removeStyleCorpusItem: vi.fn(), getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"), setPublishLimitProfile: vi.fn(), getApplicationSettings: vi.fn().mockResolvedValue({ general: defaultGeneralSettings, connections: [], modelPreferences: { defaultModel: "", skillOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} }), updateGeneralSettings: vi.fn(), updateBackupPolicy: vi.fn(), updateKeyBindingOverrides: vi.fn(), addOpenAiConnection: vi.fn(), updateOpenAiConnection: vi.fn(), removeOpenAiConnection: vi.fn(), setActiveOpenAiConnection: vi.fn(), testOpenAiConnection: vi.fn(), refreshOpenAiModels: vi.fn(), updateModelPreferences: vi.fn(),
+        getHealth: vi.fn(), listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]), createArticle: vi.fn().mockResolvedValue(created), updateArticle: vi.fn(), deleteArticle: vi.fn(), saveArticleDraft: vi.fn(), discardArticleDraft: vi.fn(), saveArticleRevision: vi.fn(), listArticleRevisions: vi.fn().mockResolvedValue([]), listAssistantMessages: vi.fn().mockResolvedValue([]), streamAssistantRequest: vi.fn(), acceptProposal: vi.fn(), summarizeProposal: vi.fn().mockResolvedValue([]), restoreRevision: vi.fn(), streamEditorial: vi.fn(), getStyleCorpus: vi.fn().mockResolvedValue({ items: [] }), addStyleCorpusItem: vi.fn(), removeStyleCorpusItem: vi.fn(), getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"), setPublishLimitProfile: vi.fn(), getApplicationSettings: vi.fn().mockResolvedValue({ general: defaultGeneralSettings, connections: [], modelPreferences: { defaultModel: "", skillOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} }), updateGeneralSettings: vi.fn(), updateBackupPolicy: vi.fn(), updateKeyBindingOverrides: vi.fn(), addOpenAiConnection: vi.fn(), updateOpenAiConnection: vi.fn(), removeOpenAiConnection: vi.fn(), setActiveOpenAiConnection: vi.fn(), testOpenAiConnection: vi.fn(), refreshOpenAiModels: vi.fn(), updateModelPreferences: vi.fn(),
     };
 }
 
@@ -49,11 +49,36 @@ describe("Editorial Workspace", () => {
             articleId: restored.id,
             content: "one\ntwo\nthree\nfour",
             baseRevisionId: "one-revision",
-            version: 2,
+            version: 3,
             updatedAt: "2026-01-01T00:01:00.000Z",
         };
 
         expect(articleContentForWorkspace(restored)).toBe("one\ntwo\nthree");
+    });
+
+
+    it("restores the latest completed Proposal Review from local Assistant records", async () => {
+        const client = fakeClient();
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "proposal", selectedArticleId: "one" }));
+        client.listAssistantMessages = vi.fn().mockResolvedValue([{
+            id: "proposal-message",
+            articleId: "one",
+            requestId: "proposal-request",
+            role: "assistant",
+            kind: "response",
+            status: "completed",
+            responseKind: "proposal_prepared",
+            baseRevisionId: "one-revision",
+            baseRevisionContent: "Draft",
+            proposalContent: "Improved Draft",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+        }]);
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText("Replacement · Change 1 of 1")).toBeTruthy();
+        expect(screen.getByText("Improved Draft")).toBeTruthy();
     });
 
     // product: application.desktop-shell-layout
@@ -66,11 +91,12 @@ describe("Editorial Workspace", () => {
         await screen.findByRole("heading", { name: "First Article" });
 
         await waitFor(() => expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toEqual({
-            version: 2,
+            version: 3,
             libraryWidth: 208,
             assistantWidth: 384,
             libraryCollapsed: true,
             assistantCollapsed: false,
+            proposalWarningsDismissed: false,
             view: "write",
             selectedArticleId: "one",
         }));
@@ -460,20 +486,26 @@ describe("Editorial Workspace", () => {
     });
 
 
-    it("shows the selected skill on author messages and names Talking points proposals", () => {
+    // product: editorial-workflows.assistant-request-proposal
+    it("shows selected skills without Author text and names skill-specific proposals", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[
             { id: "author", articleId: "one", requestId: "request", role: "author", kind: "message", status: "completed", content: "Organize these ideas.", skillOffset: "Organize ".length, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
             { id: "response", articleId: "one", requestId: "request", role: "assistant", kind: "response", status: "completed", skillId: "talking_points", responseKind: "proposal_prepared", editorialArtifactId: "proposal", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+            { id: "narrative-author", articleId: "one", requestId: "narrative-request", role: "author", kind: "message", status: "completed", content: "", skillId: "narrative_draft", skillOffset: 0, createdAt: "2026-01-01T00:00:02.000Z", updatedAt: "2026-01-01T00:00:02.000Z" },
+            { id: "narrative-response", articleId: "one", requestId: "narrative-request", role: "assistant", kind: "response", status: "completed", responseKind: "proposal_prepared", editorialArtifactId: "narrative-proposal", createdAt: "2026-01-01T00:00:03.000Z", updatedAt: "2026-01-01T00:00:03.000Z" },
         ]} />);
         const panelScope = within(panel.container);
-        const review = panelScope.getByRole("button", { name: "Review Proposal" });
+        const [review] = panelScope.getAllByRole("button", { name: "Review Proposal" });
         const timestamp = [...panel.container.querySelectorAll("time")].at(-1)!;
 
         expect(panelScope.getByText("Talking points")).toBeTruthy();
         expect(panelScope.getByText("Talking points prepared")).toBeTruthy();
+        expect(panelScope.getAllByText("Narrative draft")).toHaveLength(1);
+        expect(panelScope.getByText("Narrative draft prepared")).toBeTruthy();
         const authorContent = panel.container.querySelector('article[aria-label="Talking points"] p')!;
         expect(authorContent.childNodes[0]?.textContent).toBe("Organize ");
         expect(authorContent.childNodes[1]?.textContent).toBe("Talking points");
+        expect(panel.container.querySelector('article[aria-label="Narrative draft"] p')?.textContent).toBe("Narrative draft");
         expect(review.compareDocumentPosition(timestamp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 

@@ -1,4 +1,4 @@
-import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleDraftPath, articleRevisionsPath, articlesPath, assistantMessagesPath, assistantRequestsPath, editorialPath, HTTP_METHOD, healthPath, keyBindingsPath, publishSettingsPath, restoreRevisionPath, styleCorpusPath } from "@skladno/shared";
+import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleDraftPath, articleRevisionsPath, articlesPath, assistantMessagesPath, assistantRequestsPath, editorialPath, HTTP_METHOD, healthPath, keyBindingsPath, proposalSummariesPath, publishSettingsPath, restoreRevisionPath, styleCorpusPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
@@ -10,6 +10,7 @@ import { handleHealthRoute } from "./health-route.js";
 import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publish-settings-route.js";
 import { handleActivateAiConnectionRoute, handleAiModelsRoute, handleBackupPolicyRoute, handleCreateAiConnectionRoute, handleDeleteAiConnectionRoute, handleGeneralSettingsRoute, handleKeyBindingsRoute, handleModelPreferencesRoute, handleSettingsSnapshotRoute, handleTestAiConnectionRoute, handleUpdateAiConnectionRoute } from "./settings-route.js";
 import { createStyleCorpusItemRoute, deleteStyleCorpusItemRoute, handleStyleCorpusRoute } from "./style-corpus-route.js";
+import { summarizeProposalRoute } from "./proposal-summary-route.js";
 
 
 const ROUTE_PARAMETER = "__route_parameter__";
@@ -24,6 +25,7 @@ const ARTICLE_PATH = routePattern(`${articlesPath}/${ROUTE_PARAMETER}`);
 const ARTICLE_DRAFT_PATH = routePattern(articleDraftPath(ROUTE_PARAMETER));
 const ARTICLE_REVISIONS_PATH = routePattern(articleRevisionsPath(ROUTE_PARAMETER));
 const ARTICLE_PROPOSAL_ACCEPTANCES_PATH = routePattern(acceptProposalPath(ROUTE_PARAMETER));
+const ARTICLE_PROPOSAL_SUMMARIES_PATH = routePattern(proposalSummariesPath(ROUTE_PARAMETER));
 const ARTICLE_RESTORATION_PATH = routePattern(restoreRevisionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const ASSISTANT_MESSAGES_PATH = routePattern(assistantMessagesPath(ROUTE_PARAMETER));
 const ASSISTANT_REQUESTS_PATH = routePattern(assistantRequestsPath(ROUTE_PARAMETER));
@@ -35,7 +37,7 @@ const TEST_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAM
 
 
 export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices): Router {
-    const { articles, assistant, publishing, settings, styleCorpus } = services;
+    const { articles, assistant, proposalSummaries, publishing, settings, styleCorpus } = services;
     const router = new Router();
 
     router.register(HTTP_METHOD.GET, healthPath, (_request, response) => handleHealthRoute(response));
@@ -67,6 +69,7 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.POST, ARTICLE_REVISIONS_PATH, (request, response, parameters) => saveRevisionRoute(request, response, parameters[0]!, articles));
     router.register(HTTP_METHOD.GET, ARTICLE_REVISIONS_PATH, (_request, response, parameters) => listRevisionsRoute(response, parameters[0]!, articles));
     router.register(HTTP_METHOD.POST, ARTICLE_PROPOSAL_ACCEPTANCES_PATH, (request, response, parameters) => acceptProposalRoute(request, response, parameters[0]!, articles));
+    router.register(HTTP_METHOD.POST, ARTICLE_PROPOSAL_SUMMARIES_PATH, (request, response, parameters) => summarizeProposalRoute(request, response, parameters[0]!, proposalSummaries));
     router.register(HTTP_METHOD.POST, ARTICLE_RESTORATION_PATH, (_request, response, parameters) => restoreRevisionRoute(response, parameters[0]!, parameters[1]!, articles));
 
     return router;

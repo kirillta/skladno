@@ -1,17 +1,20 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
+    ArticleRevisionConflictError,
     createTextProposal,
     defaultPublishLimitProfileId,
     isPublishLimitProfileId,
     REVISION_PROVENANCE_KIND,
     type AssistantEditorialResult,
+    type AssistantMessage,
     type EditorialEvent,
     type EditorialOperation,
     type FactCheck,
     type StyleReview,
     type TranslationMetadata,
+    type ProposalChangeSummary,
 } from "@skladno/shared";
 import { ApplicationClientError } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
@@ -21,6 +24,7 @@ import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName, targetLanguageId } from "./editorial-language.js";
 
 type ProposalState = "idle" | "streaming" | "error";
+type ProposalDecision = "pending" | "accepted" | "rejected";
 
 interface EditorialResult<T> {
     articleId: string;
@@ -33,14 +37,18 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [proposal, setProposal] = useState("");
-    const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string }>();
-    const [selectedChanges, setSelectedChanges] = useState<Set<string>>(new Set());
+    const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string; editorialArtifactId?: string }>();
+    const [decisions, setDecisions] = useState<Record<string, ProposalDecision>>({});
     const [state, setState] = useState<ProposalState>("idle");
     const [message, setMessage] = useState("");
     const [factCheckResult, setFactCheckResult] = useState<EditorialResult<FactCheck>>();
     const [styleReviewResult, setStyleReviewResult] = useState<EditorialResult<StyleReview>>();
     const [translationResult, setTranslationResult] = useState<EditorialResult<{ metadata: TranslationMetadata; content: string }>>();
+    const [proposalSummaries, setProposalSummaries] = useState<Record<string, string>>({});
+    const [proposalSummaryState, setProposalSummaryState] = useState<"idle" | "loading" | "unavailable">("idle");
+    const [proposalSummaryLocale, setProposalSummaryLocale] = useState<string>();
     const controller = useRef<AbortController>();
+    const restoredArticleIds = useRef(new Set<string>());
     const review = useMemo(() => base && base.articleId === workspace.selectedArticle?.id ? createTextProposal(base.content, proposal) : undefined, [base, proposal, workspace.selectedArticle?.id]);
     const stale = Boolean(workspace.selectedArticle && base?.articleId === workspace.selectedArticle.id && base.revisionId !== workspace.selectedArticle.currentRevisionId);
     const selectedArticleId = workspace.selectedArticle?.id;
@@ -50,6 +58,36 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const factCheckStale = factCheckResult?.articleId === selectedArticleId && factCheckResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
     const styleReviewStale = styleReviewResult?.articleId === selectedArticleId && styleReviewResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
     const translationStale = translationResult?.articleId === selectedArticleId && translationResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
+
+
+    useEffect(() => {
+        if (state !== "idle" || stale || !review || !selectedArticleId || !base?.editorialArtifactId || review.changes.length === 0) {
+            setProposalSummaries({});
+            setProposalSummaryState("idle");
+            return;
+        }
+
+        if (proposalSummaryLocale === intl.locale)
+            return;
+
+        const controller = new AbortController();
+        setProposalSummaryState("loading");
+        void client.summarizeProposal(selectedArticleId, { editorialArtifactId: base.editorialArtifactId, interfaceLocale: intl.locale, changes: review.changes })
+            .then((summaries: ProposalChangeSummary[]) => {
+                if (controller.signal.aborted)
+                    return;
+
+                setProposalSummaries(Object.fromEntries(summaries.map((summary) => [summary.changeId, summary.summary])));
+                setProposalSummaryLocale(intl.locale);
+                setProposalSummaryState(summaries.length > 0 ? "idle" : "unavailable");
+            })
+            .catch(() => {
+                if (!controller.signal.aborted)
+                    setProposalSummaryState("unavailable");
+            });
+
+        return () => controller.abort();
+    }, [base?.editorialArtifactId, client, intl.locale, proposal, proposalSummaryLocale, review, selectedArticleId, stale, state]);
 
 
     async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string) {
@@ -65,7 +103,9 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             if (operation === "thesis_to_narrative" || operation === "flow_revision") {
                 setBase({ articleId: article.id, content, revisionId });
                 setProposal("");
-                setSelectedChanges(new Set());
+                setDecisions({});
+                setProposalSummaries({});
+                setProposalSummaryLocale(undefined);
             }
 
             setMessage("");
@@ -80,6 +120,9 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
                 if (event.type === "completed") {
                     if (operation === "thesis_to_narrative" || operation === "flow_revision")
                         setProposal(event.text);
+
+                    if ((operation === "thesis_to_narrative" || operation === "flow_revision") && event.editorialArtifactId)
+                        setBase({ articleId: article.id, content, revisionId, editorialArtifactId: event.editorialArtifactId });
 
                     if (event.factCheck)
                         setFactCheckResult({ articleId: article.id, baseRevisionId: revisionId, value: event.factCheck });
@@ -110,21 +153,26 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }
 
 
-    async function accept() {
+    async function accept(acceptedChangeIds: ReadonlySet<string>, wholeProposal = false) {
         const article = workspace.selectedArticle;
         if (!article || !base || !review || stale)
             return;
 
-        const content = applyProposalChanges(review, selectedChanges);
+        const content = wholeProposal ? review.proposedContent : applyProposalChanges(review, acceptedChangeIds);
         try {
-            const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL } });
+            const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL, baseRevisionId: base.revisionId, ...(wholeProposal ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] }) } });
 
             workspace.updateRevision(article.id, revision);
             workspace.setContent(content);
             setProposal("");
             setBase(undefined);
-            setSelectedChanges(new Set());
+            setDecisions({});
         } catch (error) {
+            if (error instanceof ArticleRevisionConflictError) {
+                workspace.updateRevision(article.id, error.article.currentRevision);
+                return;
+            }
+
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }
     }
@@ -157,15 +205,18 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }
 
 
-    function applyAssistantResult(articleId: string, baseRevisionId: string, result: AssistantEditorialResult) {
+    const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => {
         const article = workspace.articles.find((item) => item.id === articleId);
         if (!article)
             return;
 
         if (result.proposal) {
-            setBase({ articleId, content: article.currentRevision.content, revisionId: baseRevisionId });
+            restoredArticleIds.current.delete(articleId);
+            setBase({ articleId, content: article.currentRevision.content, revisionId: baseRevisionId, ...(editorialArtifactId ? { editorialArtifactId } : {}) });
             setProposal(result.proposal);
-            setSelectedChanges(new Set());
+            setProposalSummaries({});
+            setProposalSummaryLocale(undefined);
+            setDecisions({});
         }
 
         if (result.factCheck)
@@ -176,7 +227,24 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
         if (result.translation)
             setTranslationResult({ articleId, baseRevisionId, value: result.translation });
-    }
+    }, [workspace.articles]);
+
+    const restoreAssistantProposal = useCallback((messages: AssistantMessage[] | undefined) => {
+        const article = workspace.selectedArticle;
+        if (!article || restoredArticleIds.current.has(article.id))
+            return;
+
+        const message = [...(messages ?? [])].reverse().find((item) => item.proposalContent && item.baseRevisionId && item.baseRevisionContent);
+        if (!message)
+            return;
+
+        restoredArticleIds.current.add(article.id);
+        setBase({ articleId: article.id, content: message.baseRevisionContent!, revisionId: message.baseRevisionId!, ...(message.editorialArtifactId ? { editorialArtifactId: message.editorialArtifactId } : {}) });
+        setProposal(message.proposalContent!);
+        setProposalSummaries(Object.fromEntries((message.proposalSummaries ?? []).map((summary) => [summary.changeId, summary.summary])));
+        setProposalSummaryLocale(message.proposalSummaryLocale);
+        setDecisions({});
+    }, [workspace.selectedArticle]);
 
     return {
         proposal,
@@ -184,8 +252,10 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         base,
         stale,
         proposalStale: stale,
-        selectedChanges,
-        setSelectedChanges,
+        decisions,
+        proposalSummaries,
+        proposalSummaryState,
+        setDecision: (id: string, decision: ProposalDecision) => setDecisions((current) => ({ ...current, [id]: decision })),
         state,
         message,
         factCheck,
@@ -195,14 +265,21 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         translation,
         translationStale,
         request,
-        accept,
-        reject: () => {
+        acceptAll: () => accept(new Set(review ? review.changes.map((change) => change.id) : []), true),
+        applyAccepted: () => accept(new Set(Object.entries(decisions).filter(([, decision]) => decision === "accepted").map(([id]) => id)), false),
+        rejectAll: () => setDecisions(Object.fromEntries((review?.changes ?? []).map((change) => [change.id, "rejected"]))),
+        dismissProposal: () => {
+            if (base)
+                restoredArticleIds.current.add(base.articleId);
+
             setProposal("");
             setBase(undefined);
+            setDecisions({});
         },
         cancel: () => controller.current?.abort(),
         createTranslation,
-        applyAssistantResult
+        applyAssistantResult,
+        restoreAssistantProposal
     };
 }
 

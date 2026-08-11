@@ -8,6 +8,7 @@ import type { EditorialEngineResolver } from "./ports/editorial-engine-resolver.
 import { PublishingService } from "./publishing/publishing-service.js";
 import { StyleCorpusService } from "./editorial/style-corpus-service.js";
 import { ApplicationSettingsService } from "./settings/application-settings-service.js";
+import { ProposalSummaryService } from "./editorial/proposal-summary-service.js";
 import type { ArticleStore } from "./ports/article-store.js";
 import type { SettingsStore } from "./ports/settings-store.js";
 import type { StyleCorpusStore } from "./ports/style-corpus-store.js";
@@ -21,5 +22,6 @@ export function createApplicationServices(articles: ArticleStore, settings: Sett
         settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId),
         publishing: new PublishingService(settings),
         styleCorpus: new StyleCorpusService(styleCorpus),
+        proposalSummaries: new ProposalSummaryService(engines, artifacts),
     };
 }

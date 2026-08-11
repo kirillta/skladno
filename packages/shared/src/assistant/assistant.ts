@@ -110,6 +110,11 @@ export interface AssistantMessage {
     selectionText?: string;
     responseKind?: AssistantResponseKind;
     editorialArtifactId?: string;
+    baseRevisionId?: string;
+    baseRevisionContent?: string;
+    proposalContent?: string;
+    proposalSummaries?: import("../articles/revision/revisions.js").ProposalChangeSummary[];
+    proposalSummaryLocale?: string;
     createdAt: string;
     updatedAt: string;
 }

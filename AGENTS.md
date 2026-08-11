@@ -86,6 +86,8 @@ Use these sources in descending order:
 
 If an issue conflicts with a product invariant below, stop and call out the conflict before implementing it.
 
+Treat mockups as non-authoritative guidance for visual direction and interaction intent. When a mockup differs from the current application, preserve and prioritize the application's implemented feature set, product terminology, behavior, contracts, and states unless the active issue explicitly requires changing them.
+
 ## Product invariants
 
 - Never apply AI-generated text to an article without explicit author approval.

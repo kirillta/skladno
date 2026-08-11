@@ -1,7 +1,7 @@
 import type { AssistantEvent, StartAssistantRequest } from "../assistant/assistant.js";
 import type { Article, CreateArticleInput, UpdateArticleInput } from "../articles/article/article.js";
 import type { ArticleDraft, SaveArticleDraftInput } from "../articles/draft/draft.js";
-import type { AcceptProposalInput } from "../articles/revision/revisions.js";
+import type { AcceptProposalInput, ProposalChangeSummary, SummarizeProposalInput } from "../articles/revision/revisions.js";
 import type { ArticleRevision, SaveArticleRevisionInput } from "../articles/revision/revision.js";
 import type { HealthResponse } from "./health.js";
 import type { ApplicationErrorPayload } from "../cross-cutting/errors.js";
@@ -42,6 +42,7 @@ export interface ElectronApplicationOperationMap {
     saveArticleRevision: { args: [string, SaveArticleRevisionInput]; result: ArticleRevision };
     listArticleRevisions: { args: [string]; result: ArticleRevision[] };
     acceptProposal: { args: [string, AcceptProposalInput]; result: ArticleRevision };
+    summarizeProposal: { args: [string, SummarizeProposalInput]; result: ProposalChangeSummary[] };
     restoreRevision: { args: [string, string]; result: ArticleRevision };
     listAssistantMessages: { args: [string]; result: import("../assistant/assistant.js").AssistantMessage[] };
     getStyleCorpus: { args: []; result: StyleCorpus };
@@ -76,6 +77,7 @@ export const ELECTRON_APPLICATION_METHOD = {
     saveArticleRevision: "saveArticleRevision",
     listArticleRevisions: "listArticleRevisions",
     acceptProposal: "acceptProposal",
+    summarizeProposal: "summarizeProposal",
     restoreRevision: "restoreRevision",
     listAssistantMessages: "listAssistantMessages",
     getStyleCorpus: "getStyleCorpus",

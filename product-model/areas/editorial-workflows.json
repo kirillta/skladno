@@ -7,8 +7,8 @@
             "area": "Assistant foundation",
             "title": "Durable local conversation and built-in skill registry",
             "status": "implemented",
-            "owners": ["packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/ports/assistant-store.ts", "packages/server/src/application/ports/assistant-artifact-store.ts", "packages/server/src/presentation/routes/assistant-route.ts", "packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/shared/src/assistant/assistant.ts"],
-            "contract": "Every Article has one persisted greeting and stable contracts for six skills. Assistant requests are revision-bound, resolve one eligible explicit or inferred skill, and retain completed local messages and review artifacts. Talking Points derives 3–5 theses primarily from an Article selection when present, allowing the Author message to guide or explicitly extend it while excluding unselected Article content; otherwise it uses an Author message or finally Article content, and may ask focused clarifying questions when direction is ambiguous. Narrative Draft follows Author direction, develops the selected Article source conservatively, and may use the publishing character limit as advisory guidance for the resulting complete Article.",
+            "owners": ["packages/web/src/workspace/components/assistant", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/ports/assistant-store.ts", "packages/server/src/application/ports/assistant-artifact-store.ts", "packages/server/src/presentation/routes/assistant-route.ts", "packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/shared/src/assistant/assistant.ts"],
+            "contract": "Every Article has one persisted greeting and stable contracts for six skills. Assistant requests are revision-bound, resolve one eligible explicit or inferred skill, and retain completed local messages and review artifacts. The timeline retains a selected skill chip even without an Author message and uses skill-specific labels for prepared output. Talking Points derives 3–5 theses primarily from an Article selection when present, allowing the Author message to guide or explicitly extend it while excluding unselected Article content; otherwise it uses an Author message or finally Article content, and may ask focused clarifying questions when direction is ambiguous. Narrative Draft follows Author direction, develops the selected Article source conservatively, and may use the publishing character limit as advisory guidance for the resulting complete Article.",
             "persistence": "Assistant messages, requests, and completed artifacts persist locally. Workflow Stage persistence is retired; legacy values remain untouched.",
             "scenarioIds": ["editorial-workflows.assistant-request-proposal", "editorial-workflows.talking-points-source", "editorial-workflows.narrative-draft-source"]
         },
@@ -75,11 +75,11 @@
         {
             "id": "editorial-workflows.proposal-lifecycle",
             "area": "Proposal lifecycle",
-            "title": "Diff review, selection, acceptance, rejection, and stale protection",
+            "title": "Summarized diff review, bulk acceptance or rejection, fallback, and stale protection",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may review diffs, select changes, accept or reject proposals, and cannot accept a stale proposal; the conflict contract is application-owned and transport-neutral.",
-            "persistence": "Acceptance creates one immutable Revision; rejection leaves Article history unchanged.",
+            "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "contract": "Authors may review a non-authoritative Interface-locale summary for each change, select every change as accepted or rejected locally, apply the accepted subset in one Revision, accept a complete proposal in one Revision, or explicitly dismiss a stale or zero-change proposal without Article changes; summary failure does not block review, and stale and preservation warnings precede a compact review-control band with labelled icon change navigation and diff while stale and unreliable proposals cannot be partially accepted; fallback presentation identifies one complete Proposal while disclosing its underlying change count.",
+            "persistence": "Completed Proposal content, summaries with their Interface locale, and the base Revision remain locally recoverable in the Proposal artifact; acceptance creates one immutable Revision and rejection leaves Article history unchanged.",
             "scenarioIds": ["editorial-workflows.stale-proposal-blocked"]
         },
         {
@@ -106,10 +106,10 @@
         {
             "id": "editorial-workflows.ai-model-selection",
             "area": "AI model selection",
-            "title": "Refreshed model list, default model, and skill-specific overrides",
+            "title": "Refreshed model list and purpose-specific model preferences",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/electron/src/preload-bridge.ts", "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts", "packages/server/src/index.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/server.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/application", "packages/server/src/infrastructure"],
-            "contract": "A default model and built-in-skill overrides determine new editorial requests, whose system guidance is sent through the provider's supported instructions channel; test composition uses focused persistence dependencies directly.",
+            "contract": "A default model and built-in-skill overrides determine new editorial requests, while an optional text generation model handles supporting text such as Proposal-change summaries with default-model fallback; provider-side storage is disabled for summaries.",
             "persistence": "Model preferences persist locally; refreshed provider model lists are not persisted.",
             "scenarioIds": ["editorial-workflows.ai-model-preferences"]
         }
@@ -191,7 +191,7 @@
             "capabilityIds": ["editorial-workflows.proposal-lifecycle", "editorial-workflows.ai-safety"],
             "preconditions": ["A Proposal base Revision is no longer current."],
             "event": "The author opens Proposal Review." ,
-            "expected": ["The stale warning is shown and rejection remains available."],
+            "expected": ["The stale warning is shown before review controls, selection actions are disabled, and recovery actions including proposal dismissal remain available."],
             "forbidden": ["Acceptance cannot create a Revision from a stale Proposal."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/ProposalReviewView.test.tsx" }
         },
@@ -209,9 +209,9 @@
             "id": "editorial-workflows.ai-model-preferences",
             "title": "Model preferences resolve for new requests",
             "capabilityIds": ["editorial-workflows.ai-model-selection"],
-            "preconditions": ["A default model or skill-specific override is configured."],
+            "preconditions": ["A default model, text generation model, or skill-specific override is configured."],
             "event": "A new editorial request resolves its model." ,
-            "expected": ["The applicable override or default model is selected."],
+            "expected": ["The applicable editorial override, supporting-text preference, or default model is selected."],
             "forbidden": ["A refreshed provider list is not treated as persisted preference data."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         }

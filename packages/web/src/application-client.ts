@@ -45,6 +45,9 @@ import {
     type KeyBindingOverrides,
     type ModelPreferences,
     type OpenAiConnection,
+    proposalSummariesPath,
+    type ProposalChangeSummary,
+    type SummarizeProposalInput,
 } from "@skladno/shared";
 import { configureSystemDateTimeFormat } from "./i18n/formatting.js";
 
@@ -209,6 +212,11 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async acceptProposal(articleId: string, input: AcceptProposalInput): Promise<ArticleRevision> {
         return this.request<ArticleRevision>(acceptProposalPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+    }
+
+
+    async summarizeProposal(articleId: string, input: SummarizeProposalInput): Promise<ProposalChangeSummary[]> {
+        return this.request<ProposalChangeSummary[]>(proposalSummariesPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 

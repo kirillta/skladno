@@ -45,7 +45,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     if (editorial.review)
         badges.proposal = editorial.proposalStale
             ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
-            : { label: intl.formatMessage({ id: "workspace.badges.review" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.review" }), tone: "default" };
+            : { label: intl.formatMessage({ id: "workspace.badges.review" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.review" }), tone: "default", display: "dot" };
 
     if (editorial.factCheck)
         badges["fact-check"] = editorial.factCheckStale
@@ -64,7 +64,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
 
     if (publishing.length.state !== "within-limit") {
         const messageId = publishing.length.state === "over-limit" ? "workspace.badges.overLimit" : "workspace.badges.nearLimit";
-        badges.publish = { label: intl.formatMessage({ id: messageId }), accessibleLabel: intl.formatMessage({ id: messageId }), tone: publishing.length.state === "over-limit" ? "error" : "warning" };
+        badges.publish = { label: intl.formatMessage({ id: messageId }), accessibleLabel: intl.formatMessage({ id: messageId }), tone: "warning" };
     }
 
     return <div className="flex h-full min-h-0 flex-col overflow-hidden" data-article-workspace tabIndex={-1}>
@@ -88,7 +88,10 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             <Button className="ml-auto" variant="secondary" onClick={() => void workspace.retry()}>{intl.formatMessage({ id: "draftSave.retry" })}</Button>
         </Banner>}
         <WorkspaceTabBar view={layout.view} setView={layout.setView} badges={badges} shortcutOverrides={shortcutOverrides} />
-        <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} />
+        <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} proposalWarningsDismissed={layout.proposalWarningsDismissed} dismissProposalWarnings={() => layout.setProposalWarningsDismissed(true)} openWrite={() => layout.setView("write")} openAssistant={() => {
+            layout.setAssistantCollapsed(false);
+            layout.setView("write");
+        }} />
         <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} setProfile={publishing.setProfile} />
     </div>;
 }

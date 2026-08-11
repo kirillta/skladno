@@ -41,6 +41,17 @@ export class EditorialArtifactsRepository {
     }
 
 
+    get(artifactId: string, articleId: string): EditorialArtifact | undefined {
+        return this.list(articleId).find((artifact) => artifact.id === artifactId);
+    }
+
+
+    updateContent(artifactId: string, articleId: string, content: string): void {
+        if (this.database.prepare("UPDATE editorial_artifacts SET content = ? WHERE id = ? AND article_id = ?").run(content, artifactId, articleId).changes === 0)
+            throw new Error("Editorial artifact not found.");
+    }
+
+
     createCitation(input: CreateSourceCitationInput): SourceCitation {
         const id = input.id ?? createId();
         const createdAt = now();

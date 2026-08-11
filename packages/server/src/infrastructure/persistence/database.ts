@@ -144,6 +144,13 @@ const migrations = [
         ALTER TABLE assistant_messages ADD COLUMN skill_offset INTEGER;
         `,
     },
+    {
+        version: 10,
+        name: "assistant_proposal_recovery",
+        sql: `
+        ALTER TABLE assistant_messages ADD COLUMN proposal_content TEXT;
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

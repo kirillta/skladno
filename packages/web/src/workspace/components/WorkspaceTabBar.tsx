@@ -9,6 +9,7 @@ export interface WorkspaceTabBadgeDescriptor {
     label: string;
     accessibleLabel: string;
     tone: "default" | "warning" | "error";
+    display?: "badge" | "dot";
 }
 
 
@@ -58,7 +59,7 @@ export function WorkspaceTabBar({ view, setView, badges = {}, shortcutOverrides 
                 tabIndex={view === item.id ? 0 : -1}
                 title={shortcutHint(accessibleName, item.command, shortcutOverrides)}
                 onClick={() => setView(item.id)}
-                onKeyDown={(event) => handleKeyDown(event, index)}>{label}{badge && <span aria-hidden="true" className={`ml-1.5 inline-flex rounded-control border px-1.5 py-0.5 text-micro font-semibold ${badgeClassName}`}>{badge.label}</span>}</Tab>;
+                onKeyDown={(event) => handleKeyDown(event, index)}>{label}{badge && <span aria-hidden="true" className={badge.display === "dot" ? `ml-1.5 inline-block size-2 rounded-full ${badge.tone === "warning" ? "bg-warning" : badge.tone === "error" ? "bg-danger" : "bg-brand"}` : `ml-1.5 inline-flex rounded-control border px-1.5 py-0.5 text-micro font-semibold ${badgeClassName}`}>{badge.display === "dot" ? undefined : badge.label}</span>}</Tab>;
         })}
     </TabList>;
 }

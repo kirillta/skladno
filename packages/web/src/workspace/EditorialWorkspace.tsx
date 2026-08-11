@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { defaultPublishLimitProfileId, isArticleLanguage, isPublishLimitProfileId, KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
@@ -39,6 +39,11 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const [assistantSelection, setAssistantSelection] = useState<string>();
     const assistant = useAssistantMessages(client, workspace, assistantSelection, editorial.applyAssistantResult);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
+    const restoreAssistantProposal = editorial.restoreAssistantProposal;
+
+    useEffect(() => {
+        restoreAssistantProposal(assistant.messages);
+    }, [assistant.messages, restoreAssistantProposal]);
 
     const createBlank = useCallback(async () => {
         try {

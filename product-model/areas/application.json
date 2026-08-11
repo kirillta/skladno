@@ -19,7 +19,7 @@
                 "packages/electron/src/preload-bridge.ts",
                 "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts"
             ],
-            "contract": "The renderer uses a typed application client against the local Node.js service; presentation receives application services, while credentials and privileged operations remain server-side.",
+            "contract": "The renderer uses typed HTTP and Electron application-client operations, including supporting Proposal summaries, against local application services; credentials and privileged model operations remain server-side.",
             "persistence": "No renderer access to secrets, files, or SQLite.",
             "scenarioIds": [
                 "application.local-service-client-contract"
@@ -74,7 +74,7 @@
                 "packages/server/src/application/settings/application-settings-service.ts",
                 "packages/server/src/application/editorial/editorial-service.ts"
             ],
-            "contract": "Articles, Draft checkpoints, materials, style samples, and settings persist in local SQLite storage through focused domain-specific repositories wired at local-service startup; no aggregate repository facade is required.",
+            "contract": "Articles, Draft checkpoints, materials, style samples, model preferences, and completed Proposal summaries persist in local SQLite storage through focused domain-specific repositories wired at local-service startup; no aggregate repository facade is required.",
             "persistence": "SQLite is the active data store; private author data is not delegated to a remote application database.",
             "scenarioIds": [
                 "application.local-persistence-reopens"
@@ -90,8 +90,8 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/useWorkspaceLayout.ts"
             ],
-            "contract": "The desktop shell supports collapsed panels and responsive workspace layout.",
-            "persistence": "Workspace layout preferences are persisted locally in browser storage.",
+            "contract": "The desktop shell supports collapsed panels, responsive workspace layout, and locally dismissible workspace advisories.",
+            "persistence": "Workspace layout and advisory-dismissal preferences are persisted locally in browser storage.",
             "scenarioIds": [
                 "application.desktop-shell-layout"
             ],
