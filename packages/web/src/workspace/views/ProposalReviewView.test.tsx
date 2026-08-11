@@ -13,7 +13,7 @@ describe("ProposalReviewView", () => {
                 baseContent: "Original",
                 proposedContent: "Proposed",
                 changes: [{ id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] }],
-            }} stale decisions={{ "change-1": "accepted" }} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
+            }} stale decisions={{ "change-1": "accepted" }} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
         expect(screen.getByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.")).toBeTruthy();

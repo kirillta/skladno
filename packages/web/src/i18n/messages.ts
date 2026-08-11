@@ -211,6 +211,7 @@ export const messages = {
     "views.regenerateInAssistant": "Regenerate in Assistant",
     "views.proposalFallback": "This proposal cannot be safely separated into individual changes. Review the complete proposal before accepting it.",
     "views.preservationWarnings": "Check preserved details",
+    "views.dismissPreservationWarnings": "Dismiss preservation warnings",
     "views.warning.url": "URLs changed—verify every link.",
     "views.warning.number": "Numeric values changed—verify every number.",
     "views.warning.code": "Code changed—verify inline and fenced code.",

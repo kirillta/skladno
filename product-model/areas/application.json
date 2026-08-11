@@ -90,8 +90,8 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/useWorkspaceLayout.ts"
             ],
-            "contract": "The desktop shell supports collapsed panels and responsive workspace layout.",
-            "persistence": "Workspace layout preferences are persisted locally in browser storage.",
+            "contract": "The desktop shell supports collapsed panels, responsive workspace layout, and locally dismissible workspace advisories.",
+            "persistence": "Workspace layout and advisory-dismissal preferences are persisted locally in browser storage.",
             "scenarioIds": [
                 "application.desktop-shell-layout"
             ],

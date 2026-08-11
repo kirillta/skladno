@@ -14,7 +14,7 @@ import { RevisionHistoryView } from "../views/RevisionHistoryView.js";
 import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
 
-export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, onSelectionChange, assistantSelection, openWrite, openAssistant }: {
+export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
     view: WorkspaceView;
     article: Article;
     workspace: ArticleWorkspaceState;
@@ -25,6 +25,8 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     generalSettings: GeneralSettings;
     onSelectionChange?: (value: string | undefined) => void;
     assistantSelection?: string;
+    proposalWarningsDismissed: boolean;
+    dismissProposalWarnings: () => void;
     openWrite: () => void;
     openAssistant: () => void;
 }) {
@@ -34,7 +36,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
         return panel(<ArticleEditorView articleId={article.id} content={workspace.content} setContent={workspace.setContent} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} />);
 
     if (view === "proposal")
-        return panel(<ProposalReviewView review={editorial.review} stale={editorial.stale} decisions={editorial.decisions} setDecision={editorial.setDecision} acceptAll={editorial.acceptAll} applyAccepted={editorial.applyAccepted} rejectAll={editorial.reject} openWrite={openWrite} openAssistant={openAssistant} />);
+        return panel(<ProposalReviewView review={editorial.review} stale={editorial.stale} decisions={editorial.decisions} setDecision={editorial.setDecision} acceptAll={editorial.acceptAll} applyAccepted={editorial.applyAccepted} rejectAll={editorial.reject} warningsDismissed={proposalWarningsDismissed} dismissWarnings={dismissProposalWarnings} openWrite={openWrite} openAssistant={openAssistant} />);
 
     if (view === "revisions")
         return panel(<RevisionHistoryView revisions={revisions.revisions} currentRevisionId={article.currentRevisionId} select={revisions.setCandidate} generalSettings={generalSettings} />);

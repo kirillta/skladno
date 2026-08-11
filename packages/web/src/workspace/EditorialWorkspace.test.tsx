@@ -49,7 +49,7 @@ describe("Editorial Workspace", () => {
             articleId: restored.id,
             content: "one\ntwo\nthree\nfour",
             baseRevisionId: "one-revision",
-            version: 2,
+            version: 3,
             updatedAt: "2026-01-01T00:01:00.000Z",
         };
 
@@ -66,11 +66,12 @@ describe("Editorial Workspace", () => {
         await screen.findByRole("heading", { name: "First Article" });
 
         await waitFor(() => expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toEqual({
-            version: 2,
+            version: 3,
             libraryWidth: 208,
             assistantWidth: 384,
             libraryCollapsed: true,
             assistantCollapsed: false,
+            proposalWarningsDismissed: false,
             view: "write",
             selectedArticleId: "one",
         }));
