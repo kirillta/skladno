@@ -486,20 +486,26 @@ describe("Editorial Workspace", () => {
     });
 
 
-    it("shows the selected skill on author messages and names Talking points proposals", () => {
+    // product: editorial-workflows.assistant-request-proposal
+    it("shows selected skills without Author text and names skill-specific proposals", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[
             { id: "author", articleId: "one", requestId: "request", role: "author", kind: "message", status: "completed", content: "Organize these ideas.", skillOffset: "Organize ".length, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
             { id: "response", articleId: "one", requestId: "request", role: "assistant", kind: "response", status: "completed", skillId: "talking_points", responseKind: "proposal_prepared", editorialArtifactId: "proposal", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+            { id: "narrative-author", articleId: "one", requestId: "narrative-request", role: "author", kind: "message", status: "completed", content: "", skillId: "narrative_draft", skillOffset: 0, createdAt: "2026-01-01T00:00:02.000Z", updatedAt: "2026-01-01T00:00:02.000Z" },
+            { id: "narrative-response", articleId: "one", requestId: "narrative-request", role: "assistant", kind: "response", status: "completed", responseKind: "proposal_prepared", editorialArtifactId: "narrative-proposal", createdAt: "2026-01-01T00:00:03.000Z", updatedAt: "2026-01-01T00:00:03.000Z" },
         ]} />);
         const panelScope = within(panel.container);
-        const review = panelScope.getByRole("button", { name: "Review Proposal" });
+        const [review] = panelScope.getAllByRole("button", { name: "Review Proposal" });
         const timestamp = [...panel.container.querySelectorAll("time")].at(-1)!;
 
         expect(panelScope.getByText("Talking points")).toBeTruthy();
         expect(panelScope.getByText("Talking points prepared")).toBeTruthy();
+        expect(panelScope.getAllByText("Narrative draft")).toHaveLength(1);
+        expect(panelScope.getByText("Narrative draft prepared")).toBeTruthy();
         const authorContent = panel.container.querySelector('article[aria-label="Talking points"] p')!;
         expect(authorContent.childNodes[0]?.textContent).toBe("Organize ");
         expect(authorContent.childNodes[1]?.textContent).toBe("Talking points");
+        expect(panel.container.querySelector('article[aria-label="Narrative draft"] p')?.textContent).toBe("Narrative draft");
         expect(review.compareDocumentPosition(timestamp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 

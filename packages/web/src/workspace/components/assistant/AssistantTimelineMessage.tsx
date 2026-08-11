@@ -11,7 +11,9 @@ export function AssistantTimelineMessage({ message, openView, generalSettings, s
     const skillId = message.skillId ?? (authorMessage && message.requestId ? skillByRequest.get(message.requestId) : undefined);
     const label = message.responseKind === "proposal_prepared" && skillId === BUILT_IN_SKILL.TALKING_POINTS
         ? intl.formatMessage({ id: "assistant.response.talkingPointsProposal" })
-        : message.responseKind ? intl.formatMessage({ id: responseMessages[message.responseKind] }, skillId ? { skill: intl.formatMessage({ id: skillMessages[skillId] }) } : {}) : skillId ? intl.formatMessage({ id: skillMessages[skillId] }) : message.role === "author" ? intl.formatMessage({ id: "assistant.authorMessage" }) : intl.formatMessage({ id: "assistant.heading" });
+        : message.responseKind === "proposal_prepared" && skillId === BUILT_IN_SKILL.NARRATIVE_DRAFT
+            ? intl.formatMessage({ id: "assistant.response.narrativeDraftProposal" })
+            : message.responseKind ? intl.formatMessage({ id: responseMessages[message.responseKind] }, skillId ? { skill: intl.formatMessage({ id: skillMessages[skillId] }) } : {}) : skillId ? intl.formatMessage({ id: skillMessages[skillId] }) : message.role === "author" ? intl.formatMessage({ id: "assistant.authorMessage" }) : intl.formatMessage({ id: "assistant.heading" });
     const content = message.template === "greeting" ? intl.formatMessage({ id: "assistant.greeting" }) : message.template === "request_cancelled" ? intl.formatMessage({ id: "assistant.requestCancelled" }) : message.template === "request_failed" ? intl.formatMessage({ id: "assistant.requestFailed" }) : message.content;
     const view = message.responseKind === "findings_prepared" ? "fact-check" : message.responseKind === "translation_proposal_prepared" ? "translations" : message.responseKind === "proposal_and_findings_prepared" ? "style-profile" : message.responseKind === "proposal_prepared" ? "proposal" : undefined;
     const skillOffset = authorMessage && skillId ? Math.min(Math.max(message.skillOffset ?? 0, 0), content?.length ?? 0) : undefined;
@@ -20,7 +22,7 @@ export function AssistantTimelineMessage({ message, openView, generalSettings, s
 
     return <article className={`rounded-panel border p-3 ${authorMessage ? "ml-6 border-brand/45 bg-brand-soft" : "mr-6 border-border bg-surface-raised"}`} aria-label={authorMessage ? label : undefined}>
         {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
-        {(content || selectionText) && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">
+        {(content || selectionText || skillOffset !== undefined) && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">
             {selectionText && <span className="mx-1 inline-flex h-5 max-w-[calc(100%-0.5rem)] items-center align-middle rounded-full border border-border bg-surface-raised px-1.5 text-xs font-semibold text-muted" aria-label={intl.formatMessage({ id: "assistant.articleSelection" })} title={selectionText}>
                 <span className="relative -top-px max-w-48 truncate">{selectionPreview(selectionText)}</span>
             </span>}

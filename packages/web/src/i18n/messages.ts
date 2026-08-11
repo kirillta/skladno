@@ -120,6 +120,7 @@ export const messages = {
     "assistant.response.skill": "{skill}",
     "assistant.response.proposal": "Proposal prepared",
     "assistant.response.talkingPointsProposal": "Talking points prepared",
+    "assistant.response.narrativeDraftProposal": "Narrative draft prepared",
     "assistant.response.findings": "Findings prepared",
     "assistant.response.proposalAndFindings": "Proposal and findings prepared",
     "assistant.response.translation": "Translation proposal prepared",
