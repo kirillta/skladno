@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
+    ArticleRevisionConflictError,
     createTextProposal,
     defaultPublishLimitProfileId,
     isPublishLimitProfileId,
@@ -21,6 +22,7 @@ import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName, targetLanguageId } from "./editorial-language.js";
 
 type ProposalState = "idle" | "streaming" | "error";
+type ProposalDecision = "pending" | "accepted" | "rejected";
 
 interface EditorialResult<T> {
     articleId: string;
@@ -34,7 +36,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const { notifyError } = useNotifications();
     const [proposal, setProposal] = useState("");
     const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string }>();
-    const [selectedChanges, setSelectedChanges] = useState<Set<string>>(new Set());
+    const [decisions, setDecisions] = useState<Record<string, ProposalDecision>>({});
     const [state, setState] = useState<ProposalState>("idle");
     const [message, setMessage] = useState("");
     const [factCheckResult, setFactCheckResult] = useState<EditorialResult<FactCheck>>();
@@ -65,7 +67,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             if (operation === "thesis_to_narrative" || operation === "flow_revision") {
                 setBase({ articleId: article.id, content, revisionId });
                 setProposal("");
-                setSelectedChanges(new Set());
+                setDecisions({});
             }
 
             setMessage("");
@@ -110,21 +112,26 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }
 
 
-    async function accept() {
+    async function accept(acceptedChangeIds: ReadonlySet<string>, wholeProposal = false) {
         const article = workspace.selectedArticle;
         if (!article || !base || !review || stale)
             return;
 
-        const content = applyProposalChanges(review, selectedChanges);
+        const content = wholeProposal ? review.proposedContent : applyProposalChanges(review, acceptedChangeIds);
         try {
-            const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL } });
+            const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL, baseRevisionId: base.revisionId, ...(wholeProposal ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] }) } });
 
             workspace.updateRevision(article.id, revision);
             workspace.setContent(content);
             setProposal("");
             setBase(undefined);
-            setSelectedChanges(new Set());
+            setDecisions({});
         } catch (error) {
+            if (error instanceof ArticleRevisionConflictError) {
+                workspace.updateRevision(article.id, error.article.currentRevision);
+                return;
+            }
+
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }
     }
@@ -165,7 +172,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         if (result.proposal) {
             setBase({ articleId, content: article.currentRevision.content, revisionId: baseRevisionId });
             setProposal(result.proposal);
-            setSelectedChanges(new Set());
+            setDecisions({});
         }
 
         if (result.factCheck)
@@ -184,8 +191,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         base,
         stale,
         proposalStale: stale,
-        selectedChanges,
-        setSelectedChanges,
+        decisions,
+        setDecision: (id: string, decision: ProposalDecision) => setDecisions((current) => ({ ...current, [id]: decision })),
         state,
         message,
         factCheck,
@@ -195,10 +202,12 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         translation,
         translationStale,
         request,
-        accept,
+        acceptAll: () => accept(new Set(review ? review.changes.map((change) => change.id) : []), true),
+        applyAccepted: () => accept(new Set(Object.entries(decisions).filter(([, decision]) => decision === "accepted").map(([id]) => id)), false),
         reject: () => {
             setProposal("");
             setBase(undefined);
+            setDecisions({});
         },
         cancel: () => controller.current?.abort(),
         createTranslation,

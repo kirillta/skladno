@@ -185,15 +185,16 @@
         {
             "id": "workspace.proposal.explicit-acceptance",
             "area": "Proposal Review",
-            "title": "Selectable Proposal review with rejection, stale warning, and explicit immutable Revision acceptance",
+            "title": "Decision-based Proposal review with bulk actions, preservation warnings, fallback, and explicit immutable Revision acceptance",
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/views/ProposalReviewView.tsx",
+                "packages/web/src/workspace/views/proposal-review-presentation.ts",
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/editorial-proposal-state.ts"
             ],
-            "contract": "AI-generated text never enters the Article without explicit acceptance; stale Proposals cannot be accepted.",
-            "persistence": "Proposal base Revision and accepted Revision provenance.",
+            "contract": "AI-generated text never enters the Article without explicit acceptance; per-change decisions remain local until one acceptance request, and stale or unreliable Proposals cannot be partially accepted.",
+            "persistence": "Proposal base Revision and accepted Revision provenance, including accepted changes or whole-proposal fallback.",
             "scenarioIds": [
                 "workspace.proposal.stale-blocked"
             ]

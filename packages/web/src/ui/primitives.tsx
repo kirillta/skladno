@@ -128,11 +128,11 @@ export function Diff({ removed, added, layout = "stacked" }: { removed?: ReactNo
     if (layout === "columns")
         return (
             <div className="grid overflow-hidden rounded-panel border border-border md:grid-cols-2" aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>
-                <del className="block min-w-0 whitespace-pre-wrap border-b-4 border-danger bg-diff-removed p-4 decoration-danger md:border-b-0 md:border-r md:border-r-border md:border-l-4">
+                <del className="block min-w-0 whitespace-pre-wrap border-b-4 border-danger bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,var(--color-diff-removed-stripe)_6px,var(--color-diff-removed-stripe)_12px)] p-4 decoration-danger md:border-b-0 md:border-r md:border-r-border md:border-l-4">
                     <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-danger">{intl.formatMessage({ id: "ui.original" })}</strong>
                     {removedContent}
                 </del>
-                <ins className="block min-w-0 whitespace-pre-wrap border-b-4 border-success bg-diff-added p-4 decoration-success md:border-b-0 md:border-l-4">
+                <ins className="block min-w-0 whitespace-pre-wrap border-b-4 border-success bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,var(--color-diff-added-stripe)_6px,var(--color-diff-added-stripe)_12px)] p-4 decoration-success md:border-b-0 md:border-l-4">
                     <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">{intl.formatMessage({ id: "ui.proposed" })}</strong>
                     {addedContent}
                 </ins>

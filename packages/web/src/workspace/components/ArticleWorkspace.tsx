@@ -88,7 +88,10 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             <Button className="ml-auto" variant="secondary" onClick={() => void workspace.retry()}>{intl.formatMessage({ id: "draftSave.retry" })}</Button>
         </Banner>}
         <WorkspaceTabBar view={layout.view} setView={layout.setView} badges={badges} shortcutOverrides={shortcutOverrides} />
-        <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} />
+        <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} openWrite={() => layout.setView("write")} openAssistant={() => {
+            layout.setAssistantCollapsed(false);
+            layout.setView("write");
+        }} />
         <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} setProfile={publishing.setProfile} />
     </div>;
 }

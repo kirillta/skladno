@@ -75,10 +75,10 @@
         {
             "id": "editorial-workflows.proposal-lifecycle",
             "area": "Proposal lifecycle",
-            "title": "Diff review, selection, acceptance, rejection, and stale protection",
+            "title": "Decision-based diff review, bulk acceptance or rejection, fallback, and stale protection",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may review diffs, select changes, accept or reject proposals, and cannot accept a stale proposal; the conflict contract is application-owned and transport-neutral.",
+            "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "contract": "Authors may accept or reject each change locally, apply the accepted subset in one Revision, accept a complete proposal in one Revision, or reject it without Article changes; stale and unreliable proposals cannot be partially accepted.",
             "persistence": "Acceptance creates one immutable Revision; rejection leaves Article history unchanged.",
             "scenarioIds": ["editorial-workflows.stale-proposal-blocked"]
         },

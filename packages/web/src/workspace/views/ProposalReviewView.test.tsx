@@ -13,11 +13,11 @@ describe("ProposalReviewView", () => {
                 baseContent: "Original",
                 proposedContent: "Proposed",
                 changes: [{ id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] }],
-            }} stale selectedChanges={new Set(["change-1"])} setSelectedChanges={vi.fn()} accept={vi.fn()} reject={vi.fn()} />
+            }} stale decisions={{ "change-1": "accepted" }} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
         expect(screen.getByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.")).toBeTruthy();
-        expect(screen.getByRole("button", { name: "Accept selected changes" }).hasAttribute("disabled")).toBe(true);
-        expect(screen.getByRole("button", { name: "Reject proposal" }).hasAttribute("disabled")).toBe(false);
+        expect(screen.getByRole("button", { name: "Accept all" }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("button", { name: "Reject all" }).hasAttribute("disabled")).toBe(false);
     });
 });
