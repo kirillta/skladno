@@ -67,7 +67,7 @@ test("talking-points prompt uses an Article selection as primary and allows the 
 
     assert.match(prompt, /Article selection:\nSelected evidence with two concrete claims/);
     assert.match(prompt, /Author message \(supplementary direction or material that may extend the selection\)/);
-    assert.match(prompt, /never use unselected whole Article content alongside it/);
+    assert.match(prompt, /treat only the selection and any material explicitly supplied in the Author's message as source material/);
     assert.match(prompt, /selection plus any supplementary material the Author explicitly provides/);
 });
 
@@ -86,7 +86,7 @@ test("narrative-draft prompt follows Author direction, selection priority, and t
 
     assert.match(prompt, /Author message \(highest-priority direction and supplementary material\):\nAdd one simple example/);
     assert.match(prompt, /Article selection:\nSelected theses/);
-    assert.match(prompt, /never use unselected Article content as source material/);
+    assert.match(prompt, /treat only the selection and any material explicitly supplied in the Author's message as source material/);
     assert.match(prompt, /resulting complete Article: about 1300 characters/);
     assert.match(prompt, /not a hard limit on your response/);
     assert.match(prompt, /unchanged surrounding Article currently contains 800 characters/);
