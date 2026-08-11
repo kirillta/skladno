@@ -56,7 +56,7 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
-            "contract": "A skill tag never sends a request; generated text remains a Proposal until accepted.",
+            "contract": "A skill tag never sends a request; Send can explicitly run a selected skill against the whole Article without additional guidance, and generated text remains a Proposal until accepted.",
             "persistence": "Per-Article Assistant records and explicit Editorial Requests.",
             "scenarioIds": [
                 "workspace.assistant.quick-action"
@@ -336,9 +336,10 @@
             "preconditions": [
                 "An Article is open and Assistant is idle"
             ],
-            "event": "Author selects a Quick action then sends guidance.",
+            "event": "Author selects a Quick action then sends, with optional guidance.",
             "expected": [
-                "The skill tag is inserted into the composer before the request"
+                "The skill tag is inserted into the composer before the request",
+                "A selected skill can run against the whole Article without additional guidance"
             ],
             "forbidden": [
                 "Sending an Editorial Request when selecting a Quick action"

@@ -45,7 +45,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, onReques
         selectedSkill,
         skillOffset,
     });
-    const canSend = state !== "streaming" && Boolean(guidance.trim());
+    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill);
     const availableSkills = builtInSkills.filter((skill) => !selection || builtInSkillScopeCompatibility[skill].includes("selection"));
 
     composerState.current = {

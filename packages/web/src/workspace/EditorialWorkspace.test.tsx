@@ -347,6 +347,23 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("sends a selected skill without guidance as an Article request", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} />);
+        const panelScope = within(panel.container);
+
+        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
+        await user.click(panelScope.getByRole("button", { name: "Flow and clarity" }));
+
+        expect(panelScope.getByRole("button", { name: "Send editorial request" }).hasAttribute("disabled")).toBe(false);
+
+        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+
+        expect(onRequest).toHaveBeenCalledWith("", "flow_and_clarity", undefined, 0);
+    });
+
+
     it("summarizes an Article selection in a compact composer chip", () => {
         const selection = "The first selected sentence provides enough context to identify the excerpt.";
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection={selection} clearSelection={vi.fn()} />);

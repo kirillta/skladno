@@ -27,7 +27,7 @@ export function AssistantComposer({ state, guidance, selectedSkill, selection, c
     shortcutOverrides?: KeyBindingOverrides;
 }) {
     const intl = useIntl();
-    const canSend = state !== "streaming" && Boolean(guidance.trim());
+    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill);
 
     return <footer className="shrink-0 border-t border-border px-5 py-4">
         <div className="relative mb-3">

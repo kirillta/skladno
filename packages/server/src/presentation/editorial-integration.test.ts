@@ -397,6 +397,30 @@ test("assistant requests persist a revision-bound proposal and splice only the s
 });
 
 
+test("a selected Assistant skill without guidance runs on the whole Article", async () => {
+    const engine = new FixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-whole-article", text: "improved Article" },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "The whole Article" });
+        await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "assistant-whole-article",
+                authorMessage: "",
+                explicitSkillId: "flow_and_clarity",
+                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+            }),
+        });
+
+        assert.equal(engine.requests[0]?.article, "The whole Article");
+        assert.equal(engine.requests[0]?.authorContext, "");
+    });
+});
+
+
 test("conversational Assistant requests send only the selected Article context", async () => {
     let conversation: { article: string; scope: "article" | "selection" } | undefined;
     const engine: EditorialEngine = {
