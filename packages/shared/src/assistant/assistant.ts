@@ -110,6 +110,9 @@ export interface AssistantMessage {
     selectionText?: string;
     responseKind?: AssistantResponseKind;
     editorialArtifactId?: string;
+    baseRevisionId?: string;
+    baseRevisionContent?: string;
+    proposalContent?: string;
     createdAt: string;
     updatedAt: string;
 }

@@ -31,10 +31,11 @@ export class AssistantRepository {
     listMessages(articleId: string): AssistantMessage[] {
         this.ensureGreeting(articleId);
         const rows = this.database.prepare(`
-            SELECT assistant_messages.*, assistant_requests.scope_json AS request_scope_json, article_revisions.content AS request_revision_content
+            SELECT assistant_messages.*, assistant_requests.scope_json AS request_scope_json, assistant_requests.base_revision_id AS request_base_revision_id, article_revisions.content AS request_revision_content, editorial_artifacts.content AS artifact_content
             FROM assistant_messages
             LEFT JOIN assistant_requests ON assistant_requests.id = assistant_messages.request_id
             LEFT JOIN article_revisions ON article_revisions.id = assistant_requests.base_revision_id
+            LEFT JOIN editorial_artifacts ON editorial_artifacts.id = assistant_messages.editorial_artifact_id
             WHERE assistant_messages.article_id = ?
             ORDER BY assistant_messages.created_at, assistant_messages.id
         `).all(articleId) as Row[];
@@ -73,13 +74,13 @@ export class AssistantRepository {
             .run(skillId ?? null, now(), requestId);
     }
 
-    completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; editorialArtifactId?: string }): AssistantMessage {
+    completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
         const timestamp = now();
         const messageId = createId();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, skill_id, response_kind, editorial_artifact_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .run(messageId, input.articleId, input.requestId, "assistant", "response", "completed", input.content, input.skillId ?? null, input.responseKind, input.editorialArtifactId ?? null, timestamp, timestamp);
+            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, proposal_content, skill_id, response_kind, editorial_artifact_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(messageId, input.articleId, input.requestId, "assistant", "response", "completed", input.content, input.proposalContent ?? null, input.skillId ?? null, input.responseKind, input.editorialArtifactId ?? null, timestamp, timestamp);
             this.database.prepare("UPDATE assistant_requests SET status = 'completed', updated_at = ? WHERE id = ?").run(timestamp, input.requestId);
             this.database.exec("COMMIT;");
         } catch (error) {
@@ -159,13 +160,33 @@ export class AssistantRepository {
         const selectionText = role === "author" && requestScope?.kind === "selection" && typeof row.request_revision_content === "string"
             ? String(row.request_revision_content).slice(requestScope.startOffset, requestScope.endOffset)
             : undefined;
+        const proposalContent = row.proposal_content === null || row.proposal_content === undefined
+            ? this.proposalContentFromArtifact(row.artifact_content)
+            : String(row.proposal_content);
 
         return {
             id: String(row.id), articleId: String(row.article_id), ...(row.request_id === null ? {} : { requestId: String(row.request_id) }), role, kind, status,
             ...(row.content === null ? {} : { content: String(row.content) }), ...(kind === "greeting" ? { template: "greeting" as const } : {}), ...(status === "cancelled" ? { template: "request_cancelled" as const } : {}), ...(status === "failed" ? { template: "request_failed" as const } : {}), ...(skillId === undefined ? {} : { skillId }), ...(skillOffset === undefined ? {} : { skillOffset }),
             ...(selectionText ? { selectionText } : {}),
             ...(row.response_kind === null ? {} : { responseKind: String(row.response_kind) as AssistantMessage["responseKind"] }),
-            ...(row.editorial_artifact_id === null ? {} : { editorialArtifactId: String(row.editorial_artifact_id) }), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
+            ...(row.editorial_artifact_id === null ? {} : { editorialArtifactId: String(row.editorial_artifact_id) }),
+            ...(row.request_base_revision_id === null || row.request_base_revision_id === undefined ? {} : { baseRevisionId: String(row.request_base_revision_id) }),
+            ...(row.request_revision_content === null || row.request_revision_content === undefined ? {} : { baseRevisionContent: String(row.request_revision_content) }),
+            ...(proposalContent === undefined ? {} : { proposalContent }), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
         };
+    }
+
+
+    private proposalContentFromArtifact(value: unknown): string | undefined {
+        if (typeof value !== "string")
+            return undefined;
+
+        try {
+            const parsed = JSON.parse(value) as { proposal?: unknown };
+
+            return typeof parsed.proposal === "string" ? parsed.proposal : undefined;
+        } catch {
+            return undefined;
+        }
     }
 }

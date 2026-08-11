@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import {
     applyProposalChanges,
@@ -8,6 +8,7 @@ import {
     isPublishLimitProfileId,
     REVISION_PROVENANCE_KIND,
     type AssistantEditorialResult,
+    type AssistantMessage,
     type EditorialEvent,
     type EditorialOperation,
     type FactCheck,
@@ -43,6 +44,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const [styleReviewResult, setStyleReviewResult] = useState<EditorialResult<StyleReview>>();
     const [translationResult, setTranslationResult] = useState<EditorialResult<{ metadata: TranslationMetadata; content: string }>>();
     const controller = useRef<AbortController>();
+    const restoredArticleIds = useRef(new Set<string>());
     const review = useMemo(() => base && base.articleId === workspace.selectedArticle?.id ? createTextProposal(base.content, proposal) : undefined, [base, proposal, workspace.selectedArticle?.id]);
     const stale = Boolean(workspace.selectedArticle && base?.articleId === workspace.selectedArticle.id && base.revisionId !== workspace.selectedArticle.currentRevisionId);
     const selectedArticleId = workspace.selectedArticle?.id;
@@ -164,12 +166,13 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }
 
 
-    function applyAssistantResult(articleId: string, baseRevisionId: string, result: AssistantEditorialResult) {
+    const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: AssistantEditorialResult) => {
         const article = workspace.articles.find((item) => item.id === articleId);
         if (!article)
             return;
 
         if (result.proposal) {
+            restoredArticleIds.current.delete(articleId);
             setBase({ articleId, content: article.currentRevision.content, revisionId: baseRevisionId });
             setProposal(result.proposal);
             setDecisions({});
@@ -183,7 +186,22 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
         if (result.translation)
             setTranslationResult({ articleId, baseRevisionId, value: result.translation });
-    }
+    }, [workspace.articles]);
+
+    const restoreAssistantProposal = useCallback((messages: AssistantMessage[] | undefined) => {
+        const article = workspace.selectedArticle;
+        if (!article || restoredArticleIds.current.has(article.id))
+            return;
+
+        const message = [...(messages ?? [])].reverse().find((item) => item.proposalContent && item.baseRevisionId && item.baseRevisionContent);
+        if (!message)
+            return;
+
+        restoredArticleIds.current.add(article.id);
+        setBase({ articleId: article.id, content: message.baseRevisionContent!, revisionId: message.baseRevisionId! });
+        setProposal(message.proposalContent!);
+        setDecisions({});
+    }, [workspace.selectedArticle]);
 
     return {
         proposal,
@@ -205,13 +223,17 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         acceptAll: () => accept(new Set(review ? review.changes.map((change) => change.id) : []), true),
         applyAccepted: () => accept(new Set(Object.entries(decisions).filter(([, decision]) => decision === "accepted").map(([id]) => id)), false),
         reject: () => {
+            if (base)
+                restoredArticleIds.current.add(base.articleId);
+
             setProposal("");
             setBase(undefined);
             setDecisions({});
         },
         cancel: () => controller.current?.abort(),
         createTranslation,
-        applyAssistantResult
+        applyAssistantResult,
+        restoreAssistantProposal
     };
 }
 

@@ -394,6 +394,10 @@ test("assistant requests persist a revision-bound proposal and splice only the s
         assert.equal(repositories.assistant.getRequest("assistant-request-1")?.status, "completed");
         assert.equal(repositories.assistant.listMessages(article.id).filter((message) => message.requestId === "assistant-request-1").length, 2);
         assert.equal(repositories.assistant.listMessages(article.id).find((message) => message.role === "author")?.selectionText, "selected");
+        const proposalMessage = repositories.assistant.listMessages(article.id).find((message) => message.requestId === "assistant-request-1" && message.role === "assistant");
+        assert.equal(proposalMessage?.proposalContent, "before improved after");
+        assert.equal(proposalMessage?.baseRevisionId, article.currentRevisionId);
+        assert.equal(proposalMessage?.baseRevisionContent, "before selected after");
     });
 });
 

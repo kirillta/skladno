@@ -56,6 +56,31 @@ describe("Editorial Workspace", () => {
         expect(articleContentForWorkspace(restored)).toBe("one\ntwo\nthree");
     });
 
+
+    it("restores the latest completed Proposal Review from local Assistant records", async () => {
+        const client = fakeClient();
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "proposal", selectedArticleId: "one" }));
+        client.listAssistantMessages = vi.fn().mockResolvedValue([{
+            id: "proposal-message",
+            articleId: "one",
+            requestId: "proposal-request",
+            role: "assistant",
+            kind: "response",
+            status: "completed",
+            responseKind: "proposal_prepared",
+            baseRevisionId: "one-revision",
+            baseRevisionContent: "Draft",
+            proposalContent: "Improved Draft",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+        }]);
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText("Replacement · Change 1 of 1")).toBeTruthy();
+        expect(screen.getByText("Improved Draft")).toBeTruthy();
+    });
+
     // product: application.desktop-shell-layout
     it("migrates legacy panel choices into the versioned workspace layout preference", async () => {
         localStorage.clear();
