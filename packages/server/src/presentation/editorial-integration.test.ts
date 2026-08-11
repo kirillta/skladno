@@ -410,13 +410,14 @@ test("a selected Assistant skill without guidance runs on the whole Article", as
             body: JSON.stringify({
                 requestId: "assistant-whole-article",
                 authorMessage: "",
-                explicitSkillId: "flow_and_clarity",
+                explicitSkillId: "talking_points",
                 scope: { kind: "article", baseRevisionId: article.currentRevisionId },
             }),
         });
 
         assert.equal(engine.requests[0]?.article, "The whole Article");
         assert.equal(engine.requests[0]?.authorContext, "");
+        assert.equal(engine.requests[0]?.skillId, "talking_points");
     });
 });
 

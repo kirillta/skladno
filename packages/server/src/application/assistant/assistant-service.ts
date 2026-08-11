@@ -181,6 +181,7 @@ export class AssistantService {
                 operation: request.operation,
                 article: excerpt,
                 authorContext: request.authorMessage,
+                skillId: request.resolvedSkillId,
                 ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile } : {})
             }, signal);

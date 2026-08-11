@@ -8,9 +8,9 @@
             "title": "Durable local conversation and built-in skill registry",
             "status": "implemented",
             "owners": ["packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/ports/assistant-store.ts", "packages/server/src/application/ports/assistant-artifact-store.ts", "packages/server/src/presentation/routes/assistant-route.ts", "packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/shared/src/assistant/assistant.ts"],
-            "contract": "Every Article has one persisted greeting and stable contracts for six skills. Assistant requests are revision-bound, resolve one eligible explicit or inferred skill, and retain completed local messages and review artifacts.",
+            "contract": "Every Article has one persisted greeting and stable contracts for six skills. Assistant requests are revision-bound, resolve one eligible explicit or inferred skill, and retain completed local messages and review artifacts. Talking Points derives 3–5 theses from an Author message when present, otherwise from Article content, and may ask focused clarifying questions when direction is ambiguous.",
             "persistence": "Assistant messages, requests, and completed artifacts persist locally. Workflow Stage persistence is retired; legacy values remain untouched.",
-            "scenarioIds": ["editorial-workflows.assistant-request-proposal"]
+            "scenarioIds": ["editorial-workflows.assistant-request-proposal", "editorial-workflows.talking-points-source"]
         },
         {
             "id": "editorial-workflows.assistant-panel-streaming",
@@ -115,6 +115,16 @@
         }
     ],
     "scenarios": [
+        {
+            "id": "editorial-workflows.talking-points-source",
+            "title": "Talking Points uses the nearest Author input",
+            "capabilityIds": ["editorial-workflows.assistant-foundation"],
+            "preconditions": ["The author explicitly selects Talking Points."],
+            "event": "The author requests theses with or without a composer message.",
+            "expected": ["A non-empty Author message is the sole thesis source; otherwise Article content is used.", "The default output is 3–5 theses, or focused clarifying questions when direction is ambiguous."],
+            "forbidden": ["Article content does not override a non-empty Author message."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/application/editorial/workflow-prompt.test.ts" }
+        },
         {
             "id": "editorial-workflows.assistant-request-proposal",
             "title": "Assistant request produces a revision-bound proposal",

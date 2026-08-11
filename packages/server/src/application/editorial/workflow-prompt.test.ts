@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EDITORIAL_OPERATION } from "@skladno/shared";
+import { BUILT_IN_SKILL, EDITORIAL_OPERATION } from "@skladno/shared";
 
 import { createEditorialMessages } from "./workflow-prompt.js";
 
@@ -25,6 +25,34 @@ test("thesis-to-narrative prompt preserves author control and supplied theses", 
     assert.match(prompt, /Preserve the author's claims, numbers, URLs, code, technical terms/);
     assert.match(prompt, /Do not invent facts, examples, or sources/);
     assert.match(prompt, /never say that you saved or changed the article/);
+});
+
+
+// Product scenario: editorial-workflows.talking-points-source
+test("talking-points prompt prioritizes the Author's message and defaults to 3–5 theses", async () => {
+    const prompt = promptText({
+        operation: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
+        article: "Existing Article content.",
+        authorContext: "Why retries need an upper bound.",
+        skillId: BUILT_IN_SKILL.TALKING_POINTS,
+    });
+
+    assert.match(prompt, /Author's message:\nWhy retries need an upper bound/);
+    assert.doesNotMatch(prompt, /Existing Article content/);
+    assert.match(prompt, /between 3 and 5 theses/);
+    assert.match(prompt, /ask the Author only the focused questions needed/);
+});
+
+
+test("talking-points prompt falls back to Article content when the composer is empty", async () => {
+    const prompt = promptText({
+        operation: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
+        article: "Retries can amplify an outage.",
+        authorContext: "   ",
+        skillId: BUILT_IN_SKILL.TALKING_POINTS,
+    });
+
+    assert.match(prompt, /Article content:\nRetries can amplify an outage/);
 });
 
 

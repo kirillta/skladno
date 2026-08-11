@@ -140,6 +140,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 operation: request.operation,
                 article: boundedArticleContext(request.article),
                 authorContext: request.authorContext,
+                skillId: request.skillId,
             }), signal, request.previousResponseId);
         } catch (error) {
             if (error instanceof EditorialEngineError || signal.aborted)

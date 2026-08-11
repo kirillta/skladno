@@ -1,11 +1,12 @@
 import type { ModelMessage } from "ai";
-import { EDITORIAL_OPERATION, type EditorialOperation, type StyleProfile } from "@skladno/shared";
+import { BUILT_IN_SKILL, EDITORIAL_OPERATION, type BuiltInSkillId, type EditorialOperation, type StyleProfile } from "@skladno/shared";
 
 
 interface EditorialPromptInput {
     operation: EditorialOperation;
     article: string;
     authorContext: string;
+    skillId?: BuiltInSkillId;
     styleProfile?: StyleProfile;
     targetLanguage?: string;
 }
@@ -32,6 +33,17 @@ export function isEditorialOperation(value: string): value is EditorialOperation
 
 
 export function createEditorialMessages(input: EditorialPromptInput): ModelMessage[] {
+    if (input.skillId === BUILT_IN_SKILL.TALKING_POINTS) {
+        const authorMessage = input.authorContext.trim();
+        const source = authorMessage || input.article.trim();
+        const sourceLabel = authorMessage ? "Author's message" : "Article content";
+
+        return [
+            { role: "system", content: "You are an editorial assistant helping an author discover an article's central theses. Preserve the author's intent, claims, numbers, URLs, code, and technical terms. Do not invent facts or say that you saved or changed the article." },
+            { role: "user", content: `Workflow: talking points. Suggest concise, distinct theses based only on the ${sourceLabel.toLowerCase()} below. Prefer the Author's message whenever it is present; use Article content only when the message is empty. Unless the Author requests another count, suggest between 3 and 5 theses. Return a Markdown list. If the source is missing or its direction is genuinely ambiguous, ask the Author only the focused questions needed to choose a direction instead of guessing.\n\n${sourceLabel}:\n${source || "No source content was provided."}` },
+        ];
+    }
+
     if (input.operation === EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)
         return [
             { role: "system", content: `You are an editorial assistant. ${commonGuardrails}` },
