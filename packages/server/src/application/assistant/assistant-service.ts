@@ -229,7 +229,7 @@ export class AssistantService {
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.TALKING_POINTS || request.resolvedSkillId === BUILT_IN_SKILL.NARRATIVE_DRAFT || request.resolvedSkillId === BUILT_IN_SKILL.FLOW_AND_CLARITY ? { proposal: content } : {}),
             }
             : undefined;
-            
+
         const message = this.assistant.completeRequest({ requestId: request.requestId, articleId: request.articleId, skillId: request.resolvedSkillId, responseKind: kind, content: request.resolvedSkillId ? "" : content, proposalContent: result?.proposal, editorialArtifactId: artifactId });
 
         return { responseKind: kind, messageId: message.id, ...(artifactId ? { editorialArtifactId: artifactId } : {}), ...(result ? { result } : {}) };

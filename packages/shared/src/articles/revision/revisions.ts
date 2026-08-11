@@ -22,6 +22,8 @@ export interface ProposalChangeSummary {
 }
 
 export interface SummarizeProposalInput {
+    editorialArtifactId: string;
+    interfaceLocale: string;
     changes: ProposalChange[];
 }
 

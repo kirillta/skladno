@@ -9,7 +9,7 @@ import { providerLanguageName } from "./editorial-language.js";
 type ProposalState = "idle" | "streaming" | "error";
 
 
-export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: string | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult) => void) {
+export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: string | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => void) {
     const intl = useIntl();
     const [messagesByArticle, setMessagesByArticle] = useState<Record<string, AssistantMessage[]>>({});
     const [stateByArticle, setStateByArticle] = useState<Record<string, ProposalState>>({});
@@ -102,7 +102,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                 ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}),
             }, (event) => {
                 if (event.type === "completed" && event.result)
-                    onResult(current.id, revision.id, event.result);
+                    onResult(current.id, revision.id, event.result, event.editorialArtifactId);
 
                 if (event.type !== "text_delta")
                     return;

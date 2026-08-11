@@ -22,6 +22,6 @@ export function createApplicationServices(articles: ArticleStore, settings: Sett
         settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId),
         publishing: new PublishingService(settings),
         styleCorpus: new StyleCorpusService(styleCorpus),
-        proposalSummaries: new ProposalSummaryService(engines),
+        proposalSummaries: new ProposalSummaryService(engines, artifacts),
     };
 }

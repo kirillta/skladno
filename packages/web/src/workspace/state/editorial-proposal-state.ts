@@ -37,7 +37,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [proposal, setProposal] = useState("");
-    const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string }>();
+    const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string; editorialArtifactId?: string }>();
     const [decisions, setDecisions] = useState<Record<string, ProposalDecision>>({});
     const [state, setState] = useState<ProposalState>("idle");
     const [message, setMessage] = useState("");
@@ -46,6 +46,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const [translationResult, setTranslationResult] = useState<EditorialResult<{ metadata: TranslationMetadata; content: string }>>();
     const [proposalSummaries, setProposalSummaries] = useState<Record<string, string>>({});
     const [proposalSummaryState, setProposalSummaryState] = useState<"idle" | "loading" | "unavailable">("idle");
+    const [proposalSummaryLocale, setProposalSummaryLocale] = useState<string>();
     const controller = useRef<AbortController>();
     const restoredArticleIds = useRef(new Set<string>());
     const review = useMemo(() => base && base.articleId === workspace.selectedArticle?.id ? createTextProposal(base.content, proposal) : undefined, [base, proposal, workspace.selectedArticle?.id]);
@@ -60,20 +61,24 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
 
     useEffect(() => {
-        if (state !== "idle" || stale || !review || !selectedArticleId || review.changes.length === 0) {
+        if (state !== "idle" || stale || !review || !selectedArticleId || !base?.editorialArtifactId || review.changes.length === 0) {
             setProposalSummaries({});
             setProposalSummaryState("idle");
             return;
         }
 
+        if (proposalSummaryLocale === intl.locale)
+            return;
+
         const controller = new AbortController();
         setProposalSummaryState("loading");
-        void client.summarizeProposal(selectedArticleId, { changes: review.changes })
+        void client.summarizeProposal(selectedArticleId, { editorialArtifactId: base.editorialArtifactId, interfaceLocale: intl.locale, changes: review.changes })
             .then((summaries: ProposalChangeSummary[]) => {
                 if (controller.signal.aborted)
                     return;
 
                 setProposalSummaries(Object.fromEntries(summaries.map((summary) => [summary.changeId, summary.summary])));
+                setProposalSummaryLocale(intl.locale);
                 setProposalSummaryState(summaries.length > 0 ? "idle" : "unavailable");
             })
             .catch(() => {
@@ -82,7 +87,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             });
 
         return () => controller.abort();
-    }, [client, proposal, review, selectedArticleId, stale, state]);
+    }, [base?.editorialArtifactId, client, intl.locale, proposal, proposalSummaries, proposalSummaryLocale, review, selectedArticleId, stale, state]);
 
 
     async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string) {
@@ -99,6 +104,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
                 setBase({ articleId: article.id, content, revisionId });
                 setProposal("");
                 setDecisions({});
+                setProposalSummaries({});
+                setProposalSummaryLocale(undefined);
             }
 
             setMessage("");
@@ -113,6 +120,9 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
                 if (event.type === "completed") {
                     if (operation === "thesis_to_narrative" || operation === "flow_revision")
                         setProposal(event.text);
+
+                    if ((operation === "thesis_to_narrative" || operation === "flow_revision") && event.editorialArtifactId)
+                        setBase({ articleId: article.id, content, revisionId, editorialArtifactId: event.editorialArtifactId });
 
                     if (event.factCheck)
                         setFactCheckResult({ articleId: article.id, baseRevisionId: revisionId, value: event.factCheck });
@@ -195,15 +205,17 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }
 
 
-    const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: AssistantEditorialResult) => {
+    const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => {
         const article = workspace.articles.find((item) => item.id === articleId);
         if (!article)
             return;
 
         if (result.proposal) {
             restoredArticleIds.current.delete(articleId);
-            setBase({ articleId, content: article.currentRevision.content, revisionId: baseRevisionId });
+            setBase({ articleId, content: article.currentRevision.content, revisionId: baseRevisionId, ...(editorialArtifactId ? { editorialArtifactId } : {}) });
             setProposal(result.proposal);
+            setProposalSummaries({});
+            setProposalSummaryLocale(undefined);
             setDecisions({});
         }
 
@@ -227,8 +239,10 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             return;
 
         restoredArticleIds.current.add(article.id);
-        setBase({ articleId: article.id, content: message.baseRevisionContent!, revisionId: message.baseRevisionId! });
+        setBase({ articleId: article.id, content: message.baseRevisionContent!, revisionId: message.baseRevisionId!, ...(message.editorialArtifactId ? { editorialArtifactId: message.editorialArtifactId } : {}) });
         setProposal(message.proposalContent!);
+        setProposalSummaries(Object.fromEntries((message.proposalSummaries ?? []).map((summary) => [summary.changeId, summary.summary])));
+        setProposalSummaryLocale(message.proposalSummaryLocale);
         setDecisions({});
     }, [workspace.selectedArticle]);
 

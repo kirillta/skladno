@@ -23,13 +23,13 @@ export class AiSdkProposalSummaryGenerator implements ProposalSummaryGenerator {
     }
 
 
-    async summarize(changes: ProposalChange[], signal: AbortSignal): Promise<ProposalChangeSummary[]> {
+    async summarize(changes: ProposalChange[], interfaceLocale: string, signal: AbortSignal): Promise<ProposalChangeSummary[]> {
         if (changes.length === 0)
             return [];
 
         const result = await generateText({
             model: this.openai.responses(this.model),
-            prompt: `Summarize each proposed editorial change in one short, neutral sentence for the Author reviewing it. Describe only what changed and why it helps when that is evident. Do not endorse the change, invent facts, or repeat the full text. Preserve each changeId exactly.\n\n${JSON.stringify(changes.map((change) => ({ changeId: change.id, original: change.baseLines.join("\n").slice(0, 6000), proposed: change.proposalLines.join("\n").slice(0, 6000) })))}`,
+            prompt: `Summarize each proposed editorial change in one short, neutral sentence for the Author reviewing it. Write every summary in the interface locale ${interfaceLocale}, regardless of the Article language. Describe only what changed and why it helps when that is evident. Do not endorse the change, invent facts, or repeat the full text. Preserve each changeId exactly.\n\n${JSON.stringify(changes.map((change) => ({ changeId: change.id, original: change.baseLines.join("\n").slice(0, 6000), proposed: change.proposalLines.join("\n").slice(0, 6000) })))}`,
             output: Output.object({ schema: summariesSchema }),
             abortSignal: signal,
             telemetry: { isEnabled: false },

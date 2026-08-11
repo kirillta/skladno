@@ -69,7 +69,7 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.POST, ARTICLE_REVISIONS_PATH, (request, response, parameters) => saveRevisionRoute(request, response, parameters[0]!, articles));
     router.register(HTTP_METHOD.GET, ARTICLE_REVISIONS_PATH, (_request, response, parameters) => listRevisionsRoute(response, parameters[0]!, articles));
     router.register(HTTP_METHOD.POST, ARTICLE_PROPOSAL_ACCEPTANCES_PATH, (request, response, parameters) => acceptProposalRoute(request, response, parameters[0]!, articles));
-    router.register(HTTP_METHOD.POST, ARTICLE_PROPOSAL_SUMMARIES_PATH, (request, response) => summarizeProposalRoute(request, response, proposalSummaries));
+    router.register(HTTP_METHOD.POST, ARTICLE_PROPOSAL_SUMMARIES_PATH, (request, response, parameters) => summarizeProposalRoute(request, response, parameters[0]!, proposalSummaries));
     router.register(HTTP_METHOD.POST, ARTICLE_RESTORATION_PATH, (_request, response, parameters) => restoreRevisionRoute(response, parameters[0]!, parameters[1]!, articles));
 
     return router;

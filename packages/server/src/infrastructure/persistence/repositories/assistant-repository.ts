@@ -160,8 +160,9 @@ export class AssistantRepository {
         const selectionText = role === "author" && requestScope?.kind === "selection" && typeof row.request_revision_content === "string"
             ? String(row.request_revision_content).slice(requestScope.startOffset, requestScope.endOffset)
             : undefined;
+        const artifactContent = this.artifactContent(row.artifact_content);
         const proposalContent = row.proposal_content === null || row.proposal_content === undefined
-            ? this.proposalContentFromArtifact(row.artifact_content)
+            ? artifactContent?.proposal
             : String(row.proposal_content);
 
         return {
@@ -172,19 +173,26 @@ export class AssistantRepository {
             ...(row.editorial_artifact_id === null ? {} : { editorialArtifactId: String(row.editorial_artifact_id) }),
             ...(row.request_base_revision_id === null || row.request_base_revision_id === undefined ? {} : { baseRevisionId: String(row.request_base_revision_id) }),
             ...(row.request_revision_content === null || row.request_revision_content === undefined ? {} : { baseRevisionContent: String(row.request_revision_content) }),
-            ...(proposalContent === undefined ? {} : { proposalContent }), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
+            ...(proposalContent === undefined ? {} : { proposalContent }),
+            ...(artifactContent?.proposalSummaries ? { proposalSummaries: artifactContent.proposalSummaries } : {}),
+            ...(artifactContent?.proposalSummaryLocale ? { proposalSummaryLocale: artifactContent.proposalSummaryLocale } : {}),
+            createdAt: String(row.created_at), updatedAt: String(row.updated_at),
         };
     }
 
 
-    private proposalContentFromArtifact(value: unknown): string | undefined {
+    private artifactContent(value: unknown): { proposal?: string; proposalSummaries?: import("@skladno/shared").ProposalChangeSummary[]; proposalSummaryLocale?: string } | undefined {
         if (typeof value !== "string")
             return undefined;
 
         try {
-            const parsed = JSON.parse(value) as { proposal?: unknown };
+            const parsed = JSON.parse(value) as { proposal?: unknown; proposalSummaries?: unknown; proposalSummaryLocale?: unknown };
 
-            return typeof parsed.proposal === "string" ? parsed.proposal : undefined;
+            return {
+                ...(typeof parsed.proposal === "string" ? { proposal: parsed.proposal } : {}),
+                ...(Array.isArray(parsed.proposalSummaries) ? { proposalSummaries: parsed.proposalSummaries as import("@skladno/shared").ProposalChangeSummary[] } : {}),
+                ...(typeof parsed.proposalSummaryLocale === "string" ? { proposalSummaryLocale: parsed.proposalSummaryLocale } : {}),
+            };
         } catch {
             return undefined;
         }

@@ -5,8 +5,13 @@ import type { ProposalSummaryService } from "../../application/editorial/proposa
 import { object, readJson, writeJson } from "../transport/json.js";
 
 
-export async function summarizeProposalRoute(request: IncomingMessage, response: ServerResponse, summaries: ProposalSummaryService): Promise<void> {
+export async function summarizeProposalRoute(request: IncomingMessage, response: ServerResponse, articleId: string, summaries: ProposalSummaryService): Promise<void> {
     const controller = new AbortController();
-    request.on("close", () => controller.abort());
-    writeJson(response, HTTP_STATUS.OK, await summaries.summarize(object(await readJson(request)), controller.signal));
+    request.once("aborted", () => controller.abort());
+    response.once("close", () => {
+        if (!response.writableEnded)
+            controller.abort();
+    });
+
+    writeJson(response, HTTP_STATUS.OK, await summaries.summarize(articleId, object(await readJson(request)), controller.signal));
 }

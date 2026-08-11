@@ -78,8 +78,8 @@
             "title": "Summarized diff review, bulk acceptance or rejection, fallback, and stale protection",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may review a non-authoritative summary for each change, accept or reject each change locally, apply the accepted subset in one Revision, accept a complete proposal in one Revision, or reject it without Article changes; summary failure does not block review, and stale and unreliable proposals cannot be partially accepted.",
-            "persistence": "Completed Proposal content and its base Revision remain locally recoverable; acceptance creates one immutable Revision and rejection leaves Article history unchanged.",
+            "contract": "Authors may review a non-authoritative Interface-locale summary for each change, accept or reject each change locally, apply the accepted subset in one Revision, accept a complete proposal in one Revision, or reject it without Article changes; summary failure does not block review, and stale and unreliable proposals cannot be partially accepted.",
+            "persistence": "Completed Proposal content, summaries with their Interface locale, and the base Revision remain locally recoverable in the Proposal artifact; acceptance creates one immutable Revision and rejection leaves Article history unchanged.",
             "scenarioIds": ["editorial-workflows.stale-proposal-blocked"]
         },
         {

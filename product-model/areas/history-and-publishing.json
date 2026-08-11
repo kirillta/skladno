@@ -39,7 +39,7 @@
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/FactCheckView.tsx", "packages/server/src/infrastructure/editorial/ai-sdk-editorial-engine.ts", "packages/server/src/infrastructure/persistence/repositories/workflow-artifacts-repository.ts"],
             "contract": "Findings are advisory, tied to their reviewed Revision, include source links and uncertainty, indicate staleness, and use provider-compatible editorial instructions.",
-            "persistence": "Findings and citations persist locally without modifying Article text.",
+            "persistence": "Findings and citations persist locally without modifying Article text; focused updates to other editorial artifacts do not replace or detach their citations.",
             "scenarioIds": ["history-and-publishing.fact-findings-advisory"]
         },
         {

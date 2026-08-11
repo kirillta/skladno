@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, EDITORIAL_OPERATION, HTTP_STATUS, type Article, type CreateEditorialArtifactInput, type EditorialOperation, type StyleProfile } from "@skladno/shared";
+import { APPLICATION_ERROR, EDITORIAL_OPERATION, HTTP_STATUS, type Article, type CreateEditorialArtifactInput, type EditorialArtifact, type EditorialOperation, type StyleProfile } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { EditorialEngine } from "../ports/editorial-engine.js";
@@ -38,8 +38,8 @@ interface EditorialStyleCorpusStore {
 
 
 interface EditorialArtifactsStore {
-    create(input: CreateEditorialArtifactInput): unknown;
-    createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<import("@skladno/shared").CreateSourceCitationInput, "editorialArtifactId">[]): unknown;
+    create(input: CreateEditorialArtifactInput): EditorialArtifact;
+    createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<import("@skladno/shared").CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact;
 }
 
 
@@ -127,24 +127,24 @@ function citationsFor(event: Extract<EditorialEngineEvent, { type: typeof EDITOR
 }
 
 
-function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifacts: EditorialArtifactsStore, request: EditorialServiceRequest, context: EditorialStreamContext, sessionContinuationEnabled: boolean, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): void {
+function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifacts: EditorialArtifactsStore, request: EditorialServiceRequest, context: EditorialStreamContext, sessionContinuationEnabled: boolean, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): string {
     if (!context.factCheck && !context.translation && sessionContinuationEnabled)
         sessions.save(request.articleId, event.responseId);
 
     const input = artifactInput(request, context, event);
-    if (context.factCheck)
-        artifacts.createWithCitations(input, citationsFor(event));
-    else
-        artifacts.create(input);
+    return context.factCheck
+        ? artifacts.createWithCitations(input, citationsFor(event)).id
+        : artifacts.create(input).id;
 }
 
 
-async function* streamEditorialOperation(request: EditorialServiceRequest, context: EditorialStreamContext, signal: AbortSignal, onCompleted: (event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>) => void): AsyncIterable<EditorialEngineEvent> {
+async function* streamEditorialOperation(request: EditorialServiceRequest, context: EditorialStreamContext, signal: AbortSignal, onCompleted: (event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>) => string): AsyncIterable<EditorialEngineEvent> {
     let completed = false;
     for await (const event of context.engine.stream(engineRequest(request, context), signal)) {
         if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
             completed = true;
-            onCompleted(event);
+            yield { ...event, editorialArtifactId: onCompleted(event) };
+            continue;
         }
 
         yield event;

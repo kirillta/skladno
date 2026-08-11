@@ -51,6 +51,7 @@ export interface EditorialCompletedEvent {
     styleReview?: StyleReview;
     factCheck?: FactCheck;
     translation?: TranslationMetadata;
+    editorialArtifactId?: string;
 }
 
 
