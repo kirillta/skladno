@@ -2,178 +2,65 @@
 
 > Your ideas, in your voice.
 
-Skladno is a local-first AI editorial workspace for technical authors. It supports the full path from rough theses to a polished, fact-checked, voice-consistent article while keeping every meaningful edit under the author's control.
+Skladno is a local-first writing workspace for technical authors. It helps turn rough notes into a coherent Article, improve the writing, check facts, preserve the author's style, translate the result, and prepare copy for publishing.
 
-See [internationalization guidance](docs/internationalization.md) for the interface locale and catalog conventions.
+The author stays in control. AI output is always a Proposal: Skladno shows the changes, and nothing enters an Article until the author accepts it. Every accepted change creates an immutable Revision.
 
-See the [feature inventory](docs/feature-inventory.md) for the current product surface, persistence boundaries, and deferred capabilities.
+## What you can do
 
-The project is currently in its planning and foundation stage. The product backlog is tracked in [GitHub Issues](https://github.com/kirillta/skladno/issues).
+- Write and autosave Articles locally.
+- Ask the Editorial Assistant to compose, revise, fact-check, review style, or translate.
+- Review all proposed changes before accepting them.
+- Restore earlier Revisions without rewriting history.
+- Keep translations as separate linked Articles.
+- Preview copy using configurable publishing guidance.
+- Manage AI, language, publishing, and backup settings locally.
 
-## What Skladno is for
+See the [feature inventory](docs/feature-inventory.md) for current implementation status and the [glossary](docs/glossary.md) for Skladno's product language.
 
-A typical editorial session looks like this:
-
-```text
-theses
-  → coherent draft
-  → author's revision
-  → flow improvement
-  → fact-check
-  → style review
-  → translation
-  → platform-ready copy
-```
-
-The sequence is suggested, not enforced. Authors can move between steps as their work requires.
-
-Skladno is designed around three visible parts:
-
-- a list of articles and source materials;
-- a plain-text article editor;
-- a conversational editorial assistant.
-
-AI output is always a proposal. The author reviews a diff and explicitly accepts or rejects it. Accepted changes create immutable Revisions, and restoring an earlier Revision creates a new Revision.
-
-Drafts autosave locally as recoverable checkpoints and become immutable Revisions only when the author explicitly saves. Workspace layout preferences are local to the application, and publishing-length feedback is guidance rather than a limit. The Editorial Assistant keeps one local conversation per Article and offers optional skills; supporting-view badges identify content ready for review and results made stale by a newer Revision.
-
-## MVP
-
-The first release is a personal, single-user application running locally. It includes:
-
-- local article storage and autosave;
-- local author-style corpus management, compact profile derivation, and advisory style proposals;
-- a plain-text editor with Unicode-aware length guidance;
-- streamed editorial conversations;
-- thesis-to-draft composition and flow revision;
-- reviewable diffs with full or partial acceptance;
-- immutable Revision history and restoration;
-- an author-style corpus and style review;
-- fact-checking with linked sources and stated uncertainty;
-- reviewable translation into a separate linked Article;
-- LinkedIn-oriented plain-text preview and clipboard export;
-- configurable publishing-limit profiles;
-- privacy-conscious diagnostics, backup guidance, and failure recovery.
-
-The MVP deliberately excludes accounts, cloud synchronization, direct publishing, team collaboration, and an Electron distribution.
-
-## Product principles
-
-- **The author stays in control.** Generated text never silently replaces an article.
-- **History is recoverable.** Accepted changes and restorations are immutable revisions.
-- **Local first.** Drafts, source materials, style samples, and settings remain local by default.
-- **Evidence over confidence.** Fact-check findings include sources and expose uncertainty.
-- **Voice over generic polish.** Improvements should retain the author's claims, terminology, rhythm, and intent.
-- **Platform guidance is configurable.** Length and formatting rules can change and are not hard-coded as universal truths.
-- **Desktop-ready, not desktop-first.** The MVP validates the workflow as a local web application while preserving a clean path to Electron.
-
-## Planned architecture
-
-The server layering and Electron migration boundary are recorded in [ADR-001](docs/adr-001-three-layer-server-and-electron.md).
-
-The implementation will use a separated TypeScript architecture:
+## How it works
 
 ```text
-React SPA
-    │
-    │ typed application client
-    ▼
-local Node.js service
-    ├── SQLite persistence and migrations
-    ├── immutable document revisions
-    ├── Skladno editorial AI facade over the OpenAI Responses API
-    ├── typed SSE streaming to the renderer
-    ├── web search for fact-checking
-    └── local configuration and secrets
-
-shared packages
-    ├── domain types
-    ├── validation schemas
-    └── transport-neutral contracts
+Draft
+  -> explicit author request
+  -> AI Proposal or Finding
+  -> author review
+  -> new Revision when accepted
 ```
 
-This boundary keeps credentials and privileged operations out of the browser renderer. The workspace depends on a transport-neutral `EditorialWorkspaceClient`; the typed Electron main/preload adapter implements that same client without rewriting the React interface or domain logic.
+Draft checkpoints, Articles, Revisions, settings, and style samples remain local. Credentials stay in the local service and are never exposed to the browser. Network-dependent editorial actions happen only when requested by the author.
 
-The exact workspace layout, package manager, framework configuration, and development commands will be established by [issue #1](https://github.com/kirillta/skladno/issues/1).
-
-## Editorial safety model
-
-Every model operation follows the same basic lifecycle:
-
-```text
-current revision
-    → explicit author request
-    → streamed model operation
-    → completed proposal
-    → diff review
-    → accept or reject
-    → new immutable revision when accepted
-```
-
-Cancellation, network failure, malformed output, or an incomplete stream must leave the current article unchanged.
-
-Fact-check findings and style findings are attached to the exact revision that was reviewed. Translations and derived formats remain separate from their source article.
-
-## Article API and database reset
-
-The local service exposes Article-only routes under `/api/articles`: Article CRUD, `/revisions`, `/proposal-acceptances`, revision `/restorations`, and `/editorial`. There are no legacy Documents API aliases.
-
-Application Settings are local-service backed under `/api/settings`. The web UI stores only preferences and references to server-side configuration; it never receives API-key values. Backup destinations are typed local paths in the web UI. Native folder selection, restoring snapshots, and relocating active data are deferred to the Electron follow-up.
-
-This MVP replaces the pre-Article local schema. On its first start, Skladno detects the legacy schema, removes `~/.skladno/skladno.sqlite` and its SQLite sidecars, then creates the new Article schema in the same path. New Article databases are preserved on later starts. Back up any legacy MVP data before starting this version.
-
-## Roadmap
-
-The MVP work is split into dependency-aware issues covering foundation, persistence, workspace, AI integration, editorial workflows, revision control, style, fact-checking, translation, publishing preview, and release hardening.
-
-Deferred capabilities live in the [Future enhancements (post-MVP) milestone](https://github.com/kirillta/skladno/milestone/1). They include:
-
-- URL and LinkedIn imports;
-- larger style corpora and personal terminology;
-- Markdown, HTML, and DOCX exports;
-- additional platforms and direct publishing;
-- research, source libraries, voice notes, and visual assets;
-- an Electron application and offline workflows;
-- multiple providers and local models;
-- cloud sync, teams, analytics, custom workflows, mobile, PWA, and browser-extension experiences.
-
-These features are intentionally held until the core editorial loop has been validated with real publications.
-
-## Development
+## Run locally
 
 Requirements: Node.js 22 or later and npm 10 or later.
 
-1. Copy `.env.example` to `.env` and adjust local ports only if required. `SKLADNO_AI_API_KEY` remains server-side. `SKLADNO_AI_SESSION_CONTINUATION` is `false` by default; enable it only if you explicitly accept provider-held state for multi-turn continuation.
-2. Run `npm install`.
-3. Run `npm run dev`.
-4. Open `http://localhost:5173`. The page reports whether it can reach the local service at `http://127.0.0.1:8787/api/health`.
+```powershell
+npm install
+npm run dev
+```
 
-Use `npm run lint` for source and code-style checks, `npm run lint:fix` to apply safe automatic fixes, `npm run typecheck` for TypeScript project checks, `npm test` for shared-contract and SQLite repository tests, and `npm run build` for a production web build followed automatically by linting. The web package has no environment-variable exposure configured: credentials must never be prefixed with `VITE_` or imported by browser code.
+Open `http://localhost:5173`.
 
-### Workspace layout
+The AI API key is read server-side from `SKLADNO_AI_API_KEY`. Copy `.env.example` to `.env` if you need to configure local ports or AI behavior. Never expose credentials through `VITE_` variables.
 
-- `packages/shared`: domain types, API shapes, validation, and the transport-neutral `ApplicationClient` interface.
-- `packages/server`: the loopback-only Node local service and server-side configuration.
-- `packages/web`: the React renderer and the HTTP implementation of `ApplicationClient`.
+Useful checks:
 
-Electron now provides the narrow preload bridge and main-process adapter for another `ApplicationClient` implementation; neither the React UI nor shared contracts need to change. Electron window/bootstrap composition and packaged distribution remain deferred.
+```powershell
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
 
-## Privacy
+## Project structure
 
-Skladno processes unpublished writing and style samples, so privacy is a product requirement:
+- `packages/web`: React interface.
+- `packages/server`: local service, AI integration, and SQLite persistence.
+- `packages/shared`: domain types and application contracts.
+- `packages/electron`: typed desktop bridge.
 
-- API credentials stay in the privileged local service.
-- Private content and credentials must not appear in logs by default.
-- Model requests contain only the context required for the requested operation.
-- Style corpus articles remain local; style review sends a compact derived profile rather than the raw corpus.
-- The Vercel AI SDK is server-side only. Fact checking uses a bounded, fixed workflow rather than an autonomous agent or graph runtime.
-- Provider-side session continuation is disabled by default. `SKLADNO_AI_SESSION_CONTINUATION=true` is an explicit opt-in and may retain provider-held state.
-- Network-dependent actions are visible and initiated by the author.
-
-## Status
-
-Planning is complete and the implementation backlog is ready. The next step is [establishing the local-first application architecture](https://github.com/kirillta/skladno/issues/1).
+Architecture decisions and other technical notes live in [`docs`](docs). Product capabilities are maintained in [`product-model`](product-model).
 
 ## License
 
-Skladno is available under the [MIT License](LICENSE).
+[MIT](LICENSE)
