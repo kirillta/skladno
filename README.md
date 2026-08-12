@@ -16,7 +16,7 @@ The author stays in control. AI output is always a Proposal: Skladno shows the c
 - Preview copy using configurable publishing guidance.
 - Manage AI, language, publishing, and backup settings locally.
 
-See the [feature inventory](docs/feature-inventory.md) for current implementation status and the [glossary](docs/glossary.md) for Skladno's product language.
+See the [feature inventory](docs/development/product/feature-inventory.md) for current implementation status and the [glossary](docs/user/Glossary.md) for Skladno's product language.
 
 ## How it works
 
@@ -59,7 +59,7 @@ npm run build
 - `packages/shared`: domain types and application contracts.
 - `packages/electron`: typed desktop bridge.
 
-Architecture decisions and other technical notes live in [`docs`](docs). Product capabilities are maintained in [`product-model`](product-model).
+User documentation lives in [`docs/user`](docs/user). Technical documentation lives in [`docs/development`](docs/development). Product capabilities are maintained in [`product-model`](product-model).
 
 ## License
 

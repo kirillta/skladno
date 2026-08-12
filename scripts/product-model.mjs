@@ -122,7 +122,7 @@ function titleCaseArea(area) {
 
 
 function generatedInventoryPath(area) {
-    return resolve(root, "docs", `${area.area}-inventory.md`);
+    return resolve(root, "docs", "development", "product", `${area.area}-inventory.md`);
 }
 
 

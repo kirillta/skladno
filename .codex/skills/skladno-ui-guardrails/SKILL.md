@@ -9,7 +9,7 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 
 ## Required workflow
 
-1. Read the repository `AGENTS.md`, `packages/web/src/ui/design-system.md`, relevant UI primitives, and the component being changed.
+1. Read the repository `AGENTS.md`, `docs/development/ui/design-system.md`, relevant UI primitives, and the component being changed.
 2. Read every focused reference and preservation inventory relevant to the touched surface. Treat each implemented or partial capability as a requirement, and identify how the planned change preserves, extends, replaces, or intentionally removes it.
 3. Inspect the current rendered state, implementation, tests, and working-tree diff before editing. Use the collaborative preview for desktop and collapsed-panel states when present.
 4. Reuse semantic Tailwind tokens and existing primitives. Do not introduce raw colors, radius, focus, elevation, or a parallel CSS layer.
@@ -19,7 +19,7 @@ Keep Skladno’s editorial workspace visually stable while extending it. Treat e
 8. Before handoff, compare the final diff and rendered result with the preservation baseline. Verify every affected baseline capability alongside the new behavior; do not downgrade inventory status merely to make an incomplete implementation appear consistent.
 9. Run the narrowest relevant tests and typecheck. Visually inspect every changed responsive or collapsed state before handoff.
 
-Read [`../../../product-model/areas/article-workspace.json`](../../../product-model/areas/article-workspace.json) and [`../../../docs/article-workspace-inventory.md`](../../../docs/article-workspace-inventory.md) before changing the Article Workspace, Article Header, Workspace Tab Bar, Workspace View, or Article Status Bar. Update the canonical product model in the same change when an implemented workspace feature or contract changes, then run `npm run product:docs` and `npm run product:check`.
+Read [`../../../product-model/areas/article-workspace.json`](../../../product-model/areas/article-workspace.json) and [`../../../docs/development/product/article-workspace-inventory.md`](../../../docs/development/product/article-workspace-inventory.md) before changing the Article Workspace, Article Header, Workspace Tab Bar, Workspace View, or Article Status Bar. Update the canonical product model in the same change when an implemented workspace feature or contract changes, then run `npm run product:docs` and `npm run product:check`.
 
 ## Decision rules
 

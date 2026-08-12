@@ -10,7 +10,7 @@ Before changing code:
 2. Check the canonical capability records in [`product-model/areas`](product-model/areas). Preserve implemented capabilities unless the issue explicitly changes them.
 3. Follow the existing architecture and nearby conventions. Do not create parallel structures.
 
-The active issue is the source of truth for scope. [`README.md`](README.md) describes the product and development setup. Generated files in `docs/*-inventory.md` are not edited directly; update the product model and run `npm run product:docs`.
+The active issue is the source of truth for scope. [`README.md`](README.md) describes the product and development setup. Generated files in `docs/development/product/*-inventory.md` are not edited directly; update the product model and run `npm run product:docs`.
 
 ## Product invariants
 
@@ -24,7 +24,7 @@ The active issue is the source of truth for scope. [`README.md`](README.md) desc
 - Publishing limits are configurable guidance. The MVP does not publish directly to external platforms.
 - Preserve claims, numbers, URLs, code, technical terms, and author voice.
 
-Use the domain terms in the [Skladno glossary](docs/glossary.md), `packages/shared`, and the product model. Use **Article**, not `document`, except for browser DOM APIs.
+Use the domain terms in the [Skladno glossary](docs/user/Glossary.md), `packages/shared`, and the product model. Use **Article**, not `document`, except for browser DOM APIs.
 
 ## Architecture and security
 
@@ -37,7 +37,7 @@ Use the domain terms in the [Skladno glossary](docs/glossary.md), `packages/shar
 
 ## UI changes
 
-- Follow [`packages/web/src/ui/design-system.md`](packages/web/src/ui/design-system.md) and reuse its primitives and semantic Tailwind tokens.
+- Follow the [web design system](docs/development/ui/design-system.md) and reuse its primitives and semantic Tailwind tokens.
 - Keep `packages/web/src/styles.css` for Tailwind imports, tokens, and global behavior only.
 - All application-owned visible and accessible copy goes through the typed ICU catalog in `packages/web/src/i18n/messages.ts`. Never use translated text as program state or identifiers.
 - Preserve keyboard access and useful loading, empty, cancelled, offline, and recoverable-error states.
