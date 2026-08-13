@@ -7,18 +7,20 @@ description: Preserve and maintain Skladno's user-visible product capabilities a
 
 Use the canonical product-model area that matches the change:
 
-- Read `../../../product-model/areas/application.json` and generated `../../../docs/application-inventory.md` for application-shell contracts.
-- Read `../../../product-model/areas/editorial-workflows.json` and generated `../../../docs/editorial-workflows-inventory.md` for the assistant, AI operations, proposals, and editorial safety.
-- Read `../../../product-model/areas/history-and-publishing.json` and generated `../../../docs/history-and-publishing-inventory.md` for Revisions, evidence, translations, and publishing preview.
-- Read `../../../product-model/areas/cross-cutting.json` and generated `../../../docs/cross-cutting-inventory.md` for internationalization, accessibility, keyboard control, notifications, privacy, validation, and database lifecycle.
+- Read `../../../product-model/areas/application.json` and generated `../../../docs/development/product/application-inventory.md` for application-shell contracts.
+- Read `../../../product-model/areas/editorial-workflows.json` and generated `../../../docs/development/product/editorial-workflows-inventory.md` for the assistant, AI operations, proposals, and editorial safety.
+- Read `../../../product-model/areas/history-and-publishing.json` and generated `../../../docs/development/product/history-and-publishing-inventory.md` for Revisions, evidence, translations, and publishing preview.
+- Read `../../../product-model/areas/cross-cutting.json` and generated `../../../docs/development/product/cross-cutting-inventory.md` for internationalization, accessibility, keyboard control, notifications, privacy, validation, and database lifecycle.
 
 ## Registry-owned product areas
 
 Application shell, Article Workspace, Editorial workflows, History and publishing, Cross-cutting, and Settings are registry-owned. Before changing any of those areas:
 
-1. Read its canonical JSON model and generated inventory in `../../../product-model/areas/` and `../../../docs/`.
-2. Run `npm run product:impact -- <changed paths>` to identify affected capability IDs. CI runs `npm run product:changed -- <base revision> <head revision>` and requires every impacted area's canonical JSON model to change in the same diff.
-3. Update the canonical JSON model and scenario evidence, then run `npm run product:docs` and `npm run product:check`.
+1. Read its canonical JSON model and generated inventory in `../../../product-model/areas/` and `../../../docs/development/product/`.
+2. Optionally run `npm run product:impact -- <changed paths>` to identify capabilities that may be affected. Path matches are guidance, not proof of a product change.
+3. Update the canonical model only when capability, status, contract, persistence, or user-visible behavior changes. Then run `npm run product:docs -- <area>` and `npm run product:check`.
+
+Use `automated` evidence only when the referenced check identifies the scenario. Use `human-reviewed` for evidence that requires a person; it is recorded, not mechanically verified.
 
 Do not edit generated inventories by hand. They are evidence for people and agents; the model is authoritative.
 

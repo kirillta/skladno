@@ -1,6 +1,6 @@
 # Article Workspace inventory
 
-This file is generated from `product-model/areas/article-workspace.json`. Edit the canonical product model, then run `npm run product:docs`.
+This file is generated from `product-model/areas/article-workspace.json`. Edit the canonical product model, then run `npm run product:docs -- article-workspace`.
 
 | ID | Area | Feature | Status | Owner / contract |
 |---|---|---|---|---|

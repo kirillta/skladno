@@ -10,7 +10,7 @@ Before changing code:
 2. Check the canonical capability records in [`product-model/areas`](product-model/areas). Preserve implemented capabilities unless the issue explicitly changes them.
 3. Follow the existing architecture and nearby conventions. Do not create parallel structures.
 
-The active issue is the source of truth for scope. [`README.md`](README.md) describes the product and development setup. Generated files in `docs/development/product/*-inventory.md` are not edited directly; update the product model and run `npm run product:docs`.
+The active issue is the source of truth for scope. [`README.md`](README.md) describes the product and development setup. Generated files in `docs/development/product/*-inventory.md` are not edited directly; update the product model and run `npm run product:docs -- <area>`.
 
 ## Product invariants
 
@@ -46,5 +46,5 @@ Use the domain terms in the [Skladno glossary](docs/user/Glossary.md), `packages
 
 - Add the narrowest test that protects changed behavior and use deterministic provider fixtures.
 - Run the smallest relevant scripts from the root `package.json`; use npm only. At minimum, run lint and typecheck for source changes.
-- If user-visible capability or its status changed, update the matching `product-model/areas/*.json`, regenerate its inventory, and run `npm run product:check`.
+- If a capability, status, contract, persistence boundary, or user-visible behavior changed, update the matching `product-model/areas/*.json`, run `npm run product:docs -- <area>`, and run `npm run product:check`. Do not change the model merely because an owner path was touched.
 - Report checks run and any manual verification still needed.

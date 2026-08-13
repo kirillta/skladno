@@ -1,6 +1,6 @@
 # Editorial Workflows inventory
 
-This file is generated from `product-model/areas/editorial-workflows.json`. Edit the canonical product model, then run `npm run product:docs`.
+This file is generated from `product-model/areas/editorial-workflows.json`. Edit the canonical product model, then run `npm run product:docs -- editorial-workflows`.
 
 | ID | Area | Feature | Status | Owner / contract |
 |---|---|---|---|---|

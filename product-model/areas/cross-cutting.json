@@ -71,7 +71,7 @@
             "owners": ["packages/server/src/infrastructure/persistence/database.ts", "packages/server/src/infrastructure/persistence"],
             "contract": "Startup performs the one-time legacy Documents-to-Articles schema transition, then preserves the resulting Article database; persistence composition uses focused repositories directly.",
             "persistence": "SQLite remains the durable local data store after migration.",
-            "scenarioIds": ["cross-cutting.database-transition-manual"]
+            "scenarioIds": ["cross-cutting.database-transition-human-reviewed"]
         },
         {
             "id": "cross-cutting.assistant-persistence",
@@ -102,7 +102,7 @@
             "owners": ["AGENTS.md", "packages/electron/src"],
             "contract": "These capabilities remain outside the validated MVP editorial loop. The Electron IPC adapter is an architectural hook only; the Electron window/bootstrap and packaged alternate client remain deferred.",
             "persistence": "No persistence or network surface is introduced for deferred MVP work.",
-            "scenarioIds": ["cross-cutting.deferred-mvp-boundary-manual"],
+            "scenarioIds": ["cross-cutting.deferred-mvp-boundary-human-reviewed"],
             "tracking": "Future enhancements (post-MVP) milestone in AGENTS.md."
         }
     ],
@@ -168,14 +168,14 @@
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/configuration/config.test.ts" }
         },
         {
-            "id": "cross-cutting.database-transition-manual",
+            "id": "cross-cutting.database-transition-human-reviewed",
             "title": "Database transition preserves the resulting Article database",
             "capabilityIds": ["cross-cutting.database-lifecycle"],
             "preconditions": ["A legacy Documents database exists before local service startup."],
             "event": "The service starts for the first time after the Article migration.",
             "expected": ["The legacy database and sidecars are replaced once with the Article schema."],
             "forbidden": ["Future starts do not delete the resulting Article database."],
-            "evidence": { "kind": "manual", "path": "packages/server/src/infrastructure/persistence/database.ts" }
+            "evidence": { "kind": "human-reviewed", "path": "packages/server/src/infrastructure/persistence/database.ts" }
         },
         {
             "id": "cross-cutting.assistant-records-local",
@@ -195,17 +195,17 @@
             "event": "A change proposes persistent activity-center work.",
             "expected": ["The work is tracked as post-MVP rather than inferred into current scope."],
             "forbidden": ["Popup notification history is not treated as the activity center."],
-            "evidence": { "kind": "manual", "path": "AGENTS.md" }
+            "evidence": { "kind": "human-reviewed", "path": "AGENTS.md" }
         },
         {
-            "id": "cross-cutting.deferred-mvp-boundary-manual",
+            "id": "cross-cutting.deferred-mvp-boundary-human-reviewed",
             "title": "Deferred MVP capabilities remain out of scope",
             "capabilityIds": ["cross-cutting.deferred-mvp-boundary"],
             "preconditions": ["A future-enhancement capability is considered."],
             "event": "An MVP implementation change is planned.",
             "expected": ["The capability remains deferred unless the active issue explicitly changes scope."],
             "forbidden": ["Deferred product surface is not silently introduced."],
-            "evidence": { "kind": "manual", "path": "AGENTS.md" }
+            "evidence": { "kind": "human-reviewed", "path": "AGENTS.md" }
         }
     ]
 }

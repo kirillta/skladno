@@ -41,7 +41,7 @@
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/electron/src/preload-bridge.ts", "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts", "packages/server/src/index.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/server.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/application", "packages/server/src/infrastructure"],
             "contract": "A default model and per-skill overrides apply to six built-in skills, while an optional text generation model handles supporting text such as Proposal-change summaries and falls back to the default model; Settings is supplied to presentation as an application service, persistence is composed from focused repositories, and legacy preferences normalize on read without exposing unknown keys.",
             "persistence": "app_settings.application-model-preferences",
-            "scenarioIds": ["settings.model-preferences-manual"]
+            "scenarioIds": ["settings.model-preferences-human-reviewed"]
         },
         {
             "id": "settings.available-model-list",
@@ -51,7 +51,7 @@
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/available-models-provider.ts", "packages/server/src/presentation/routes/settings-route.ts"],
             "contract": "The active OpenAI connection can refresh its available model list for model selection.",
             "persistence": "Server-side OpenAI refresh only; the resulting list is not persisted.",
-            "scenarioIds": ["settings.available-model-list-manual"]
+            "scenarioIds": ["settings.available-model-list-human-reviewed"]
         },
         {
             "id": "settings.publishing-profiles",
@@ -72,7 +72,7 @@
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/server/src/infrastructure/configuration/config.ts"],
             "contract": "The active local data directory and server-only environment values are determined at startup; project .env values are loaded before the local service starts and Settings displays the active data directory.",
             "persistence": "Startup configuration rather than a Settings-managed value.",
-            "scenarioIds": ["settings.active-data-directory-manual"],
+            "scenarioIds": ["settings.active-data-directory-human-reviewed"],
             "limitations": ["The data-directory UI is incomplete."]
         },
         {
@@ -83,7 +83,7 @@
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "Authors can save a backup destination, schedule, and retention policy.",
             "persistence": "app_settings.application-backup-policy",
-            "scenarioIds": ["settings.backup-policy-manual"],
+            "scenarioIds": ["settings.backup-policy-human-reviewed"],
             "limitations": ["Validation, backup snapshots, and retention execution remain incomplete."]
         }
     ],
@@ -119,24 +119,24 @@
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
         {
-            "id": "settings.model-preferences-manual",
+            "id": "settings.model-preferences-human-reviewed",
             "title": "Model preferences resolve for editorial and supporting work",
             "capabilityIds": ["settings.model-preferences"],
             "preconditions": ["A default model, text generation model, or skill override is saved."],
             "event": "A new editorial request is prepared.",
             "expected": ["Editorial work resolves its built-in-skill override or default model, while supporting text resolves its text generation model or default-model fallback."],
             "forbidden": ["Unknown legacy override keys are not exposed."],
-            "evidence": { "kind": "manual", "path": "packages/server/src/presentation/server.ts" }
+            "evidence": { "kind": "human-reviewed", "path": "packages/server/src/presentation/server.ts" }
         },
         {
-            "id": "settings.available-model-list-manual",
+            "id": "settings.available-model-list-human-reviewed",
             "title": "Available models can be refreshed without becoming settings data",
             "capabilityIds": ["settings.available-model-list"],
             "preconditions": ["An active AI connection is configured."],
             "event": "The author refreshes the available model list.",
             "expected": ["The current provider list is offered for selection."],
             "forbidden": ["The refreshed list is not persisted as a model preference."],
-            "evidence": { "kind": "manual", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
+            "evidence": { "kind": "human-reviewed", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
         },
         {
             "id": "settings.publish-profile-default",
@@ -149,24 +149,24 @@
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         },
         {
-            "id": "settings.active-data-directory-manual",
+            "id": "settings.active-data-directory-human-reviewed",
             "title": "Settings show the configured local data location",
             "capabilityIds": ["settings.active-data-directory"],
             "preconditions": ["The local service starts with a configured data directory."],
             "event": "The author opens Data & backups Settings.",
             "expected": ["The active local data location is shown."],
             "forbidden": ["The UI does not imply that the directory can already be changed in Settings."],
-            "evidence": { "kind": "manual", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
+            "evidence": { "kind": "human-reviewed", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
         },
         {
-            "id": "settings.backup-policy-manual",
+            "id": "settings.backup-policy-human-reviewed",
             "title": "Backup policy preferences are persisted separately from backups",
             "capabilityIds": ["settings.backup-policy"],
             "preconditions": ["The author opens Data & backups Settings."],
             "event": "The author changes destination, schedule, or retention preferences.",
             "expected": ["The local backup policy is saved through Settings."],
             "forbidden": ["Saving policy preferences does not claim that backup snapshots or retention execution are complete."],
-            "evidence": { "kind": "manual", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
+            "evidence": { "kind": "human-reviewed", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
         }
     ]
 }

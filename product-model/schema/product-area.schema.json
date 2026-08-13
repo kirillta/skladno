@@ -185,7 +185,7 @@
                         "kind": {
                             "enum": [
                                 "automated",
-                                "manual"
+                                "human-reviewed"
                             ]
                         },
                         "path": {

@@ -1,6 +1,6 @@
 # History And Publishing inventory
 
-This file is generated from `product-model/areas/history-and-publishing.json`. Edit the canonical product model, then run `npm run product:docs`.
+This file is generated from `product-model/areas/history-and-publishing.json`. Edit the canonical product model, then run `npm run product:docs -- history-and-publishing`.
 
 | ID | Area | Feature | Status | Owner / contract |
 |---|---|---|---|---|
