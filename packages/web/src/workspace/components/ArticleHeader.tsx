@@ -43,9 +43,11 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
 
     useEffect(() => () => clearTimeout(renameTimer.current), []);
 
+
     function updateMetadata(input: UpdateArticleInput) {
         void updateArticle(article.id, input).catch((error) => reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) }));
     }
+
 
     function persistTitle(value: string) {
         const nextTitle = value.trim();
@@ -64,6 +66,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             });
     }
 
+
     function finishTitleEditing() {
         clearTimeout(renameTimer.current);
         persistTitle(title);
@@ -71,6 +74,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
         if (!title.trim())
             setTitle(article.title);
     }
+
 
     async function confirmDelete() {
         try {
@@ -80,6 +84,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }
     }
+
 
     return <header className="border-b border-border bg-surface">
         <div className="flex min-h-16 items-center gap-3 px-5">

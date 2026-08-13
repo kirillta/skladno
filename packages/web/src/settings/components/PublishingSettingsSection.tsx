@@ -4,6 +4,7 @@ import { publishingProfileMessageId } from "../../i18n/publishing.js";
 import { Select } from "../../ui/primitives.js";
 import { SettingRow } from "./SettingRow.js";
 
+
 export function PublishingSettingsSection({ profileId, save }: { profileId: PublishLimitProfileId; save: (profileId: PublishLimitProfileId) => void }) {
     const intl = useIntl();
 

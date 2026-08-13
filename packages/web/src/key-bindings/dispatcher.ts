@@ -1,5 +1,6 @@
 import { keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, type KeyBindingCommandId, type KeyBindingOverrides, type KeyBindingScope } from "@skladno/shared";
 
+
 export interface KeyBindingEvent {
     key: string;
     ctrlKey: boolean;
@@ -12,7 +13,9 @@ export interface KeyBindingEvent {
     preventDefault(): void;
 }
 
+
 export type KeyBindingHandler = () => void;
+
 
 function isEditableTarget(target: EventTarget | null): boolean {
     if (!(target instanceof HTMLElement))
@@ -21,17 +24,23 @@ function isEditableTarget(target: EventTarget | null): boolean {
     return target.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
 }
 
+
 export function eventKeyBinding(event: Pick<KeyBindingEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey">) {
     return normalizeKeyBinding({ primary: event.ctrlKey || event.metaKey, shift: event.shiftKey, alt: event.altKey, key: event.key });
 }
 
+
 export class KeyBindingDispatcher {
     private overrides: KeyBindingOverrides = {};
+
+
     private readonly handlers = new Map<KeyBindingCommandId, KeyBindingHandler>();
+
 
     setOverrides(overrides: KeyBindingOverrides): void {
         this.overrides = overrides;
     }
+
 
     register(commandId: KeyBindingCommandId, handler: KeyBindingHandler): () => void {
         this.handlers.set(commandId, handler);
@@ -40,6 +49,7 @@ export class KeyBindingDispatcher {
                 this.handlers.delete(commandId);
         };
     }
+
 
     dispatch(event: KeyBindingEvent, scope: KeyBindingScope = "application"): boolean {
         if (event.repeat || event.isComposing)

@@ -29,7 +29,9 @@ async function* noConversation(): AsyncIterable<EditorialEngineEvent> {
 class FixtureEngine implements EditorialEngine {
     requests: EditorialEngineRequest[] = [];
 
+
     constructor(private readonly events: EditorialEngineEvent[]) { }
+
 
     async *stream(request: EditorialEngineRequest): AsyncIterable<EditorialEngineEvent> {
         this.requests.push(request);

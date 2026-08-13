@@ -26,6 +26,7 @@ import { providerLanguageName, targetLanguageId } from "./editorial-language.js"
 type ProposalState = "idle" | "streaming" | "error";
 type ProposalDecision = "pending" | "accepted" | "rejected";
 
+
 interface EditorialResult<T> {
     articleId: string;
     baseRevisionId: string;

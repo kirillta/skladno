@@ -146,11 +146,13 @@ export function EditorialAssistantPanel({ state, message, errorDetails, onReques
         element.append(value.slice(offset));
     }, [clearSelection, intl, selection]);
 
+
     function focusQuickAction(index: number) {
         const nextIndex = (index + availableSkills.length) % availableSkills.length;
         setActiveSkillIndex(nextIndex);
         document.querySelectorAll<HTMLButtonElement>("[data-assistant-skill]")[nextIndex]?.focus();
     }
+
 
     const selectSkill = useCallback((skill: BuiltInSkillId) => {
         const insertionOffset = selectedSkill ? skillOffset : slashTriggerOffset ?? composerOffset;

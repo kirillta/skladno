@@ -16,10 +16,12 @@ export interface TextProposal {
     changes: ProposalChange[];
 }
 
+
 export interface ProposalChangeSummary {
     changeId: string;
     summary: string;
 }
+
 
 export interface SummarizeProposalInput {
     editorialArtifactId: string;

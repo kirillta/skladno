@@ -5,6 +5,7 @@ import { useIntl } from "react-intl";
 
 const tone = { supported: "success", disputed: "error", unverifiable: "warning" } as const;
 
+
 export function FactCheckView({ factCheck, stale, runAgain, resolve, proposeCorrections }: {
     factCheck: FactCheck | undefined;
     stale: boolean;

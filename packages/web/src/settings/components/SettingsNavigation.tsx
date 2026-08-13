@@ -2,6 +2,7 @@ import { useIntl } from "react-intl";
 import { Button } from "../../ui/primitives.js";
 import { settingsSections, type SettingsSection } from "../settings-sections.js";
 
+
 export function SettingsNavigation({ section, setSection, back, status }: { section: SettingsSection; setSection: (section: SettingsSection) => void; back: () => void; status: string }) {
     const intl = useIntl();
 

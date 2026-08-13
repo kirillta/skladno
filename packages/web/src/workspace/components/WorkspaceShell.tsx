@@ -7,6 +7,7 @@ const assistantLimits = { minimum: 320, collapsed: 48 };
 const articleWorkspaceMinimum = 640;
 const keyboardIncrement = 16;
 
+
 function clamp(value: number, minimum: number, maximum: number): number {
     return Math.min(maximum, Math.max(minimum, value));
 }
@@ -24,6 +25,7 @@ function ResizeHandle({ label, value, minimum, maximum, direction = 1, edge = "e
     function adjust(value: number) {
         onChange(clamp(value, minimum, maximum));
     }
+
 
     function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
         if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
@@ -47,27 +49,33 @@ function ResizeHandle({ label, value, minimum, maximum, direction = 1, edge = "e
         }
     }
 
+
     function startResize(event: ReactPointerEvent<HTMLDivElement>) {
         const startX = event.clientX;
         const startValue = value;
 
         event.currentTarget.setPointerCapture?.(event.pointerId);
 
+
         function resize(moveEvent: PointerEvent) {
             adjust(startValue + direction * (moveEvent.clientX - startX));
         }
+
 
         function stopResize() {
             window.removeEventListener("pointermove", resize);
             window.removeEventListener("pointerup", stopResize);
         }
 
+
         window.addEventListener("pointermove", resize);
         window.addEventListener("pointerup", stopResize, { once: true });
     }
 
+
     return <div role="separator" aria-orientation="vertical" aria-label={label} aria-valuemin={minimum} aria-valuemax={maximum} aria-valuenow={value} tabIndex={0} onKeyDown={handleKeyDown} onPointerDown={startResize} className={`absolute inset-y-0 z-10 w-4 cursor-col-resize touch-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:bg-border hover:before:bg-brand focus-visible:outline-none focus-visible:before:w-0.5 focus-visible:before:bg-brand ${edge === "start" ? "-left-2" : "-right-2"}`} />;
 }
+
 
 export function WorkspaceShell({ children, library, assistant, focusMode, libraryCollapsed, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, libraryWidth, setLibraryWidth, assistantWidth, setAssistantWidth }: {
     children: ReactNode;
@@ -104,6 +112,7 @@ export function WorkspaceShell({ children, library, assistant, focusMode, librar
         function updateViewportWidth() {
             setViewportWidth(window.innerWidth);
         }
+
 
         window.addEventListener("resize", updateViewportWidth);
 

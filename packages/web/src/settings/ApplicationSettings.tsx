@@ -12,6 +12,7 @@ import { PublishingSettingsSection } from "./components/PublishingSettingsSectio
 import { SettingsNavigation } from "./components/SettingsNavigation.js";
 import { settingsSections, type SettingsSection } from "./settings-sections.js";
 
+
 export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { client: EditorialWorkspaceClient; back: () => void; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void }) {
     const intl = useIntl();
     const { notify, notifyError } = useNotifications();
@@ -44,6 +45,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
         void client.getPublishLimitProfile().then(setPublishingProfileId).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.loadingFailed" }) }));
     }, [client, intl, notifyError]);
 
+
     async function saveGeneral(next: GeneralSettings) {
         setGeneral(next);
         setStatus(intl.formatMessage({ id: "settings.saving" }));
@@ -55,6 +57,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
             notify({ tone: "error", title: intl.formatMessage({ id: "settings.saveFailed" }) });
         }
     }
+
 
     async function savePreferences(next: ModelPreferences) {
         setPreferences(next);
@@ -68,6 +71,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
         }
     }
 
+
     async function saveBackupPolicy(next: BackupPolicy) {
         setBackupPolicy(next);
         setStatus(intl.formatMessage({ id: "settings.saving" }));
@@ -79,6 +83,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
             notify({ tone: "error", title: intl.formatMessage({ id: "settings.backupSaveFailed" }) });
         }
     }
+
 
     async function saveKeyBindingOverrides(next: KeyBindingOverrides) {
         setKeyBindingOverrides(next);
@@ -93,6 +98,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
             throw error;
         }
     }
+
 
     async function addConnection() {
         if (settings?.connections.some((connection) => connection.environmentVariableName === environmentName)) {
@@ -118,6 +124,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
         }
     }
 
+
     async function setActiveConnection(connectionId: string) {
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
@@ -130,6 +137,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }
     }
+
 
     async function removeConnection() {
         if (!connectionPendingRemoval)
@@ -152,6 +160,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
         }
     }
 
+
     async function refreshModels() {
         try {
             setModels(await client.refreshOpenAiModels());
@@ -159,6 +168,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }
     }
+
 
     async function savePublishingProfile(profileId: PublishLimitProfileId) {
         setPublishingProfileId(profileId);
@@ -169,6 +179,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.saveFailed" }) });
         }
     }
+
 
     return <main className="flex h-dvh overflow-hidden bg-surface text-ink">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />

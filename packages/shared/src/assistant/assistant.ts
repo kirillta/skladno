@@ -79,6 +79,7 @@ export type AssistantResponseKind = "editorial_conversation" |
     "request_cancelled" |
     "request_failed";
 
+
 export interface AssistantRequest {
     id: string;
     articleId: string;
@@ -119,6 +120,7 @@ export interface AssistantMessage {
     updatedAt: string;
 }
 
+
 export interface AssistantEditorialResult {
     proposal?: string;
     factCheck?: import("../editorial/editorial.js").FactCheck;
@@ -133,6 +135,7 @@ export interface AssistantEditorialResult {
 export const assistantMessagesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/messages`;
 export const assistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
 
+
 export interface StartAssistantRequest {
     requestId: string;
     authorMessage: string;
@@ -143,6 +146,7 @@ export interface StartAssistantRequest {
     retryOfRequestId?: string;
 }
 
+
 export type AssistantEvent =
     | { type: "accepted"; requestId: string }
     | { type: "skill_resolved"; requestId: string; skillId?: BuiltInSkillId; source?: AssistantSkillSource }
@@ -150,6 +154,7 @@ export type AssistantEvent =
     | { type: "tool_status"; requestId: string; tool: string; status: "started" | "completed" }
     | { type: "completed"; requestId: string; responseKind: AssistantResponseKind; messageId: string; editorialArtifactId?: string; result?: AssistantEditorialResult }
     | { type: "error"; requestId: string; errorCode: import("../cross-cutting/errors.js").ApplicationErrorCode; retryable: boolean };
+
 
 export interface AssistantClient {
     streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void>;

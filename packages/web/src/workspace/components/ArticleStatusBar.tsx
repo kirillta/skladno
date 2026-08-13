@@ -15,10 +15,12 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, setProfile
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const tone = length.state === "over-limit" ? "error" : length.state === "near-limit" ? "warning" : "info";
 
+
     async function selectProfile(profileId: PublishLimitProfileId) {
         await setProfile(profileId);
         setProfileMenuOpen(false);
     }
+
 
     return <footer className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
         <span className="font-normal text-muted">{intl.formatMessage({ id: "status.revision" }, { revisionNumber })}</span>

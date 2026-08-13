@@ -2,9 +2,11 @@ import { KEY_BINDING_COMMAND } from "@skladno/shared";
 import { describe, expect, it, vi } from "vitest";
 import { KeyBindingDispatcher } from "./dispatcher.js";
 
+
 function event(key: string, options: Partial<Parameters<KeyBindingDispatcher["dispatch"]>[0]> = {}) {
     return { key, ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, repeat: false, isComposing: false, target: null, preventDefault: vi.fn(), ...options };
 }
+
 
 describe("KeyBindingDispatcher", () => {
     it("dispatches a registered command and prevents its browser default", () => {

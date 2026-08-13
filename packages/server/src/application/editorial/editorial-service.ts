@@ -43,6 +43,7 @@ interface EditorialArtifactsStore {
     createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<import("@skladno/shared").CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact;
 }
 
+
 interface FactChecksStore { save(artifactId: string, articleId: string, revisionId: string): void; }
 
 
@@ -147,7 +148,7 @@ function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifa
             return { ...finding, factId, occurrenceId: `${context.article.currentRevisionId}:${factId}`, checkedAt: new Date().toISOString() };
         }),
     } };
-    
+
     const artifact = artifacts.createWithCitations(artifactInput(request, context, enriched), citationsFor(enriched));
     factChecks.save(artifact.id, request.articleId, context.article.currentRevisionId);
     return artifact.id;

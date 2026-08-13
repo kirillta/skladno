@@ -33,6 +33,7 @@ export default defineConfig(
         },
         rules: {
             "project-style/conditional-braces": "error",
+            "project-style/two-blank-lines-between-declarations": "error",
             "@stylistic/brace-style": ["error", "1tbs"],
             "@stylistic/comma-spacing": "error",
             "@stylistic/comma-style": ["error", "last"],
@@ -41,9 +42,7 @@ export default defineConfig(
                 SwitchCase: 1,
             }],
             "@stylistic/keyword-spacing": "error",
-            "@stylistic/lines-between-class-members": ["error", "always", {
-                exceptAfterSingleLine: true,
-            }],
+            "@stylistic/lines-between-class-members": "off",
             "@stylistic/max-statements-per-line": ["error", {
                 max: 1,
             }],

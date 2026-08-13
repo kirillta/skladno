@@ -13,6 +13,7 @@ import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
 
+
 // Product scenarios: workspace.library.create-and-select, workspace.assistant.quick-action, workspace.empty.create-article, workspace.header.metadata-and-deletion, workspace.navigation.persisted-view, workspace.publishing.over-guidance, history-and-publishing.publishing-guidance, cross-cutting.accessible-workspace-separators
 
 function article(id: string, title: string): Article {
@@ -431,6 +432,7 @@ describe("Editorial Workspace", () => {
             get: () => 640,
         });
 
+
         function AssistantPanelHarness() {
             const [collapsed, setCollapsed] = useState(false);
 
@@ -439,6 +441,7 @@ describe("Editorial Workspace", () => {
                 { id: "latest", articleId: "one", role: "assistant", kind: "response", status: "completed", content: "The latest response.", createdAt: "2026-01-01T00:01:00.000Z", updatedAt: "2026-01-01T00:01:00.000Z" },
             ]} />;
         }
+
 
         try {
             const panel = renderLocalized(<AssistantPanelHarness />);

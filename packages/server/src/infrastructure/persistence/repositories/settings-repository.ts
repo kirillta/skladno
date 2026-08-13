@@ -7,6 +7,7 @@ import { now, required, type Row } from "./repository-utils.js";
 export class SettingsRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
+
     set(key: string, value: unknown): AppSetting {
         required(key, "Setting key");
         const updatedAt = now();
@@ -15,6 +16,7 @@ export class SettingsRepository {
 
         return { key, value, updatedAt };
     }
+
 
     get(key: string): AppSetting | undefined {
         const row = this.database.prepare("SELECT * FROM app_settings WHERE key = ?").get(key) as Row | undefined;

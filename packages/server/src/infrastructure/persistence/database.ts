@@ -207,6 +207,7 @@ function removeLegacyDatabase(filename: string): void {
     }
 }
 
+
 export function openDatabase(filename: string): SqliteDatabase {
     if (isLegacyDatabase(filename))
         removeLegacyDatabase(filename);

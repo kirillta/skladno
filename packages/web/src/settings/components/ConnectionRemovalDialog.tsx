@@ -2,6 +2,7 @@ import type { OpenAiConnection } from "@skladno/shared";
 import { useIntl } from "react-intl";
 import { Button, Dialog } from "../../ui/primitives.js";
 
+
 export function ConnectionRemovalDialog({ connection, close, remove }: { connection: OpenAiConnection; close: () => void; remove: () => void }) {
     const intl = useIntl();
 

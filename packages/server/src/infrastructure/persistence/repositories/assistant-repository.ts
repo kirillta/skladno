@@ -9,8 +9,10 @@ const statuses: readonly AssistantMessageStatus[] = ["completed", "pending", "fa
 const requestStatuses: readonly AssistantRequestStatus[] = ["pending", "running", "completed", "failed", "cancelled"];
 const skillSources: readonly AssistantSkillSource[] = ["explicit", "inferred"];
 
+
 export class AssistantRepository {
     constructor(private readonly database: SqliteDatabase) { }
+
 
     ensureGreeting(articleId: string): void {
         const exists = this.database.prepare("SELECT 1 FROM assistant_messages WHERE article_id = ? AND kind = 'greeting' LIMIT 1").get(articleId);
@@ -22,11 +24,13 @@ export class AssistantRepository {
             .run(createId(), articleId, "assistant", "greeting", "completed", timestamp, timestamp);
     }
 
+
     seedGreetings(): void {
         const articles = this.database.prepare("SELECT id FROM articles").all() as Row[];
         for (const article of articles)
             this.ensureGreeting(String(article.id));
     }
+
 
     listMessages(articleId: string): AssistantMessage[] {
         this.ensureGreeting(articleId);
@@ -42,6 +46,7 @@ export class AssistantRepository {
 
         return rows.map((row) => this.toMessage(row));
     }
+
 
     createRequest(input: { id: string; articleId: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; skillOffset?: number; retryOfRequestId?: string }): AssistantRequest {
         if (this.database.prepare("SELECT 1 FROM assistant_requests WHERE id = ?").get(input.id))
@@ -63,9 +68,11 @@ export class AssistantRepository {
         return this.getRequest(input.id)!;
     }
 
+
     setAuthorMessage(requestId: string, content: string): void {
         this.database.prepare("UPDATE assistant_messages SET content = ?, updated_at = ? WHERE request_id = ? AND role = 'author'").run(content, now(), requestId);
     }
+
 
     resolveRequest(requestId: string, skillId: BuiltInSkillId | undefined, source: AssistantSkillSource | undefined): void {
         this.database.prepare("UPDATE assistant_requests SET resolved_skill_id = ?, skill_source = ?, updated_at = ? WHERE id = ?")
@@ -73,6 +80,7 @@ export class AssistantRepository {
         this.database.prepare("UPDATE assistant_messages SET skill_id = ?, updated_at = ? WHERE request_id = ? AND role = 'author'")
             .run(skillId ?? null, now(), requestId);
     }
+
 
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
         const timestamp = now();
@@ -90,6 +98,7 @@ export class AssistantRepository {
 
         return this.toMessage(this.database.prepare("SELECT * FROM assistant_messages WHERE id = ?").get(messageId) as Row);
     }
+
 
     failRequest(requestId: string, status: "failed" | "cancelled", errorCode: string): void {
         const timestamp = now();
@@ -110,6 +119,7 @@ export class AssistantRepository {
             throw error;
         }
     }
+
 
     getRequest(requestId: string): AssistantRequest | undefined {
         const row = this.database.prepare("SELECT * FROM assistant_requests WHERE id = ?").get(requestId) as Row | undefined;
@@ -137,6 +147,7 @@ export class AssistantRepository {
             createdAt: String(row.created_at), updatedAt: String(row.updated_at)
         };
     }
+
 
     private toMessage(row: Row): AssistantMessage {
         const role = String(row.role) as AssistantMessageRole;

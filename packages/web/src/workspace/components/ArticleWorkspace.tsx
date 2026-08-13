@@ -16,6 +16,7 @@ import { KEY_BINDING_COMMAND } from "@skladno/shared";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import type { WorkspaceView } from "../workspace-views.js";
 
+
 export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, shortcutOverrides, onSelectionChange, assistantSelection }: {
     workspace: ArticleWorkspaceState;
     layout: WorkspaceLayoutState;

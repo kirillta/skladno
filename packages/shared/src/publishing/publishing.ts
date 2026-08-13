@@ -7,12 +7,14 @@ export const PUBLISH_LIMIT_PROFILE = {
 
 export type PublishLimitProfileId = typeof PUBLISH_LIMIT_PROFILE[keyof typeof PUBLISH_LIMIT_PROFILE];
 
+
 export interface PublishLimitProfile {
     id: PublishLimitProfileId;
     label: string;
     characterLimit: number;
     warningThreshold: number;
 }
+
 
 export const publishLimitProfiles: readonly PublishLimitProfile[] = [
     {
@@ -30,6 +32,7 @@ export const publishLimitProfiles: readonly PublishLimitProfile[] = [
 ];
 
 export const defaultPublishLimitProfileId = PUBLISH_LIMIT_PROFILE.LINKEDIN_POST;
+
 
 export function isPublishLimitProfileId(value: unknown): value is PublishLimitProfileId {
     return publishLimitProfiles.some((profile) => profile.id === value);

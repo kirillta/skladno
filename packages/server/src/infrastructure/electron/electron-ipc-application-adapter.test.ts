@@ -15,7 +15,10 @@ import { registerElectronIpcApplicationAdapter, type ElectronIpcMain, type Elect
 
 class FakeIpcMain implements ElectronIpcMain {
     private readonly handlers = new Map<string, (event: ElectronIpcMainEvent, request: unknown) => Promise<ElectronInvokeResult> | ElectronInvokeResult>();
+
+
     private readonly listeners = new Map<string, (event: ElectronIpcMainEvent, payload: unknown) => void>();
+
 
     handle(channel: string, listener: (event: ElectronIpcMainEvent, request: unknown) => Promise<ElectronInvokeResult> | ElectronInvokeResult): void {
         this.handlers.set(channel, listener);

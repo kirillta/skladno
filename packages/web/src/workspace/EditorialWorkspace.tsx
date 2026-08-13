@@ -93,6 +93,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         if (screen !== "editorial-workspace")
             return;
 
+
         function toggleFocusMode() {
             const activeElement = document.activeElement;
             const focusWillBeLost = !(activeElement instanceof HTMLElement)
@@ -104,6 +105,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
 
             shortcutActions.current.setFocusMode((current) => !current);
         }
+
 
         const unregister = [
             dispatcher.register(KEY_BINDING_COMMAND.NEW_ARTICLE, () => void shortcutActions.current.createBlank()),

@@ -57,6 +57,7 @@ import { configureSystemDateTimeFormat } from "./i18n/formatting.js";
 
 export type { EditorialWorkspaceClient } from "@skladno/shared";
 
+
 /** HTTP implementation of the UI's transport-neutral application boundary. */
 
 
@@ -73,6 +74,7 @@ function applicationClientError(payload: unknown, status: number): ApplicationCl
 export class HttpApplicationClient implements EditorialWorkspaceClient {
     constructor(private readonly serviceUrl = "http://127.0.0.1:8787") { }
 
+
     async getHealth(): Promise<HealthResponse> {
         const response = await fetch(`${this.serviceUrl}${healthPath}`);
         if (!response.ok)
@@ -81,6 +83,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
         return parseHealthResponse(await response.json());
     }
 
+
     async getApplicationSettings(): Promise<ApplicationSettingsSnapshot> {
         const settings = await this.request<ApplicationSettingsSnapshot>(applicationSettingsPath);
         configureSystemDateTimeFormat(settings.systemDateTimeFormat);
@@ -88,41 +91,51 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
         return settings;
     }
 
+
     async updateGeneralSettings(input: GeneralSettings): Promise<GeneralSettings> {
         return this.request<GeneralSettings>(`${applicationSettingsPath}/general`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
+
 
     async updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy> {
         return this.request<BackupPolicy>(`${applicationSettingsPath}/backup-policy`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
 
+
     async updateKeyBindingOverrides(input: KeyBindingOverrides): Promise<KeyBindingOverrides> {
         return this.request<KeyBindingOverrides>(keyBindingsPath, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
+
 
     async addOpenAiConnection(input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection> {
         return this.request<OpenAiConnection>(aiConnectionsPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
+
     async updateOpenAiConnection(connectionId: string, input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection> {
         return this.request<OpenAiConnection>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
+
 
     async removeOpenAiConnection(connectionId: string): Promise<void> {
         await this.request<void>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}`, { method: HTTP_METHOD.DELETE });
     }
 
+
     async setActiveOpenAiConnection(connectionId: string): Promise<void> {
         await this.request<void>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}/active`, { method: HTTP_METHOD.PUT });
     }
+
 
     async testOpenAiConnection(connectionId: string): Promise<OpenAiConnection> {
         return this.request<OpenAiConnection>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}/test`, { method: HTTP_METHOD.POST });
     }
 
+
     async refreshOpenAiModels(): Promise<string[]> {
         return this.request<string[]>(aiModelsPath, { method: HTTP_METHOD.POST });
     }
+
 
     async updateModelPreferences(input: ModelPreferences): Promise<ModelPreferences> {
         return this.request<ModelPreferences>(aiModelPreferencesPath, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
@@ -137,6 +150,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     async createArticle(input: CreateArticleInput): Promise<Article> {
         return this.request<Article>(articlesPath, { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
+
 
     async listAssistantMessages(articleId: string): Promise<AssistantMessage[]> {
         return this.request<AssistantMessage[]>(assistantMessagesPath(articleId));
@@ -293,6 +307,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
                 return;
         }
     }
+
 
     async listFactChecks(articleId: string): Promise<FactCheck[]> {
         return this.request<FactCheck[]>(factChecksPath(articleId));

@@ -3,10 +3,11 @@ import type { FactCheck } from "@skladno/shared";
 import type { SqliteDatabase } from "../database.js";
 import { now, type Row } from "./repository-utils.js";
 
+
 export class FactChecksRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
-    
+
     save(artifactId: string, articleId: string, revisionId: string): void {
         this.database.prepare("INSERT INTO fact_check_runs (editorial_artifact_id, article_id, revision_id, created_at) VALUES (?, ?, ?, ?)")
             .run(artifactId, articleId, revisionId, now());
