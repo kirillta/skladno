@@ -33,17 +33,20 @@ const translationSchema = z.object({
 const claimSchema = z.object({ claim: z.string().min(1) });
 
 
+const sourceUrlSchema = z.string().min(1).refine((value) => URL.canParse(value), "Expected a URL");
+
+
 const findingSchema = z.object({
     claim: z.string().min(1),
     status: z.enum([FACT_CHECK_STATUS.SUPPORTED, FACT_CHECK_STATUS.DISPUTED, FACT_CHECK_STATUS.UNVERIFIABLE]),
     rationale: z.string().min(1),
     uncertainty: z.string().min(1),
     sources: z.array(z.object({
-        url: z.url(),
+        url: sourceUrlSchema,
         title: z.string().min(1),
-        excerpt: z.string().min(1).optional(),
+        excerpt: z.string().min(1).nullable(),
         quality: z.enum(["primary", "credible", "secondary", "unknown"]),
-        publishedAt: z.string().optional(),
+        publishedAt: z.string().nullable(),
     })).max(5),
 });
 
@@ -292,7 +295,8 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         if (!extraction.output || !isAcceptedFinish(extraction.finishReason))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "OpenAI returned incomplete fact-check claims. Retry the request.");
 
-        const research = await Promise.all(extraction.output.claims.map(async ({ claim }) => {
+        const research: { claim: string; evidence: string; sources: unknown }[] = [];
+        for (const { claim } of extraction.output.claims) {
             const result = await generateText({
                 model: this.openai.responses(this.options.model),
                 prompt: `Research this factual claim using OpenAI web search. Prefer primary sources, report source URLs, publication dates when available, and brief supporting or contradicting evidence. Do not infer missing evidence.\n\nClaim: ${claim}`,
@@ -303,8 +307,8 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 providerOptions: this.providerOptions(),
             });
 
-            return { claim, evidence: result.text, sources: result.sources };
-        }));
+            research.push({ claim, evidence: result.text, sources: result.sources });
+        }
 
         const evaluation = await generateText({
             model: this.openai.responses(this.options.model),
@@ -321,7 +325,13 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         const factCheck: FactCheck = {
             findings: evaluation.output.findings.map((finding) => ({
                 ...finding,
-                sources: finding.sources.filter((source) => /^https:\/\//.test(source.url)),
+                sources: finding.sources
+                    .filter((source) => /^https:\/\//.test(source.url))
+                    .map(({ excerpt, publishedAt, ...source }) => ({
+                        ...source,
+                        ...(excerpt ? { excerpt } : {}),
+                        ...(publishedAt ? { publishedAt } : {}),
+                    })),
             })),
         };
 
