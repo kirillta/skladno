@@ -4,6 +4,7 @@ import type { ApplicationSettingsService } from "./settings/application-settings
 import type { PublishingService } from "./publishing/publishing-service.js";
 import type { StyleCorpusService } from "./editorial/style-corpus-service.js";
 import type { ProposalSummaryService } from "./editorial/proposal-summary-service.js";
+import type { FactCheckService } from "./editorial/fact-check-service.js";
 
 
 export interface ApplicationServices {
@@ -13,4 +14,5 @@ export interface ApplicationServices {
     publishing: PublishingService;
     styleCorpus: StyleCorpusService;
     proposalSummaries: ProposalSummaryService;
+    factChecks: FactCheckService;
 }

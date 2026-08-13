@@ -10,6 +10,8 @@ import {
     articleRevisionsPath,
     articleDraftPath,
     editorialPath,
+    factCheckResolutionPath,
+    factChecksPath,
     healthPath,
     HTTP_METHOD,
     HTTP_STATUS,
@@ -48,6 +50,8 @@ import {
     proposalSummariesPath,
     type ProposalChangeSummary,
     type SummarizeProposalInput,
+    type FactCheck,
+    type FactCheckFinding,
 } from "@skladno/shared";
 import { configureSystemDateTimeFormat } from "./i18n/formatting.js";
 
@@ -288,6 +292,15 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             if (done)
                 return;
         }
+    }
+
+    async listFactChecks(articleId: string): Promise<FactCheck[]> {
+        return this.request<FactCheck[]>(factChecksPath(articleId));
+    }
+
+
+    async resolveFactCheckFinding(articleId: string, occurrenceId: string, resolution: NonNullable<FactCheckFinding["resolution"]>): Promise<void> {
+        await this.request<void>(factCheckResolutionPath(articleId, occurrenceId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ resolution }) });
     }
 
 

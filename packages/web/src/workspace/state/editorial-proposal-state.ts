@@ -59,6 +59,21 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const styleReviewStale = styleReviewResult?.articleId === selectedArticleId && styleReviewResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
     const translationStale = translationResult?.articleId === selectedArticleId && translationResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
 
+    const loadFactChecks = useCallback(async () => {
+        const article = workspace.selectedArticle;
+        if (!article || !client.listFactChecks)
+            return;
+
+        const checks = await client.listFactChecks(article.id);
+        const factCheck = checks.find((check) => check.reviewedRevisionId === article.currentRevisionId) ?? checks[0];
+        if (factCheck)
+            setFactCheckResult({ articleId: article.id, baseRevisionId: factCheck.reviewedRevisionId ?? article.currentRevisionId, value: factCheck });
+    }, [client, workspace.selectedArticle]);
+
+    useEffect(() => {
+        void loadFactChecks();
+    }, [loadFactChecks]);
+
 
     useEffect(() => {
         if (state !== "idle" || stale || !review || !selectedArticleId || !base?.editorialArtifactId || review.changes.length === 0) {
@@ -126,6 +141,9 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
                     if (event.factCheck)
                         setFactCheckResult({ articleId: article.id, baseRevisionId: revisionId, value: event.factCheck });
+
+                    if (event.factCheck)
+                        void loadFactChecks();
 
                     if (event.styleReview)
                         setStyleReviewResult({ articleId: article.id, baseRevisionId: revisionId, value: event.styleReview });
@@ -277,6 +295,16 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             setDecisions({});
         },
         cancel: () => controller.current?.abort(),
+        loadFactChecks,
+        resolveFactCheck: async (findingId: string, resolution: NonNullable<FactCheck["findings"][number]["resolution"]>) => {
+            const article = workspace.selectedArticle;
+            if (!article || !client.resolveFactCheckFinding)
+                return;
+
+            await client.resolveFactCheckFinding(article.id, findingId, resolution);
+            await loadFactChecks();
+        },
+        proposeFactCorrections: (findings: FactCheck["findings"]) => request("flow_revision", intl.formatMessage({ id: "assistant.factCheckCorrectionPrompt" }, { findings: findings.map((finding) => `- ${finding.claim}\n  ${finding.rationale}`).join("\n") })),
         createTranslation,
         applyAssistantResult,
         restoreAssistantProposal

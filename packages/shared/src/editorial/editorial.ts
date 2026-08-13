@@ -1,4 +1,6 @@
 export const editorialPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/editorial`;
+export const factChecksPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/fact-checks`;
+export const factCheckResolutionPath = (articleId: string, occurrenceId: string) => `${factChecksPath(articleId)}/${encodeURIComponent(occurrenceId)}/resolution`;
 
 
 export const EDITORIAL_OPERATION = {
@@ -90,16 +92,31 @@ export interface FactCheckSource {
 
 
 export interface FactCheckFinding {
+    /** Stable across unchanged claim appearances; assigned locally after a completed run. */
+    factId?: string;
+    occurrenceId?: string;
     claim: string;
     status: typeof FACT_CHECK_STATUS[keyof typeof FACT_CHECK_STATUS];
     rationale: string;
     uncertainty: string;
     sources: FactCheckSource[];
+    importance?: "high" | "normal" | "low";
+    reusedFromRevisionId?: string;
+    checkedAt?: string;
+    resolution?: "corrected_or_removed" | "accepted_as_written" | "evidence_accepted";
 }
 
 
 export interface FactCheck {
+    reviewedRevisionId?: string;
+    createdAt?: string;
     findings: FactCheckFinding[];
+}
+
+
+export interface FactCheckClient {
+    listFactChecks?(articleId: string): Promise<FactCheck[]>;
+    resolveFactCheckFinding?(articleId: string, findingId: string, resolution: NonNullable<FactCheckFinding["resolution"]>): Promise<void>;
 }
 
 

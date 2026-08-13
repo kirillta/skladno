@@ -42,7 +42,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
         return panel(<RevisionHistoryView revisions={revisions.revisions} currentRevisionId={article.currentRevisionId} select={revisions.setCandidate} generalSettings={generalSettings} />);
 
     if (view === "fact-check")
-        return panel(<FactCheckView factCheck={editorial.factCheck} />);
+        return panel(<FactCheckView factCheck={editorial.factCheck} stale={editorial.factCheckStale} runAgain={() => editorial.request("fact_check", "")} resolve={editorial.resolveFactCheck} proposeCorrections={editorial.proposeFactCorrections} />);
 
     if (view === "style-profile")
         return panel(<StyleProfileView corpus={corpus.corpus} findings={editorial.styleReview} add={corpus.add} remove={corpus.remove} />);

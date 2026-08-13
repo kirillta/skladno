@@ -9,13 +9,14 @@ import { PublishingService } from "./publishing/publishing-service.js";
 import { StyleCorpusService } from "./editorial/style-corpus-service.js";
 import { ApplicationSettingsService } from "./settings/application-settings-service.js";
 import { ProposalSummaryService } from "./editorial/proposal-summary-service.js";
+import { FactCheckService } from "./editorial/fact-check-service.js";
 import type { ArticleStore } from "./ports/article-store.js";
 import type { SettingsStore } from "./ports/settings-store.js";
 import type { StyleCorpusStore } from "./ports/style-corpus-store.js";
 import type { SystemDateTimeFormatProvider } from "./ports/system-date-time-format-provider.js";
 
 
-export function createApplicationServices(articles: ArticleStore, settings: SettingsStore, styleCorpus: StyleCorpusStore, assistant: AssistantStore, artifacts: AssistantArtifactStore, engines: EditorialEngineResolver, dateTimeFormat: SystemDateTimeFormatProvider, models: AvailableModelsProvider, createConnectionId: () => string): ApplicationServices {
+export function createApplicationServices(articles: ArticleStore, settings: SettingsStore, styleCorpus: StyleCorpusStore, assistant: AssistantStore, artifacts: AssistantArtifactStore, engines: EditorialEngineResolver, dateTimeFormat: SystemDateTimeFormatProvider, models: AvailableModelsProvider, createConnectionId: () => string, factChecks: ConstructorParameters<typeof FactCheckService>[0] = { list: () => [], resolve: () => undefined }): ApplicationServices {
     return {
         articles: new ArticleService(articles, assistant),
         assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines),
@@ -23,5 +24,6 @@ export function createApplicationServices(articles: ArticleStore, settings: Sett
         publishing: new PublishingService(settings),
         styleCorpus: new StyleCorpusService(styleCorpus),
         proposalSummaries: new ProposalSummaryService(engines, artifacts),
+        factChecks: new FactCheckService(factChecks),
     };
 }

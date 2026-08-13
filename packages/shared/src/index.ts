@@ -69,6 +69,8 @@ export {
     EDITORIAL_ERROR_CATEGORY,
     FACT_CHECK_STATUS,
     editorialPath,
+    factCheckResolutionPath,
+    factChecksPath,
     type EditorialClient,
     type EditorialCompletedEvent,
     type EditorialErrorEvent,
@@ -82,6 +84,7 @@ export {
     type FactCheck,
     type FactCheckFinding,
     type FactCheckSource,
+    type FactCheckClient,
     type StartEditorialRequest,
     type TranslationMetadata,
 } from "./editorial/editorial.js";

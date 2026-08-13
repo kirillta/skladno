@@ -6,3 +6,4 @@ export { SettingsRepository } from "./repositories/settings-repository.js";
 export { StyleCorpusRepository } from "./repositories/style-corpus-repository.js";
 export { EditorialArtifactsRepository } from "./repositories/workflow-artifacts-repository.js";
 export { AssistantRepository } from "./repositories/assistant-repository.js";
+export { FactChecksRepository } from "./repositories/fact-checks-repository.js";
