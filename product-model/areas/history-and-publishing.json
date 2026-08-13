@@ -37,8 +37,8 @@
             "area": "Fact Check",
             "title": "Revision-tied findings, citations, uncertainty, and stale indication",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/FactCheckView.tsx", "packages/server/src/infrastructure/editorial/ai-sdk-editorial-engine.ts", "packages/server/src/infrastructure/persistence/repositories/workflow-artifacts-repository.ts"],
-            "contract": "Findings are advisory, tied to their reviewed Revision, include source links and uncertainty, indicate staleness, and use provider-compatible editorial instructions.",
+            "owners": ["packages/web/src/workspace/views/FactCheckView.tsx", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/infrastructure/editorial/ai-sdk-editorial-engine.ts", "packages/server/src/infrastructure/persistence/repositories/fact-checks-repository.ts"],
+            "contract": "Findings are advisory, tied to their reviewed Revision, include source links and uncertainty, indicate staleness, and are persistently actionable whether initiated from Fact Check or the Assistant.",
             "persistence": "Findings and citations persist locally without modifying Article text; focused updates to other editorial artifacts do not replace or detach their citations.",
             "scenarioIds": ["history-and-publishing.fact-findings-advisory"]
         },

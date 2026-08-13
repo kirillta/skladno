@@ -18,7 +18,7 @@ describe("WorkspaceTabBar", () => {
         render(<IntlProvider locale="en" messages={messages}>
             <WorkspaceTabBar view="write" setView={setView} badges={{
                 proposal: { label: "Review", accessibleLabel: "Review", tone: "default" },
-                "fact-check": { label: "2 findings", accessibleLabel: "2 findings", tone: "default" },
+                "fact-check": { label: "2", accessibleLabel: "2 findings", tone: "default" },
                 translations: { label: "Stale", accessibleLabel: "Stale", tone: "warning" },
                 publish: { label: "Over limit", accessibleLabel: "Over limit", tone: "warning" },
             }} />
@@ -32,7 +32,7 @@ describe("WorkspaceTabBar", () => {
 
         expect(write.getAttribute("aria-selected")).toBe("true");
         expect(proposal.getAttribute("aria-controls")).toBe("workspace-panel-proposal");
-        expect(factCheck.textContent).toContain("2 findings");
+        expect(factCheck.textContent).toContain("2");
         expect(translations.textContent).toContain("Stale");
         expect(publish.textContent).toContain("Over limit");
         expect(publish.querySelector("span")?.className).toContain("border-warning");
@@ -53,7 +53,7 @@ describe("WorkspaceTabBar", () => {
         render(<IntlProvider locale="en" messages={messages}>
             <WorkspaceTabBar view="fact-check" setView={setView} badges={{
                 proposal: { label: "Stale", accessibleLabel: "Stale", tone: "warning" },
-                "fact-check": { label: "1 finding", accessibleLabel: "1 finding", tone: "default" },
+                "fact-check": { label: "1", accessibleLabel: "1 finding", tone: "default" },
                 "style-profile": { label: "0 findings", accessibleLabel: "0 findings", tone: "default" },
                 translations: { label: "Ready", accessibleLabel: "Ready", tone: "default" },
                 publish: { label: "Near limit", accessibleLabel: "Near limit", tone: "warning" },

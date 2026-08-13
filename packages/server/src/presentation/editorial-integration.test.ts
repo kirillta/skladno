@@ -59,8 +59,8 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, persi
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: storeResponses
     };
-    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection");
-    const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses);
+    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection", persistence.factChecks);
+    const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses, persistence.factChecks);
     const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -362,6 +362,37 @@ test("fact checks persist completed findings and citations against the reviewed 
         assert.equal(artifact.revisionId, article.currentRevisionId);
         assert.equal(repositories.editorialArtifacts.listCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
         assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "An article");
+    });
+});
+
+
+test("Assistant Fact Check results persist revision-bound findings for review", async () => {
+    const engine = new FixtureEngine([{
+        type: EDITORIAL_ENGINE_EVENT.COMPLETED,
+        responseId: "assistant-fact-check-complete",
+        text: "",
+        factCheck: { findings: [{
+            claim: "HTTP was standardized in 1999.",
+            status: "disputed",
+            rationale: "The RFC date differs from the claim.",
+            uncertainty: "The cited source is primary.",
+            sources: [],
+        }] },
+    }]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "An article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "assistant-fact-request", authorMessage: "", explicitSkillId: "fact_checking", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+        const body = await response.text();
+        const checks = await (await fetch(`${baseUrl}/api/articles/${article.id}/fact-checks`)).json() as { reviewedRevisionId: string; findings: { occurrenceId?: string }[] }[];
+
+        assert.match(body, /"reviewedRevisionId":"[^"]+"/);
+        assert.equal(checks[0]?.reviewedRevisionId, article.currentRevisionId);
+        assert.ok(checks[0]?.findings[0]?.occurrenceId);
     });
 });
 

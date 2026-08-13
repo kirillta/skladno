@@ -19,4 +19,29 @@ describe("FactCheckView", () => {
         expect(screen.queryByRole("button", { name: /Propose corrections/ })).toBeNull();
         await user.click(screen.getByRole("button", { name: "Run Fact Check again" }));
     });
+
+
+    it("shows the reviewed Revision and actionable current findings", async () => {
+        const user = userEvent.setup();
+        const runAgain = vi.fn();
+        const proposeCorrections = vi.fn();
+        const resolve = vi.fn();
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={factCheck} revisionNumber={3} stale={false} runAgain={runAgain} resolve={resolve} proposeCorrections={proposeCorrections} /></IntlProvider>);
+
+        expect(screen.getByText("Reviewed Revision: v3")).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: "Propose correction" }));
+        await user.click(screen.getByRole("button", { name: "Accept as written" }));
+        expect(proposeCorrections).toHaveBeenCalledWith([factCheck.findings[0]]);
+        expect(resolve).toHaveBeenCalledWith("revision-1:fact-1", "accepted_as_written");
+    });
+
+
+    it("runs a Fact Check from its empty state", async () => {
+        const user = userEvent.setup();
+        const runAgain = vi.fn();
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={undefined} stale={false} runAgain={runAgain} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: "Run Fact Check" }));
+        expect(runAgain).toHaveBeenCalledOnce();
+    });
 });

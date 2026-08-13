@@ -1,4 +1,5 @@
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type FactCheck, type StartAssistantRequest } from "@skladno/shared";
+import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleStore } from "../ports/article-store.js";
@@ -25,6 +26,9 @@ export interface PreparedAssistantRequest extends AssistantServiceRequest {
     operation: EditorialOperation;
     engine: EditorialEngine;
 }
+
+
+interface FactChecksStore { save(artifactId: string, articleId: string, revisionId: string): void; }
 
 
 function inferSkill(message: string, requestScope: AssistantRequestScope): BuiltInSkillId | undefined {
@@ -88,6 +92,20 @@ function errorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_IN
 }
 
 
+function enrichedFactCheck(factCheck: FactCheck, revisionId: string): FactCheck {
+    const checkedAt = new Date().toISOString();
+    return {
+        ...factCheck,
+        reviewedRevisionId: revisionId,
+        createdAt: checkedAt,
+        findings: factCheck.findings.map((finding) => {
+            const factId = createHash("sha256").update(finding.claim.trim().toLowerCase().replace(/\s+/g, " ")).digest("hex").slice(0, 16);
+            return { ...finding, factId, occurrenceId: `${revisionId}:${factId}`, checkedAt };
+        }),
+    };
+}
+
+
 export class AssistantService {
     constructor(
         private readonly articles: ArticleStore,
@@ -95,6 +113,7 @@ export class AssistantService {
         private readonly styleCorpus: StyleCorpusStore,
         private readonly artifacts: AssistantArtifactStore,
         private readonly engines: EditorialEngineResolver,
+        private readonly factChecks: FactChecksStore = { save: () => undefined },
     ) { }
 
 
@@ -204,6 +223,7 @@ export class AssistantService {
     private persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>): Omit<Extract<AssistantEvent, { type: "completed" }>, "type" | "requestId"> {
         const content = completedContent(request, event.text);
         const kind = responseKind(request.resolvedSkillId);
+        const factCheck = event.factCheck && enrichedFactCheck(event.factCheck, request.scope.baseRevisionId);
         const artifactId = request.resolvedSkillId
             ? this.artifacts.create({
                 articleId: request.articleId,
@@ -216,14 +236,18 @@ export class AssistantService {
                     authorGuidance: request.authorMessage,
                     scope: request.scope,
                     responseId: event.responseId,
-                    proposal: content, findings: event.factCheck ?? event.styleReview,
+                    proposal: content,
+                    ...(factCheck ? { factCheck } : { findings: event.styleReview }),
                     translation: event.translation
                 })
             }).id
             : undefined;
+        if (artifactId && factCheck)
+            this.factChecks.save(artifactId, request.articleId, request.scope.baseRevisionId);
+
         const result: AssistantEditorialResult | undefined = request.resolvedSkillId
             ? {
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING && event.factCheck ? { factCheck: event.factCheck } : {}),
+                ...(request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING && factCheck ? { factCheck } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { proposal: content, ...(event.styleReview ? { styleReview: event.styleReview } : {}) } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && event.translation ? { translation: { metadata: event.translation, content } } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.TALKING_POINTS || request.resolvedSkillId === BUILT_IN_SKILL.NARRATIVE_DRAFT || request.resolvedSkillId === BUILT_IN_SKILL.FLOW_AND_CLARITY ? { proposal: content } : {}),

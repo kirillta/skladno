@@ -16,10 +16,21 @@ import type { StyleCorpusStore } from "./ports/style-corpus-store.js";
 import type { SystemDateTimeFormatProvider } from "./ports/system-date-time-format-provider.js";
 
 
-export function createApplicationServices(articles: ArticleStore, settings: SettingsStore, styleCorpus: StyleCorpusStore, assistant: AssistantStore, artifacts: AssistantArtifactStore, engines: EditorialEngineResolver, dateTimeFormat: SystemDateTimeFormatProvider, models: AvailableModelsProvider, createConnectionId: () => string, factChecks: ConstructorParameters<typeof FactCheckService>[0] = { list: () => [], resolve: () => undefined }): ApplicationServices {
+export function createApplicationServices(
+    articles: ArticleStore,
+    settings: SettingsStore,
+    styleCorpus: StyleCorpusStore,
+    assistant: AssistantStore,
+    artifacts: AssistantArtifactStore,
+    engines: EditorialEngineResolver,
+    dateTimeFormat: SystemDateTimeFormatProvider,
+    models: AvailableModelsProvider,
+    createConnectionId: () => string,
+    factChecks: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void } = { list: () => [], resolve: () => undefined, save: () => undefined }
+): ApplicationServices {
     return {
         articles: new ArticleService(articles, assistant),
-        assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines),
+        assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks),
         settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId),
         publishing: new PublishingService(settings),
         styleCorpus: new StyleCorpusService(styleCorpus),

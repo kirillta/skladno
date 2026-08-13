@@ -15,7 +15,7 @@ import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
 
 
-export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
+export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, runFactCheck, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
     view: WorkspaceView;
     article: Article;
     workspace: ArticleWorkspaceState;
@@ -24,6 +24,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     corpus: StyleCorpusState;
     publishing: PublishingState;
     generalSettings: GeneralSettings;
+    runFactCheck: () => void;
     onSelectionChange?: (value: string | undefined) => void;
     assistantSelection?: string;
     proposalWarningsDismissed: boolean;
@@ -31,7 +32,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     openWrite: () => void;
     openAssistant: () => void;
 }) {
-    const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" || view === "revisions" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : view === "proposal" ? "min-h-0 flex-1 overflow-y-auto p-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" : "min-h-0 flex-1 overflow-y-auto p-5"}>{children}</section>;
+    const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" || view === "revisions" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "min-h-0 flex-1 overflow-y-auto p-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong"}>{children}</section>;
 
     if (view === "write")
         return panel(<ArticleEditorView articleId={article.id} content={workspace.content} setContent={workspace.setContent} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} />);
@@ -42,8 +43,10 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     if (view === "revisions")
         return panel(<RevisionHistoryView revisions={revisions.revisions} currentRevisionId={article.currentRevisionId} select={revisions.setCandidate} generalSettings={generalSettings} />);
 
-    if (view === "fact-check")
-        return panel(<FactCheckView factCheck={editorial.factCheck} stale={editorial.factCheckStale} runAgain={() => editorial.request("fact_check", "")} resolve={editorial.resolveFactCheck} proposeCorrections={editorial.proposeFactCorrections} />);
+    if (view === "fact-check") {
+        const revisionNumber = revisions.revisions.findIndex((revision) => revision.id === editorial.factCheck?.reviewedRevisionId);
+        return panel(<FactCheckView factCheck={editorial.factCheck} revisionNumber={revisionNumber < 0 ? undefined : revisionNumber + 1} stale={editorial.factCheckStale} runAgain={runFactCheck} resolve={editorial.resolveFactCheck} proposeCorrections={editorial.proposeFactCorrections} />);
+    }
 
     if (view === "style-profile")
         return panel(<StyleProfileView corpus={corpus.corpus} findings={editorial.styleReview} add={corpus.add} remove={corpus.remove} />);

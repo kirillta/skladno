@@ -17,7 +17,7 @@ import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import type { WorkspaceView } from "../workspace-views.js";
 
 
-export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, shortcutOverrides, onSelectionChange, assistantSelection }: {
+export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, shortcutOverrides, onSelectionChange, assistantSelection }: {
     workspace: ArticleWorkspaceState;
     layout: WorkspaceLayoutState;
     editorial: EditorialProposalState;
@@ -26,6 +26,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     publishing: PublishingState;
     generalSettings: GeneralSettings;
     createBlank: () => Promise<unknown>;
+    runFactCheck: () => void;
     shortcutOverrides?: KeyBindingOverrides;
     onSelectionChange?: (value: string | undefined) => void;
     assistantSelection?: string;
@@ -51,7 +52,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     if (editorial.factCheck)
         badges["fact-check"] = editorial.factCheckStale
             ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
-            : { label: intl.formatMessage({ id: "workspace.badges.findings" }, { count: editorial.factCheck.findings.length }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.findings" }, { count: editorial.factCheck.findings.length }), tone: "default" };
+            : { label: intl.formatNumber(editorial.factCheck.findings.length), accessibleLabel: intl.formatMessage({ id: "workspace.badges.findings" }, { count: editorial.factCheck.findings.length }), tone: "default" };
 
     if (editorial.styleReview)
         badges["style-profile"] = editorial.styleReviewStale
@@ -89,10 +90,24 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             <Button className="ml-auto" variant="secondary" onClick={() => void workspace.retry()}>{intl.formatMessage({ id: "draftSave.retry" })}</Button>
         </Banner>}
         <WorkspaceTabBar view={layout.view} setView={layout.setView} badges={badges} shortcutOverrides={shortcutOverrides} />
-        <WorkspaceViewRouter view={layout.view} article={article} workspace={workspace} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} proposalWarningsDismissed={layout.proposalWarningsDismissed} dismissProposalWarnings={() => layout.setProposalWarningsDismissed(true)} openWrite={() => layout.setView("write")} openAssistant={() => {
-            layout.setAssistantCollapsed(false);
-            layout.setView("write");
-        }} />
+        <WorkspaceViewRouter view={layout.view}
+            article={article}
+            workspace={workspace}
+            editorial={editorial}
+            revisions={revisions}
+            corpus={corpus}
+            publishing={publishing}
+            generalSettings={generalSettings}
+            runFactCheck={runFactCheck}
+            onSelectionChange={onSelectionChange}
+            assistantSelection={assistantSelection}
+            proposalWarningsDismissed={layout.proposalWarningsDismissed}
+            dismissProposalWarnings={() => layout.setProposalWarningsDismissed(true)}
+            openWrite={() => layout.setView("write")}
+            openAssistant={() => {
+                layout.setAssistantCollapsed(false);
+                layout.setView("write");
+            }} />
         <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} setProfile={publishing.setProfile} />
     </div>;
 }
