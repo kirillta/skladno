@@ -47,7 +47,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     if (editorial.review)
         badges.proposal = editorial.proposalStale
             ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
-            : { label: intl.formatMessage({ id: "workspace.badges.review" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.review" }), tone: "default", display: "dot" };
+            : { label: intl.formatMessage({ id: "workspace.badges.review" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.review" }), tone: "default" };
 
     if (editorial.factCheck)
         badges["fact-check"] = editorial.factCheckStale

@@ -3,10 +3,10 @@ import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding } from "@sklad
 import { Banner, Button, EmptyState, Status } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 
-const tone = { 
-    [FACT_CHECK_STATUS.SUPPORTED]: "success", 
-    [FACT_CHECK_STATUS.DISPUTED]: "error", 
-    [FACT_CHECK_STATUS.UNVERIFIABLE]: "warning" 
+const tone = {
+    [FACT_CHECK_STATUS.SUPPORTED]: "success",
+    [FACT_CHECK_STATUS.DISPUTED]: "error",
+    [FACT_CHECK_STATUS.UNVERIFIABLE]: "warning",
 } as const;
 
 

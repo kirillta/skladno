@@ -2,7 +2,7 @@
 export const messages = {
     "article.defaultTitle": "Untitled article",
     "workspace.tabs.write": "Write",
-    "workspace.tabs.proposal": "Proposal Review",
+    "workspace.tabs.proposal": "Proposals",
     "workspace.tabs.revisions": "Revisions",
     "workspace.tabs.factCheck": "Fact Check",
     "workspace.tabs.styleProfile": "Style Profile",

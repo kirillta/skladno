@@ -103,7 +103,7 @@
                 "packages/web/src/workspace/components/WorkspaceViewRouter.tsx",
                 "scripts/web-import-boundaries.mjs"
             ],
-            "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation; every scrollable supporting View uses the shared quiet scrollbar.",
+            "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation; actionable and stale Workspace Tab badges use visible text rather than dots, and every scrollable supporting View uses the shared quiet scrollbar.",
             "persistence": "Active View is a local workspace preference; results retain their Article and base Revision.",
             "scenarioIds": [
                 "workspace.navigation.keyboard-tabs",

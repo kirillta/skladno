@@ -25,13 +25,14 @@ describe("WorkspaceTabBar", () => {
         </IntlProvider>);
 
         const write = screen.getByRole("tab", { name: "Write" });
-        const proposal = screen.getByRole("tab", { name: "Proposal Review: Review" });
+        const proposal = screen.getByRole("tab", { name: "Proposals: Review" });
         const factCheck = screen.getByRole("tab", { name: "Fact Check: 2 findings" });
         const translations = screen.getByRole("tab", { name: "Translations: Stale" });
         const publish = screen.getByRole("tab", { name: "Publish: Over limit" });
 
         expect(write.getAttribute("aria-selected")).toBe("true");
         expect(proposal.getAttribute("aria-controls")).toBe("workspace-panel-proposal");
+        expect(proposal.textContent).toContain("Review");
         expect(factCheck.textContent).toContain("2");
         expect(translations.textContent).toContain("Stale");
         expect(publish.textContent).toContain("Over limit");
@@ -84,7 +85,7 @@ describe("WorkspaceTabBar", () => {
         expect(setView).toHaveBeenLastCalledWith("publish");
 
         expect(screen.getByRole("tab", { name: "Revisions" }).textContent).toBe("Revisions");
-        expect(screen.getByRole("tab", { name: "Proposal Review: Stale" }).textContent).toContain("Stale");
+        expect(screen.getByRole("tab", { name: "Proposals: Stale" }).textContent).toContain("Stale");
         expect(screen.getByRole("tab", { name: "Translations: Ready" }).textContent).toContain("Ready");
         expect(screen.getByRole("tab", { name: "Publish: Near limit" }).textContent).toContain("Near limit");
     });

@@ -64,7 +64,7 @@ The collapsed Navigation Rail uses `w-10`, keeps Style Profile and Settings as l
 
 ## Workspace tabs
 
-Use accessible tabs for Write, Proposal Review, Revisions, Fact Check, Style Profile, Translations, and Publish. Each tab requires a stable ID, `aria-controls`, matching tab panel, and Arrow/Home/End keyboard navigation. Use compact badges only for actionable or stale content; the badge text must name the condition.
+Use accessible tabs for Write, Proposals, Revisions, Fact Check, Style Profile, Translations, and Publish. Each tab requires a stable ID, `aria-controls`, matching tab panel, and Arrow/Home/End keyboard navigation. Use compact text badges only for actionable or stale content; the badge text must name the condition or count. Do not use dot-only badges in Workspace Tabs.
 
 ## Article formatting
 
