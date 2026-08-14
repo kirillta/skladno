@@ -104,6 +104,7 @@ export interface FactCheckFinding {
     reusedFromRevisionId?: string;
     checkedAt?: string;
     resolution?: "corrected_or_removed" | "accepted_as_written" | "evidence_accepted";
+    stale?: boolean;
 }
 
 

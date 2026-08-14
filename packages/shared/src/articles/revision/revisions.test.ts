@@ -17,3 +17,12 @@ test("line proposals represent additions, deletions, replacements, and no-op pro
     assert.equal(applyProposalChanges(replacement, new Set([replacement.changes[0].id])), "one\nTWO\nthree");
     assert.equal(createTextProposal("unchanged", "unchanged").changes.length, 0);
 });
+
+
+test("fact corrections preserve Article blank-line formatting", () => {
+    const proposal = createTextProposal("first\nold fact\nlast", "first\n\ncorrected fact\n\nlast");
+    const removal = createTextProposal("first\n\nold fact\nlast", "first\ncorrected fact\nlast");
+
+    assert.equal(applyProposalChanges(proposal, new Set([proposal.changes[0]!.id]), true), "first\ncorrected fact\nlast");
+    assert.equal(applyProposalChanges(removal, new Set(removal.changes.map((change) => change.id)), true), "first\n\ncorrected fact\nlast");
+});

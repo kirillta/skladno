@@ -1,13 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
 import { FactCheckView } from "./FactCheckView.js";
 
 // product: history-and-publishing.fact-findings-advisory
 
 const factCheck = { reviewedRevisionId: "revision-1", findings: [{ factId: "fact-1", occurrenceId: "revision-1:fact-1", claim: "A claim that needs evidence.", status: "disputed" as const, rationale: "The source contradicts the stated number.", uncertainty: "Medium", sources: [{ url: "https://example.com/source", title: "Primary source", quality: "primary" as const, publishedAt: "2026-01-01" }] }] };
+
+afterEach(cleanup);
 
 describe("FactCheckView", () => {
     it("keeps stale findings readable but blocks correction selection", async () => {
@@ -18,6 +20,19 @@ describe("FactCheckView", () => {
         expect(screen.getByRole("link", { name: /Primary source/ }).getAttribute("target")).toBe("_blank");
         expect(screen.queryByRole("button", { name: /Propose corrections/ })).toBeNull();
         await user.click(screen.getByRole("button", { name: "Run Fact Check again" }));
+    });
+
+
+    it("keeps unchanged and accepted findings active after a Revision update", () => {
+        const findings = [
+            { ...factCheck.findings[0], stale: true },
+            { ...factCheck.findings[0], occurrenceId: "revision-1:fact-2", claim: "An unchanged claim.", stale: false },
+            { ...factCheck.findings[0], occurrenceId: "revision-1:fact-3", claim: "A corrected claim.", resolution: "corrected_or_removed" as const, stale: false },
+        ];
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings }} stale runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getAllByRole("button", { name: "Propose correction" })).toHaveLength(1);
+        expect(screen.getByText("Corrected or removed")).toBeTruthy();
     });
 
 

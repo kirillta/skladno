@@ -48,7 +48,7 @@
             "title": "Fact-check request",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/editorial/create-editorial-engine.ts", "packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "A fixed server-side fact-check workflow creates advisory, Revision-tied findings with their own freshness state.",
+            "contract": "A fixed server-side fact-check workflow creates advisory findings with per-Fact freshness across Revisions; unchanged Facts and accepted findings remain active.",
             "persistence": "Findings and citations are stored locally without changing Article text.",
             "scenarioIds": ["editorial-workflows.finding-operations-preserve-article"]
         },
@@ -78,7 +78,7 @@
             "title": "Summarized diff review, bulk acceptance or rejection, fallback, and stale protection",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may review a non-authoritative Interface-locale summary for each change, select every change as accepted or rejected locally, apply the accepted subset in one Revision, accept a complete proposal in one Revision, or explicitly dismiss a stale or zero-change proposal without Article changes; summary failure does not block review, and stale and preservation warnings precede a compact review-control band with labelled icon change navigation and diff while stale and unreliable proposals cannot be partially accepted; fallback presentation identifies one complete Proposal while disclosing its underlying change count.",
+            "contract": "Authors may review a non-authoritative Interface-locale summary for each change, select every change as accepted or rejected locally, apply the accepted subset in one Revision, accept a complete proposal in one Revision, or explicitly dismiss a stale or zero-change proposal without Article changes; accepted Fact corrections preserve the Article's existing blank-line formatting; summary failure does not block review, and stale and preservation warnings precede a compact review-control band with labelled icon change navigation and diff while stale and unreliable proposals cannot be partially accepted; fallback presentation identifies one complete Proposal while disclosing its underlying change count.",
             "persistence": "Completed Proposal content, summaries with their Interface locale, and the base Revision remain locally recoverable in the Proposal artifact; acceptance creates one immutable Revision and rejection leaves Article history unchanged.",
             "scenarioIds": ["editorial-workflows.stale-proposal-blocked"]
         },

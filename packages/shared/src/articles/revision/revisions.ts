@@ -49,6 +49,19 @@ function lines(content: string): string[] {
 }
 
 
+function replacementLines(change: ProposalChange, preserveBlankLines: boolean): string[] {
+    if (!preserveBlankLines)
+        return change.proposalLines;
+
+    const proposedText = change.proposalLines.filter((line) => line.trim() !== "");
+    if (proposedText.length !== change.baseLines.filter((line) => line.trim() !== "").length)
+        return change.proposalLines;
+
+    let index = 0;
+    return change.baseLines.map((line) => line.trim() === "" ? line : proposedText[index++]!);
+}
+
+
 /**
  * Creates line-based hunks. They are deliberately used only while the original
  * revision remains current; callers must otherwise fall back to whole-proposal review.
@@ -114,14 +127,14 @@ export function createTextProposal(baseContent: string, proposedContent: string)
 }
 
 
-export function applyProposalChanges(proposal: TextProposal, selectedChangeIds: ReadonlySet<string>): string {
+export function applyProposalChanges(proposal: TextProposal, selectedChangeIds: ReadonlySet<string>, preserveBlankLines = false): string {
     const baseLines = lines(proposal.baseContent);
     const result: string[] = [];
     let cursor = 0;
 
     for (const change of proposal.changes) {
         result.push(...baseLines.slice(cursor, change.baseStart));
-        result.push(...(selectedChangeIds.has(change.id) ? change.proposalLines : change.baseLines));
+        result.push(...(selectedChangeIds.has(change.id) ? replacementLines(change, preserveBlankLines) : change.baseLines));
         cursor = change.baseEnd;
     }
 

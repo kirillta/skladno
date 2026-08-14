@@ -223,7 +223,7 @@
                 "packages/web/src/workspace/views/FactCheckView.tsx",
                 "packages/web/src/workspace/views/StyleProfileView.tsx"
             ],
-            "contract": "Findings never modify Article text and raw style samples remain local.",
+            "contract": "Findings never modify Article text; unchanged Facts and accepted findings survive Revision updates, while changed unresolved Facts become stale. Raw style samples remain local.",
             "persistence": "Completed Editorial artifacts and local Style corpus.",
             "scenarioIds": [
                 "workspace.findings.advisory-only"
@@ -615,7 +615,7 @@
             ],
             "event": "Author reviews Fact Check or Style Profile output.",
             "expected": [
-                "Findings retain freshness state and source context"
+                "Findings retain per-Fact freshness, acceptance state, and source context across Revision updates"
             ],
             "forbidden": [
                 "Changing Article text from advisory output"
