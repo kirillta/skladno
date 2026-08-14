@@ -60,7 +60,7 @@ export function FactCheckView({ factCheck, revisionNumber, reusedRevisionNumbers
                 const id = finding.occurrenceId ?? finding.claim;
                 const active = activeFindingId === id;
                 return <button type="button" key={id} className={`block w-full border-l-2 p-3 text-left text-sm hover:bg-brand-soft ${active ? "border-brand bg-brand-soft" : "border-transparent"}`} aria-current={active || undefined} onClick={() => selectFinding(finding)}>
-                    <span className="block font-semibold">{finding.claim}</span>
+                    <span className={`block font-semibold ${finding.resolution ? "text-muted" : ""}`}>{finding.claim}</span>
                     <Badge className="mt-2 !rounded-control border" tone={tone[finding.status]}>{intl.formatMessage({ id: `views.factStatus.${finding.status}` })}</Badge>
                 </button>;
             })}</aside>
