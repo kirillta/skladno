@@ -110,7 +110,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     <div className="mt-2 space-y-1">
                         {visibleArticles.map((article) => {
                             const isSelected = article.id === selectedArticleId;
-                            const detail = article.language ?? formatUpdatedAt(article.updatedAt, intl.formatMessage);
+                            const detail = [article.language, formatUpdatedAt(article.updatedAt, intl.formatMessage)].filter(Boolean).join(" · ");
 
                             return <button key={article.id} onClick={() => selectArticle(article.id)} className={`w-full rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-brand" : "text-ink hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
                                 <span className="flex gap-2">
