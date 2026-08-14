@@ -17,6 +17,7 @@ describe("FactCheckView", () => {
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={factCheck} stale runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
         expect(screen.getAllByText("A claim that needs evidence.")).toHaveLength(2);
+        expect(screen.getByRole("link", { name: /Primary source/ }).getAttribute("title")).toBe("https://example.com/source");
         expect(screen.getByRole("link", { name: /Primary source/ }).getAttribute("target")).toBe("_blank");
         expect(screen.queryByRole("button", { name: /Propose corrections/ })).toBeNull();
         await user.click(screen.getByRole("button", { name: "Run Fact Check again" }));
