@@ -15,8 +15,6 @@ export function ArticleHeader(props: {
     remove: (articleId: string) => Promise<void>;
     focusMode: boolean;
     setFocusMode: (value: boolean) => void;
-    targetLanguage: string;
-    setTargetLanguage: (language: string) => void;
     notifyError?: Notifications["notifyError"];
     shortcutOverrides?: KeyBindingOverrides;
 }) {
@@ -24,7 +22,7 @@ export function ArticleHeader(props: {
 }
 
 
-function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, targetLanguage, setTargetLanguage, notifyError, shortcutOverrides = {} }: Parameters<typeof ArticleHeader>[0]) {
+function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, notifyError, shortcutOverrides = {} }: Parameters<typeof ArticleHeader>[0]) {
     const intl = useIntl();
     const reportError = notifyError ?? (() => undefined);
     const [title, setTitle] = useState(article.title);
@@ -87,7 +85,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
 
 
     return <header className="border-b border-border bg-surface">
-        <div className="flex min-h-16 items-center gap-3 px-5">
+        <div className="flex min-h-12 items-center gap-2 overflow-x-auto px-5 py-1.5">
             <h1 className={editingTitle ? "min-w-0 flex-1 text-xl font-semibold tracking-tight" : "min-w-0 flex-1 text-xl font-semibold tracking-tight"}>
                 {editingTitle
                     ? <Field autoFocus aria-label={intl.formatMessage({ id: "articleHeader.title" })} className="h-10 min-h-10 w-full px-2 text-xl font-semibold tracking-tight" value={title} onBlur={finishTitleEditing} onChange={(event) => {
@@ -106,26 +104,20 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
                     }} />
                     : <button className="w-full truncate text-left hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.rename" }, { articleTitle: article.title })} onClick={() => setEditingTitle(true)}>{article.title}</button>}
             </h1>
-            <div className="flex shrink-0 items-center">
-                <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })} title={shortcutHint(intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" }), KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, shortcutOverrides)} onClick={() => setFocusMode(!focusMode)}>
-                    {focusMode ? <LeaveFocusIcon className="size-4" /> : <FocusIcon className="size-4" />}
-                </IconButton>
-            </div>
-        </div>
-        <div className="flex min-h-12 items-center gap-2 overflow-x-auto border-t border-border px-5 py-1.5 text-xs" aria-label={intl.formatMessage({ id: "articleHeader.metadata" })}>
-            <Select className="min-w-28 !w-32" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} value={article.language ?? "en"} onChange={(event) => updateMetadata({ language: event.target.value })}>
-                {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageId(language) })}</option>)}
-            </Select>
-            <Select className="min-w-28 !w-32" aria-label={intl.formatMessage({ id: "articleHeader.targetLanguage" })} value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)}>
-                {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageId(language) })}</option>)}
-            </Select>
-            <div className="ml-auto flex shrink-0 items-center">
+            <div className="flex shrink-0 items-center gap-2 text-xs" aria-label={intl.formatMessage({ id: "articleHeader.metadata" })}>
                 <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: "articleHeader.saveRevision" })} title={shortcutHint(intl.formatMessage({ id: "articleHeader.saveRevision" }), KEY_BINDING_COMMAND.SAVE_REVISION, shortcutOverrides)} onClick={() => void save().catch(() => undefined)}>
                     <SaveIcon className="size-4" />
                 </IconButton>
                 <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "articleHeader.deleteArticle" })} title={intl.formatMessage({ id: "articleHeader.deleteArticle" })} onClick={() => setDeleteConfirmationOpen(true)}>
                     <DeleteIcon className="size-4" />
                 </IconButton>
+                <Select className="min-w-28 !w-32" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} value={article.language ?? "en"} onChange={(event) => updateMetadata({ language: event.target.value })}>
+                    {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageId(language) })}</option>)}
+                </Select>
+                <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })} title={shortcutHint(intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" }), KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, shortcutOverrides)} onClick={() => setFocusMode(!focusMode)}>
+                    {focusMode ? <LeaveFocusIcon className="size-4" /> : <FocusIcon className="size-4" />}
+                </IconButton>
+
             </div>
         </div>
         {deleteConfirmationOpen && <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl" open aria-labelledby="delete-article-title" onCancel={(event) => {

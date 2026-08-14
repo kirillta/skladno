@@ -76,8 +76,6 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             remove={workspace.remove}
             focusMode={layout.focusMode}
             setFocusMode={layout.setFocusMode}
-            targetLanguage={layout.targetLanguage}
-            setTargetLanguage={layout.setTargetLanguage}
             notifyError={notifyError}
             shortcutOverrides={shortcutOverrides}
         />

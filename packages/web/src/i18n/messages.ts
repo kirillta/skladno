@@ -78,7 +78,6 @@ export const messages = {
     "draftConflict.confirmRevision": "Discard the persisted Draft and replace your retained local text with the latest Revision?",
     "articleHeader.title": "Article title",
     "articleHeader.rename": "Rename article: {articleTitle}",
-    "articleHeader.targetLanguage": "Target language",
     "articleHeader.sourceLanguage": "Source language",
     "articleHeader.publishingProfile": "Publishing profile",
     "articleHeader.defaultPublishingProfile": "Default publishing profile",
