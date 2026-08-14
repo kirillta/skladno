@@ -45,7 +45,7 @@ describe("FactCheckView", () => {
         await user.click(screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!);
         expect(scrollTo).toHaveBeenCalledOnce();
         expect(screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!.getAttribute("aria-current")).toBe("true");
-        expect(screen.getByText("Resolution: Accepted as written")).toBeTruthy();
+        expect(screen.getByText("Accepted as written")).toBeTruthy();
     });
 
 
