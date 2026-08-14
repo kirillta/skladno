@@ -112,7 +112,10 @@ export function Skeleton({ className, label }: { className?: string; label?: str
 
 
 export function EmptyState({ title, children, className }: PropsWithChildren<{ title: string; className?: string }>) {
-    return <div className={joinClassNames("grid min-h-48 place-items-center gap-2 p-6 text-center text-muted", className)}><p>{title}</p>{children}</div>;
+    return <div className={joinClassNames("grid min-h-48 place-content-center justify-items-center gap-1 p-6 text-center", className)}>
+        <p className="text-base font-medium text-muted">{title}</p>
+        <div className="flex flex-col items-center gap-3 text-sm text-muted">{children}</div>
+    </div>;
 }
 
 
