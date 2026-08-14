@@ -112,7 +112,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                             const isSelected = article.id === selectedArticleId;
                             const detail = [article.language, formatUpdatedAt(article.updatedAt, intl.formatMessage)].filter(Boolean).join(" · ");
 
-                            return <button key={article.id} onClick={() => selectArticle(article.id)} className={`w-full rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-brand" : "text-ink hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
+                            return <button key={article.id} onClick={() => selectArticle(article.id)} className={`w-full rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-ink" : "text-ink/85 hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
                                 <span className="flex gap-2">
                                     <ArticleIcon className="mt-0.5 size-4 shrink-0 text-muted" />
                                     <span className="min-w-0">
