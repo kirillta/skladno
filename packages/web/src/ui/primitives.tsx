@@ -7,6 +7,14 @@ export type ControlState = "default" | "loading" | "success" | "warning" | "erro
 export type Tone = "info" | "success" | "warning" | "error";
 
 
+const toneClasses: Record<Tone, string> = {
+    info: "bg-info-soft text-info",
+    success: "bg-success-soft text-success",
+    warning: "bg-warning-soft text-warning",
+    error: "bg-danger-soft text-danger",
+};
+
+
 function joinClassNames(...names: (string | undefined)[]): string {
     return names.filter(Boolean).join(" ");
 }
@@ -60,7 +68,6 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
 
 
 export function Badge({ children, className, variant = "soft", compact = false, tone, ...props }: PropsWithChildren<HTMLAttributes<HTMLSpanElement> & { variant?: "soft" | "solid"; compact?: boolean; tone?: Tone }>) {
-    const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
     return (
         <span
             {...props}
@@ -78,13 +85,11 @@ export function Badge({ children, className, variant = "soft", compact = false, 
 
 
 export function Status({ label, children, className, compact = false, tone = "info" }: PropsWithChildren<{ label: string; className?: string; compact?: boolean; tone?: Tone }>) {
-    const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
     return <div className={joinClassNames("flex gap-2 rounded-panel border border-border text-xs leading-5", compact ? "min-h-9 p-2" : "p-3", toneClasses[tone], className)} role="status"><StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" /><span><strong>{label}</strong>{children}</span></div>;
 }
 
 
 export function Banner({ children, tone = "info", className, role = "status", ...props }: PropsWithChildren<HTMLAttributes<HTMLDivElement> & { tone?: Tone }>) {
-    const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
     return <div {...props} className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone], className)} role={role}><StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" />{children}</div>;
 }
 
