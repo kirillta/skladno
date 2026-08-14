@@ -26,6 +26,7 @@ import { providerLanguageName, targetLanguageId } from "./editorial-language.js"
 type ProposalState = "idle" | "streaming" | "error";
 type ProposalDecision = "pending" | "accepted" | "rejected";
 
+
 interface EditorialResult<T> {
     articleId: string;
     baseRevisionId: string;
@@ -33,11 +34,20 @@ interface EditorialResult<T> {
 }
 
 
+export function withFindingFreshness(factCheck: FactCheck, revisionId: string, content: string): FactCheck {
+    const normalizedContent = content.replace(/\s+/g, " ").toLowerCase();
+    return { ...factCheck, findings: factCheck.findings.map((finding) => ({
+        ...finding,
+        stale: factCheck.reviewedRevisionId !== revisionId && !finding.resolution && !normalizedContent.includes(finding.claim.replace(/\s+/g, " ").toLowerCase()),
+    })) };
+}
+
+
 export function useEditorialProposal(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [proposal, setProposal] = useState("");
-    const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string; editorialArtifactId?: string }>();
+    const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string; editorialArtifactId?: string; correctedFindingIds?: string[] }>();
     const [decisions, setDecisions] = useState<Record<string, ProposalDecision>>({});
     const [state, setState] = useState<ProposalState>("idle");
     const [message, setMessage] = useState("");
@@ -52,12 +62,30 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const review = useMemo(() => base && base.articleId === workspace.selectedArticle?.id ? createTextProposal(base.content, proposal) : undefined, [base, proposal, workspace.selectedArticle?.id]);
     const stale = Boolean(workspace.selectedArticle && base?.articleId === workspace.selectedArticle.id && base.revisionId !== workspace.selectedArticle.currentRevisionId);
     const selectedArticleId = workspace.selectedArticle?.id;
-    const factCheck = factCheckResult?.articleId === selectedArticleId ? factCheckResult?.value : undefined;
+    const selectedFactCheck = factCheckResult && factCheckResult.articleId === selectedArticleId ? factCheckResult.value : undefined;
+    const factCheck = selectedFactCheck && workspace.selectedArticle
+        ? withFindingFreshness(selectedFactCheck, workspace.selectedArticle.currentRevisionId, workspace.selectedArticle.currentRevision.content)
+        : undefined;
     const styleReview = styleReviewResult?.articleId === selectedArticleId ? styleReviewResult?.value : undefined;
     const translation = translationResult?.articleId === selectedArticleId ? translationResult?.value.metadata : undefined;
-    const factCheckStale = factCheckResult?.articleId === selectedArticleId && factCheckResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
+    const factCheckStale = factCheck?.findings.some((finding) => finding.stale) ?? false;
     const styleReviewStale = styleReviewResult?.articleId === selectedArticleId && styleReviewResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
     const translationStale = translationResult?.articleId === selectedArticleId && translationResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
+
+    const loadFactChecks = useCallback(async () => {
+        const article = workspace.selectedArticle;
+        if (!article || !client.listFactChecks)
+            return;
+
+        const checks = await client.listFactChecks(article.id);
+        const factCheck = checks.find((check) => check.reviewedRevisionId === article.currentRevisionId) ?? checks[0];
+        if (factCheck)
+            setFactCheckResult({ articleId: article.id, baseRevisionId: factCheck.reviewedRevisionId ?? article.currentRevisionId, value: factCheck });
+    }, [client, workspace.selectedArticle]);
+
+    useEffect(() => {
+        void loadFactChecks();
+    }, [loadFactChecks]);
 
 
     useEffect(() => {
@@ -90,7 +118,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }, [base?.editorialArtifactId, client, intl.locale, proposal, proposalSummaryLocale, review, selectedArticleId, stale, state]);
 
 
-    async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string) {
+    async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string, correctedFindingIds?: string[]) {
         const article = workspace.selectedArticle;
         if (!article)
             return;
@@ -101,7 +129,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             const content = saved?.content ?? workspace.content;
 
             if (operation === "thesis_to_narrative" || operation === "flow_revision") {
-                setBase({ articleId: article.id, content, revisionId });
+                setBase({ articleId: article.id, content, revisionId, ...(correctedFindingIds?.length ? { correctedFindingIds } : {}) });
                 setProposal("");
                 setDecisions({});
                 setProposalSummaries({});
@@ -122,10 +150,13 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
                         setProposal(event.text);
 
                     if ((operation === "thesis_to_narrative" || operation === "flow_revision") && event.editorialArtifactId)
-                        setBase({ articleId: article.id, content, revisionId, editorialArtifactId: event.editorialArtifactId });
+                        setBase({ articleId: article.id, content, revisionId, editorialArtifactId: event.editorialArtifactId, ...(correctedFindingIds?.length ? { correctedFindingIds } : {}) });
 
                     if (event.factCheck)
                         setFactCheckResult({ articleId: article.id, baseRevisionId: revisionId, value: event.factCheck });
+
+                    if (event.factCheck)
+                        void loadFactChecks();
 
                     if (event.styleReview)
                         setStyleReviewResult({ articleId: article.id, baseRevisionId: revisionId, value: event.styleReview });
@@ -153,17 +184,35 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }
 
 
+    async function markCorrectedFindings(articleId: string, findingIds: string[]) {
+        if (!client.resolveFactCheckFinding)
+            return;
+
+        try {
+            await Promise.all(findingIds.map((findingId) => client.resolveFactCheckFinding!(articleId, findingId, "corrected_or_removed")));
+            setFactCheckResult((current) => current?.articleId === articleId ? { ...current, value: { ...current.value, findings: current.value.findings.map((finding) => findingIds.includes(finding.occurrenceId ?? "") ? { ...finding, resolution: "corrected_or_removed" } : finding) } } : current);
+        } catch (error) {
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        }
+    }
+
+
     async function accept(acceptedChangeIds: ReadonlySet<string>, wholeProposal = false) {
         const article = workspace.selectedArticle;
         if (!article || !base || !review || stale)
             return;
 
-        const content = wholeProposal ? review.proposedContent : applyProposalChanges(review, acceptedChangeIds);
+        const content = base.correctedFindingIds?.length
+            ? applyProposalChanges(review, wholeProposal ? new Set(review.changes.map((change) => change.id)) : acceptedChangeIds, true)
+            : wholeProposal ? review.proposedContent : applyProposalChanges(review, acceptedChangeIds);
         try {
             const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL, baseRevisionId: base.revisionId, ...(wholeProposal ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] }) } });
 
             workspace.updateRevision(article.id, revision);
             workspace.setContent(content);
+            if (base.correctedFindingIds?.length)
+                await markCorrectedFindings(article.id, base.correctedFindingIds);
+
             setProposal("");
             setBase(undefined);
             setDecisions({});
@@ -277,6 +326,16 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             setDecisions({});
         },
         cancel: () => controller.current?.abort(),
+        loadFactChecks,
+        resolveFactCheck: async (findingId: string, resolution: NonNullable<FactCheck["findings"][number]["resolution"]>) => {
+            const article = workspace.selectedArticle;
+            if (!article || !client.resolveFactCheckFinding)
+                return;
+
+            await client.resolveFactCheckFinding(article.id, findingId, resolution);
+            await loadFactChecks();
+        },
+        proposeFactCorrections: (findings: FactCheck["findings"]) => request("flow_revision", intl.formatMessage({ id: "assistant.factCheckCorrectionPrompt" }, { findings: findings.map((finding) => `- ${finding.claim}\n  ${finding.rationale}`).join("\n") }), undefined, findings.flatMap((finding) => finding.occurrenceId ? [finding.occurrenceId] : [])),
         createTranslation,
         applyAssistantResult,
         restoreAssistantProposal

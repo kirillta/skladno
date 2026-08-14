@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { defaultPublishLimitProfileId, isArticleLanguage, isPublishLimitProfileId, KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
+import { BUILT_IN_SKILL, defaultPublishLimitProfileId, isArticleLanguage, isPublishLimitProfileId, KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Banner } from "../ui/primitives.js";
 import { ApplicationSettings } from "../settings/ApplicationSettings.js";
@@ -40,6 +40,10 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const assistant = useAssistantMessages(client, workspace, assistantSelection, editorial.applyAssistantResult);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
     const restoreAssistantProposal = editorial.restoreAssistantProposal;
+    const runFactCheck = () => {
+        layout.setAssistantCollapsed(false);
+        void assistant.request("", BUILT_IN_SKILL.FACT_CHECKING);
+    };
 
     useEffect(() => {
         restoreAssistantProposal(assistant.messages);
@@ -93,6 +97,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         if (screen !== "editorial-workspace")
             return;
 
+
         function toggleFocusMode() {
             const activeElement = document.activeElement;
             const focusWillBeLost = !(activeElement instanceof HTMLElement)
@@ -104,6 +109,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
 
             shortcutActions.current.setFocusMode((current) => !current);
         }
+
 
         const unregister = [
             dispatcher.register(KEY_BINDING_COMMAND.NEW_ARTICLE, () => void shortcutActions.current.createBlank()),
@@ -165,6 +171,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             state={assistant.state}
             message={assistant.message}
             errorDetails={assistant.errorDetails}
+            factCheckClaims={assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true }))}
             onRequest={assistant.request}
             onCancel={assistant.cancel}
             collapsed={layout.assistantCollapsed}
@@ -178,7 +185,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             generalSettings={generalSettings}
             clearSelection={() => setAssistantSelection(undefined)} />
         }>
-        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} assistantSelection={assistantSelection} />
+        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} runFactCheck={runFactCheck} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} assistantSelection={assistantSelection} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
         <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
     </ExtractedWorkspaceShell>;

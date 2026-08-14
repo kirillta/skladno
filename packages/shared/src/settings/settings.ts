@@ -50,6 +50,7 @@ export function isTimeZonePreference(value: unknown): value is TimeZonePreferenc
     }
 }
 
+
 export interface GeneralSettings {
     theme: ThemePreference;
     interfaceLocale: InterfaceLocale;
@@ -60,11 +61,13 @@ export interface GeneralSettings {
     defaultTranslationLanguages: string[];
 }
 
+
 export interface SystemDateTimeFormat {
     locale?: string;
     datePattern?: string;
     timePattern?: string;
 }
+
 
 export interface OpenAiConnection {
     id: string;
@@ -76,17 +79,20 @@ export interface OpenAiConnection {
     diagnostic?: string;
 }
 
+
 export interface ModelPreferences {
     defaultModel: string;
     textGenerationModel?: string;
     skillOverrides: Partial<Record<BuiltInSkillId, string>>;
 }
 
+
 export interface BackupPolicy {
     destinationPath?: string;
     schedule: "off" | "daily";
     retention: { mode: "count"; count: number } | { mode: "unlimited" };
 }
+
 
 export interface ApplicationSettingsSnapshot {
     general: GeneralSettings;
@@ -98,6 +104,7 @@ export interface ApplicationSettingsSnapshot {
     keyBindingOverrides: KeyBindingOverrides;
 }
 
+
 export const defaultGeneralSettings: GeneralSettings = {
     theme: "system",
     interfaceLocale: defaultInterfaceLocale,
@@ -108,9 +115,11 @@ export const defaultGeneralSettings: GeneralSettings = {
     defaultTranslationLanguages: [],
 };
 
+
 export interface DirectorySelectionClient {
     chooseBackupDirectory?(): Promise<string | undefined>;
 }
+
 
 export interface ApplicationSettingsClient {
     getApplicationSettings(): Promise<ApplicationSettingsSnapshot>;

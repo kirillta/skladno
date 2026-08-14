@@ -7,6 +7,7 @@ import test from "node:test";
 import { openDatabase } from "./database.js";
 import { createTestPersistence, type TestPersistence } from "../../test-support/test-persistence.js";
 
+
 // Product scenarios: history-and-publishing.revision-restore-creates-new, history-and-publishing.style-corpus-local, cross-cutting.assistant-records-local
 
 function withRepository(run: (repositories: TestPersistence, close: () => void, database: ReturnType<typeof openDatabase>) => void): void {

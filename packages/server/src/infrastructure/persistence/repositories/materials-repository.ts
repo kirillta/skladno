@@ -18,6 +18,7 @@ function material(row: Row): Material {
 export class MaterialsRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
+
     create(input: CreateMaterialInput): Material {
         const timestamp = now();
         const materialId = input.id ?? createId();
@@ -26,6 +27,7 @@ export class MaterialsRepository {
 
         return this.get(materialId)!;
     }
+
 
     get(materialId: string): Material | undefined {
         const row = this.database.prepare("SELECT * FROM author_materials WHERE id = ?").get(materialId) as Row | undefined;
@@ -43,6 +45,7 @@ export class MaterialsRepository {
         if (result.changes === 0)
             throw new Error("Material not found.");
     }
+
 
     update(materialId: string, input: UpdateMaterialInput): Material {
         const existing = this.get(materialId);

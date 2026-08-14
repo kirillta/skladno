@@ -5,6 +5,7 @@ import { useIntl } from "react-intl";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { workspaceViewDefinitions, type WorkspaceView } from "../workspace-views.js";
 
+
 export interface WorkspaceTabBadgeDescriptor {
     label: string;
     accessibleLabel: string;
@@ -20,6 +21,8 @@ export function WorkspaceTabBar({ view, setView, badges = {}, shortcutOverrides 
     shortcutOverrides?: KeyBindingOverrides;
 }) {
     const intl = useIntl();
+
+
     function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
         const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=tab]");
         let next: number;
@@ -39,6 +42,7 @@ export function WorkspaceTabBar({ view, setView, badges = {}, shortcutOverrides 
         setView(workspaceViewDefinitions[next]!.id);
         tabs?.[next]?.focus();
     }
+
 
     return <TabList className="min-h-10 bg-surface px-3" aria-label={intl.formatMessage({ id: "workspace.tabs.ariaLabel" })}>
         {workspaceViewDefinitions.map((item, index) => {

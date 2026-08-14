@@ -7,6 +7,7 @@ export function configureSystemDateTimeFormat(value: SystemDateTimeFormat | unde
     configuredSystemDateTimeFormat = value;
 }
 
+
 function timeOptions(timeFormat: TimeFormatPreference): Intl.DateTimeFormatOptions {
     const hourCycle = timeFormat === "12-hour" ? "h12" : timeFormat === "24-hour" ? "h23" : undefined;
 
@@ -21,6 +22,7 @@ function timeOptions(timeFormat: TimeFormatPreference): Intl.DateTimeFormatOptio
 export function systemLocale(): string {
     return configuredSystemDateTimeFormat?.locale || Intl.DateTimeFormat().resolvedOptions().locale;
 }
+
 
 export function systemTimeZone(): string | undefined {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;

@@ -113,6 +113,7 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         return response.value;
     }
 
+
     return {
         getHealth: () => invoke(ELECTRON_APPLICATION_METHOD.getHealth),
         getApplicationSettings: () => invoke(ELECTRON_APPLICATION_METHOD.getApplicationSettings),

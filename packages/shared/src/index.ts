@@ -69,6 +69,8 @@ export {
     EDITORIAL_ERROR_CATEGORY,
     FACT_CHECK_STATUS,
     editorialPath,
+    factCheckResolutionPath,
+    factChecksPath,
     type EditorialClient,
     type EditorialCompletedEvent,
     type EditorialErrorEvent,
@@ -82,6 +84,7 @@ export {
     type FactCheck,
     type FactCheckFinding,
     type FactCheckSource,
+    type FactCheckClient,
     type StartEditorialRequest,
     type TranslationMetadata,
 } from "./editorial/editorial.js";
@@ -136,7 +139,33 @@ export type {
     EditorialArtifact,
 } from "./persistence/index.js";
 export { articlesPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./articles/workspace/workspace.js";
-export { BUILT_IN_SKILL, assistantMessagesPath, assistantRequestsPath, builtInSkills, builtInSkillScopeCompatibility, isBuiltInSkillId, legacyEditorialOperationSkillMap, resolveBuiltInSkillId, type AssistantClient, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantMessageTemplate, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId, type StartAssistantRequest } from "./assistant/assistant.js";
+export {
+    ASSISTANT_EVENT,
+    BUILT_IN_SKILL,
+    assistantMessagesPath,
+    assistantRequestsPath,
+    builtInSkills,
+    builtInSkillScopeCompatibility,
+    isBuiltInSkillId,
+    legacyEditorialOperationSkillMap,
+    resolveBuiltInSkillId,
+    type AssistantClient,
+    type AssistantEditorialResult,
+    type AssistantEvent,
+    type AssistantMessage,
+    type AssistantMessageKind,
+    type AssistantMessageRole,
+    type AssistantMessageStatus,
+    type AssistantMessageTemplate,
+    type AssistantRequest,
+    type AssistantRequestScope,
+    type AssistantRequestStatus,
+    type AssistantResponseKind,
+    type AssistantSkillSource,
+    type BuiltInSkillId,
+    type FactCheckClaimPreview,
+    type StartAssistantRequest
+} from "./assistant/assistant.js";
 export { ARTICLE_LANGUAGE, articleLanguages, isArticleLanguage, type ArticleLanguage } from "./cross-cutting/languages.js";
 export {
     countPublishingCharacters,

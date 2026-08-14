@@ -270,11 +270,113 @@ const noAccessibleLabelSelector = {
 };
 
 
+const twoBlankLinesBetweenDeclarations = {
+    meta: {
+        type: "layout",
+        docs: {
+            description: "Require two blank lines around functions, interfaces, classes, and class members.",
+        },
+        fixable: "whitespace",
+        messages: {
+            twoBlankLines: "Expected two blank lines between declarations.",
+        },
+        schema: [],
+    },
+
+    create(context) {
+        const sourceCode = context.sourceCode;
+        const declarationTypes = new Set([
+            "ClassDeclaration",
+            "FunctionDeclaration",
+            "TSDeclareFunction",
+            "TSInterfaceDeclaration",
+        ]);
+        const memberTypes = new Set([
+            "MethodDefinition",
+            "PropertyDefinition",
+            "TSAbstractMethodDefinition",
+            "TSAbstractPropertyDefinition",
+        ]);
+
+
+        function unwrap(node) {
+            return node.type === "ExportNamedDeclaration" || node.type === "ExportDefaultDeclaration"
+                ? node.declaration ?? node
+                : node;
+        }
+
+
+        function needsPadding(previous, next, members = false) {
+            if (members)
+                return true;
+
+            const previousDeclaration = unwrap(previous);
+            const nextDeclaration = unwrap(next);
+            if (previousDeclaration.type === "VariableDeclaration" && nextDeclaration.type === "VariableDeclaration" && previousDeclaration.kind === "const" && nextDeclaration.kind === "const")
+                return false;
+
+            return declarationTypes.has(previousDeclaration.type) || declarationTypes.has(nextDeclaration.type);
+        }
+
+
+        function checkPairs(nodes, members = false) {
+            for (let index = 0; index < nodes.length - 1; index++) {
+                const previous = nodes[index];
+                const next = nodes[index + 1];
+                if (!memberTypes.has(previous.type) && !memberTypes.has(next.type) && !needsPadding(previous, next, members))
+                    continue;
+
+                const previousToken = sourceCode.getLastToken(previous);
+                const nextToken = sourceCode.getFirstToken(next);
+                const comments = sourceCode.getTokensBetween(previousToken, nextToken, { includeComments: true }).filter((token) => token.type === "Block" || token.type === "Line");
+                const boundaryToken = comments[0]?.loc.start.line > previousToken.loc.end.line ? comments[0] : nextToken;
+                const blankLines = boundaryToken.loc.start.line - previousToken.loc.end.line - 1;
+                if (blankLines === 2)
+                    continue;
+
+                context.report({
+                    node: next,
+                    messageId: "twoBlankLines",
+                    fix(fixer) {
+                        if (boundaryToken === nextToken && comments.length > 0)
+                            return null;
+
+                        const lineStart = sourceCode.text.lastIndexOf("\n", boundaryToken.range[0] - 1) + 1;
+                        const indentation = /^[ \t]*/u.exec(sourceCode.text.slice(lineStart, boundaryToken.range[0]))?.[0] ?? "";
+                        const newline = sourceCode.text.includes("\r\n") ? "\r\n" : "\n";
+                        return fixer.replaceTextRange(
+                            [previousToken.range[1], boundaryToken.range[0]],
+                            `${newline}${newline}${newline}${indentation}`,
+                        );
+                    },
+                });
+            }
+        }
+
+
+        return {
+            Program(node) {
+                checkPairs(node.body);
+            },
+
+            BlockStatement(node) {
+                checkPairs(node.body);
+            },
+
+            ClassBody(node) {
+                checkPairs(node.body, true);
+            },
+        };
+    },
+};
+
+
 export default {
     rules: {
         "conditional-braces": conditionalBraces,
         "no-accessible-label-selector": noAccessibleLabelSelector,
         "no-production-intl-provider": noProductionIntlProvider,
         "no-untranslated-ui-copy": noUntranslatedUiCopy,
+        "two-blank-lines-between-declarations": twoBlankLinesBetweenDeclarations,
     },
 };

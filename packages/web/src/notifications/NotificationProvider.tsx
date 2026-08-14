@@ -128,6 +128,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             notificationsRef.current.slice(0, MAX_VISIBLE_NOTIFICATIONS).forEach((notification) => setPaused(notification.id, "document", document.hidden));
         }
 
+
         document.addEventListener("visibilitychange", updateDocumentPause);
         updateDocumentPause();
 

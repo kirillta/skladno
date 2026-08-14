@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { ApplicationClientError, type AssistantEditorialResult, type AssistantMessage, type BuiltInSkillId } from "@skladno/shared";
+import { ApplicationClientError, ASSISTANT_EVENT, type AssistantEditorialResult, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
@@ -15,6 +15,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const [stateByArticle, setStateByArticle] = useState<Record<string, ProposalState>>({});
     const [messageByArticle, setMessageByArticle] = useState<Record<string, string>>({});
     const [errorDetailsByArticle, setErrorDetailsByArticle] = useState<Record<string, string>>({});
+    const [factCheckClaimsByArticle, setFactCheckClaimsByArticle] = useState<Record<string, FactCheckClaimPreview[]>>({});
     const controller = useRef<AbortController>();
     const article = workspace.selectedArticle;
     const messages = article ? messagesByArticle[article.id] : undefined;
@@ -87,6 +88,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                 ...states,
                 [current.id]: "streaming",
             }));
+            setFactCheckClaimsByArticle((claims) => ({ ...claims, [current.id]: [] }));
             controller.current = new AbortController();
             const streamedId = `streaming-${crypto.randomUUID()}`;
             const selectedContent = selection && workspace.content.includes(selection) ? selection : undefined;
@@ -101,10 +103,17 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                 ...(skillOffset === undefined ? {} : { skillOffset }),
                 ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}),
             }, (event) => {
-                if (event.type === "completed" && event.result)
-                    onResult(current.id, revision.id, event.result, event.editorialArtifactId);
+                if (event.type === ASSISTANT_EVENT.TOOL_STATUS && event.claims)
+                    setFactCheckClaimsByArticle((claims) => ({ ...claims, [current.id]: event.claims! }));
 
-                if (event.type !== "text_delta")
+                if (event.type === ASSISTANT_EVENT.COMPLETED && event.result) {
+                    const result = event.result;
+                    onResult(current.id, revision.id, result, event.editorialArtifactId);
+                    if (result.factCheck)
+                        setFactCheckClaimsByArticle((claims) => ({ ...claims, [current.id]: result.factCheck!.findings.map(({ claim }) => ({ claim, checked: true })) }));
+                }
+
+                if (event.type !== ASSISTANT_EVENT.TEXT_DELTA)
                     return;
 
                 setMessagesByArticle((itemsByArticle) => {
@@ -162,7 +171,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         }
     }, [client, intl, onResult, reload, selection, workspace]);
 
-    return { messages, state, message, errorDetails, request, cancel: () => controller.current?.abort() };
+    return { messages, state, message, errorDetails, factCheckClaims: article ? factCheckClaimsByArticle[article.id] : undefined, request, cancel: () => controller.current?.abort() };
 }
 
 

@@ -6,6 +6,7 @@ import { defaultGeneralSettings, type ArticleRevision, type GeneralSettings } fr
 import { messages } from "../../i18n/messages.js";
 import { RevisionHistoryView } from "./RevisionHistoryView.js";
 
+
 // Product scenarios: workspace.revisions.restore, history-and-publishing.revision-history-browsing
 
 function revision(id: string, content: string, kind: string, createdAt: string, restoredFromRevisionId?: string): ArticleRevision {

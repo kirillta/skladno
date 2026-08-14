@@ -1,4 +1,5 @@
 import { APPLICATION_ERROR, EDITORIAL_OPERATION, HTTP_STATUS, type Article, type CreateEditorialArtifactInput, type EditorialArtifact, type EditorialOperation, type StyleProfile } from "@skladno/shared";
+import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { EditorialEngine } from "../ports/editorial-engine.js";
@@ -41,6 +42,9 @@ interface EditorialArtifactsStore {
     create(input: CreateEditorialArtifactInput): EditorialArtifact;
     createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<import("@skladno/shared").CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact;
 }
+
+
+interface FactChecksStore { save(artifactId: string, articleId: string, revisionId: string): void; }
 
 
 function prepareEditorialStream(articles: EditorialArticleStore, sessions: EditorialSessionStore, styleCorpus: EditorialStyleCorpusStore, engines: EditorialEngineResolver, sessionContinuationEnabled: boolean, request: EditorialServiceRequest): EditorialStreamContext {
@@ -127,14 +131,27 @@ function citationsFor(event: Extract<EditorialEngineEvent, { type: typeof EDITOR
 }
 
 
-function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifacts: EditorialArtifactsStore, request: EditorialServiceRequest, context: EditorialStreamContext, sessionContinuationEnabled: boolean, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): string {
+function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifacts: EditorialArtifactsStore, factChecks: FactChecksStore, request: EditorialServiceRequest, context: EditorialStreamContext, sessionContinuationEnabled: boolean, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): string {
     if (!context.factCheck && !context.translation && sessionContinuationEnabled)
         sessions.save(request.articleId, event.responseId);
 
-    const input = artifactInput(request, context, event);
-    return context.factCheck
-        ? artifacts.createWithCitations(input, citationsFor(event)).id
-        : artifacts.create(input).id;
+    if (!context.factCheck)
+        return artifacts.create(artifactInput(request, context, event)).id;
+
+    const factCheck = event.factCheck!;
+    const enriched = { ...event, factCheck: {
+        ...factCheck,
+        reviewedRevisionId: context.article.currentRevisionId,
+        createdAt: new Date().toISOString(),
+        findings: factCheck.findings.map((finding) => {
+            const factId = createHash("sha256").update(finding.claim.trim().toLowerCase().replace(/\s+/g, " ")).digest("hex").slice(0, 16);
+            return { ...finding, factId, occurrenceId: `${context.article.currentRevisionId}:${factId}`, checkedAt: new Date().toISOString() };
+        }),
+    } };
+
+    const artifact = artifacts.createWithCitations(artifactInput(request, context, enriched), citationsFor(enriched));
+    factChecks.save(artifact.id, request.articleId, context.article.currentRevisionId);
+    return artifact.id;
 }
 
 
@@ -163,6 +180,7 @@ export class EditorialService {
         private readonly artifacts: EditorialArtifactsStore,
         private readonly engines: EditorialEngineResolver,
         private readonly sessionContinuationEnabled: boolean,
+        private readonly factChecks: FactChecksStore = { save: () => undefined },
     ) { }
 
 
@@ -174,7 +192,7 @@ export class EditorialService {
                 request,
                 context,
                 signal,
-                (event) => persistCompletedEditorialOutput(this.sessions, this.artifacts, request, context, this.sessionContinuationEnabled, event),
+                (event) => persistCompletedEditorialOutput(this.sessions, this.artifacts, this.factChecks, request, context, this.sessionContinuationEnabled, event),
             );
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)

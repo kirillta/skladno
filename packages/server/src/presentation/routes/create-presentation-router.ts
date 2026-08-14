@@ -1,4 +1,4 @@
-import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleDraftPath, articleRevisionsPath, articlesPath, assistantMessagesPath, assistantRequestsPath, editorialPath, HTTP_METHOD, healthPath, keyBindingsPath, proposalSummariesPath, publishSettingsPath, restoreRevisionPath, styleCorpusPath } from "@skladno/shared";
+import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleDraftPath, articleRevisionsPath, articlesPath, assistantMessagesPath, assistantRequestsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, proposalSummariesPath, publishSettingsPath, restoreRevisionPath, styleCorpusPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
@@ -11,6 +11,7 @@ import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publis
 import { handleActivateAiConnectionRoute, handleAiModelsRoute, handleBackupPolicyRoute, handleCreateAiConnectionRoute, handleDeleteAiConnectionRoute, handleGeneralSettingsRoute, handleKeyBindingsRoute, handleModelPreferencesRoute, handleSettingsSnapshotRoute, handleTestAiConnectionRoute, handleUpdateAiConnectionRoute } from "./settings-route.js";
 import { createStyleCorpusItemRoute, deleteStyleCorpusItemRoute, handleStyleCorpusRoute } from "./style-corpus-route.js";
 import { summarizeProposalRoute } from "./proposal-summary-route.js";
+import { listFactChecksRoute, resolveFactCheckRoute } from "./fact-check-route.js";
 
 
 const ROUTE_PARAMETER = "__route_parameter__";
@@ -30,6 +31,8 @@ const ARTICLE_RESTORATION_PATH = routePattern(restoreRevisionPath(ROUTE_PARAMETE
 const ASSISTANT_MESSAGES_PATH = routePattern(assistantMessagesPath(ROUTE_PARAMETER));
 const ASSISTANT_REQUESTS_PATH = routePattern(assistantRequestsPath(ROUTE_PARAMETER));
 const EDITORIAL_PATH = routePattern(editorialPath(ROUTE_PARAMETER));
+const FACT_CHECKS_PATH = routePattern(factChecksPath(ROUTE_PARAMETER));
+const FACT_CHECK_RESOLUTION_PATH = routePattern(factCheckResolutionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const STYLE_CORPUS_ITEM_PATH = routePattern(`${styleCorpusPath}/${ROUTE_PARAMETER}`);
 const AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}`);
 const ACTIVE_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/active`);
@@ -37,13 +40,15 @@ const TEST_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAM
 
 
 export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices): Router {
-    const { articles, assistant, proposalSummaries, publishing, settings, styleCorpus } = services;
+    const { articles, assistant, factChecks, proposalSummaries, publishing, settings, styleCorpus } = services;
     const router = new Router();
 
     router.register(HTTP_METHOD.GET, healthPath, (_request, response) => handleHealthRoute(response));
     router.register(HTTP_METHOD.GET, ASSISTANT_MESSAGES_PATH, (_request, response, parameters) => listAssistantMessagesRoute(response, parameters[0]!, assistant));
     router.register(HTTP_METHOD.POST, ASSISTANT_REQUESTS_PATH, (request, response, parameters) => createAssistantRequestRoute(request, response, parameters[0]!, assistant));
     router.register(HTTP_METHOD.POST, EDITORIAL_PATH, (request, response, parameters) => handleEditorialRoute(request, response, parameters[0]!, editorial));
+    router.register(HTTP_METHOD.GET, FACT_CHECKS_PATH, (_request, response, parameters) => listFactChecksRoute(response, parameters[0]!, factChecks));
+    router.register(HTTP_METHOD.PUT, FACT_CHECK_RESOLUTION_PATH, (request, response, parameters) => resolveFactCheckRoute(request, response, parameters[0]!, parameters[1]!, factChecks));
     router.register(HTTP_METHOD.GET, styleCorpusPath, (_request, response) => handleStyleCorpusRoute(response, styleCorpus));
     router.register(HTTP_METHOD.POST, styleCorpusPath, (request, response) => createStyleCorpusItemRoute(request, response, styleCorpus));
     router.register(HTTP_METHOD.DELETE, STYLE_CORPUS_ITEM_PATH, (_request, response, parameters) => deleteStyleCorpusItemRoute(response, parameters[0]!, styleCorpus));

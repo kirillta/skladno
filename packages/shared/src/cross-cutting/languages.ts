@@ -12,6 +12,7 @@ export type ArticleLanguage = typeof ARTICLE_LANGUAGE[keyof typeof ARTICLE_LANGU
 
 export const articleLanguages: readonly ArticleLanguage[] = Object.values(ARTICLE_LANGUAGE);
 
+
 export function isArticleLanguage(value: unknown): value is ArticleLanguage {
     return typeof value === "string" && articleLanguages.includes(value as ArticleLanguage);
 }

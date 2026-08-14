@@ -2,6 +2,7 @@ import type { ArticleRevision } from "@skladno/shared";
 import { Button, Dialog } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 
+
 export function RestoreRevisionDialog({ candidate, hasUncommittedChanges, close, restore }: {
     candidate: ArticleRevision | undefined;
     hasUncommittedChanges: boolean;

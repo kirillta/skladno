@@ -22,6 +22,7 @@ export function useArticleRevisions(client: EditorialWorkspaceClient, article: A
         client.listArticleRevisions(articleId).then(setRevisions).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.revisionHistoryFailed" }) }));
     }, [articleId, currentRevisionId, client, intl, notifyError]);
 
+
     async function restore(mode: "keep" | "save" | "discard") {
         if (!article || !candidate)
             return;
@@ -41,6 +42,7 @@ export function useArticleRevisions(client: EditorialWorkspaceClient, article: A
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }
     }
+
 
     return { revisions, candidate, setCandidate, restore };
 }

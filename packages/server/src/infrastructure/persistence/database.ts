@@ -151,6 +151,24 @@ const migrations = [
         ALTER TABLE assistant_messages ADD COLUMN proposal_content TEXT;
         `,
     },
+    {
+        version: 11,
+        name: "fact_check_runs_and_resolutions",
+        sql: `
+        CREATE TABLE fact_check_runs (
+            editorial_artifact_id TEXT PRIMARY KEY REFERENCES editorial_artifacts(id) ON DELETE CASCADE,
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            revision_id TEXT NOT NULL REFERENCES article_revisions(id) ON DELETE RESTRICT,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX fact_check_runs_article_revision ON fact_check_runs(article_id, revision_id, created_at DESC);
+        CREATE TABLE fact_check_resolutions (
+            occurrence_id TEXT PRIMARY KEY,
+            resolution TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;
@@ -188,6 +206,7 @@ function removeLegacyDatabase(filename: string): void {
         }
     }
 }
+
 
 export function openDatabase(filename: string): SqliteDatabase {
     if (isLegacyDatabase(filename))

@@ -1,4 +1,5 @@
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type FactCheck, type FactCheckFinding, type StartAssistantRequest } from "@skladno/shared";
+import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleStore } from "../ports/article-store.js";
@@ -24,6 +25,13 @@ export interface PreparedAssistantRequest extends AssistantServiceRequest {
     resolvedSkillId?: BuiltInSkillId;
     operation: EditorialOperation;
     engine: EditorialEngine;
+    reusableFactFindings?: FactCheckFinding[];
+}
+
+
+interface FactChecksStore {
+    list(articleId: string): FactCheck[];
+    save(artifactId: string, articleId: string, revisionId: string): void;
 }
 
 
@@ -88,6 +96,20 @@ function errorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_IN
 }
 
 
+function enrichedFactCheck(factCheck: FactCheck, revisionId: string): FactCheck {
+    const checkedAt = new Date().toISOString();
+    return {
+        ...factCheck,
+        reviewedRevisionId: revisionId,
+        createdAt: checkedAt,
+        findings: factCheck.findings.map((finding) => {
+            const factId = createHash("sha256").update(finding.claim.trim().toLowerCase().replace(/\s+/g, " ")).digest("hex").slice(0, 16);
+            return { ...finding, factId, occurrenceId: `${revisionId}:${factId}`, checkedAt };
+        }),
+    };
+}
+
+
 export class AssistantService {
     constructor(
         private readonly articles: ArticleStore,
@@ -95,6 +117,7 @@ export class AssistantService {
         private readonly styleCorpus: StyleCorpusStore,
         private readonly artifacts: AssistantArtifactStore,
         private readonly engines: EditorialEngineResolver,
+        private readonly factChecks: FactChecksStore = { list: () => [], save: () => undefined },
     ) { }
 
 
@@ -140,7 +163,13 @@ export class AssistantService {
             ? getPublishLimitProfile(article.publishingProfileId).characterLimit
             : undefined;
 
-        return { ...request, articleContent, ...(publishingCharacterLimit ? { publishingCharacterLimit } : {}), resolvedSkillId, operation, engine };
+        const reusableFactFindings = resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING
+            ? this.factChecks.list(article.id).flatMap((factCheck) => factCheck.findings
+                .filter((finding) => finding.status === FACT_CHECK_STATUS.SUPPORTED)
+                .map((finding) => ({ ...finding, reusedFromRevisionId: factCheck.reviewedRevisionId })))
+            : [];
+
+        return { ...request, articleContent, ...(publishingCharacterLimit ? { publishingCharacterLimit } : {}), resolvedSkillId, operation, engine, ...(reusableFactFindings.length ? { reusableFactFindings } : {}) };
     }
 
 
@@ -149,19 +178,19 @@ export class AssistantService {
         this.assistant.setAuthorMessage(request.requestId, request.authorMessage);
         this.assistant.resolveRequest(request.requestId, request.resolvedSkillId, request.explicitSkillId ? "explicit" : request.resolvedSkillId ? "inferred" : undefined);
 
-        yield { type: "accepted", requestId: request.requestId };
-        yield { type: "skill_resolved", requestId: request.requestId, ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {}) };
+        yield { type: ASSISTANT_EVENT.ACCEPTED, requestId: request.requestId };
+        yield { type: ASSISTANT_EVENT.SKILL_RESOLVED, requestId: request.requestId, ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {}) };
 
         let completed = false;
         try {
             for await (const event of this.engineStream(request, signal)) {
                 if (event.type === EDITORIAL_ENGINE_EVENT.TEXT_DELTA) {
-                    yield { type: "text_delta", requestId: request.requestId, delta: event.delta };
+                    yield { type: ASSISTANT_EVENT.TEXT_DELTA, requestId: request.requestId, delta: event.delta };
                 } else if (event.type === EDITORIAL_ENGINE_EVENT.TOOL_STATUS) {
-                    yield { type: "tool_status", requestId: request.requestId, tool: event.tool, status: event.status };
+                    yield { type: ASSISTANT_EVENT.TOOL_STATUS, requestId: request.requestId, tool: event.tool, status: event.status, ...(event.claims ? { claims: event.claims } : {}) };
                 } else {
                     completed = true;
-                    yield { type: "completed", requestId: request.requestId, ...this.persistCompletion(request, event) };
+                    yield { type: ASSISTANT_EVENT.COMPLETED, requestId: request.requestId, ...this.persistCompletion(request, event) };
                 }
             }
 
@@ -191,7 +220,8 @@ export class AssistantService {
                 ...(request.scope.kind === "selection" ? { surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
                 ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
                 ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile } : {})
+                ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile } : {}),
+                ...(request.reusableFactFindings ? { reusableFactFindings: request.reusableFactFindings } : {})
             }, signal);
 
         const history = this.assistant.listMessages(request.articleId)
@@ -201,9 +231,10 @@ export class AssistantService {
     }
 
 
-    private persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>): Omit<Extract<AssistantEvent, { type: "completed" }>, "type" | "requestId"> {
+    private persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
         const content = completedContent(request, event.text);
         const kind = responseKind(request.resolvedSkillId);
+        const factCheck = event.factCheck && enrichedFactCheck(event.factCheck, request.scope.baseRevisionId);
         const artifactId = request.resolvedSkillId
             ? this.artifacts.create({
                 articleId: request.articleId,
@@ -216,14 +247,18 @@ export class AssistantService {
                     authorGuidance: request.authorMessage,
                     scope: request.scope,
                     responseId: event.responseId,
-                    proposal: content, findings: event.factCheck ?? event.styleReview,
+                    proposal: content,
+                    ...(factCheck ? { factCheck } : { findings: event.styleReview }),
                     translation: event.translation
                 })
             }).id
             : undefined;
+        if (artifactId && factCheck)
+            this.factChecks.save(artifactId, request.articleId, request.scope.baseRevisionId);
+
         const result: AssistantEditorialResult | undefined = request.resolvedSkillId
             ? {
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING && event.factCheck ? { factCheck: event.factCheck } : {}),
+                ...(request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING && factCheck ? { factCheck } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { proposal: content, ...(event.styleReview ? { styleReview: event.styleReview } : {}) } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && event.translation ? { translation: { metadata: event.translation, content } } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.TALKING_POINTS || request.resolvedSkillId === BUILT_IN_SKILL.NARRATIVE_DRAFT || request.resolvedSkillId === BUILT_IN_SKILL.FLOW_AND_CLARITY ? { proposal: content } : {}),

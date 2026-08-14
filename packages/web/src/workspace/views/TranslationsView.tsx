@@ -2,6 +2,7 @@ import type { Article, TranslationMetadata } from "@skladno/shared";
 import { Banner, Button, EmptyState } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 
+
 export function TranslationsView({ article, translation, stale, create }: {
     article: Article;
     translation: TranslationMetadata | undefined;

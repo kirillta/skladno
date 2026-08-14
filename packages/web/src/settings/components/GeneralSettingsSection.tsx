@@ -5,6 +5,7 @@ import { formatDate, formatDateTime, formatTime, formatTimeZoneLabel, systemTime
 import { Select, Button } from "../../ui/primitives.js";
 import { SettingRow } from "./SettingRow.js";
 
+
 function formatExample(general: GeneralSettings): string {
     return formatDateTime(new Date(), general.interfaceLocale, general.dateFormat, general.timeFormat, general.timeZone);
 }

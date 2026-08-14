@@ -13,6 +13,7 @@ import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
 
+
 // Product scenarios: workspace.library.create-and-select, workspace.assistant.quick-action, workspace.empty.create-article, workspace.header.metadata-and-deletion, workspace.navigation.persisted-view, workspace.publishing.over-guidance, history-and-publishing.publishing-guidance, cross-cutting.accessible-workspace-separators
 
 function article(id: string, title: string): Article {
@@ -431,6 +432,7 @@ describe("Editorial Workspace", () => {
             get: () => 640,
         });
 
+
         function AssistantPanelHarness() {
             const [collapsed, setCollapsed] = useState(false);
 
@@ -439,6 +441,7 @@ describe("Editorial Workspace", () => {
                 { id: "latest", articleId: "one", role: "assistant", kind: "response", status: "completed", content: "The latest response.", createdAt: "2026-01-01T00:01:00.000Z", updatedAt: "2026-01-01T00:01:00.000Z" },
             ]} />;
         }
+
 
         try {
             const panel = renderLocalized(<AssistantPanelHarness />);
@@ -510,17 +513,12 @@ describe("Editorial Workspace", () => {
     });
 
 
-    it("selects a target language from the Article Header", async () => {
-        const user = userEvent.setup();
-        const setLanguage = vi.fn();
-        const header = renderLocalized(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={setLanguage} />);
+    it("keeps only the source language selector in the Article Header", () => {
+        const header = renderLocalized(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} />);
         const headerScope = within(header.container);
 
-        expect(headerScope.getByRole("combobox", { name: "Target language" })).toBeTruthy();
-
-        await user.selectOptions(headerScope.getByRole("combobox", { name: "Target language" }), "pt");
-
-        expect(setLanguage).toHaveBeenCalledWith("pt");
+        expect(headerScope.getByRole("combobox", { name: "Source language" })).toBeTruthy();
+        expect(headerScope.queryByRole("combobox", { name: "Target language" })).toBeNull();
     });
 
 
@@ -539,7 +537,7 @@ describe("Editorial Workspace", () => {
     it("renames an Article from its header when editing finishes", async () => {
         const user = userEvent.setup();
         const updateArticle = vi.fn().mockResolvedValue(undefined);
-        const header = renderLocalized(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
+        const header = renderLocalized(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} />);
         const headerScope = within(header.container);
 
         await user.click(headerScope.getByRole("button", { name: "Rename article: Untitled article" }));
@@ -554,7 +552,7 @@ describe("Editorial Workspace", () => {
     it("requires confirmation before deleting an Article", async () => {
         const user = userEvent.setup();
         const remove = vi.fn().mockResolvedValue(undefined);
-        const header = renderLocalized(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={remove} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />);
+        const header = renderLocalized(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={remove} focusMode={false} setFocusMode={vi.fn()} />);
         const headerScope = within(header.container);
 
         await user.click(headerScope.getByRole("button", { name: "Delete article" }));

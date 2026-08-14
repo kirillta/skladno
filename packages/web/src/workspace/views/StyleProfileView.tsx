@@ -3,6 +3,7 @@ import type { StyleCorpus, StyleReview } from "@skladno/shared";
 import { Button, Field, TextareaField } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 
+
 export function StyleProfileView({ corpus, findings, add, remove }: {
     corpus: StyleCorpus | undefined;
     findings: StyleReview | undefined;

@@ -234,12 +234,14 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
         editor.focus();
     };
 
+
     function rememberBlockSelection() {
         editor.getEditorState().read(() => {
             const selection = $getSelection();
             savedBlockSelection.current = selection?.clone() ?? null;
         });
     }
+
 
     function applyBlockType(type: BlockType) {
         editor.update(() => {
@@ -253,6 +255,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
         editor.focus();
     }
 
+
     function applyTextFormat(format: TextFormatType) {
         editor.update(() => {
             const selection = $getSelection();
@@ -262,6 +265,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
 
         editor.focus();
     }
+
 
     function applyList(type: ListType) {
         editor.update(() => {
@@ -282,6 +286,7 @@ function Toolbar({ editor, openLink }: { editor: LexicalEditor; openLink: () => 
 
         editor.focus();
     }
+
 
     const keyNav = (event: KeyboardEvent<HTMLDivElement>) => {
         const items = [...event.currentTarget.querySelectorAll<HTMLElement>("a,button,select")];
@@ -378,6 +383,7 @@ function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => voi
     }), [editor]
     );
 
+
     function apply() {
         if (!isSupportedArticleLink(url)) {
             setError("Use an http:, https:, or mailto: URL.");
@@ -398,6 +404,7 @@ function LinkDialog({ editor, close }: { editor: LexicalEditor; close: () => voi
         close();
         editor.focus();
     }
+
 
     return <Dialog open aria-labelledby="link-dialog-title" className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl">
         <h2 id="link-dialog-title" className="text-base font-semibold">{editing ? intl.formatMessage({ id: "editor.link" }) : intl.formatMessage({ id: "editor.link" })}</h2>

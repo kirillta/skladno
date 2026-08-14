@@ -28,11 +28,13 @@ export function DraftConflictDialog({ conflict, open, close, resolve }: {
     if (!conflict)
         return null;
 
+
     function confirmAndResolve(mode: "draft" | "revision") {
         const messageId = mode === "draft" ? "draftConflict.confirmDraft" : "draftConflict.confirmRevision";
         if (window.confirm(intl.formatMessage({ id: messageId })))
             void resolve(mode);
     }
+
 
     const latestContent = conflict.draft?.content ?? conflict.article.currentRevision.content;
     return <dialog ref={dialog} className="fixed inset-0 z-50 m-auto max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100vw-2rem)] overflow-auto rounded-panel border border-border bg-surface-raised p-5 text-ink shadow-dialog sm:max-w-3xl" aria-labelledby="draft-conflict-title" onCancel={(event) => {

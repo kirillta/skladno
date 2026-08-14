@@ -1,6 +1,7 @@
 import { Button, TextareaField } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 
+
 export function PublishingPreviewView({ publishing }: {
     publishing: {
         text: string;

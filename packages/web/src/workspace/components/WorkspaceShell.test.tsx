@@ -8,6 +8,7 @@ import { WorkspaceShell } from "./WorkspaceShell.js";
 
 const originalViewportWidth = window.innerWidth;
 
+
 function setViewportWidth(width: number) {
     Object.defineProperty(window, "innerWidth", {
         configurable: true,

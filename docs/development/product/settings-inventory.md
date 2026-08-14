@@ -1,6 +1,6 @@
 # Settings inventory
 
-This file is generated from `product-model/areas/settings.json`. Edit the canonical product model, then run `npm run product:docs`.
+This file is generated from `product-model/areas/settings.json`. Edit the canonical product model, then run `npm run product:docs -- settings`.
 
 | ID | Area | Feature | Status | Owner / contract |
 |---|---|---|---|---|

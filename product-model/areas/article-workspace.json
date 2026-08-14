@@ -103,7 +103,7 @@
                 "packages/web/src/workspace/components/WorkspaceViewRouter.tsx",
                 "scripts/web-import-boundaries.mjs"
             ],
-            "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation; Proposal Review uses the shared quiet scrollbar.",
+            "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation; actionable and stale Workspace Tab badges use visible text rather than dots, and every scrollable supporting View uses the shared quiet scrollbar.",
             "persistence": "Active View is a local workspace preference; results retain their Article and base Revision.",
             "scenarioIds": [
                 "workspace.navigation.keyboard-tabs",
@@ -223,7 +223,7 @@
                 "packages/web/src/workspace/views/FactCheckView.tsx",
                 "packages/web/src/workspace/views/StyleProfileView.tsx"
             ],
-            "contract": "Findings never modify Article text and raw style samples remain local.",
+            "contract": "Findings never modify Article text; unchanged Facts and accepted findings survive Revision updates, while changed unresolved Facts become stale. Raw style samples remain local.",
             "persistence": "Completed Editorial artifacts and local Style corpus.",
             "scenarioIds": [
                 "workspace.findings.advisory-only"
@@ -615,7 +615,7 @@
             ],
             "event": "Author reviews Fact Check or Style Profile output.",
             "expected": [
-                "Findings retain freshness state and source context"
+                "Findings retain per-Fact freshness, acceptance state, and source context across Revision updates"
             ],
             "forbidden": [
                 "Changing Article text from advisory output"

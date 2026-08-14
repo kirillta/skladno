@@ -16,10 +16,12 @@ export interface TextProposal {
     changes: ProposalChange[];
 }
 
+
 export interface ProposalChangeSummary {
     changeId: string;
     summary: string;
 }
+
 
 export interface SummarizeProposalInput {
     editorialArtifactId: string;
@@ -44,6 +46,19 @@ export const restoreRevisionPath = (articleId: string, revisionId: string) => `$
 
 function lines(content: string): string[] {
     return content === "" ? [] : content.split("\n");
+}
+
+
+function replacementLines(change: ProposalChange, preserveBlankLines: boolean): string[] {
+    if (!preserveBlankLines)
+        return change.proposalLines;
+
+    const proposedText = change.proposalLines.filter((line) => line.trim() !== "");
+    if (proposedText.length !== change.baseLines.filter((line) => line.trim() !== "").length)
+        return change.proposalLines;
+
+    let index = 0;
+    return change.baseLines.map((line) => line.trim() === "" ? line : proposedText[index++]!);
 }
 
 
@@ -112,14 +127,14 @@ export function createTextProposal(baseContent: string, proposedContent: string)
 }
 
 
-export function applyProposalChanges(proposal: TextProposal, selectedChangeIds: ReadonlySet<string>): string {
+export function applyProposalChanges(proposal: TextProposal, selectedChangeIds: ReadonlySet<string>, preserveBlankLines = false): string {
     const baseLines = lines(proposal.baseContent);
     const result: string[] = [];
     let cursor = 0;
 
     for (const change of proposal.changes) {
         result.push(...baseLines.slice(cursor, change.baseStart));
-        result.push(...(selectedChangeIds.has(change.id) ? change.proposalLines : change.baseLines));
+        result.push(...(selectedChangeIds.has(change.id) ? replacementLines(change, preserveBlankLines) : change.baseLines));
         cursor = change.baseEnd;
     }
 

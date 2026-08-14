@@ -1,5 +1,5 @@
 import { ArticleService } from "../application/articles/article-service.js";
-import { AssistantRepository, ArticlesRepository, EditorialArtifactsRepository, EditorialSessionsRepository, MaterialsRepository, SettingsRepository, StyleCorpusRepository, type SqliteDatabase } from "../infrastructure/persistence/index.js";
+import { AssistantRepository, ArticlesRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, MaterialsRepository, SettingsRepository, StyleCorpusRepository, type SqliteDatabase } from "../infrastructure/persistence/index.js";
 
 
 export interface TestPersistence {
@@ -8,6 +8,7 @@ export interface TestPersistence {
     assistant: AssistantRepository;
     editorialArtifacts: EditorialArtifactsRepository;
     editorialSessions: EditorialSessionsRepository;
+    factChecks: FactChecksRepository;
     materials: MaterialsRepository;
     settings: SettingsRepository;
     styleCorpus: StyleCorpusRepository;
@@ -19,6 +20,7 @@ export function createTestPersistence(database: SqliteDatabase): TestPersistence
     const assistant = new AssistantRepository(database);
     const editorialArtifacts = new EditorialArtifactsRepository(database);
     const editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.get(articleId)));
+    const factChecks = new FactChecksRepository(database);
     const materials = new MaterialsRepository(database);
     const settings = new SettingsRepository(database);
     const styleCorpus = new StyleCorpusRepository(database);
@@ -30,6 +32,7 @@ export function createTestPersistence(database: SqliteDatabase): TestPersistence
         assistant,
         editorialArtifacts,
         editorialSessions,
+        factChecks,
         materials,
         settings,
         styleCorpus,

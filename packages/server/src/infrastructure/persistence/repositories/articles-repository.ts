@@ -57,6 +57,7 @@ const articleSelect = "SELECT a.id article_id, a.title, a.language, a.audience, 
 export class ArticlesRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
+
     create(input: CreateArticleInput): Article {
 
         const language = input.language;

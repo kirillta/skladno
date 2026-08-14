@@ -10,6 +10,7 @@ import { PublishingService } from "../../application/publishing/publishing-servi
 import { object, readJson, writeJson } from "../transport/json.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
 
+
 export function handlePublishSettingsRoute(response: ServerResponse, publishing: PublishingService): void {
     const profileId = publishing.getProfile();
 

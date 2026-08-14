@@ -25,12 +25,14 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
     const intl = useIntl();
     const cards = useRef<(HTMLElement | null)[]>([]);
 
+
     function moveChange(direction: -1 | 1) {
         const current = cards.current.findIndex((card) => card === document.activeElement);
         const index = current < 0 ? 0 : (current + direction + cards.current.length) % cards.current.length;
 
         cards.current[index]?.focus();
     }
+
 
     if (!review)
         return <EmptyState title={intl.formatMessage({ id: "views.proposalEmptyTitle" })}>{intl.formatMessage({ id: "views.proposalEmpty" })}</EmptyState>;

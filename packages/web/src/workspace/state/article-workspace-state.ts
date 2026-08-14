@@ -28,6 +28,7 @@ function withoutDraft(article: Article): Omit<Article, "draft"> {
     return result;
 }
 
+
 export function articleContentForWorkspace(article: Article): string {
     if (article.draft?.baseRevisionId === article.currentRevisionId)
         return article.draft.content;
@@ -155,6 +156,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
         timers.current.set(articleId, setTimeout(() => void checkpoint(articleId, content).catch(() => undefined), 750));
     }
 
+
     checkpointRef.current = checkpoint;
 
 
@@ -163,6 +165,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
             if (document.visibilityState === "hidden" && selectedArticleId)
                 void checkpointRef.current(selectedArticleId).catch(() => undefined);
         }
+
 
         document.addEventListener("visibilitychange", saveWhenHidden);
 

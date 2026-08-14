@@ -38,7 +38,7 @@ function PseudoLocaleFixture() {
     return <IntlProvider locale="en-XA" messages={pseudoMessages} onError={(error) => {
         throw error;
     }}>
-        <ArticleHeader article={article()} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} targetLanguage="es" setTargetLanguage={vi.fn()} />
+        <ArticleHeader article={article()} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} />
         <ArticleStatusBar revisionNumber={1} length={{ count: 12, remaining: 2988, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />
         <EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="es" />
     </IntlProvider>;

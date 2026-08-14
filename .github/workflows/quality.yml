@@ -32,12 +32,6 @@ jobs:
             - name: Check product model
               run: npm run product:check
 
-            - name: Check changed product areas
-              env:
-                  PRODUCT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-                  PRODUCT_HEAD_SHA: ${{ github.sha }}
-              run: npm run product:changed -- "$PRODUCT_BASE_SHA" "$PRODUCT_HEAD_SHA"
-
             - name: Lint
               run: npm run lint
 

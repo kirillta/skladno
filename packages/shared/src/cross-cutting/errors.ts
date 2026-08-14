@@ -35,10 +35,12 @@ export const APPLICATION_ERROR = {
 
 export type ApplicationErrorCode = typeof APPLICATION_ERROR[keyof typeof APPLICATION_ERROR];
 
+
 export interface ApplicationErrorPayload {
     code: ApplicationErrorCode;
     parameters?: Record<string, string | number>;
 }
+
 
 /** A renderer-safe failure returned by the local service. */
 export class ApplicationClientError extends Error {

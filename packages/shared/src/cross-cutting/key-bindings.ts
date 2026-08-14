@@ -21,6 +21,7 @@ export type KeyBindingCommandId = typeof KEY_BINDING_COMMAND[keyof typeof KEY_BI
 export type KeyBindingCategory = "general" | "workspace" | "assistant";
 export type KeyBindingScope = "application" | "assistant";
 
+
 export interface KeyBinding {
     primary: boolean;
     shift: boolean;
@@ -28,7 +29,9 @@ export interface KeyBinding {
     key: string;
 }
 
+
 export type KeyBindingOverrides = Partial<Record<KeyBindingCommandId, KeyBinding | null>>;
+
 
 export interface KeyBindingCommand {
     id: KeyBindingCommandId;
@@ -40,9 +43,11 @@ export interface KeyBindingCommand {
     allowInEditable: boolean;
 }
 
+
 function binding(key: string, options: Partial<Omit<KeyBinding, "key">> = {}): KeyBinding {
     return { primary: true, shift: false, alt: false, ...options, key };
 }
+
 
 export const keyBindingCommands = [
     { id: KEY_BINDING_COMMAND.NEW_ARTICLE, category: "general", labelMessageId: "keyBindings.newArticle", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("n"), scope: "application", allowInEditable: true },
@@ -65,9 +70,11 @@ export const keyBindingCommands = [
 
 const commandIds = new Set<KeyBindingCommandId>(keyBindingCommands.map((command) => command.id));
 
+
 export function isKeyBindingCommandId(value: unknown): value is KeyBindingCommandId {
     return typeof value === "string" && commandIds.has(value as KeyBindingCommandId);
 }
+
 
 export function normalizeKeyBinding(value: unknown): KeyBinding | undefined {
     if (!value || typeof value !== "object")
@@ -84,13 +91,16 @@ export function normalizeKeyBinding(value: unknown): KeyBinding | undefined {
     return { primary: candidate.primary === true, shift: candidate.shift === true, alt: candidate.alt === true, key };
 }
 
+
 export function keyBindingsEqual(left: KeyBinding, right: KeyBinding): boolean {
     return left.primary === right.primary && left.shift === right.shift && left.alt === right.alt && left.key === right.key;
 }
 
+
 export function resolveKeyBindings(overrides: KeyBindingOverrides = {}): Record<KeyBindingCommandId, KeyBinding | null> {
     return Object.fromEntries(keyBindingCommands.map((command) => [command.id, Object.prototype.hasOwnProperty.call(overrides, command.id) ? overrides[command.id]! : command.defaultBinding])) as Record<KeyBindingCommandId, KeyBinding | null>;
 }
+
 
 export function findKeyBindingConflict(bindings: Record<KeyBindingCommandId, KeyBinding | null>): [KeyBindingCommandId, KeyBindingCommandId] | undefined {
     const entries = Object.entries(bindings) as [KeyBindingCommandId, KeyBinding | null][];
@@ -104,6 +114,7 @@ export function findKeyBindingConflict(bindings: Record<KeyBindingCommandId, Key
             return [firstId, duplicate[0]];
     }
 }
+
 
 export function formatKeyBinding(binding: KeyBinding | null, platform = ""): string {
     if (!binding)

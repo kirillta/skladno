@@ -6,6 +6,7 @@ import type { AssistantClient, AssistantMessage } from "../../assistant/assistan
 
 export const articlesPath = "/api/articles";
 
+
 /** The transport-neutral operations required by the author workspace. */
 export interface ArticleLibraryClient extends RevisionClient, AssistantClient {
     listArticles(): Promise<Article[]>;
@@ -28,6 +29,7 @@ export class ArticleDraftConflictError extends Error {
         this.name = "ArticleDraftConflictError";
     }
 }
+
 
 export class ArticleRevisionConflictError extends Error {
     constructor(public readonly article: Article) {

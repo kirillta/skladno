@@ -4,6 +4,7 @@ import { defaultInterfaceLocale, type ApplicationSettingsClient, type InterfaceL
 import { catalogByLocale } from "./catalogs.js";
 import { messages } from "./messages.js";
 
+
 export function I18nProvider({ client, children }: { client: ApplicationSettingsClient; children: ReactNode }) {
     const [locale, setLocale] = useState<InterfaceLocale>(defaultInterfaceLocale);
 

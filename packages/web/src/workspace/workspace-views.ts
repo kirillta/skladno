@@ -14,6 +14,7 @@ export const workspaceViews = [
 
 export type WorkspaceView = typeof workspaceViews[number];
 
+
 export interface WorkspaceViewDefinition {
     id: WorkspaceView;
     label: MessageId;

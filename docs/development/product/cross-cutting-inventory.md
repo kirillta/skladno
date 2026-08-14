@@ -1,6 +1,6 @@
 # Cross Cutting inventory
 
-This file is generated from `product-model/areas/cross-cutting.json`. Edit the canonical product model, then run `npm run product:docs`.
+This file is generated from `product-model/areas/cross-cutting.json`. Edit the canonical product model, then run `npm run product:docs -- cross-cutting`.
 
 | ID | Area | Feature | Status | Owner / contract |
 |---|---|---|---|---|

@@ -1,6 +1,7 @@
 /** The stable HTTP route for the service health probe. */
 export const healthPath = "/api/health";
 
+
 /**
  * Transport-neutral representation of the local service state.
  * Future Electron adapters can return this shape without changing the UI.
@@ -30,6 +31,7 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
         !Number.isNaN(Date.parse(candidate.timestamp))
     );
 }
+
 
 export function parseHealthResponse(value: unknown): HealthResponse {
     if (!isHealthResponse(value))
