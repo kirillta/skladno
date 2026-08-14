@@ -45,7 +45,8 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
 
     if (view === "fact-check") {
         const revisionNumber = revisions.revisions.findIndex((revision) => revision.id === editorial.factCheck?.reviewedRevisionId);
-        return panel(<FactCheckView factCheck={editorial.factCheck} revisionNumber={revisionNumber < 0 ? undefined : revisionNumber + 1} stale={editorial.factCheckStale} runAgain={runFactCheck} resolve={editorial.resolveFactCheck} proposeCorrections={editorial.proposeFactCorrections} />);
+        const reusedRevisionNumbers = Object.fromEntries(revisions.revisions.map((revision, index) => [revision.id, index + 1]));
+        return panel(<FactCheckView factCheck={editorial.factCheck} revisionNumber={revisionNumber < 0 ? undefined : revisionNumber + 1} reusedRevisionNumbers={reusedRevisionNumbers} stale={editorial.factCheckStale} runAgain={runFactCheck} resolve={editorial.resolveFactCheck} proposeCorrections={editorial.proposeFactCorrections} />);
     }
 
     if (view === "style-profile")

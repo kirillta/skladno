@@ -59,13 +59,14 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
 }
 
 
-export function Badge({ children, className, variant = "soft", compact = false, ...props }: PropsWithChildren<HTMLAttributes<HTMLSpanElement> & { variant?: "soft" | "solid"; compact?: boolean }>) {
+export function Badge({ children, className, variant = "soft", compact = false, tone, ...props }: PropsWithChildren<HTMLAttributes<HTMLSpanElement> & { variant?: "soft" | "solid"; compact?: boolean; tone?: Tone }>) {
+    const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
     return (
         <span
             {...props}
             className={joinClassNames(
                 "inline-flex items-center rounded-full font-semibold",
-                variant === "solid" ? "bg-brand text-on-brand" : "bg-brand-soft text-brand",
+                variant === "solid" ? "bg-brand text-on-brand" : tone ? toneClasses[tone] : "bg-brand-soft text-brand",
                 compact ? "size-4 shrink-0 justify-center p-0 text-badge" : "gap-1 px-2 py-0.5 text-xs leading-4",
                 className,
             )}
@@ -76,9 +77,9 @@ export function Badge({ children, className, variant = "soft", compact = false, 
 }
 
 
-export function Status({ label, children, tone = "info" }: PropsWithChildren<{ label: string; tone?: Tone }>) {
+export function Status({ label, children, className, compact = false, tone = "info" }: PropsWithChildren<{ label: string; className?: string; compact?: boolean; tone?: Tone }>) {
     const toneClasses = { info: "bg-info-soft text-info", success: "bg-success-soft text-success", warning: "bg-warning-soft text-warning", error: "bg-danger-soft text-danger" };
-    return <div className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone])} role="status"><StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" /><span><strong>{label}</strong>{children}</span></div>;
+    return <div className={joinClassNames("flex gap-2 rounded-panel border border-border text-xs leading-5", compact ? "min-h-9 p-2" : "p-3", toneClasses[tone], className)} role="status"><StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" /><span><strong>{label}</strong>{children}</span></div>;
 }
 
 
