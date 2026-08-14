@@ -132,6 +132,22 @@ export interface AssistantEditorialResult {
 }
 
 
+export interface FactCheckClaimPreview {
+    claim: string;
+    checked: boolean;
+}
+
+
+export const ASSISTANT_EVENT = {
+    ACCEPTED: "accepted",
+    SKILL_RESOLVED: "skill_resolved",
+    TEXT_DELTA: "text_delta",
+    TOOL_STATUS: "tool_status",
+    COMPLETED: "completed",
+    ERROR: "error",
+} as const;
+
+
 export const assistantMessagesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/messages`;
 export const assistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
 
@@ -148,12 +164,12 @@ export interface StartAssistantRequest {
 
 
 export type AssistantEvent =
-    | { type: "accepted"; requestId: string }
-    | { type: "skill_resolved"; requestId: string; skillId?: BuiltInSkillId; source?: AssistantSkillSource }
-    | { type: "text_delta"; requestId: string; delta: string }
-    | { type: "tool_status"; requestId: string; tool: string; status: "started" | "completed" }
-    | { type: "completed"; requestId: string; responseKind: AssistantResponseKind; messageId: string; editorialArtifactId?: string; result?: AssistantEditorialResult }
-    | { type: "error"; requestId: string; errorCode: import("../cross-cutting/errors.js").ApplicationErrorCode; retryable: boolean };
+    | { type: typeof ASSISTANT_EVENT.ACCEPTED; requestId: string }
+    | { type: typeof ASSISTANT_EVENT.SKILL_RESOLVED; requestId: string; skillId?: BuiltInSkillId; source?: AssistantSkillSource }
+    | { type: typeof ASSISTANT_EVENT.TEXT_DELTA; requestId: string; delta: string }
+    | { type: typeof ASSISTANT_EVENT.TOOL_STATUS; requestId: string; tool: string; status: "started" | "completed"; claims?: FactCheckClaimPreview[] }
+    | { type: typeof ASSISTANT_EVENT.COMPLETED; requestId: string; responseKind: AssistantResponseKind; messageId: string; editorialArtifactId?: string; result?: AssistantEditorialResult }
+    | { type: typeof ASSISTANT_EVENT.ERROR; requestId: string; errorCode: import("../cross-cutting/errors.js").ApplicationErrorCode; retryable: boolean };
 
 
 export interface AssistantClient {

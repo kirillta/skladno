@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, type Article, type AssistantMessage, type BuiltInSkillId, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
+import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, type Article, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
 import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
@@ -11,10 +11,11 @@ import { composerCaretOffset, composerText, placeCaretAfterSkill, textBeforeSkil
 import { selectionPreview, skillMessages } from "./assistant/assistant-messages.js";
 
 
-export function EditorialAssistantPanel({ state, message, errorDetails, onRequest, onCancel, collapsed, setCollapsed, language, assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
+export function EditorialAssistantPanel({ state, message, errorDetails, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, language, assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
+    factCheckClaims?: FactCheckClaimPreview[];
     onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string, skillOffset?: number) => Promise<void>;
     onCancel: () => void;
     collapsed: boolean;
@@ -244,7 +245,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, onReques
                 <ChevronRightIcon className="size-3" />
             </Button>
         </header>
-        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} generalSettings={generalSettings} elapsedDuration={elapsedDuration} />
+        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} generalSettings={generalSettings} elapsedDuration={elapsedDuration} />
         <AssistantComposer
             state={state}
             guidance={guidance}

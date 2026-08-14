@@ -368,6 +368,11 @@ test("fact checks persist completed findings and citations against the reviewed 
 
 test("Assistant Fact Check results persist revision-bound findings for review", async () => {
     const engine = new FixtureEngine([{
+        type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS,
+        tool: "claim_extraction",
+        status: "completed",
+        claims: [{ claim: "HTTP was standardized in 1999.", checked: false }],
+    }, {
         type: EDITORIAL_ENGINE_EVENT.COMPLETED,
         responseId: "assistant-fact-check-complete",
         text: "",
@@ -390,6 +395,7 @@ test("Assistant Fact Check results persist revision-bound findings for review", 
         const body = await response.text();
         const checks = await (await fetch(`${baseUrl}/api/articles/${article.id}/fact-checks`)).json() as { reviewedRevisionId: string; findings: { occurrenceId?: string }[] }[];
 
+        assert.match(body, /"claims":\["HTTP was standardized in 1999\."\]/);
         assert.match(body, /"reviewedRevisionId":"[^"]+"/);
         assert.equal(checks[0]?.reviewedRevisionId, article.currentRevisionId);
         assert.ok(checks[0]?.findings[0]?.occurrenceId);

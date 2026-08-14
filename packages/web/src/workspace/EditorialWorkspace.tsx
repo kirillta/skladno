@@ -171,6 +171,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             state={assistant.state}
             message={assistant.message}
             errorDetails={assistant.errorDetails}
+            factCheckClaims={assistant.factCheckClaims}
             onRequest={assistant.request}
             onCancel={assistant.cancel}
             collapsed={layout.assistantCollapsed}

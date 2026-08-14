@@ -1,11 +1,12 @@
-import { BUILT_IN_SKILL, type AssistantMessage, type BuiltInSkillId, type GeneralSettings } from "@skladno/shared";
+import { BUILT_IN_SKILL, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
 import { Button } from "../../../ui/primitives.js";
 import { formatDateTime } from "../../../i18n/formatting.js";
 import { useIntl } from "react-intl";
 import { responseMessages, selectionPreview, skillMessages } from "./assistant-messages.js";
+import { FactCheckClaims } from "./FactCheckClaims.js";
 
 
-export function AssistantTimelineMessage({ message, openView, generalSettings, skillByRequest }: { message: AssistantMessage; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, BuiltInSkillId> }) {
+export function AssistantTimelineMessage({ message, factCheckClaims, openView, generalSettings, skillByRequest }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, BuiltInSkillId> }) {
     const intl = useIntl();
     const authorMessage = message.role === "author";
     const skillId = message.skillId ?? (message.requestId ? skillByRequest.get(message.requestId) : undefined);
@@ -31,7 +32,8 @@ export function AssistantTimelineMessage({ message, openView, generalSettings, s
                 {messageContent.slice(skillOffset)}
             </>}
         </p>}
-        {view && <Button className="mt-2" variant="secondary" onClick={() => openView?.(view)}>
+        {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
+        {view && <Button className="mt-3" variant="secondary" onClick={() => openView?.(view)}>
             {intl.formatMessage({ id: view === "fact-check" || view === "style-profile" ? "assistant.viewFindings" : view === "translations" ? "assistant.reviewTranslation" : "assistant.reviewProposal" })}
         </Button>}
         <time className="mt-2 block text-xs text-muted">{formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)}</time>

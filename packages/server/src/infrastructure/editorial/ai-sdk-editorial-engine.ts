@@ -1,7 +1,7 @@
 import { generateText, Output, streamText, type ModelMessage } from "ai";
 import { createOpenAI, type OpenaiResponsesProviderMetadata } from "@ai-sdk/openai";
 import { z } from "zod";
-import { EDITORIAL_OPERATION, FACT_CHECK_STATUS, type FactCheck, type StyleProfile, type StyleReview } from "@skladno/shared";
+import { EDITORIAL_OPERATION, FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding, type StyleProfile, type StyleReview } from "@skladno/shared";
 
 import type { EditorialConversationRequest } from "../../application/ports/editorial-conversation-request.js";
 import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
@@ -125,7 +125,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
     async *stream(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
         try {
             if (request.operation === EDITORIAL_OPERATION.FACT_CHECK) {
-                yield* this.streamFactCheck(request.article, signal);
+                yield* this.streamFactCheck(request, signal);
                 return;
             }
 
@@ -279,24 +279,47 @@ export class AiSdkEditorialEngine implements EditorialEngine {
     }
 
 
-    private async *streamFactCheck(article: string, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+    private async *streamFactCheck(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
         const stages = ["claim_extraction", "openai_web_research", "evidence_evaluation", "classification", "citation_assembly"];
         for (const tool of stages)
             yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "started" };
 
         const extraction = await generateText({
             model: this.openai.responses(this.options.model),
-            prompt: `Extract up to 12 externally verifiable factual claims from this article. Exclude opinions and advice.\n\n${boundedArticleContext(article)}`,
+            prompt: `Extract up to 12 externally verifiable factual claims from this article. Exclude opinions and advice.\n\n${boundedArticleContext(request.article)}`,
             output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12) }) }),
             abortSignal: signal,
             telemetry: { isEnabled: false },
             providerOptions: this.providerOptions(),
         });
-        if (!extraction.output || !isAcceptedFinish(extraction.finishReason))
+        const extractionResponseId = responseId(extraction.providerMetadata);
+        if (!extraction.output || !extractionResponseId || !isAcceptedFinish(extraction.finishReason))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "OpenAI returned incomplete fact-check claims. Retry the request.");
 
+        const reusableByClaim = new Map<string, FactCheckFinding>();
+        for (const finding of request.reusableFactFindings ?? []) {
+            const key = finding.claim.trim().toLowerCase().replace(/\s+/g, " ");
+            if (finding.status === FACT_CHECK_STATUS.SUPPORTED && !reusableByClaim.has(key))
+                reusableByClaim.set(key, finding);
+        }
+
+        const reusedFindings: FactCheckFinding[] = [];
+        const claimsToCheck = extraction.output.claims.filter(({ claim }) => {
+            const reusable = reusableByClaim.get(claim.trim().toLowerCase().replace(/\s+/g, " "));
+            if (!reusable)
+                return true;
+
+            reusedFindings.push({ ...reusable, claim });
+            return false;
+        });
+
+        yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "completed", claims: [
+            ...reusedFindings.map(({ claim }) => ({ claim, checked: true })),
+            ...claimsToCheck.map(({ claim }) => ({ claim, checked: false })),
+        ] };
+
         const research: { claim: string; evidence: string; sources: unknown }[] = [];
-        for (const { claim } of extraction.output.claims) {
+        for (const { claim } of claimsToCheck) {
             const result = await generateText({
                 model: this.openai.responses(this.options.model),
                 prompt: `Research this factual claim using OpenAI web search. Prefer primary sources, report source URLs, publication dates when available, and brief supporting or contradicting evidence. Do not infer missing evidence.\n\nClaim: ${claim}`,
@@ -308,6 +331,14 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             });
 
             research.push({ claim, evidence: result.text, sources: result.sources });
+        }
+
+        if (!claimsToCheck.length) {
+            for (const tool of stages.filter((tool) => tool !== "claim_extraction"))
+                yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "completed" };
+
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: extractionResponseId, text: "", factCheck: { findings: reusedFindings } };
+            return;
         }
 
         const evaluation = await generateText({
@@ -323,7 +354,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "OpenAI returned incomplete fact-check findings. Retry the request.");
 
         const factCheck: FactCheck = {
-            findings: evaluation.output.findings.map((finding) => ({
+            findings: [...reusedFindings, ...evaluation.output.findings.map((finding) => ({
                 ...finding,
                 sources: finding.sources
                     .filter((source) => /^https:\/\//.test(source.url))
@@ -332,10 +363,10 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                         ...(excerpt ? { excerpt } : {}),
                         ...(publishedAt ? { publishedAt } : {}),
                     })),
-            })),
+            }))],
         };
 
-        for (const tool of stages)
+        for (const tool of stages.filter((tool) => tool !== "claim_extraction"))
             yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "completed" };
 
         yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: completedResponseId, text: "", factCheck };

@@ -1,4 +1,4 @@
-import type { BuiltInSkillId, EditorialOperation, StyleProfile } from "@skladno/shared";
+import type { BuiltInSkillId, EditorialOperation, FactCheckFinding, StyleProfile } from "@skladno/shared";
 
 
 export interface EditorialEngineRequest {
@@ -12,4 +12,5 @@ export interface EditorialEngineRequest {
     targetArticleCharacterLimit?: number;
     previousResponseId?: string;
     targetLanguage?: string;
+    reusableFactFindings?: FactCheckFinding[];
 }
