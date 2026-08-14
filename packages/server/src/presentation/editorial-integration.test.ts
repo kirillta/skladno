@@ -395,7 +395,7 @@ test("Assistant Fact Check results persist revision-bound findings for review", 
         const body = await response.text();
         const checks = await (await fetch(`${baseUrl}/api/articles/${article.id}/fact-checks`)).json() as { reviewedRevisionId: string; findings: { occurrenceId?: string }[] }[];
 
-        assert.match(body, /"claims":\["HTTP was standardized in 1999\."\]/);
+        assert.match(body, /"claims":\[{"claim":"HTTP was standardized in 1999\.","checked":false}\]/);
         assert.match(body, /"reviewedRevisionId":"[^"]+"/);
         assert.equal(checks[0]?.reviewedRevisionId, article.currentRevisionId);
         assert.ok(checks[0]?.findings[0]?.occurrenceId);
