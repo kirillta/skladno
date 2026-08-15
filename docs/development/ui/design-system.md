@@ -10,6 +10,8 @@ The complete typography and color reference is the [visual atlas](visual-atlas.m
 
 Buttons expose default, hover, focus, active, disabled, and loading behavior. The semantic state variants add a solid success/warning/error border, a dashed outdated border, or a double conflicted border so the meaning survives color loss.
 
+Expandable workspace sections may use a short CSS transition for expansion and collapse. Keep the section mounted during the transition, preserve `aria-expanded` and `aria-controls` on the trigger, remove collapsed content from interaction with `aria-hidden` and `inert`, and disable the transition for reduced-motion users.
+
 ## Popup notifications
 
 Use application-level popup notifications for cross-screen outcomes and background actions. Use the `useNotifications` hook within the application notification provider; callers must provide localized title, message, and action text. `notifyError` maps local-service failures through the existing localized error catalog and never presents raw unknown error details.
