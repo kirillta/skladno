@@ -10,6 +10,8 @@ The complete typography and color reference is the [visual atlas](visual-atlas.m
 
 Buttons expose default, hover, focus, active, disabled, and loading behavior. The semantic state variants add a solid success/warning/error border, a dashed outdated border, or a double conflicted border so the meaning survives color loss.
 
+For a short asynchronous action, use the button's loading state and show a centered spinner in place of its visible label. Keep an invisible label to preserve the button's footprint, retain `aria-busy`, and expose a localized `role="status"` label for assistive technology. Disable the action while it is pending; do not add a separate loader that shifts the control row.
+
 Expandable workspace sections may use a short CSS transition for expansion and collapse. Keep the section mounted during the transition, preserve `aria-expanded` and `aria-controls` on the trigger, remove collapsed content from interaction with `aria-hidden` and `inert`, and disable the transition for reduced-motion users.
 
 ## Popup notifications

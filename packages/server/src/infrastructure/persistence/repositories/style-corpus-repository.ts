@@ -82,7 +82,7 @@ export class StyleCorpusRepository {
     }
 
 
-    add(input: CreateStyleCorpusItemInput): StyleCorpus {
+    add(input: CreateStyleCorpusItemInput & { name: string }): StyleCorpus {
         const timestamp = now();
         const materialId = createId();
         this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(materialId, required(input.name, "Corpus item name"), required(input.content, "Corpus item content"), timestamp, timestamp);

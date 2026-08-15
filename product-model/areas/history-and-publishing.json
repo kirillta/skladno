@@ -27,9 +27,9 @@
             "area": "Style corpus",
             "title": "Versioned local writing samples and explicit compact style profile rebuild",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/StyleProfileView.tsx", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
-            "contract": "Authors manage included local writing samples and global rules; input changes leave the current compact profile visible but outdated until an explicit rebuild creates the next version.",
-            "persistence": "Raw samples, global rules, Article-specific rules, and append-only compact profile versions remain local; Style Profile exposes a short local sample excerpt for author recognition.",
+            "owners": ["packages/web/src/workspace/views/StyleProfileView.tsx", "packages/server/src/application/editorial/style-corpus-service.ts", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
+            "contract": "Authors manage included local writing samples and global rules; when an author explicitly submits text without a source name, the configured text generation model names that sample and the submit button shows its loading state. Input changes leave the current compact profile visible but outdated until an explicit rebuild creates the next version.",
+            "persistence": "Raw samples, global rules, Article-specific rules, generated source names, and append-only compact profile versions remain local; Style Profile exposes a short local sample excerpt for author recognition.",
             "scenarioIds": ["history-and-publishing.style-corpus-local"]
         },
         {
@@ -99,11 +99,11 @@
             "id": "history-and-publishing.style-corpus-local",
             "title": "Style corpus stays local while a compact profile is derived",
             "capabilityIds": ["history-and-publishing.style-corpus"],
-            "preconditions": ["The author adds a writing sample."],
+            "preconditions": ["The author adds a writing sample, optionally without a source name."],
             "event": "The style corpus or global rules change.",
-            "expected": ["The current profile is marked outdated until an explicit rebuild creates the next compact version."],
-            "forbidden": ["Raw style samples are not treated as remote application data."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.test.ts" }
+            "expected": ["A submitted blank source name is generated with the configured text model; the current profile is marked outdated until an explicit rebuild creates the next compact version."],
+            "forbidden": ["Raw style samples are not treated as remote application data except for the author-explicit name-generation request."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/application/editorial/style-corpus-service.test.ts" }
         },
         {
             "id": "history-and-publishing.fact-findings-advisory",

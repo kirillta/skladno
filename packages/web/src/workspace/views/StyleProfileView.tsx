@@ -26,7 +26,7 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, a
     findings: StyleReview | undefined;
     findingsStale: boolean;
     articleId: string;
-    add: (name: string, content: string, origin?: "import") => Promise<void>;
+    add: (name: string | undefined, content: string, origin?: "import") => Promise<void>;
     remove: (id: string) => Promise<void>;
     setIncluded: (id: string, included: boolean) => Promise<void>;
     setRules: (rules: string) => Promise<void>;
@@ -54,7 +54,7 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, a
         void operation().then(() => onSuccess?.(), () => undefined).then(() => setPendingAction(undefined));
     };
     const submit = (origin?: "import") => {
-        if (!name.trim() || !content.trim()) {
+        if (!content.trim()) {
             setValidationFailed(true);
             return;
         }
@@ -109,13 +109,21 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, a
                 <div id="style-profile-add-sample" aria-hidden={!adding} {...(!adding ? { inert: true } : {}) as Record<string, boolean>} className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${adding ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0"}`}>
                     <div className="min-h-0 overflow-hidden">
                         <div className="mb-4 rounded-panel border border-border bg-surface p-4">
-                            <label className="block text-xs font-semibold text-ink" htmlFor="style-profile-source-name">{intl.formatMessage({ id: "styleProfile.sourceName" })}<span className="ml-1 text-danger" aria-hidden="true">*</span></label>
-                            <Field id="style-profile-source-name" required aria-required="true" aria-invalid={validationFailed && !name.trim()} placeholder={intl.formatMessage({ id: "styleProfile.sourceName" })} value={name} onChange={(event) => setName(event.target.value)} />
+                            <label className="block text-xs font-semibold text-ink" htmlFor="style-profile-source-name">{intl.formatMessage({ id: "styleProfile.sourceName" })}</label>
+                            <Field id="style-profile-source-name" placeholder={intl.formatMessage({ id: "styleProfile.sourceName" })} value={name} onChange={(event) => setName(event.target.value)} />
                             <label className="mt-3 block text-xs font-semibold text-ink" htmlFor="style-profile-source-content">{intl.formatMessage({ id: "styleProfile.paste" })}<span className="ml-1 text-danger" aria-hidden="true">*</span></label>
                             <TextareaField id="style-profile-source-content" required aria-required="true" aria-invalid={validationFailed && !content.trim()} className="mt-1 min-h-32" placeholder={intl.formatMessage({ id: "styleProfile.paste" })} value={content} onChange={(event) => setContent(event.target.value)} />
                             {validationFailed && <p className="mt-3 text-xs text-muted" role="alert">{intl.formatMessage({ id: "styleProfile.required" })}</p>}
                             {uploadFailed && <Banner className="mt-3" tone="warning" role="alert">{intl.formatMessage({ id: "styleProfile.invalidFile" })}</Banner>}
-                            <div className="mt-3 flex gap-3"><input ref={upload} className="sr-only" type="file" accept=".txt,.md,text/plain,text/markdown" onChange={importFile} /><Button className="flex-1" variant="secondary" disabled={Boolean(pendingAction)} onClick={() => upload.current?.click()}>{intl.formatMessage({ id: "styleProfile.upload" })}</Button><Button state={pendingAction === "add" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={() => submit()}>{intl.formatMessage({ id: "styleProfile.add" })}</Button></div>
+                            <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: "styleProfile.sourceNameHint" })}</p>
+                            <div className="mt-3 flex gap-3">
+                                <input ref={upload} className="sr-only" type="file" accept=".txt,.md,text/plain,text/markdown" onChange={importFile} />
+                                <Button className="flex-1" variant="secondary" disabled={Boolean(pendingAction)} onClick={() => upload.current?.click()}>{intl.formatMessage({ id: "styleProfile.upload" })}</Button>
+                                <Button className="relative" state={pendingAction === "add" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={() => submit()}>{pendingAction === "add" ? <>
+                                    <span className="invisible" aria-hidden="true">{intl.formatMessage({ id: "styleProfile.add" })}</span>
+                                    <svg className="absolute inset-0 m-auto size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" /><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="3" /></svg><span className="sr-only" role="status">{intl.formatMessage({ id: "styleProfile.generatingSourceName" })}</span></> : intl.formatMessage({ id: "styleProfile.add" })}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>

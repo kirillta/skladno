@@ -15,9 +15,27 @@ describe("StyleProfileView", () => {
         await user.click(screen.getByRole("button", { name: "+ Add" }));
         await user.click(screen.getByRole("button", { name: "Add" }));
 
-        expect(screen.getByRole("alert").textContent).toContain("Enter a source name and paste text before adding.");
-        expect(screen.getByPlaceholderText("Source name").getAttribute("aria-invalid")).toBe("true");
-        expect(screen.getByPlaceholderText("Source name").getAttribute("required")).not.toBeNull();
+        expect(screen.getByRole("alert").textContent).toContain("Paste text before adding.");
+        expect(screen.getByText("Leave blank to generate a source name with your text model.")).toBeTruthy();
+        expect(screen.getByPlaceholderText("Source name").getAttribute("required")).toBeNull();
         expect(screen.getByPlaceholderText("Paste text here").getAttribute("required")).not.toBeNull();
+    });
+
+    it("adds text without a source name for generation", async () => {
+        const user = userEvent.setup();
+        let resolveAdd: (() => void) | undefined;
+        const add = vi.fn(() => new Promise<void>((resolve) => {
+            resolveAdd = resolve;
+        }));
+        render(<IntlProvider locale="en" messages={messages}><StyleProfileView articleId="article-1" corpus={undefined} findings={undefined} findingsStale={false} add={add} remove={vi.fn()} setIncluded={vi.fn()} setRules={vi.fn()} rebuild={vi.fn()} getArticleRules={vi.fn().mockResolvedValue("")} setArticleRules={vi.fn()} /></IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: "+ Add" }));
+        await user.type(screen.getByPlaceholderText("Paste text here"), "A representative writing sample.");
+        await user.click(screen.getByRole("button", { name: "Add" }));
+
+        expect(add).toHaveBeenCalledWith("", "A representative writing sample.", undefined);
+        expect(screen.getByRole("status").textContent).toContain("Generating source name");
+        expect(screen.getByRole("button", { name: "Generating source name" }).getAttribute("aria-busy")).toBe("true");
+        resolveAdd?.();
     });
 });

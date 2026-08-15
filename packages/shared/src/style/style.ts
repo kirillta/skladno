@@ -48,7 +48,7 @@ export interface StyleCorpus {
 
 
 export interface CreateStyleCorpusItemInput {
-    name: string;
+    name?: string;
     content: string;
     origin?: "manual" | "import";
 }

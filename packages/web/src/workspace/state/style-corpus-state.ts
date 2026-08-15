@@ -16,7 +16,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient) {
 
     return {
         corpus,
-        add: async (name: string, content: string, origin?: "import") => {
+        add: async (name: string | undefined, content: string, origin?: "import") => {
             try {
                 setCorpus(await client.addStyleCorpusItem({ name, content, origin }));
             } catch (error) {
