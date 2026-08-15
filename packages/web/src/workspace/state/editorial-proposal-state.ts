@@ -312,6 +312,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         styleReview,
         styleReviewStale,
         translation,
+        translationContent: translationResult && translationResult.articleId === selectedArticleId ? translationResult.value.content : undefined,
+        translationBaseRevisionId: translationResult && translationResult.articleId === selectedArticleId ? translationResult.baseRevisionId : undefined,
         translationStale,
         request,
         acceptAll: () => accept(new Set(review ? review.changes.map((change) => change.id) : []), true),

@@ -324,7 +324,7 @@ describe("Editorial Workspace", () => {
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const updateArticle = vi.fn().mockResolvedValue(undefined);
 
-        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} article={article("one", "First Article")} updateArticle={updateArticle} />);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} translationLanguages={["Portuguese"]} assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} article={article("one", "First Article")} updateArticle={updateArticle} />);
         const panelScope = within(panel.container);
 
         expect(panelScope.getByText(/I’m here to help shape this Article/)).toBeTruthy();
@@ -345,7 +345,7 @@ describe("Editorial Workspace", () => {
 
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
-        expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", "Portuguese", "Preserve the key claims.".length);
+        expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", ["Portuguese"], "Preserve the key claims.".length);
     });
 
 
@@ -388,6 +388,19 @@ describe("Editorial Workspace", () => {
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
         expect(onRequest).toHaveBeenCalledWith("", "flow_and_clarity", undefined, 0);
+    });
+
+    it("creates a translation proposal for every configured default language", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" translationLanguages={["Spanish", "German"]} assistantMessages={[]} />);
+        const panelScope = within(panel.container);
+
+        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
+        await user.click(panelScope.getByRole("button", { name: "Translation" }));
+        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+
+        expect(onRequest).toHaveBeenCalledWith("", "translation", ["Spanish", "German"], 0);
     });
 
 

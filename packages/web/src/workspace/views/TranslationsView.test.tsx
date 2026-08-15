@@ -28,9 +28,21 @@ const article: Article = {
 describe("TranslationsView", () => {
     afterEach(cleanup);
 
+    it("starts translation from the workspace without inventing a target language", async () => {
+        const user = userEvent.setup();
+        const translate = vi.fn();
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={{ ...article, language: "ru" }} translation={undefined} stale={false} create={vi.fn()} translate={translate} translationLanguages={["es"]} />
+        </IntlProvider>);
+
+        expect(screen.queryByText(/ru source/)).toBeNull();
+        await user.click(screen.getByRole("button", { name: "Translate" }));
+        expect(translate).toHaveBeenCalledOnce();
+    });
+
     it("workspace.translations.stale-source blocks creating a translation from stale source content", () => {
         render(<IntlProvider locale="en" messages={messages}>
-            <TranslationsView article={article} translation={{ targetLanguage: "Spanish", protectedSpans: [] }} stale create={vi.fn()} />
+            <TranslationsView article={article} translation={{ targetLanguage: "Spanish", protectedSpans: [] }} stale create={vi.fn()} translate={vi.fn()} />
         </IntlProvider>);
 
         expect(screen.getByText("The source Article has changed since this translation proposal was made.")).toBeTruthy();
@@ -44,7 +56,7 @@ describe("TranslationsView", () => {
             resolveCreate = resolve;
         }));
         render(<IntlProvider locale="en" messages={messages}>
-            <TranslationsView article={article} translation={{ targetLanguage: "Spanish", protectedSpans: [] }} stale={false} create={create} />
+            <TranslationsView article={article} translation={{ targetLanguage: "Spanish", protectedSpans: [] }} stale={false} create={create} translate={vi.fn()} />
         </IntlProvider>);
 
         const button = screen.getByRole("button", { name: "Create translation article (Spanish)" });

@@ -15,7 +15,7 @@ import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
 
 
-export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, runFactCheck, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
+export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, runFactCheck, runTranslation, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
     view: WorkspaceView;
     article: Article;
     workspace: ArticleWorkspaceState;
@@ -25,6 +25,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     publishing: PublishingState;
     generalSettings: GeneralSettings;
     runFactCheck: () => void;
+    runTranslation: () => void;
     onSelectionChange?: (value: string | undefined) => void;
     assistantSelection?: string;
     proposalWarningsDismissed: boolean;
@@ -53,7 +54,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
         return panel(<StyleProfileView corpus={corpus.corpus} findings={editorial.styleReview} findingsStale={editorial.styleReviewStale} articleId={article.id} revisions={revisions.revisions} generalSettings={generalSettings} add={corpus.add} remove={corpus.remove} setIncluded={corpus.setIncluded} setRules={corpus.setRules} rebuild={corpus.rebuild} getArticleRules={corpus.getArticleRules} setArticleRules={corpus.setArticleRules} snapshotArticleRevision={corpus.snapshotArticleRevision} />);
 
     if (view === "translations")
-        return panel(<TranslationsView article={article} translation={editorial.translation} stale={editorial.translationStale} create={editorial.createTranslation} />);
+        return panel(<TranslationsView article={article} sourceArticle={article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined} translation={editorial.translation} translationContent={editorial.translationContent} sourceRevisionId={editorial.translationBaseRevisionId ?? article.sourceRevisionId} stale={editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId)} create={editorial.createTranslation} translate={runTranslation} translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language)} />);
 
     return panel(<PublishingPreviewView publishing={publishing} />);
 }

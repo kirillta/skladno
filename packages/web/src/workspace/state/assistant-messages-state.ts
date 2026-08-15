@@ -85,10 +85,17 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         }));
     }, [article, profileRebuilt]);
 
-    const request = useCallback(async (authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string, skillOffset?: number) => {
+    const request = useCallback(async (authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string | readonly string[], skillOffset?: number) => {
         const current = workspace.selectedArticle;
         if (!current)
             return;
+
+        if (targetLanguage && typeof targetLanguage !== "string") {
+            for (const language of targetLanguage)
+                await request(authorMessage, explicitSkillId, language, skillOffset);
+
+            return;
+        }
 
         try {
             const saved = await workspace.save(current.id);

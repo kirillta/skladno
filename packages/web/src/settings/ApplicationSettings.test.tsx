@@ -181,6 +181,30 @@ describe("ApplicationSettings", () => {
         expect(screen.getAllByRole("option", { name: "gpt-5" })).not.toHaveLength(0);
     });
 
+    it("keeps Article and translation language defaults together in Publishing Settings", async () => {
+        const user = userEvent.setup();
+        const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            updateGeneralSettings,
+            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: "Publishing" }));
+        const languages = screen.getByRole("group", { name: "Default translation languages" });
+        expect(languages.getAttribute("aria-describedby")).toBeTruthy();
+
+        await user.click(screen.getByRole("checkbox", { name: "Spanish" }));
+        await user.click(screen.getByRole("checkbox", { name: "German" }));
+
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({
+            ...defaultGeneralSettings,
+            defaultTranslationLanguages: ["es", "de"],
+        }));
+    });
+
     it("prevents duplicate environment-variable names and manages saved connections", async () => {
         const user = userEvent.setup();
         const firstConnection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "unchecked" as const };

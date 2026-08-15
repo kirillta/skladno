@@ -52,7 +52,6 @@ export function useWorkspaceLayout() {
         return migrated;
     });
     const [focusMode, setFocusMode] = useState(false);
-    const [targetLanguage, setTargetLanguage] = useState("es");
 
     const setView = useCallback((view: WorkspaceView) => setPreferences((current) => ({ ...current, view })), []);
     const setSelectedArticleId = useCallback((selectedArticleId: string | undefined) => setPreferences((current) => ({ ...current, ...(selectedArticleId ? { selectedArticleId } : { selectedArticleId: undefined }) })), []);
@@ -76,8 +75,6 @@ export function useWorkspaceLayout() {
         setAssistantWidth: (assistantWidth: number) => setPreferences((current) => ({ ...current, assistantWidth: Math.max(320, assistantWidth) })),
         focusMode,
         setFocusMode,
-        targetLanguage,
-        setTargetLanguage,
     };
 }
 
