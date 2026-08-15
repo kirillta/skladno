@@ -45,6 +45,15 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
         void client.getPublishLimitProfile().then(setPublishingProfileId).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.loadingFailed" }) }));
     }, [client, intl, notifyError]);
 
+    useEffect(() => {
+        if (section !== "ai" || !settings?.activeConnectionId)
+            return;
+
+        void client.refreshOpenAiModels().then(setModels).catch((error) => {
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        });
+    }, [client, intl, notifyError, section, settings?.activeConnectionId]);
+
 
     async function saveGeneral(next: GeneralSettings) {
         setGeneral(next);
