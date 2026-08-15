@@ -119,10 +119,7 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, a
                             <div className="mt-3 flex gap-3">
                                 <input ref={upload} className="sr-only" type="file" accept=".txt,.md,text/plain,text/markdown" onChange={importFile} />
                                 <Button className="flex-1" variant="secondary" disabled={Boolean(pendingAction)} onClick={() => upload.current?.click()}>{intl.formatMessage({ id: "styleProfile.upload" })}</Button>
-                                <Button className="relative" state={pendingAction === "add" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={() => submit()}>{pendingAction === "add" ? <>
-                                    <span className="invisible" aria-hidden="true">{intl.formatMessage({ id: "styleProfile.add" })}</span>
-                                    <svg className="absolute inset-0 m-auto size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" /><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="3" /></svg><span className="sr-only" role="status">{intl.formatMessage({ id: "styleProfile.generatingSourceName" })}</span></> : intl.formatMessage({ id: "styleProfile.add" })}
-                                </Button>
+                                <Button state={pendingAction === "add" ? "loading" : "default"} loadingLabel={intl.formatMessage({ id: "styleProfile.generatingSourceName" })} disabled={Boolean(pendingAction)} onClick={() => submit()}>{intl.formatMessage({ id: "styleProfile.add" })}</Button>
                             </div>
                         </div>
                     </div>
