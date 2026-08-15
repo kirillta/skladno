@@ -478,6 +478,7 @@ export const messages = {
     "errors.environmentVariableUnavailable": "The {environmentVariableName} variable is not available to the local service.",
     "errors.aiConnectionNotFound": "AI connection not found.",
     "errors.duplicateAiConnection": "That environment-variable name is already saved. Use a different name or remove the existing connection.",
+    "errors.duplicateStyleCorpusItem": "This text is already in the style corpus.",
     "errors.activeConnectionRequired": "Add and select an OpenAI connection first.",
     "errors.activeConnectionRemovalBlocked": "Choose another active AI connection before removing this one.",
     "errors.aiConnectionVerificationFailed": "The AI provider could not verify this connection. Check the variable and its key, then try again.",

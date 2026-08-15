@@ -82,6 +82,11 @@ export class StyleCorpusRepository {
     }
 
 
+    hasContent(content: string): boolean {
+        return Boolean(this.database.prepare("SELECT 1 FROM style_corpus_items JOIN author_materials ON author_materials.id = style_corpus_items.author_material_id WHERE author_materials.content = ?").get(content));
+    }
+
+
     add(input: CreateStyleCorpusItemInput & { name: string }): StyleCorpus {
         const timestamp = now();
         const materialId = createId();

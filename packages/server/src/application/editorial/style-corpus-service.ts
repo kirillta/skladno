@@ -18,6 +18,9 @@ export class StyleCorpusService {
         if (!input.content.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
+        if (this.store.hasContent(input.content))
+            throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_STYLE_CORPUS_ITEM, HTTP_STATUS.BAD_REQUEST);
+
         const name = input.name?.trim();
         if (name)
             return this.store.add({ ...input, name });

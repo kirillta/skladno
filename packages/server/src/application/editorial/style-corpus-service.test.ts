@@ -11,6 +11,7 @@ test("generates a source name only when the Author leaves it blank", async () =>
     const corpus = { items: [], rules: "", status: "empty" } as StyleCorpus;
     const store = {
         get: () => corpus,
+        hasContent: () => false,
         add: (input: CreateStyleCorpusItemInput & { name: string }) => {
             inputs.push(input);
             return corpus;
@@ -34,4 +35,23 @@ test("generates a source name only when the Author leaves it blank", async () =>
         { name: "Manual source", content: "Text" },
         { name: "Generated source", content: "Text" },
     ]);
+});
+
+
+test("rejects text already in the style corpus", async () => {
+    const corpus = { items: [], rules: "", status: "empty" } as StyleCorpus;
+    const store = {
+        get: () => corpus,
+        hasContent: (content: string) => content === "Text",
+        add: () => corpus,
+        setIncluded: () => corpus,
+        setRules: () => corpus,
+        rebuild: () => corpus,
+        getArticleRules: () => "",
+        setArticleRules: () => "",
+        remove: () => undefined,
+    };
+    const service = new StyleCorpusService(store);
+
+    await assert.rejects(service.add({ name: "Duplicate", content: "Text" }, new AbortController().signal), { code: "duplicate_style_corpus_item" });
 });

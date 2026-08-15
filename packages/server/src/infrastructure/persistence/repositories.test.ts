@@ -304,6 +304,9 @@ test("style corpus keeps raw samples local and rebuilds versioned profiles expli
     repositories.styleCorpus.remove(corpus.items[0]!.id);
     assert.equal(repositories.styleCorpus.get().profile?.version, 1);
     assert.equal(repositories.materials.get(corpus.items[0]!.id), undefined);
+
+    const readded = repositories.styleCorpus.add({ name: "Author sample", content: "I explain systems directly.\n\nI use compact paragraphs." });
+    assert.equal(readded.items.length, 1);
 }));
 
 
