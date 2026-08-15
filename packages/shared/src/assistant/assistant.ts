@@ -66,7 +66,7 @@ export type AssistantRequestScope =
 export type AssistantMessageRole = "assistant" | "author" | "system";
 export type AssistantMessageKind = "greeting" | "message" | "response" | "status";
 /** Stable application-authored message templates; render these through the interface catalog. */
-export type AssistantMessageTemplate = "greeting" | "request_cancelled" | "request_failed";
+export type AssistantMessageTemplate = "greeting" | "request_cancelled" | "request_failed" | "profile_rebuilt";
 export type AssistantMessageStatus = "completed" | "pending" | "failed" | "cancelled";
 export type AssistantRequestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type AssistantSkillSource = "explicit" | "inferred";

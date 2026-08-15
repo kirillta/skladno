@@ -38,4 +38,15 @@ describe("StyleProfileView", () => {
         expect(screen.getByRole("button", { name: "Generating source name" }).getAttribute("aria-busy")).toBe("true");
         resolveAdd?.();
     });
+
+    it("confirms before removing a writing sample", async () => {
+        const user = userEvent.setup();
+        const remove = vi.fn().mockResolvedValue(undefined);
+        render(<IntlProvider locale="en" messages={messages}><StyleProfileView articleId="article-1" corpus={{ items: [{ id: "sample-1", name: "Sample", characterCount: 4, wordCount: 1, excerpt: "Text", createdAt: "2026-08-15T00:00:00.000Z", updatedAt: "2026-08-15T00:00:00.000Z", included: true, origin: "manual" }], rules: "", status: "outdated" }} findings={undefined} findingsStale={false} add={vi.fn()} remove={remove} setIncluded={vi.fn()} setRules={vi.fn()} rebuild={vi.fn()} getArticleRules={vi.fn().mockResolvedValue("")} setArticleRules={vi.fn()} /></IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: "Remove" }));
+        expect(remove).not.toHaveBeenCalled();
+        await user.click(screen.getByRole("button", { name: "Remove sample" }));
+        expect(remove).toHaveBeenCalledWith("sample-1");
+    });
 });

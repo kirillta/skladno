@@ -9,7 +9,7 @@ import { providerLanguageName } from "./editorial-language.js";
 type ProposalState = "idle" | "streaming" | "error";
 
 
-export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: string | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => void) {
+export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: string | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => void, profileRebuilt?: { articleId: string; count: number; token: number }) {
     const intl = useIntl();
     const [messagesByArticle, setMessagesByArticle] = useState<Record<string, AssistantMessage[]>>({});
     const [stateByArticle, setStateByArticle] = useState<Record<string, ProposalState>>({});
@@ -63,6 +63,27 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             cancelled = true;
         };
     }, [article, client]);
+
+    useEffect(() => {
+        if (!article || !profileRebuilt || profileRebuilt.articleId !== article.id)
+            return;
+
+        const timestamp = new Date().toISOString();
+        setMessagesByArticle((current) => ({
+            ...current,
+            [article.id]: [...(current[article.id] ?? []), {
+                id: `profile-rebuilt-${profileRebuilt.token}`,
+                articleId: article.id,
+                role: "system",
+                kind: "status",
+                status: "completed",
+                template: "profile_rebuilt",
+                content: String(profileRebuilt.count),
+                createdAt: timestamp,
+                updatedAt: timestamp,
+            }],
+        }));
+    }, [article, profileRebuilt]);
 
     const request = useCallback(async (authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string, skillOffset?: number) => {
         const current = workspace.selectedArticle;

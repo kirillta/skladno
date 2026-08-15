@@ -5,7 +5,7 @@ import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 
 
-export function useStyleCorpus(client: EditorialWorkspaceClient) {
+export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (activeCount: number) => void) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [corpus, setCorpus] = useState<StyleCorpus>();
@@ -51,7 +51,9 @@ export function useStyleCorpus(client: EditorialWorkspaceClient) {
         },
         rebuild: async () => {
             try {
-                setCorpus(await client.rebuildStyleCorpus());
+                const next = await client.rebuildStyleCorpus();
+                setCorpus(next);
+                onRebuilt?.(next.items.filter((item) => item.included).length);
             } catch (error) {
                 notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
                 throw error;

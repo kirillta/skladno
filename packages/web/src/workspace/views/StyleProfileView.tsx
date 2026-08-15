@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import type { StyleCorpus, StyleReview } from "@skladno/shared";
-import { Banner, Button, Field, IconButton, TextareaField } from "../../ui/primitives.js";
+import { defaultGeneralSettings, type GeneralSettings, type StyleCorpus, type StyleReview } from "@skladno/shared";
+import { Banner, Button, Dialog, Field, IconButton, TextareaField } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 import { DeleteIcon } from "../../ui/icons.js";
 import type { MessageId } from "../../i18n/messages.js";
+import { formatDate } from "../../i18n/formatting.js";
 
 
 const traitTitles: Record<string, MessageId> = { voice: "styleProfile.trait.voice", rhythm: "styleProfile.trait.rhythm", structure: "styleProfile.trait.structure", vocabulary: "styleProfile.trait.vocabulary" };
@@ -21,11 +22,12 @@ const traitDescriptions: Record<string, MessageId> = {
 const quietScrollbar = "[scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong";
 
 
-export function StyleProfileView({ corpus, findings, findingsStale, articleId, add, remove, setIncluded, setRules, rebuild, getArticleRules, setArticleRules }: {
+export function StyleProfileView({ corpus, findings, findingsStale, articleId, generalSettings = defaultGeneralSettings, add, remove, setIncluded, setRules, rebuild, getArticleRules, setArticleRules }: {
     corpus: StyleCorpus | undefined;
     findings: StyleReview | undefined;
     findingsStale: boolean;
     articleId: string;
+    generalSettings?: GeneralSettings;
     add: (name: string | undefined, content: string, origin?: "import") => Promise<void>;
     remove: (id: string) => Promise<void>;
     setIncluded: (id: string, included: boolean) => Promise<void>;
@@ -45,6 +47,7 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, a
     const [uploadFailed, setUploadFailed] = useState(false);
     const [articleRules, setArticleRulesDraft] = useState("");
     const [pendingAction, setPendingAction] = useState<string>();
+    const [removingId, setRemovingId] = useState<string>();
     const activeCount = corpus?.items.filter((item) => item.included).length ?? 0;
     const summary = corpus?.profile
         ? intl.formatMessage({ id: "styleProfile.summary" }, { version: corpus.profile.version, confidence: corpus.profile.confidence })
@@ -93,6 +96,15 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, a
         setRulesDraft(corpus?.rules ?? "");
     }, [corpus?.rules]);
 
+    const confirmRemove = () => {
+        if (!removingId)
+            return;
+
+        const id = removingId;
+        setRemovingId(undefined);
+        run(`remove:${id}`, () => remove(id));
+    };
+
     return <div className="flex h-full min-h-0 max-w-[120rem] flex-col">
         {rebuilt && <Banner className="mb-6" tone="success">{intl.formatMessage({ id: "styleProfile.rebuilt" }, { count: activeCount })}</Banner>}
         <header className="mb-8 shrink-0 flex flex-wrap items-start justify-between gap-4">
@@ -128,10 +140,10 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, a
                     <div className="grid grid-cols-[1rem_minmax(0,1fr)_2.25rem] items-center gap-2">
                         <input className="size-4 accent-brand" type="checkbox" checked={item.included} disabled={Boolean(pendingAction)} aria-label={intl.formatMessage({ id: "styleProfile.include" })} onChange={(event) => run(`include:${item.id}`, () => setIncluded(item.id, event.target.checked))} />
                         <p className="min-w-0 text-sm font-semibold">{item.name}</p>
-                        <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "views.remove" })} disabled={Boolean(pendingAction)} onClick={() => run(`remove:${item.id}`, () => remove(item.id))}><DeleteIcon className="size-4" /></IconButton>
+                        <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "views.remove" })} disabled={Boolean(pendingAction)} onClick={() => setRemovingId(item.id)}><DeleteIcon className="size-4" /></IconButton>
                     </div>
                     <p className="mt-2 text-sm italic text-muted">{item.excerpt}</p>
-                    <p className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "styleProfile.words" }, { count: item.wordCount })}</p>
+                    <p className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "styleProfile.words" }, { count: item.wordCount })} · {intl.formatMessage({ id: "styleProfile.addedDate" }, { date: formatDate(item.createdAt, generalSettings.dateFormat, generalSettings.timeZone) })}</p>
                 </article>)}
                 </div>
             </section>
@@ -151,5 +163,16 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, a
                 {findings?.findings.map((finding) => <p key={finding.divergence} className="mt-3 text-sm">{finding.divergence}: {finding.suggestion}</p>)}
             </section>
         </div>
+        {removingId && <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl" open aria-labelledby="remove-style-sample-title" onCancel={(event) => {
+            event.preventDefault();
+            setRemovingId(undefined);
+        }}>
+            <h2 id="remove-style-sample-title" className="text-lg font-semibold">{intl.formatMessage({ id: "styleProfile.removeConfirmationTitle" })}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">{intl.formatMessage({ id: "styleProfile.removeConfirmationDescription" })}</p>
+            <div className="mt-5 flex justify-end gap-3">
+                <Button variant="secondary" autoFocus onClick={() => setRemovingId(undefined)}>{intl.formatMessage({ id: "editor.cancel" })}</Button>
+                <Button variant="danger" onClick={confirmRemove}>{intl.formatMessage({ id: "styleProfile.confirmRemove" })}</Button>
+            </div>
+        </Dialog>}
     </div>;
 }
