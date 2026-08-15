@@ -9,6 +9,7 @@ export interface EditorialEngineRequest {
     skillId?: BuiltInSkillId;
     surroundingArticleCharacterCount?: number;
     styleProfile?: StyleProfile;
+    articleStyleRules?: string;
     targetArticleCharacterLimit?: number;
     previousResponseId?: string;
     targetLanguage?: string;

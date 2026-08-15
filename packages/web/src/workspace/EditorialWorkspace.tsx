@@ -37,7 +37,12 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const editorial = useEditorialProposal(client, workspace);
     const corpus = useStyleCorpus(client);
     const [assistantSelection, setAssistantSelection] = useState<string>();
-    const assistant = useAssistantMessages(client, workspace, assistantSelection, editorial.applyAssistantResult);
+    const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
+        editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
+        if (result.proposal)
+            layout.setView("proposal");
+    }, [editorial, layout]);
+    const assistant = useAssistantMessages(client, workspace, assistantSelection, applyAssistantResult);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
     const restoreAssistantProposal = editorial.restoreAssistantProposal;
     const runFactCheck = () => {

@@ -11,8 +11,8 @@ export function PublishingPreviewView({ publishing }: {
 }) {
     const intl = useIntl();
     return <div>
-        <h2 className="font-semibold">{intl.formatMessage({ id: "views.publishingPreview" })}</h2>
-        <p className={publishing.length.state === "over-limit" ? "mt-3 text-sm text-danger" : publishing.length.state === "near-limit" ? "mt-3 text-sm text-warning" : "mt-3 text-sm text-muted"}>{publishing.length.state === "over-limit"
+        <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.publishingPreview" })}</h2>
+        <p className={publishing.length.state === "over-limit" ? "mt-1 text-xs text-danger" : publishing.length.state === "near-limit" ? "mt-1 text-xs text-warning" : "mt-1 text-xs text-muted"}>{publishing.length.state === "over-limit"
             ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(publishing.length.remaining)) })
             : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(publishing.length.remaining) })}</p>
         <TextareaField aria-label={intl.formatMessage({ id: "views.plainTextPreview" })} className="mt-3 min-h-72" readOnly value={publishing.text} />

@@ -17,6 +17,31 @@ export class StyleCorpusService {
     }
 
 
+    setIncluded(id: string, included: boolean): StyleCorpus {
+        return this.store.setIncluded(id, included);
+    }
+
+
+    setRules(rules: string): StyleCorpus {
+        return this.store.setRules(rules);
+    }
+
+
+    rebuild(): StyleCorpus {
+        return this.store.rebuild();
+    }
+
+
+    getArticleRules(articleId: string): string {
+        return this.store.getArticleRules(articleId);
+    }
+
+
+    setArticleRules(articleId: string, rules: string): string {
+        return this.store.setArticleRules(articleId, rules);
+    }
+
+
     remove(materialId: string): void {
         this.store.remove(materialId);
     }

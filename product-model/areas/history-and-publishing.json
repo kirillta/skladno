@@ -25,11 +25,11 @@
         {
             "id": "history-and-publishing.style-corpus",
             "area": "Style corpus",
-            "title": "Local writing samples and compact style profile",
+            "title": "Versioned local writing samples and explicit compact style profile rebuild",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/StyleProfileView.tsx", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
-            "contract": "Authors can add or remove local writing samples and derive a compact style profile.",
-            "persistence": "Raw samples and their derived local profile remain local.",
+            "contract": "Authors manage included local writing samples and global rules; input changes leave the current compact profile visible but outdated until an explicit rebuild creates the next version.",
+            "persistence": "Raw samples, global rules, Article-specific rules, and append-only compact profile versions remain local; Style Profile exposes a short local sample excerpt for author recognition.",
             "scenarioIds": ["history-and-publishing.style-corpus-local"]
         },
         {
@@ -100,8 +100,8 @@
             "title": "Style corpus stays local while a compact profile is derived",
             "capabilityIds": ["history-and-publishing.style-corpus"],
             "preconditions": ["The author adds a writing sample."],
-            "event": "The style corpus changes.",
-            "expected": ["A derived profile reflects the local sample and is removed when the corpus becomes empty."],
+            "event": "The style corpus or global rules change.",
+            "expected": ["The current profile is marked outdated until an explicit rebuild creates the next compact version."],
             "forbidden": ["Raw style samples are not treated as remote application data."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.test.ts" }
         },

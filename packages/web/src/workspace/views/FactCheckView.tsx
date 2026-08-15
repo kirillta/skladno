@@ -54,7 +54,18 @@ export function FactCheckView({ factCheck, revisionNumber, reusedRevisionNumbers
     const revisionLabel = (revisionId: string) => intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: reusedRevisionNumbers?.[revisionId] ?? revisionNumber ?? "—" });
 
     return <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col">
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">{intl.formatMessage({ id: "views.factCheck" })}</h2><p className="text-sm text-muted">{intl.formatMessage({ id: "views.factCheckRevision" }, { revision: revisionNumber === undefined ? "—" : revisionLabel(factCheck.reviewedRevisionId ?? "") })}</p></div><div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheckAgain" })}</Button>{eligible.length > 0 && <><Button variant="secondary" onClick={() => setSelected(new Set(eligible.map((finding) => finding.occurrenceId!)))}>{intl.formatMessage({ id: "views.selectAllNeedingReview" })}</Button><Button disabled={selectedFindings.length === 0} onClick={() => proposeCorrections(selectedFindings)}>{intl.formatMessage({ id: "views.proposeFactCorrections" }, { count: selectedFindings.length })}</Button></>}</div></div>
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.factCheck" })}</h2>
+                <p className="text-xs text-muted">{intl.formatMessage({ id: "views.factCheckRevision" }, { revision: revisionNumber === undefined ? "—" : revisionLabel(factCheck.reviewedRevisionId ?? "") })}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheckAgain" })}</Button>
+                {eligible.length > 0 && <><Button variant="secondary" onClick={() => setSelected(new Set(eligible.map((finding) => finding.occurrenceId!)))}>{intl.formatMessage({ id: "views.selectAllNeedingReview" })}</Button>
+                    <Button disabled={selectedFindings.length === 0} onClick={() => proposeCorrections(selectedFindings)}>{intl.formatMessage({ id: "views.proposeFactCorrections" }, { count: selectedFindings.length })}</Button>
+                </>}
+            </div>
+        </div>
         {stale && <Banner className="mt-4" tone="warning"><span>{intl.formatMessage({ id: "views.factCheckStale" })}</span></Banner>}
         <div className="mt-4 grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)]">
             <aside aria-label={intl.formatMessage({ id: "views.factCheckFindings" })} className={`divide-y divide-border overflow-y-auto rounded-panel border border-border ${quietScrollbar}`}>{factCheck.findings.map((finding) => {

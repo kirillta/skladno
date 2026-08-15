@@ -169,6 +169,29 @@ const migrations = [
         );
         `,
     },
+    {
+        version: 12,
+        name: "versioned_style_profiles",
+        sql: `
+        ALTER TABLE style_corpus_items ADD COLUMN included INTEGER NOT NULL DEFAULT 1;
+        ALTER TABLE style_corpus_items ADD COLUMN origin TEXT NOT NULL DEFAULT 'manual';
+        ALTER TABLE style_corpus_items ADD COLUMN article_id TEXT;
+        ALTER TABLE style_corpus_items ADD COLUMN revision_id TEXT;
+        CREATE TABLE style_corpus_settings (id INTEGER PRIMARY KEY CHECK (id = 1), rules TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL);
+        INSERT INTO style_corpus_settings (id, rules, updated_at) VALUES (1, '', '') ON CONFLICT(id) DO NOTHING;
+        CREATE TABLE style_profile_versions (version INTEGER PRIMARY KEY, profile_json TEXT NOT NULL, created_at TEXT NOT NULL);
+        `,
+    },
+    {
+        version: 13,
+        name: "article_style_rules",
+        sql: `
+        CREATE TABLE article_style_rules (
+            article_id TEXT PRIMARY KEY REFERENCES articles(id) ON DELETE CASCADE,
+            rules TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        `,
+    },
 ] as const;
 
 export type SqliteDatabase = DatabaseSync;

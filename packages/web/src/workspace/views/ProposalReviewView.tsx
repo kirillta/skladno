@@ -48,7 +48,7 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
         <header className="-mx-5 border-b border-border bg-canvas px-5 py-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 className="font-semibold">{intl.formatMessage({ id: "views.proposalReview" })}</h2>
+                    <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.proposalReview" })}</h2>
                     <p className="mt-1 text-xs text-muted">{stale || !presentation.reliable
                         ? intl.formatMessage({ id: "views.proposalWhole" }, { changes: presentation.changes.length })
                         : intl.formatMessage({ id: "views.proposalCounts" }, { total: presentation.changes.length, pending: counts.pending, accepted: counts.accepted, rejected: counts.rejected })}</p>

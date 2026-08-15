@@ -102,6 +102,16 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
             return services.styleCorpus.get();
         case ELECTRON_APPLICATION_METHOD.addStyleCorpusItem:
             return services.styleCorpus.add(args[0] as import("@skladno/shared").CreateStyleCorpusItemInput);
+        case ELECTRON_APPLICATION_METHOD.setStyleCorpusItemIncluded:
+            return services.styleCorpus.setIncluded(String(args[0]), Boolean(args[1]));
+        case ELECTRON_APPLICATION_METHOD.setStyleCorpusRules:
+            return services.styleCorpus.setRules(String(args[0]));
+        case ELECTRON_APPLICATION_METHOD.rebuildStyleCorpus:
+            return services.styleCorpus.rebuild();
+        case ELECTRON_APPLICATION_METHOD.getArticleStyleRules:
+            return services.styleCorpus.getArticleRules(String(args[0]));
+        case ELECTRON_APPLICATION_METHOD.setArticleStyleRules:
+            return services.styleCorpus.setArticleRules(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.removeStyleCorpusItem:
             return services.styleCorpus.remove(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.getPublishLimitProfile:

@@ -281,16 +281,39 @@ test("foreign keys and Article ownership reject invalid writes", () => withRepos
 }));
 
 
-test("style corpus keeps raw samples local and derives confidence from its local contents", () => withRepository((repositories) => {
+test("style corpus keeps raw samples local and rebuilds versioned profiles explicitly", () => withRepository((repositories) => {
     const empty = repositories.styleCorpus.get();
     assert.equal(empty.profile, undefined);
 
     const corpus = repositories.styleCorpus.add({ name: "Author sample", content: "I explain systems directly.\n\nI use compact paragraphs." });
     assert.equal(corpus.items.length, 1);
-    assert.equal(corpus.profile?.confidence, "low");
-    assert.ok(corpus.profile?.traits.some((trait) => trait.id === "sentence-length"));
+    assert.equal(corpus.status, "outdated");
+    assert.equal(corpus.profile, undefined);
+    assert.equal(corpus.items[0]!.excerpt, "I explain systems directly. I use compact paragraphs.");
+
+    const rebuilt = repositories.styleCorpus.rebuild();
+    assert.equal(rebuilt.status, "ready");
+    assert.equal(rebuilt.profile?.version, 1);
+    assert.equal(rebuilt.profile?.confidence, "low");
+    assert.ok(rebuilt.profile?.traits.some((trait) => trait.id === "rhythm"));
+
+    const excluded = repositories.styleCorpus.setIncluded(corpus.items[0]!.id, false);
+    assert.equal(excluded.status, "empty");
+    assert.equal(excluded.profile?.version, 1);
 
     repositories.styleCorpus.remove(corpus.items[0]!.id);
-    assert.equal(repositories.styleCorpus.get().profile, undefined);
+    assert.equal(repositories.styleCorpus.get().profile?.version, 1);
     assert.equal(repositories.materials.get(corpus.items[0]!.id), undefined);
+}));
+
+
+test("Article style rules are isolated from the global profile", () => withRepository((repositories) => {
+    const first = repositories.articleService.createArticle({ title: "First", content: "One" });
+    const second = repositories.articleService.createArticle({ title: "Second", content: "Two" });
+
+    repositories.styleCorpus.setArticleRules(first.id, "Use active voice.");
+
+    assert.equal(repositories.styleCorpus.getArticleRules(first.id), "Use active voice.");
+    assert.equal(repositories.styleCorpus.getArticleRules(second.id), "");
+    assert.equal(repositories.styleCorpus.get().profile, undefined);
 }));

@@ -104,8 +104,8 @@ export function responsesPrompt(messages: ModelMessage[]) {
 }
 
 
-function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StyleProfile): StyleReview {
-    const availableTraits = new Set(profile.traits.map((trait) => trait.id));
+function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StyleProfile, articleRules = ""): StyleReview {
+    const availableTraits = new Set([...profile.traits.map((trait) => trait.id), ...profile.rules.split("\n").filter(Boolean).map((_rule, index) => `global-rule-${index + 1}`), ...articleRules.split("\n").filter(Boolean).map((_rule, index) => `article-rule-${index + 1}`)]);
     if (value.findings.some((finding) => finding.traitIds.some((traitId) => !availableTraits.has(traitId))))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "Style review cited a trait that is not in the supplied local profile. Retry the request.");
 
@@ -234,6 +234,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 article: boundedArticleContext(request.article),
                 authorContext: request.authorContext,
                 styleProfile: request.styleProfile,
+                articleStyleRules: request.articleStyleRules,
             }),
             output: Output.object({ schema: styleReviewSchema }),
             abortSignal: signal,
@@ -248,7 +249,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             type: EDITORIAL_ENGINE_EVENT.COMPLETED,
             responseId: completedResponseId,
             text: result.output.proposal,
-            styleReview: styleReview(result.output, request.styleProfile),
+            styleReview: styleReview(result.output, request.styleProfile, request.articleStyleRules),
         };
     }
 

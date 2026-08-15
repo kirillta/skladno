@@ -151,7 +151,7 @@ export class AssistantService {
         if (resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !request.targetLanguage?.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
-        if (resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && !this.styleCorpus.get().profile)
+        if (resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && this.styleCorpus.get().status !== "ready")
             throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
         const operation = operationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
@@ -220,7 +220,7 @@ export class AssistantService {
                 ...(request.scope.kind === "selection" ? { surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
                 ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
                 ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile } : {}),
+                ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile, articleStyleRules: this.styleCorpus.getArticleRules(request.articleId) } : {}),
                 ...(request.reusableFactFindings ? { reusableFactFindings: request.reusableFactFindings } : {})
             }, signal);
 
@@ -248,6 +248,7 @@ export class AssistantService {
                     scope: request.scope,
                     responseId: event.responseId,
                     proposal: content,
+                    ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile, articleStyleRules: this.styleCorpus.getArticleRules(request.articleId) } : {}),
                     ...(factCheck ? { factCheck } : { findings: event.styleReview }),
                     translation: event.translation
                 })

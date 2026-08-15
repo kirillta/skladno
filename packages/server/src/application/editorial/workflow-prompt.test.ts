@@ -117,11 +117,15 @@ test("style review sends a compact profile rather than raw corpus text", async (
         article: "Current draft.",
         authorContext: "",
         styleProfile: {
+            version: 1,
             corpusItemCount: 1,
             characterCount: 120,
             confidence: "low",
             updatedAt: "2026-07-28T00:00:00.000Z",
             traits: [{ id: "paragraphing", label: "Compact paragraphs", evidence: "Observed locally." }],
+            phrasesToAvoid: [],
+            contributorIds: ["sample-1"],
+            rules: "",
         },
     });
 

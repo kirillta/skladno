@@ -58,7 +58,7 @@
             "title": "Style review",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
-            "contract": "Style review uses a compact derived profile; raw style samples remain local and review findings retain freshness state.",
+            "contract": "Style review uses only the current compact, explicitly rebuilt profile plus Article-specific manual rules; raw style samples remain local and review findings retain freshness state.",
             "persistence": "Raw style corpus and derived review artifacts stay local.",
             "scenarioIds": ["editorial-workflows.finding-operations-preserve-article"]
         },

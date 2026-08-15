@@ -17,6 +17,7 @@ interface EditorialStreamContext {
     factCheck: boolean;
     translation: boolean;
     styleProfile?: StyleProfile;
+    articleStyleRules?: string;
     previousResponseId?: string;
 }
 
@@ -34,7 +35,8 @@ interface EditorialSessionStore {
 
 
 interface EditorialStyleCorpusStore {
-    get(): { profile?: StyleProfile };
+    get(): { profile?: StyleProfile; status: "empty" | "outdated" | "ready" };
+    getArticleRules(articleId: string): string;
 }
 
 
@@ -61,8 +63,9 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
     if (!sessionContinuationEnabled)
         sessions.remove(request.articleId);
 
-    const styleProfile = request.operation === EDITORIAL_OPERATION.STYLE_REVIEW ? styleCorpus.get().profile : undefined;
-    if (request.operation === EDITORIAL_OPERATION.STYLE_REVIEW && !styleProfile)
+    const corpus = request.operation === EDITORIAL_OPERATION.STYLE_REVIEW ? styleCorpus.get() : undefined;
+    const styleProfile = corpus?.profile;
+    if (request.operation === EDITORIAL_OPERATION.STYLE_REVIEW && (corpus?.status !== "ready" || !styleProfile))
         throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
     const engine = engines.resolve(request.operation);
@@ -75,6 +78,7 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
         factCheck,
         translation,
         ...(styleProfile ? { styleProfile } : {}),
+        ...(styleProfile ? { articleStyleRules: styleCorpus.getArticleRules(request.articleId) } : {}),
         ...(session?.previousResponseId ? { previousResponseId: session.previousResponseId } : {}),
     };
 }
@@ -86,6 +90,7 @@ function engineRequest(request: EditorialServiceRequest, context: EditorialStrea
         article: context.article.currentRevision.content,
         authorContext: request.authorContext,
         ...(context.styleProfile ? { styleProfile: context.styleProfile } : {}),
+        ...(context.styleProfile ? { articleStyleRules: context.articleStyleRules } : {}),
         ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
         ...(context.previousResponseId ? { previousResponseId: context.previousResponseId } : {}),
     };
@@ -113,6 +118,7 @@ function artifactInput(request: EditorialServiceRequest, context: EditorialStrea
             responseId: event.responseId,
             proposal: event.text,
             styleProfile: context.styleProfile,
+            articleStyleRules: context.articleStyleRules,
             findings: event.styleReview?.findings,
             factCheck: event.factCheck,
             translation: event.translation,

@@ -10,6 +10,7 @@ interface EditorialPromptInput {
     skillId?: BuiltInSkillId;
     surroundingArticleCharacterCount?: number;
     styleProfile?: StyleProfile;
+    articleStyleRules?: string;
     targetArticleCharacterLimit?: number;
     targetLanguage?: string;
 }
@@ -30,6 +31,11 @@ function styleTraits(profile: StyleProfile): string {
     return profile.traits
         .map((trait) => `- ${trait.id}: ${trait.label} (${trait.evidence})`)
         .join("\n");
+}
+
+
+function numberedRules(rules: string, prefix: string): string {
+    return rules.split("\n").map((rule) => rule.trim()).filter(Boolean).map((rule, index) => `- ${prefix}-${index + 1}: ${rule}`).join("\n") || "None.";
 }
 
 
@@ -80,7 +86,7 @@ export function createEditorialMessages(input: EditorialPromptInput): ModelMessa
 
         return [
             { role: "system", content: `You are an editorial assistant. ${commonGuardrails}` },
-            { role: "user", content: `Workflow: style review. Compare the current draft against this compact, locally derived author-style profile. The raw corpus is not available to you. Identify only concrete, material divergences. Produce a conservative full-text proposal that addresses those divergences; do not make changes merely to imitate superficial habits. Each finding must cite one or more supplied trait IDs.\n\nCurrent article:\n${input.article}\n\nCorpus confidence: ${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters). Treat low confidence as tentative.\n\nSupplied corpus traits:\n${styleTraits(input.styleProfile)}\n\nAuthor guidance:\n${authorGuidance(input.authorContext)}` },
+            { role: "user", content: `Workflow: style review. Compare the current draft against this compact, locally derived author-style profile. The raw corpus is not available to you. Identify only concrete, material divergences. Produce one conservative full-text proposal; all findings must cite supplied trait or rule IDs.\n\nCurrent article:\n${input.article}\n\nCorpus confidence: ${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters). Treat low confidence as tentative.\n\nSupplied corpus traits:\n${styleTraits(input.styleProfile)}\n\nGlobal rules:\n${numberedRules(input.styleProfile.rules, "global-rule")}\n\nThis Article rules:\n${numberedRules(input.articleStyleRules ?? "", "article-rule")}\n\nAuthor guidance:\n${authorGuidance(input.authorContext)}` },
         ];
     }
 

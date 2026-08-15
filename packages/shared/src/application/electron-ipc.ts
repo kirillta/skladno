@@ -47,6 +47,11 @@ export interface ElectronApplicationOperationMap {
     listAssistantMessages: { args: [string]; result: import("../assistant/assistant.js").AssistantMessage[] };
     getStyleCorpus: { args: []; result: StyleCorpus };
     addStyleCorpusItem: { args: [CreateStyleCorpusItemInput]; result: StyleCorpus };
+    setStyleCorpusItemIncluded: { args: [string, boolean]; result: StyleCorpus };
+    setStyleCorpusRules: { args: [string]; result: StyleCorpus };
+    rebuildStyleCorpus: { args: []; result: StyleCorpus };
+    getArticleStyleRules: { args: [string]; result: string };
+    setArticleStyleRules: { args: [string, string]; result: string };
     removeStyleCorpusItem: { args: [string]; result: void };
     getPublishLimitProfile: { args: []; result: PublishLimitProfileId };
     setPublishLimitProfile: { args: [PublishLimitProfileId]; result: PublishLimitProfileId };
@@ -82,6 +87,11 @@ export const ELECTRON_APPLICATION_METHOD = {
     listAssistantMessages: "listAssistantMessages",
     getStyleCorpus: "getStyleCorpus",
     addStyleCorpusItem: "addStyleCorpusItem",
+    setStyleCorpusItemIncluded: "setStyleCorpusItemIncluded",
+    setStyleCorpusRules: "setStyleCorpusRules",
+    rebuildStyleCorpus: "rebuildStyleCorpus",
+    getArticleStyleRules: "getArticleStyleRules",
+    setArticleStyleRules: "setArticleStyleRules",
     removeStyleCorpusItem: "removeStyleCorpusItem",
     getPublishLimitProfile: "getPublishLimitProfile",
     setPublishLimitProfile: "setPublishLimitProfile",

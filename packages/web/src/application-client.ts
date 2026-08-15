@@ -30,7 +30,7 @@ import {
     type EditorialEvent,
     type StartEditorialRequest,
     restoreRevisionPath,
-    styleCorpusPath,
+    articleStyleRulesPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath,
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
     publishSettingsPath,
@@ -255,6 +255,31 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async removeStyleCorpusItem(materialId: string): Promise<void> {
         await this.request<void>(`${styleCorpusPath}/${encodeURIComponent(materialId)}`, { method: HTTP_METHOD.DELETE });
+    }
+
+
+    async setStyleCorpusItemIncluded(itemId: string, included: boolean): Promise<StyleCorpus> {
+        return this.request<StyleCorpus>(`${styleCorpusPath}/${encodeURIComponent(itemId)}`, { method: HTTP_METHOD.PUT, body: JSON.stringify({ included }) });
+    }
+
+
+    async setStyleCorpusRules(rules: string): Promise<StyleCorpus> {
+        return this.request<StyleCorpus>(styleCorpusRulesPath, { method: HTTP_METHOD.PUT, body: JSON.stringify({ rules }) });
+    }
+
+
+    async rebuildStyleCorpus(): Promise<StyleCorpus> {
+        return this.request<StyleCorpus>(styleCorpusRebuildPath, { method: HTTP_METHOD.POST });
+    }
+
+
+    async getArticleStyleRules(articleId: string): Promise<string> {
+        return (await this.request<{ rules: string }>(articleStyleRulesPath(articleId))).rules;
+    }
+
+
+    async setArticleStyleRules(articleId: string, rules: string): Promise<string> {
+        return (await this.request<{ rules: string }>(articleStyleRulesPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ rules }) })).rules;
     }
 
 

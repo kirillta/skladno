@@ -128,7 +128,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             const revisionId = saved?.id ?? article.currentRevisionId;
             const content = saved?.content ?? workspace.content;
 
-            if (operation === "thesis_to_narrative" || operation === "flow_revision") {
+            if (operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review") {
                 setBase({ articleId: article.id, content, revisionId, ...(correctedFindingIds?.length ? { correctedFindingIds } : {}) });
                 setProposal("");
                 setDecisions({});
@@ -142,14 +142,14 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             controller.current = new AbortController();
 
             await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}) }, (event: EditorialEvent) => {
-                if (event.type === "text_delta" && (operation === "thesis_to_narrative" || operation === "flow_revision"))
+                if (event.type === "text_delta" && (operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review"))
                     setProposal((value) => value + event.delta);
 
                 if (event.type === "completed") {
-                    if (operation === "thesis_to_narrative" || operation === "flow_revision")
+                    if (operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review")
                         setProposal(event.text);
 
-                    if ((operation === "thesis_to_narrative" || operation === "flow_revision") && event.editorialArtifactId)
+                    if ((operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review") && event.editorialArtifactId)
                         setBase({ articleId: article.id, content, revisionId, editorialArtifactId: event.editorialArtifactId, ...(correctedFindingIds?.length ? { correctedFindingIds } : {}) });
 
                     if (event.factCheck)

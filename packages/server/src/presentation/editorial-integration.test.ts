@@ -245,7 +245,7 @@ test("style review uses a compact local profile and saves cited findings as a pr
                 findings: [{
                     divergence: "The draft uses long paragraphs.",
                     suggestion: "Split the opening paragraph.",
-                    traitIds: ["paragraphing"],
+                    traitIds: ["structure"],
                 }],
             },
         },
@@ -253,7 +253,9 @@ test("style review uses a compact local profile and saves cited findings as a pr
 
     await withService(engine, async (baseUrl, repositories) => {
         repositories.styleCorpus.add({ name: "Published sample", content: "I write short sentences.\n\nI keep paragraphs brief." });
+        repositories.styleCorpus.rebuild();
         const article = repositories.articleService.createArticle({ title: "Draft", content: "A long draft" });
+        repositories.styleCorpus.setArticleRules(article.id, "Use active voice.");
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -263,13 +265,15 @@ test("style review uses a compact local profile and saves cited findings as a pr
         const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
 
         assert.match(body, /"text":"A concise proposal."/);
-        assert.match(body, /"traitIds":\["paragraphing"\]/);
-        assert.equal(engine.requests[0]!.styleProfile?.traits.some((trait) => trait.id === "paragraphing"), true);
+        assert.match(body, /"traitIds":\["structure"\]/);
+        assert.equal(engine.requests[0]!.styleProfile?.traits.some((trait) => trait.id === "structure"), true);
         assert.deepEqual(JSON.parse(artifact.content).findings, [{
             divergence: "The draft uses long paragraphs.",
             suggestion: "Split the opening paragraph.",
-            traitIds: ["paragraphing"],
+            traitIds: ["structure"],
         }]);
+        assert.equal(JSON.parse(artifact.content).articleStyleRules, "Use active voice.");
+        assert.equal(JSON.parse(artifact.content).styleProfile.version, 1);
         assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "A long draft");
     });
 });

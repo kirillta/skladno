@@ -90,12 +90,16 @@ export {
 } from "./editorial/editorial.js";
 export {
     styleCorpusPath,
+    styleCorpusRulesPath,
+    styleCorpusRebuildPath,
+    articleStyleRulesPath,
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
     type StyleCorpusClient,
     type StyleCorpusItem,
     type StyleProfile,
     type StyleTrait,
+    type ArticleStyleRulesClient,
 } from "./style/style.js";
 export {
     acceptProposalPath,

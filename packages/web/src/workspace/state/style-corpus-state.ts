@@ -16,9 +16,9 @@ export function useStyleCorpus(client: EditorialWorkspaceClient) {
 
     return {
         corpus,
-        add: async (name: string, content: string) => {
+        add: async (name: string, content: string, origin?: "import") => {
             try {
-                setCorpus(await client.addStyleCorpusItem({ name, content }));
+                setCorpus(await client.addStyleCorpusItem({ name, content, origin }));
             } catch (error) {
                 notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
                 throw error;
@@ -32,7 +32,12 @@ export function useStyleCorpus(client: EditorialWorkspaceClient) {
                 notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
                 throw error;
             }
-        }
+        },
+        setIncluded: async (id: string, included: boolean) => setCorpus(await client.setStyleCorpusItemIncluded(id, included)),
+        setRules: async (rules: string) => setCorpus(await client.setStyleCorpusRules(rules)),
+        rebuild: async () => setCorpus(await client.rebuildStyleCorpus()),
+        getArticleRules: (articleId: string) => client.getArticleStyleRules(articleId),
+        setArticleRules: (articleId: string, rules: string) => client.setArticleStyleRules(articleId, rules),
     };
 }
 

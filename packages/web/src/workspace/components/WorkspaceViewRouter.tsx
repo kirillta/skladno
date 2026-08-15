@@ -50,7 +50,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     }
 
     if (view === "style-profile")
-        return panel(<StyleProfileView corpus={corpus.corpus} findings={editorial.styleReview} add={corpus.add} remove={corpus.remove} />);
+        return panel(<StyleProfileView corpus={corpus.corpus} findings={editorial.styleReview} articleId={article.id} add={corpus.add} remove={corpus.remove} setIncluded={corpus.setIncluded} setRules={corpus.setRules} rebuild={corpus.rebuild} getArticleRules={corpus.getArticleRules} setArticleRules={corpus.setArticleRules} />);
 
     if (view === "translations")
         return panel(<TranslationsView article={article} translation={editorial.translation} stale={editorial.translationStale} create={editorial.createTranslation} />);
