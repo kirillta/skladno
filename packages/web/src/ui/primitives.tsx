@@ -35,7 +35,7 @@ const buttonVariantClasses = {
     primary: "border-transparent bg-brand text-on-brand hover:bg-brand-hover",
     secondary: "border-border bg-surface-raised text-brand hover:border-brand/45 hover:bg-brand-soft",
     quiet: "border-transparent bg-transparent text-muted hover:bg-brand-soft hover:text-brand",
-    danger: "border-transparent bg-transparent text-danger hover:bg-danger-soft",
+    danger: "border-danger bg-danger text-on-brand hover:bg-danger/90",
 } as const;
 
 

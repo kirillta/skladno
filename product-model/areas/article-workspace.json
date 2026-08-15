@@ -223,7 +223,7 @@
                 "packages/web/src/workspace/views/FactCheckView.tsx",
                 "packages/web/src/workspace/views/StyleProfileView.tsx"
             ],
-            "contract": "Findings never modify Article text; unchanged Facts and accepted findings survive Revision updates, while changed unresolved Facts become stale. Raw style samples remain local, Article-specific style rules remain Article metadata outside Revision text, and the Style Profile identifies whether custom rules are applied in the next style review or unsaved.",
+            "contract": "Findings never modify Article text; unchanged Facts and accepted findings survive Revision updates, while changed unresolved Facts become stale. Raw style samples remain local, Article-specific style rules remain Article metadata outside Revision text, and the Style Profile identifies current profile contributors, rebuild time, applied rule evidence, and grounded style-review findings.",
             "persistence": "Completed Editorial artifacts and local Style corpus.",
             "scenarioIds": [
                 "workspace.findings.advisory-only"

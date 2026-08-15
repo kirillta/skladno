@@ -1,4 +1,4 @@
-import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleDraftPath, articleRevisionsPath, articlesPath, articleStyleRulesPath, assistantMessagesPath, assistantRequestsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, proposalSummariesPath, publishSettingsPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
+import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleDraftPath, articleRevisionsPath, articlesPath, articleStyleCorpusSnapshotPath, articleStyleRulesPath, assistantMessagesPath, assistantRequestsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, proposalSummariesPath, publishSettingsPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
@@ -9,7 +9,7 @@ import { handleEditorialRoute } from "./editorial-route.js";
 import { handleHealthRoute } from "./health-route.js";
 import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publish-settings-route.js";
 import { handleActivateAiConnectionRoute, handleAiModelsRoute, handleBackupPolicyRoute, handleCreateAiConnectionRoute, handleDeleteAiConnectionRoute, handleGeneralSettingsRoute, handleKeyBindingsRoute, handleModelPreferencesRoute, handleSettingsSnapshotRoute, handleTestAiConnectionRoute, handleUpdateAiConnectionRoute } from "./settings-route.js";
-import { createStyleCorpusItemRoute, deleteStyleCorpusItemRoute, getArticleStyleRulesRoute, handleStyleCorpusRoute, rebuildStyleCorpusRoute, setArticleStyleRulesRoute, updateStyleCorpusItemRoute, updateStyleCorpusRulesRoute } from "./style-corpus-route.js";
+import { addArticleRevisionStyleCorpusItemRoute, createStyleCorpusItemRoute, deleteStyleCorpusItemRoute, getArticleStyleRulesRoute, handleStyleCorpusRoute, rebuildStyleCorpusRoute, setArticleStyleRulesRoute, updateStyleCorpusItemRoute, updateStyleCorpusRulesRoute } from "./style-corpus-route.js";
 import { summarizeProposalRoute } from "./proposal-summary-route.js";
 import { listFactChecksRoute, resolveFactCheckRoute } from "./fact-check-route.js";
 
@@ -35,6 +35,7 @@ const FACT_CHECKS_PATH = routePattern(factChecksPath(ROUTE_PARAMETER));
 const FACT_CHECK_RESOLUTION_PATH = routePattern(factCheckResolutionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const STYLE_CORPUS_ITEM_PATH = routePattern(`${styleCorpusPath}/${ROUTE_PARAMETER}`);
 const ARTICLE_STYLE_RULES_PATH = routePattern(articleStyleRulesPath(ROUTE_PARAMETER));
+const ARTICLE_STYLE_CORPUS_SNAPSHOT_PATH = routePattern(articleStyleCorpusSnapshotPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}`);
 const ACTIVE_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/active`);
 const TEST_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/test`);
@@ -51,6 +52,7 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.GET, FACT_CHECKS_PATH, (_request, response, parameters) => listFactChecksRoute(response, parameters[0]!, factChecks));
     router.register(HTTP_METHOD.PUT, FACT_CHECK_RESOLUTION_PATH, (request, response, parameters) => resolveFactCheckRoute(request, response, parameters[0]!, parameters[1]!, factChecks));
     router.register(HTTP_METHOD.GET, styleCorpusPath, (_request, response) => handleStyleCorpusRoute(response, styleCorpus));
+    router.register(HTTP_METHOD.POST, ARTICLE_STYLE_CORPUS_SNAPSHOT_PATH, (_request, response, parameters) => addArticleRevisionStyleCorpusItemRoute(response, parameters[0]!, parameters[1]!, styleCorpus));
     router.register(HTTP_METHOD.POST, styleCorpusPath, (request, response) => createStyleCorpusItemRoute(request, response, styleCorpus));
     router.register(HTTP_METHOD.PUT, styleCorpusRulesPath, (request, response) => updateStyleCorpusRulesRoute(request, response, styleCorpus));
     router.register(HTTP_METHOD.POST, styleCorpusRebuildPath, (_request, response) => rebuildStyleCorpusRoute(response, styleCorpus));

@@ -93,6 +93,7 @@ export {
     styleCorpusRulesPath,
     styleCorpusRebuildPath,
     articleStyleRulesPath,
+    articleStyleCorpusSnapshotPath,
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
     type StyleCorpusClient,
@@ -100,6 +101,7 @@ export {
     type StyleProfile,
     type StyleTrait,
     type ArticleStyleRulesClient,
+    type ArticleStyleCorpusSnapshotClient,
 } from "./style/style.js";
 export {
     acceptProposalPath,

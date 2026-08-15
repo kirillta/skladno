@@ -45,6 +45,11 @@ export function rebuildStyleCorpusRoute(response: ServerResponse, styleCorpus: S
 }
 
 
+export function addArticleRevisionStyleCorpusItemRoute(response: ServerResponse, articleId: string, revisionId: string, styleCorpus: StyleCorpusService): void {
+    writeJson(response, HTTP_STATUS.CREATED, styleCorpus.addArticleRevision(articleId, revisionId));
+}
+
+
 export function getArticleStyleRulesRoute(response: ServerResponse, articleId: string, styleCorpus: StyleCorpusService): void {
     writeJson(response, HTTP_STATUS.OK, { rules: styleCorpus.getArticleRules(articleId) });
 }

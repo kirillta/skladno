@@ -112,6 +112,8 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
             return services.styleCorpus.getArticleRules(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.setArticleStyleRules:
             return services.styleCorpus.setArticleRules(String(args[0]), String(args[1]));
+        case ELECTRON_APPLICATION_METHOD.addArticleRevisionStyleCorpusItem:
+            return services.styleCorpus.addArticleRevision(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.removeStyleCorpusItem:
             return services.styleCorpus.remove(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.getPublishLimitProfile:

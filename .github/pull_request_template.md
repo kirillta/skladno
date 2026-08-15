@@ -1,10 +1,5 @@
-## Product contract
+## What changed
 
-- Affected capability IDs:
-- Disposition for each: preserve, extend, narrow, or retire:
-- Changed scenario IDs:
-- Human review or visual verification still required:
+[Short, human-readable description of what was done and why.]
 
-### Closes 
-
-[linked issue numbers]
+Closes #[issue number, if applicable]

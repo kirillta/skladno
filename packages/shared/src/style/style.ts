@@ -2,6 +2,7 @@ export const styleCorpusPath = "/api/style-corpus";
 export const styleCorpusRulesPath = `${styleCorpusPath}/rules`;
 export const styleCorpusRebuildPath = `${styleCorpusPath}/rebuild`;
 export const articleStyleRulesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/style-rules`;
+export const articleStyleCorpusSnapshotPath = (articleId: string, revisionId: string) => `/api/articles/${encodeURIComponent(articleId)}/revisions/${encodeURIComponent(revisionId)}/style-corpus-snapshot`;
 
 
 export interface StyleTrait {
@@ -50,7 +51,9 @@ export interface StyleCorpus {
 export interface CreateStyleCorpusItemInput {
     name?: string;
     content: string;
-    origin?: "manual" | "import";
+    origin?: "manual" | "import" | "article-revision";
+    articleId?: string;
+    revisionId?: string;
 }
 
 
@@ -67,4 +70,9 @@ export interface StyleCorpusClient {
 export interface ArticleStyleRulesClient {
     getArticleStyleRules(articleId: string): Promise<string>;
     setArticleStyleRules(articleId: string, rules: string): Promise<string>;
+}
+
+
+export interface ArticleStyleCorpusSnapshotClient {
+    addArticleRevisionStyleCorpusItem?(articleId: string, revisionId: string): Promise<StyleCorpus>;
 }

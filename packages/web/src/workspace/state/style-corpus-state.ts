@@ -75,6 +75,17 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
                 throw error;
             }
         },
+        snapshotArticleRevision: async (articleId: string, revisionId: string) => {
+            if (!client.addArticleRevisionStyleCorpusItem)
+                return;
+
+            try {
+                setCorpus(await client.addArticleRevisionStyleCorpusItem(articleId, revisionId));
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
     };
 }
 

@@ -13,7 +13,7 @@ describe("StyleProfileView", () => {
         render(<IntlProvider locale="en" messages={messages}><StyleProfileView articleId="article-1" corpus={undefined} findings={undefined} findingsStale={false} add={vi.fn()} remove={vi.fn()} setIncluded={vi.fn()} setRules={vi.fn()} rebuild={vi.fn()} getArticleRules={vi.fn().mockResolvedValue("")} setArticleRules={vi.fn()} /></IntlProvider>);
 
         expect(screen.queryByRole("button", { name: "Add rule" })).toBeNull();
-        await user.click(screen.getByRole("button", { name: "+ Add" }));
+        await user.click(screen.getByRole("button", { name: "Add writing sample" }));
         await user.click(screen.getByRole("button", { name: "Add" }));
 
         expect(screen.getByRole("alert").textContent).toContain("Paste text before adding.");
@@ -30,7 +30,7 @@ describe("StyleProfileView", () => {
         }));
         render(<IntlProvider locale="en" messages={messages}><StyleProfileView articleId="article-1" corpus={undefined} findings={undefined} findingsStale={false} add={add} remove={vi.fn()} setIncluded={vi.fn()} setRules={vi.fn()} rebuild={vi.fn()} getArticleRules={vi.fn().mockResolvedValue("")} setArticleRules={vi.fn()} /></IntlProvider>);
 
-        await user.click(screen.getByRole("button", { name: "+ Add" }));
+        await user.click(screen.getByRole("button", { name: "Add writing sample" }));
         await user.type(screen.getByPlaceholderText("Sample text"), "A representative writing sample.");
         await user.click(screen.getByRole("button", { name: "Add" }));
 
@@ -71,5 +71,22 @@ describe("StyleProfileView", () => {
         await user.click(screen.getAllByRole("button", { name: "Save rules" })[0]);
 
         await waitFor(() => expect(screen.getAllByText("Applied in style review.").length).toBeGreaterThan(0));
+    });
+
+    it("confirms an immutable Article Revision snapshot and explains style findings", async () => {
+        const user = userEvent.setup();
+        const snapshotArticleRevision = vi.fn().mockResolvedValue(undefined);
+        render(<IntlProvider locale="en" messages={messages}><StyleProfileView articleId="article-1" revisions={[{ id: "revision-1", articleId: "article-1", content: "Older", createdAt: "2026-08-14T00:00:00.000Z", provenance: { kind: "author-draft" } }, { id: "revision-2", articleId: "article-1", content: "Newer", createdAt: "2026-08-15T00:00:00.000Z", provenance: { kind: "author-draft" } }]} corpus={{ items: [{ id: "sample-1", name: "Snapshot", characterCount: 4, wordCount: 1, excerpt: "Text", createdAt: "2026-08-15T00:00:00.000Z", updatedAt: "2026-08-15T00:00:00.000Z", included: true, origin: "manual" }], rules: "", status: "ready", profile: { version: 2, corpusItemCount: 1, characterCount: 4, confidence: "low", traits: [], phrasesToAvoid: [], contributorIds: ["sample-1"], rules: "", updatedAt: "2026-08-15T00:00:00.000Z" } }} findings={{ findings: [{ divergence: "Long opening", suggestion: "Shorten it", traitIds: ["transitions"] }], traitLabels: { transitions: "uses explicit transitions" } }} findingsStale={false} add={vi.fn()} remove={vi.fn()} setIncluded={vi.fn()} setRules={vi.fn()} rebuild={vi.fn()} getArticleRules={vi.fn().mockResolvedValue("")} setArticleRules={vi.fn()} snapshotArticleRevision={snapshotArticleRevision} /></IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: "Add this Article" }));
+        expect(screen.getByText("Choose a saved Revision to add as a writing sample. This creates a separate, immutable copy and does not change the Article.")).toBeTruthy();
+        expect([...screen.getByLabelText("Saved Revision").querySelectorAll("option")].map((option) => [option.textContent, option.value])).toEqual([["Revision 2", "revision-2"], ["Revision 1", "revision-1"]]);
+        await user.click(screen.getByRole("button", { name: "Add to corpus" }));
+
+        await waitFor(() => expect(snapshotArticleRevision).toHaveBeenCalledWith("article-1", "revision-2"));
+        expect(screen.getByText("1 source")).toBeTruthy();
+        await user.click(screen.getByText("Show sources"));
+        expect(screen.getAllByText("Snapshot")).toHaveLength(2);
+        expect(screen.getByText("Grounded in uses explicit transitions")).toBeTruthy();
     });
 });

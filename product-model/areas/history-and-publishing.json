@@ -28,8 +28,8 @@
             "title": "Versioned local writing samples and explicit compact style profile rebuild",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/StyleProfileView.tsx", "packages/server/src/application/editorial/style-corpus-service.ts", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
-            "contract": "Authors manage included local writing samples and global rules; duplicate sample text is rejected and sample removal requires confirmation. When an author explicitly submits text without a source name, the configured text generation model names that sample and the submit button shows its loading state. Input changes leave the current compact profile visible but outdated until an explicit rebuild creates the next version, which records a service message in the selected Article's Assistant chat.",
-            "persistence": "Raw samples, global rules, Article-specific rules, generated source names, and append-only compact profile versions remain local; Style Profile exposes a short local sample excerpt for author recognition.",
+            "contract": "Authors manage included local writing samples, explicitly confirmed immutable Article Revision snapshots, and global rules; duplicate sample text is rejected and sample removal requires confirmation. When an author explicitly submits text without a source name, the configured text generation model names that sample and the submit button shows its loading state. Input changes leave the current compact profile visible but outdated until an explicit rebuild creates the next version, which records a service message in the selected Article's Assistant chat. The visible profile identifies its exact contributor samples and rebuild time.",
+            "persistence": "Raw samples, immutable Article Revision provenance, global rules, Article-specific rules, generated source names, and append-only compact profile versions remain local; Style Profile exposes a short local sample excerpt for author recognition.",
             "scenarioIds": ["history-and-publishing.style-corpus-local"]
         },
         {
@@ -101,7 +101,7 @@
             "capabilityIds": ["history-and-publishing.style-corpus"],
             "preconditions": ["The author adds a writing sample, optionally without a source name."],
             "event": "The style corpus or global rules change.",
-            "expected": ["A submitted blank source name is generated with the configured text model; removing a sample requires confirmation; the current profile is marked outdated until an explicit rebuild creates the next compact version, and the rebuild is recorded in the selected Article's Assistant chat."],
+            "expected": ["A submitted blank source name is generated with the configured text model; a confirmed Article Revision snapshot retains its source Revision; removing a sample requires confirmation; the current profile is marked outdated until an explicit rebuild creates the next compact version, and the rebuild is recorded in the selected Article's Assistant chat."],
             "forbidden": ["Raw style samples are not treated as remote application data except for the author-explicit name-generation request."],
             "evidence": { "kind": "automated", "path": "packages/server/src/application/editorial/style-corpus-service.test.ts" }
         },
