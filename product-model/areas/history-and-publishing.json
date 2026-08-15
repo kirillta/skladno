@@ -48,8 +48,8 @@
             "title": "Linked translation Articles with source freshness protection",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/TranslationsView.tsx", "packages/server/src/application/editorial/translation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "A translation is an independently recoverable linked Article. The translation workspace starts configured target-language requests through the Assistant, whose normal skill message records the request. It identifies its reviewed source Revision, presents source and translated text side by side when space permits (with compact tabs otherwise), exposes validated protected spans, and warns when a source changes; stale proposals cannot start creation.",
-            "persistence": "Source Article and Revision linkage persist on the independently recoverable translation Article.",
+            "contract": "A translation is an independently recoverable linked Article. The translation workspace starts configured target-language requests through the Assistant, whose normal skill message records the request. It restores the latest completed translation proposal after reload, identifies its reviewed source Revision, presents source and translated text side by side when space permits (with compact tabs otherwise), exposes validated protected spans, and warns when a source changes; stale proposals cannot start creation.",
+            "persistence": "Completed translation proposals persist in local Assistant artifacts; Source Article and Revision linkage persist on the independently recoverable translation Article.",
             "scenarioIds": ["history-and-publishing.translation-stale-source"]
         },
         {

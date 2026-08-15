@@ -82,6 +82,22 @@ describe("Editorial Workspace", () => {
         expect(screen.getByText("Improved Draft")).toBeTruthy();
     });
 
+
+    it("restores the latest completed translation from local Assistant records", async () => {
+        const client = fakeClient();
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "translations", selectedArticleId: "one" }));
+        client.listAssistantMessages = vi.fn().mockResolvedValue([{
+            id: "translation-message", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision",
+            translation: { content: "Borrador traducido", metadata: { targetLanguage: "Spanish", protectedSpans: [] } },
+            createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+        }]);
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText("Borrador traducido")).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Create translation article (Spanish)" })).toBeTruthy();
+    });
+
     // product: application.desktop-shell-layout
     it("migrates legacy panel choices into the versioned workspace layout preference", async () => {
         localStorage.clear();

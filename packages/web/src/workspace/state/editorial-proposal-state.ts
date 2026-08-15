@@ -283,16 +283,22 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         if (!article || restoredArticleIds.current.has(article.id))
             return;
 
-        const message = [...(messages ?? [])].reverse().find((item) => item.proposalContent && item.baseRevisionId && item.baseRevisionContent);
-        if (!message)
+        const message = [...(messages ?? [])].reverse().find((item) => item.responseKind !== "translation_proposal_prepared" && item.proposalContent && item.baseRevisionId && item.baseRevisionContent);
+        const translationMessage = [...(messages ?? [])].reverse().find((item) => item.translation && item.baseRevisionId);
+        if (!message && !translationMessage)
             return;
 
         restoredArticleIds.current.add(article.id);
-        setBase({ articleId: article.id, content: message.baseRevisionContent!, revisionId: message.baseRevisionId!, ...(message.editorialArtifactId ? { editorialArtifactId: message.editorialArtifactId } : {}) });
-        setProposal(message.proposalContent!);
-        setProposalSummaries(Object.fromEntries((message.proposalSummaries ?? []).map((summary) => [summary.changeId, summary.summary])));
-        setProposalSummaryLocale(message.proposalSummaryLocale);
-        setDecisions({});
+        if (message) {
+            setBase({ articleId: article.id, content: message.baseRevisionContent!, revisionId: message.baseRevisionId!, ...(message.editorialArtifactId ? { editorialArtifactId: message.editorialArtifactId } : {}) });
+            setProposal(message.proposalContent!);
+            setProposalSummaries(Object.fromEntries((message.proposalSummaries ?? []).map((summary) => [summary.changeId, summary.summary])));
+            setProposalSummaryLocale(message.proposalSummaryLocale);
+            setDecisions({});
+        }
+
+        if (translationMessage)
+            setTranslationResult({ articleId: article.id, baseRevisionId: translationMessage.baseRevisionId!, value: translationMessage.translation! });
     }, [workspace.selectedArticle]);
 
     return {

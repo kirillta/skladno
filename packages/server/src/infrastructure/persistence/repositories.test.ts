@@ -108,6 +108,24 @@ test("Proposal summaries remain recoverable with their Assistant Proposal", () =
 }));
 
 
+test("Translation proposals remain recoverable with their Assistant message", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Source", content: "Hello Node.js" });
+    const request = repositories.assistant.createRequest({ id: "translation-request", articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId }, explicitSkillId: "translation" });
+    repositories.assistant.resolveRequest(request.id, "translation", "explicit");
+    const artifact = repositories.editorialArtifacts.create({
+        articleId: article.id,
+        revisionId: article.currentRevisionId,
+        kind: "assistant-proposal",
+        content: JSON.stringify({ proposal: "Hola Node.js", translation: { targetLanguage: "Spanish", protectedSpans: ["Node.js"] } }),
+    });
+    repositories.assistant.completeRequest({ requestId: request.id, articleId: article.id, skillId: "translation", responseKind: "translation_proposal_prepared", content: "", editorialArtifactId: artifact.id });
+
+    const message = repositories.assistant.listMessages(article.id).find((item) => item.editorialArtifactId === artifact.id);
+
+    assert.deepEqual(message?.translation, { content: "Hola Node.js", metadata: { targetLanguage: "Spanish", protectedSpans: ["Node.js"] } });
+}));
+
+
 test("proposal acceptance requires the reviewed Revision to still be current", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Proposal", content: "before" });
     const accepted = repositories.articleService.acceptProposal(article.id, {

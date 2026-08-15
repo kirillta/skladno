@@ -185,6 +185,7 @@ export class AssistantRepository {
             ...(row.request_base_revision_id === null || row.request_base_revision_id === undefined ? {} : { baseRevisionId: String(row.request_base_revision_id) }),
             ...(row.request_revision_content === null || row.request_revision_content === undefined ? {} : { baseRevisionContent: String(row.request_revision_content) }),
             ...(proposalContent === undefined ? {} : { proposalContent }),
+            ...(artifactContent?.translation ? { translation: artifactContent.translation } : {}),
             ...(artifactContent?.proposalSummaries ? { proposalSummaries: artifactContent.proposalSummaries } : {}),
             ...(artifactContent?.proposalSummaryLocale ? { proposalSummaryLocale: artifactContent.proposalSummaryLocale } : {}),
             createdAt: String(row.created_at), updatedAt: String(row.updated_at),
@@ -192,15 +193,19 @@ export class AssistantRepository {
     }
 
 
-    private artifactContent(value: unknown): { proposal?: string; proposalSummaries?: import("@skladno/shared").ProposalChangeSummary[]; proposalSummaryLocale?: string } | undefined {
+    private artifactContent(value: unknown): { proposal?: string; translation?: NonNullable<AssistantMessage["translation"]>; proposalSummaries?: import("@skladno/shared").ProposalChangeSummary[]; proposalSummaryLocale?: string } | undefined {
         if (typeof value !== "string")
             return undefined;
 
         try {
-            const parsed = JSON.parse(value) as { proposal?: unknown; proposalSummaries?: unknown; proposalSummaryLocale?: unknown };
+            const parsed = JSON.parse(value) as { proposal?: unknown; translation?: { targetLanguage?: unknown; protectedSpans?: unknown }; proposalSummaries?: unknown; proposalSummaryLocale?: unknown };
+            const translation = typeof parsed.proposal === "string" && typeof parsed.translation?.targetLanguage === "string" && Array.isArray(parsed.translation.protectedSpans) && parsed.translation.protectedSpans.every((span) => typeof span === "string")
+                ? { content: parsed.proposal, metadata: { targetLanguage: parsed.translation.targetLanguage, protectedSpans: parsed.translation.protectedSpans as string[] } }
+                : undefined;
 
             return {
                 ...(typeof parsed.proposal === "string" ? { proposal: parsed.proposal } : {}),
+                ...(translation ? { translation } : {}),
                 ...(Array.isArray(parsed.proposalSummaries) ? { proposalSummaries: parsed.proposalSummaries as import("@skladno/shared").ProposalChangeSummary[] } : {}),
                 ...(typeof parsed.proposalSummaryLocale === "string" ? { proposalSummaryLocale: parsed.proposalSummaryLocale } : {}),
             };
