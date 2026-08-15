@@ -9,7 +9,7 @@ import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
 
 
-// Product scenarios: settings.general-time-zone-preferences, settings.ai-connection-lifecycle
+// Product scenarios: settings.general-time-zone-preferences, settings.ai-connection-lifecycle, settings.available-model-list
 
 function settingsSnapshot(): ApplicationSettingsSnapshot {
     return {
@@ -132,6 +132,7 @@ describe("ApplicationSettings", () => {
             getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
             getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
             addOpenAiConnection,
+            refreshOpenAiModels: vi.fn().mockResolvedValue([]),
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
@@ -162,6 +163,24 @@ describe("ApplicationSettings", () => {
         expect(screen.getByText("OPENAI_API_KEY")).toBeTruthy();
     });
 
+    it("loads available models when AI Settings opens", async () => {
+        const user = userEvent.setup();
+        const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
+        const refreshOpenAiModels = vi.fn().mockResolvedValue(["gpt-5"]);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id }),
+            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+            refreshOpenAiModels,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: "AI" }));
+
+        await waitFor(() => expect(refreshOpenAiModels).toHaveBeenCalledOnce());
+        expect(screen.getAllByRole("option", { name: "gpt-5" })).not.toHaveLength(0);
+    });
+
     it("prevents duplicate environment-variable names and manages saved connections", async () => {
         const user = userEvent.setup();
         const firstConnection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "unchecked" as const };
@@ -174,11 +193,13 @@ describe("ApplicationSettings", () => {
             addOpenAiConnection: vi.fn(),
             setActiveOpenAiConnection,
             removeOpenAiConnection,
+            refreshOpenAiModels: vi.fn().mockResolvedValue([]),
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await user.click(await screen.findByRole("button", { name: "AI" }));
+        await waitFor(() => expect(client.refreshOpenAiModels).toHaveBeenCalledOnce());
         await user.type(screen.getByPlaceholderText("For example, OPENAI_API_KEY"), "OPENAI_API_KEY");
         await user.click(screen.getByRole("button", { name: "Add connection" }));
 
@@ -188,6 +209,7 @@ describe("ApplicationSettings", () => {
 
         await user.click(screen.getByRole("button", { name: "Use this connection" }));
         await waitFor(() => expect(setActiveOpenAiConnection).toHaveBeenCalledWith(secondConnection.id));
+        await waitFor(() => expect(client.refreshOpenAiModels).toHaveBeenCalledTimes(2));
 
         await user.click(screen.getAllByRole("button", { name: "Remove connection" })[0]!);
         const dialog = screen.getByRole("dialog");

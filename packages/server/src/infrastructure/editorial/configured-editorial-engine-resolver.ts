@@ -6,6 +6,7 @@ import type { SettingsStore } from "../../application/ports/settings-store.js";
 import type { ServerConfig } from "../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
 import { AiSdkProposalSummaryGenerator } from "./ai-sdk-proposal-summary-generator.js";
+import { OpenAiSourceNameGenerator } from "./openai-source-name-generator.js";
 
 
 export function resolveTextGenerationModel(preferences: Partial<ModelPreferences> | undefined, fallback: string): string {
@@ -36,6 +37,24 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     resolveProposalSummaryGenerator() {
+        const configuration = this.resolveTextGenerationConfiguration();
+        if (!configuration)
+            return undefined;
+
+        return new AiSdkProposalSummaryGenerator(configuration.apiKey, configuration.model);
+    }
+
+
+    resolveSourceNameGenerator() {
+        const configuration = this.resolveTextGenerationConfiguration();
+        if (!configuration)
+            return undefined;
+
+        return new OpenAiSourceNameGenerator(configuration.apiKey, configuration.model);
+    }
+
+
+    private resolveTextGenerationConfiguration(): { apiKey: string; model: string } | undefined {
         const savedConnections = this.settings.get("application-ai-connections")?.value as { connections?: OpenAiConnection[]; activeConnectionId?: string } | undefined;
         const active = savedConnections?.connections?.find((connection) => connection.id === savedConnections.activeConnectionId);
         const apiKey = active ? process.env[active.environmentVariableName] : this.config.aiApiKey;
@@ -43,8 +62,6 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
             return undefined;
 
         const preferences = this.settings.get("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
-        const model = resolveTextGenerationModel(preferences, this.config.aiModel);
-
-        return new AiSdkProposalSummaryGenerator(apiKey, model);
+        return { apiKey, model: resolveTextGenerationModel(preferences, this.config.aiModel) };
     }
 }

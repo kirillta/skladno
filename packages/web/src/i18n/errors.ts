@@ -17,6 +17,7 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     environment_variable_unavailable: "errors.environmentVariableUnavailable",
     ai_connection_not_found: "errors.aiConnectionNotFound",
     duplicate_ai_connection: "errors.duplicateAiConnection",
+    duplicate_style_corpus_item: "errors.duplicateStyleCorpusItem",
     active_connection_required: "errors.activeConnectionRequired",
     active_connection_removal_blocked: "errors.activeConnectionRemovalBlocked",
     ai_connection_verification_failed: "errors.aiConnectionVerificationFailed",

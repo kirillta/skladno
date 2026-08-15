@@ -12,9 +12,9 @@ export function handleStyleCorpusRoute(response: ServerResponse, styleCorpus: St
 
 export async function createStyleCorpusItemRoute(request: IncomingMessage, response: ServerResponse, styleCorpus: StyleCorpusService): Promise<void> {
     const body = object(await readJson(request));
-    const input: CreateStyleCorpusItemInput = { name: string(body.name, "name"), content: string(body.content, "content") };
+    const input: CreateStyleCorpusItemInput = { name: typeof body.name === "string" ? body.name : undefined, content: string(body.content, "content") };
 
-    writeJson(response, HTTP_STATUS.CREATED, styleCorpus.add(input));
+    writeJson(response, HTTP_STATUS.CREATED, await styleCorpus.add(input, new AbortController().signal));
 }
 
 

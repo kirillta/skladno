@@ -101,7 +101,7 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
         case ELECTRON_APPLICATION_METHOD.getStyleCorpus:
             return services.styleCorpus.get();
         case ELECTRON_APPLICATION_METHOD.addStyleCorpusItem:
-            return services.styleCorpus.add(args[0] as import("@skladno/shared").CreateStyleCorpusItemInput);
+            return services.styleCorpus.add(args[0] as import("@skladno/shared").CreateStyleCorpusItemInput, new AbortController().signal);
         case ELECTRON_APPLICATION_METHOD.setStyleCorpusItemIncluded:
             return services.styleCorpus.setIncluded(String(args[0]), Boolean(args[1]));
         case ELECTRON_APPLICATION_METHOD.setStyleCorpusRules:

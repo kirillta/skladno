@@ -33,7 +33,7 @@ export function createApplicationServices(
         assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks),
         settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId),
         publishing: new PublishingService(settings),
-        styleCorpus: new StyleCorpusService(styleCorpus),
+        styleCorpus: new StyleCorpusService(styleCorpus, engines),
         proposalSummaries: new ProposalSummaryService(engines, artifacts),
         factChecks: new FactCheckService(factChecks),
     };

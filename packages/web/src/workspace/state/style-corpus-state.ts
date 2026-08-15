@@ -5,7 +5,7 @@ import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 
 
-export function useStyleCorpus(client: EditorialWorkspaceClient) {
+export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (activeCount: number) => void) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [corpus, setCorpus] = useState<StyleCorpus>();
@@ -16,7 +16,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient) {
 
     return {
         corpus,
-        add: async (name: string, content: string, origin?: "import") => {
+        add: async (name: string | undefined, content: string, origin?: "import") => {
             try {
                 setCorpus(await client.addStyleCorpusItem({ name, content, origin }));
             } catch (error) {
@@ -33,11 +33,48 @@ export function useStyleCorpus(client: EditorialWorkspaceClient) {
                 throw error;
             }
         },
-        setIncluded: async (id: string, included: boolean) => setCorpus(await client.setStyleCorpusItemIncluded(id, included)),
-        setRules: async (rules: string) => setCorpus(await client.setStyleCorpusRules(rules)),
-        rebuild: async () => setCorpus(await client.rebuildStyleCorpus()),
-        getArticleRules: (articleId: string) => client.getArticleStyleRules(articleId),
-        setArticleRules: (articleId: string, rules: string) => client.setArticleStyleRules(articleId, rules),
+        setIncluded: async (id: string, included: boolean) => {
+            try {
+                setCorpus(await client.setStyleCorpusItemIncluded(id, included));
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
+        setRules: async (rules: string) => {
+            try {
+                setCorpus(await client.setStyleCorpusRules(rules));
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
+        rebuild: async () => {
+            try {
+                const next = await client.rebuildStyleCorpus();
+                setCorpus(next);
+                onRebuilt?.(next.items.filter((item) => item.included).length);
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
+        getArticleRules: async (articleId: string) => {
+            try {
+                return await client.getArticleStyleRules(articleId);
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
+        setArticleRules: async (articleId: string, rules: string) => {
+            try {
+                return await client.setArticleStyleRules(articleId, rules);
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
     };
 }
 

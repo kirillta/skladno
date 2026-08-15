@@ -10,6 +10,10 @@ The complete typography and color reference is the [visual atlas](visual-atlas.m
 
 Buttons expose default, hover, focus, active, disabled, and loading behavior. The semantic state variants add a solid success/warning/error border, a dashed outdated border, or a double conflicted border so the meaning survives color loss.
 
+For a short asynchronous action, use the button's loading state and show a centered spinner in place of its visible label. Keep an invisible label to preserve the button's footprint, retain `aria-busy`, and expose a localized `role="status"` label for assistive technology. Disable the action while it is pending; do not add a separate loader that shifts the control row.
+
+Expandable workspace sections may use a short CSS transition for expansion and collapse. Keep the section mounted during the transition, preserve `aria-expanded` and `aria-controls` on the trigger, remove collapsed content from interaction with `aria-hidden` and `inert`, and disable the transition for reduced-motion users.
+
 ## Popup notifications
 
 Use application-level popup notifications for cross-screen outcomes and background actions. Use the `useNotifications` hook within the application notification provider; callers must provide localized title, message, and action text. `notifyError` maps local-service failures through the existing localized error catalog and never presents raw unknown error details.
@@ -49,6 +53,8 @@ Application Settings is a separate application screen, never a Workspace View or
 Use `bg-surface-supporting` for Settings Navigation, the Article Library Panel, and the Editorial Assistant Panel. This slightly darker shared surface elevates the supporting areas above the main workspace without changing their borders or control states.
 
 Each setting needs a visible label, persistent author-centered hint, control, and save or validation status. Connect each control to its help with `aria-describedby`; essential explanation never belongs only in a tooltip. Appearance selection persists without changing visual tokens until the dedicated theme work lands.
+
+Field labels name the content or setting, not the action used to provide it. Use labels such as `Sample text` rather than `Paste text here`; keep instructions and examples in the persistent hint or placeholder.
 
 Key bindings are local application preferences. Show each command's current platform-aware shortcut with an accessible recording control, clear action, and reset-to-default action. A conflicting shortcut must remain unsaved and identify the command that already owns it. Settings defines bindings and the dispatcher; connecting bindings to workspace actions is a separate task.
 
