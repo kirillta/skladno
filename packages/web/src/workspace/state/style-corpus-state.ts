@@ -33,11 +33,46 @@ export function useStyleCorpus(client: EditorialWorkspaceClient) {
                 throw error;
             }
         },
-        setIncluded: async (id: string, included: boolean) => setCorpus(await client.setStyleCorpusItemIncluded(id, included)),
-        setRules: async (rules: string) => setCorpus(await client.setStyleCorpusRules(rules)),
-        rebuild: async () => setCorpus(await client.rebuildStyleCorpus()),
-        getArticleRules: (articleId: string) => client.getArticleStyleRules(articleId),
-        setArticleRules: (articleId: string, rules: string) => client.setArticleStyleRules(articleId, rules),
+        setIncluded: async (id: string, included: boolean) => {
+            try {
+                setCorpus(await client.setStyleCorpusItemIncluded(id, included));
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
+        setRules: async (rules: string) => {
+            try {
+                setCorpus(await client.setStyleCorpusRules(rules));
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
+        rebuild: async () => {
+            try {
+                setCorpus(await client.rebuildStyleCorpus());
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
+        getArticleRules: async (articleId: string) => {
+            try {
+                return await client.getArticleStyleRules(articleId);
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
+        setArticleRules: async (articleId: string, rules: string) => {
+            try {
+                return await client.setArticleStyleRules(articleId, rules);
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                throw error;
+            }
+        },
     };
 }
 
