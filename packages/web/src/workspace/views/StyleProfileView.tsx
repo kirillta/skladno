@@ -57,6 +57,7 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, r
     const [snapshotRevisionId, setSnapshotRevisionId] = useState<string>();
     const [sourcesExpanded, setSourcesExpanded] = useState(false);
     const activeCount = corpus?.items.filter((item) => item.included).length ?? 0;
+    const selectableRevisions = revisions.map((revision, index) => ({ revision, number: index + 1 })).sort((left, right) => right.revision.createdAt.localeCompare(left.revision.createdAt));
     const summary = corpus?.profile
         ? intl.formatMessage({ id: "styleProfile.summary" }, { version: corpus.profile.version, confidence: corpus.profile.confidence })
         : intl.formatMessage({ id: "styleProfile.none" });
@@ -145,7 +146,7 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, r
         {corpus?.profile?.confidence === "low" && <Banner className="mb-6" tone="warning">{intl.formatMessage({ id: "styleProfile.lowConfidence" })}</Banner>}
         <div className="grid min-h-0 min-w-0 flex-1 gap-8 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:grid-rows-[minmax(0,1fr)]">
             <section className={`min-h-0 min-w-0 overflow-y-auto px-1 ${quietScrollbar}`}>
-                <div className="mb-3 flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "styleProfile.writingSamples" })}</h3><p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: "styleProfile.corpusHint" })}</p></div><div className="flex shrink-0 gap-2"><Button variant="quiet" onClick={() => setSnapshotRevisionId(revisions[0]?.id)} disabled={!revisions.length || Boolean(pendingAction)}>{intl.formatMessage({ id: "styleProfile.addRevision" })}</Button><Button variant="quiet" aria-expanded={adding} aria-controls="style-profile-add-sample" onClick={() => setAdding((value) => !value)}>+ {intl.formatMessage({ id: "styleProfile.add" })}</Button></div></div>
+                <div className="mb-3 flex flex-col items-start gap-3"><div className="min-w-0"><h3 className="text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "styleProfile.writingSamples" })}</h3><p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: "styleProfile.corpusHint" })}</p></div><div className="flex flex-wrap gap-2"><Button variant="quiet" onClick={() => setSnapshotRevisionId(selectableRevisions[0]?.revision.id)} disabled={!selectableRevisions.length || Boolean(pendingAction)}>{intl.formatMessage({ id: "styleProfile.addRevision" })}</Button><Button variant="quiet" aria-expanded={adding} aria-controls="style-profile-add-sample" onClick={() => setAdding((value) => !value)}>{intl.formatMessage({ id: "styleProfile.addWritingSample" })}</Button></div></div>
                 <div id="style-profile-add-sample" aria-hidden={!adding} {...(!adding ? { inert: true } : {}) as Record<string, boolean>} className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${adding ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0"}`}>
                     <div className="min-h-0 overflow-hidden">
                         <div className="mb-4 rounded-panel border border-border bg-surface p-4">
@@ -209,9 +210,9 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, r
         }}>
             <h2 id="add-style-revision-title" className="text-lg font-semibold">{intl.formatMessage({ id: "styleProfile.addRevisionTitle" })}</h2>
             <p className="mt-2 text-sm leading-6 text-muted">{intl.formatMessage({ id: "styleProfile.addRevisionDescription" })}</p>
-            <label className="mt-4 block text-sm font-medium" htmlFor="style-profile-revision">{intl.formatMessage({ id: "styleProfile.revision" }, { number: "" })}</label>
+            <label className="mt-4 block text-sm font-medium" htmlFor="style-profile-revision">{intl.formatMessage({ id: "styleProfile.savedRevision" })}</label>
             <Select id="style-profile-revision" className="mt-1" value={snapshotRevisionId} onChange={(event) => setSnapshotRevisionId(event.target.value)}>
-                {revisions.map((revision, index) => <option key={revision.id} value={revision.id}>{intl.formatMessage({ id: "styleProfile.revision" }, { number: index + 1 })}</option>)}
+                {selectableRevisions.map(({ revision, number }) => <option key={revision.id} value={revision.id}>{intl.formatMessage({ id: "styleProfile.revision" }, { number })}</option>)}
             </Select>
             <div className="mt-5 flex justify-end gap-3">
                 <Button variant="secondary" autoFocus onClick={() => setSnapshotRevisionId(undefined)}>{intl.formatMessage({ id: "editor.cancel" })}</Button>
