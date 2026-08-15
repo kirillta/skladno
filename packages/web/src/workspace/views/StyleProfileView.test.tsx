@@ -18,7 +18,7 @@ describe("StyleProfileView", () => {
         expect(screen.getByRole("alert").textContent).toContain("Paste text before adding.");
         expect(screen.getByText("Leave blank to generate a source name with your text model.")).toBeTruthy();
         expect(screen.getByPlaceholderText("Source name").getAttribute("required")).toBeNull();
-        expect(screen.getByPlaceholderText("Paste text here").getAttribute("required")).not.toBeNull();
+        expect(screen.getByPlaceholderText("Sample text").getAttribute("required")).not.toBeNull();
     });
 
     it("adds text without a source name for generation", async () => {
@@ -30,7 +30,7 @@ describe("StyleProfileView", () => {
         render(<IntlProvider locale="en" messages={messages}><StyleProfileView articleId="article-1" corpus={undefined} findings={undefined} findingsStale={false} add={add} remove={vi.fn()} setIncluded={vi.fn()} setRules={vi.fn()} rebuild={vi.fn()} getArticleRules={vi.fn().mockResolvedValue("")} setArticleRules={vi.fn()} /></IntlProvider>);
 
         await user.click(screen.getByRole("button", { name: "+ Add" }));
-        await user.type(screen.getByPlaceholderText("Paste text here"), "A representative writing sample.");
+        await user.type(screen.getByPlaceholderText("Sample text"), "A representative writing sample.");
         await user.click(screen.getByRole("button", { name: "Add" }));
 
         expect(add).toHaveBeenCalledWith("", "A representative writing sample.", undefined);

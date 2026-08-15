@@ -54,6 +54,8 @@ Use `bg-surface-supporting` for Settings Navigation, the Article Library Panel, 
 
 Each setting needs a visible label, persistent author-centered hint, control, and save or validation status. Connect each control to its help with `aria-describedby`; essential explanation never belongs only in a tooltip. Appearance selection persists without changing visual tokens until the dedicated theme work lands.
 
+Field labels name the content or setting, not the action used to provide it. Use labels such as `Sample text` rather than `Paste text here`; keep instructions and examples in the persistent hint or placeholder.
+
 Key bindings are local application preferences. Show each command's current platform-aware shortcut with an accessible recording control, clear action, and reset-to-default action. A conflicting shortcut must remain unsaved and identify the command that already owns it. Settings defines bindings and the dispatcher; connecting bindings to workspace actions is a separate task.
 
 ## Article Library Panel and Navigation Rail
