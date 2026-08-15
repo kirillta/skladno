@@ -404,6 +404,28 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("uses the promoted Revision for every configured translation", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        const promoted: ArticleRevision = { ...article("one", "First Article").currentRevision, id: "promoted-revision", content: "Changed Draft" };
+        const source = article("one", "First Article");
+        source.draft = { articleId: source.id, content: promoted.content, baseRevisionId: source.currentRevisionId, version: 1, updatedAt: promoted.createdAt };
+        client.listArticles = vi.fn().mockResolvedValue([source]);
+        client.getApplicationSettings = vi.fn().mockResolvedValue({ general: { ...defaultGeneralSettings, defaultTranslationLanguages: ["es", "de"] }, connections: [], modelPreferences: { defaultModel: "", skillOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} });
+        client.saveArticleDraft = vi.fn().mockResolvedValue(source.draft);
+        client.saveArticleRevision = vi.fn().mockResolvedValue(promoted);
+
+        render(<App client={client} />);
+        await screen.findByRole("textbox", { name: "Article draft" });
+        await user.click(screen.getByRole("button", { name: "Quick actions" }));
+        await user.click(screen.getByRole("button", { name: "Translation" }));
+        await user.click(screen.getByRole("button", { name: "Send editorial request" }));
+
+        await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalledTimes(2));
+        expect(vi.mocked(client.streamAssistantRequest).mock.calls.map(([, request]) => request.scope.baseRevisionId)).toEqual([promoted.id, promoted.id]);
+    });
+
+
     it("summarizes an Article selection in a compact composer chip", () => {
         const selection = "The first selected sentence provides enough context to identify the excerpt.";
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection={selection} clearSelection={vi.fn()} />);
