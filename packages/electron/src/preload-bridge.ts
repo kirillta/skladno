@@ -151,6 +151,7 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         rebuildStyleCorpus: () => invoke(ELECTRON_APPLICATION_METHOD.rebuildStyleCorpus),
         getArticleStyleRules: (articleId) => invoke(ELECTRON_APPLICATION_METHOD.getArticleStyleRules, articleId),
         setArticleStyleRules: (articleId, rules) => invoke(ELECTRON_APPLICATION_METHOD.setArticleStyleRules, articleId, rules),
+        addArticleRevisionStyleCorpusItem: (articleId, revisionId) => invoke(ELECTRON_APPLICATION_METHOD.addArticleRevisionStyleCorpusItem, articleId, revisionId),
         removeStyleCorpusItem: (materialId) => invoke(ELECTRON_APPLICATION_METHOD.removeStyleCorpusItem, materialId),
         getPublishLimitProfile: () => invoke(ELECTRON_APPLICATION_METHOD.getPublishLimitProfile),
         setPublishLimitProfile: (profileId) => invoke(ELECTRON_APPLICATION_METHOD.setPublishLimitProfile, profileId),

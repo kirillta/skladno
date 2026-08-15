@@ -109,7 +109,14 @@ function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StylePro
     if (value.findings.some((finding) => finding.traitIds.some((traitId) => !availableTraits.has(traitId))))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "Style review cited a trait that is not in the supplied local profile. Retry the request.");
 
-    return { findings: value.findings };
+    return {
+        findings: value.findings,
+        profileVersion: profile.version,
+        confidence: profile.confidence,
+        traitLabels: Object.fromEntries([...profile.traits.map((trait) => [trait.id, trait.label]), ...profile.rules.split("\n").filter(Boolean).map((rule, index) => [`global-rule-${index + 1}`, rule]), ...articleRules.split("\n").filter(Boolean).map((rule, index) => [`article-rule-${index + 1}`, rule])]),
+        globalRules: profile.rules.split("\n").filter(Boolean),
+        articleRules: articleRules.split("\n").filter(Boolean),
+    };
 }
 
 

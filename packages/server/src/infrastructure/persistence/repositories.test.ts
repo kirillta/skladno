@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { openDatabase } from "./database.js";
 import { createTestPersistence, type TestPersistence } from "../../test-support/test-persistence.js";
+import { StyleCorpusService } from "../../application/editorial/style-corpus-service.js";
 
 
 // Product scenarios: history-and-publishing.revision-restore-creates-new, history-and-publishing.style-corpus-local, cross-cutting.assistant-records-local
@@ -319,4 +320,21 @@ test("Article style rules are isolated from the global profile", () => withRepos
     assert.equal(repositories.styleCorpus.getArticleRules(first.id), "Use active voice.");
     assert.equal(repositories.styleCorpus.getArticleRules(second.id), "");
     assert.equal(repositories.styleCorpus.get().profile, undefined);
+}));
+
+
+test("Article Revision snapshots remain local immutable style samples", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Snapshot", content: "First version." });
+    const revision = repositories.articles.appendRevision(article.id, "Second version.", { kind: "author-draft" });
+    const service = new StyleCorpusService(repositories.styleCorpus, undefined, repositories.articles);
+
+    const corpus = service.addArticleRevision(article.id, revision.id);
+    const snapshot = corpus.items[0]!;
+
+    assert.equal(snapshot.origin, "article-revision");
+    assert.equal(snapshot.articleId, article.id);
+    assert.equal(snapshot.revisionId, revision.id);
+    assert.match(snapshot.name, /Snapshot — Revision 2/);
+    assert.equal(snapshot.excerpt, "Second version.");
+    assert.throws(() => service.addArticleRevision(article.id, revision.id), { code: "duplicate_style_corpus_item" });
 }));

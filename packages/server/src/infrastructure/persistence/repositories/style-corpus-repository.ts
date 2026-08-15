@@ -12,6 +12,12 @@ function profileFor(items: { id: string; content: string }[], rules: string, ver
     const averageSentenceWords = sentences.length === 0 ? 0 : words.length / sentences.length;
     const firstPerson = (content.match(/\b(I|we|my|our|I’m|we’re|I’ve|we’ve)\b/giu) ?? []).length;
     const contractions = (content.match(/\b[\p{L}]+['’][\p{L}]+\b/gu) ?? []).length;
+    const transitionCount = (content.match(/\b(however|therefore|for example|for instance|meanwhile|instead|because|although|finally|first|second)\b/giu) ?? []).length;
+    // ponytail: O(n²) phrase counting is bounded by the local corpus; add a frequency map if profiles grow materially.
+    const phrasesToAvoid = [...content.toLowerCase().matchAll(/\b([\p{L}]+\s+[\p{L}]+\s+[\p{L}]+)\b/gu)]
+        .map((match) => match[1]!)
+        .filter((phrase, index, phrases) => phrases.indexOf(phrase) === index && phrases.filter((item) => item === phrase).length >= 2)
+        .slice(0, 5);
     const traits: StyleTrait[] = [{
         id: "voice",
         label: firstPerson > 0 ? "personal author presence" : "impersonal explanatory voice",
@@ -28,6 +34,10 @@ function profileFor(items: { id: string; content: string }[], rules: string, ver
         id: "vocabulary",
         label: contractions > 0 ? "conversational contractions" : "formal, expanded phrasing",
         evidence: `${contractions} contractions in the local corpus.`
+    }, {
+        id: "transitions",
+        label: transitionCount > 0 ? "uses explicit transitions" : "uses few explicit transitions",
+        evidence: `${transitionCount} transition markers in the local corpus.`
     }];
     const characterCount = content.length;
 
@@ -37,7 +47,7 @@ function profileFor(items: { id: string; content: string }[], rules: string, ver
         characterCount,
         confidence: items.length >= 5 && characterCount >= 12_000 ? "high" : items.length >= 2 && characterCount >= 3_000 ? "medium" : "low",
         traits,
-        phrasesToAvoid: [],
+        phrasesToAvoid,
         contributorIds: items.map((item) => item.id),
         rules,
         updatedAt: now()
@@ -87,11 +97,11 @@ export class StyleCorpusRepository {
     }
 
 
-    add(input: CreateStyleCorpusItemInput & { name: string }): StyleCorpus {
+    add(input: CreateStyleCorpusItemInput & { name: string; origin?: "manual" | "import" | "article-revision"; articleId?: string; revisionId?: string }): StyleCorpus {
         const timestamp = now();
         const materialId = createId();
         this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(materialId, required(input.name, "Corpus item name"), required(input.content, "Corpus item content"), timestamp, timestamp);
-        this.database.prepare("INSERT INTO style_corpus_items (author_material_id, created_at, origin) VALUES (?, ?, ?)").run(materialId, timestamp, input.origin ?? "manual");
+        this.database.prepare("INSERT INTO style_corpus_items (author_material_id, created_at, origin, article_id, revision_id) VALUES (?, ?, ?, ?, ?)").run(materialId, timestamp, input.origin ?? "manual", input.articleId ?? null, input.revisionId ?? null);
 
         return this.get();
     }

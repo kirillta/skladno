@@ -72,6 +72,11 @@ export interface StyleFinding {
 
 export interface StyleReview {
     findings: StyleFinding[];
+    profileVersion?: import("../style/style.js").StyleProfile["version"];
+    confidence?: import("../style/style.js").StyleProfile["confidence"];
+    traitLabels?: Record<string, string>;
+    globalRules?: string[];
+    articleRules?: string[];
 }
 
 

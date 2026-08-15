@@ -30,7 +30,7 @@ import {
     type EditorialEvent,
     type StartEditorialRequest,
     restoreRevisionPath,
-    articleStyleRulesPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath,
+    articleStyleCorpusSnapshotPath, articleStyleRulesPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath,
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
     publishSettingsPath,
@@ -280,6 +280,11 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async setArticleStyleRules(articleId: string, rules: string): Promise<string> {
         return (await this.request<{ rules: string }>(articleStyleRulesPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ rules }) })).rules;
+    }
+
+
+    async addArticleRevisionStyleCorpusItem(articleId: string, revisionId: string): Promise<StyleCorpus> {
+        return this.request<StyleCorpus>(articleStyleCorpusSnapshotPath(articleId, revisionId), { method: HTTP_METHOD.POST });
     }
 
 

@@ -52,6 +52,7 @@ export interface ElectronApplicationOperationMap {
     rebuildStyleCorpus: { args: []; result: StyleCorpus };
     getArticleStyleRules: { args: [string]; result: string };
     setArticleStyleRules: { args: [string, string]; result: string };
+    addArticleRevisionStyleCorpusItem: { args: [string, string]; result: StyleCorpus };
     removeStyleCorpusItem: { args: [string]; result: void };
     getPublishLimitProfile: { args: []; result: PublishLimitProfileId };
     setPublishLimitProfile: { args: [PublishLimitProfileId]; result: PublishLimitProfileId };
@@ -92,6 +93,7 @@ export const ELECTRON_APPLICATION_METHOD = {
     rebuildStyleCorpus: "rebuildStyleCorpus",
     getArticleStyleRules: "getArticleStyleRules",
     setArticleStyleRules: "setArticleStyleRules",
+    addArticleRevisionStyleCorpusItem: "addArticleRevisionStyleCorpusItem",
     removeStyleCorpusItem: "removeStyleCorpusItem",
     getPublishLimitProfile: "getPublishLimitProfile",
     setPublishLimitProfile: "setPublishLimitProfile",
