@@ -41,11 +41,13 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, g
     const [name, setName] = useState("");
     const [content, setContent] = useState("");
     const [rules, setRulesDraft] = useState(corpus?.rules ?? "");
+    const [savedRules, setSavedRules] = useState(corpus?.rules ?? "");
     const [rebuilt, setRebuilt] = useState(false);
     const [adding, setAdding] = useState(false);
     const [validationFailed, setValidationFailed] = useState(false);
     const [uploadFailed, setUploadFailed] = useState(false);
     const [articleRules, setArticleRulesDraft] = useState("");
+    const [savedArticleRules, setSavedArticleRules] = useState("");
     const [pendingAction, setPendingAction] = useState<string>();
     const [removingId, setRemovingId] = useState<string>();
     const activeCount = corpus?.items.filter((item) => item.included).length ?? 0;
@@ -89,12 +91,19 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, g
     };
 
     useEffect(() => {
-        void getArticleRules(articleId).then(setArticleRulesDraft, () => undefined);
+        void getArticleRules(articleId).then((nextRules) => {
+            setArticleRulesDraft(nextRules);
+            setSavedArticleRules(nextRules);
+        }, () => undefined);
     }, [articleId, getArticleRules]);
 
     useEffect(() => {
-        setRulesDraft(corpus?.rules ?? "");
+        const nextRules = corpus?.rules ?? "";
+        setRulesDraft(nextRules);
+        setSavedRules(nextRules);
     }, [corpus?.rules]);
+
+    const ruleStatus = (draft: string, saved: string): MessageId => !draft.trim() ? "styleProfile.rulesNone" : draft === saved ? "styleProfile.rulesApplied" : "styleProfile.rulesUnsaved";
 
     const confirmRemove = () => {
         if (!removingId)
@@ -156,10 +165,12 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, g
                 {corpus?.profile?.phrasesToAvoid.length ? <><h3 className="mb-3 mt-7 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "styleProfile.phrasesToAvoid" })}</h3><div className="flex flex-wrap gap-2">{corpus.profile.phrasesToAvoid.map((phrase) => <span className="rounded-control border border-danger/30 bg-danger-soft px-2 py-1 text-sm text-danger" key={phrase}>{phrase}</span>)}</div></> : null}
                 <h3 className="mb-3 mt-7 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "styleProfile.manualRules" })}</h3>
                 <TextareaField id="style-profile-global-rules" aria-label={intl.formatMessage({ id: "styleProfile.rules" })} className="min-h-36" placeholder={intl.formatMessage({ id: "styleProfile.rules" })} value={rules} onChange={(event) => setRulesDraft(event.target.value)} />
-                <div className="mt-3 flex gap-3"><Button variant="quiet" disabled={Boolean(pendingAction)} onClick={() => document.getElementById("style-profile-global-rules")?.focus()}>{intl.formatMessage({ id: "styleProfile.addRule" })}</Button><Button variant="secondary" state={pendingAction === "rules" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={() => run("rules", () => setRules(rules))}>{intl.formatMessage({ id: "styleProfile.saveRules" })}</Button></div>
+                <p className="mt-2 text-xs text-muted" role="status">{intl.formatMessage({ id: ruleStatus(rules, savedRules) })}</p>
+                <Button className="mt-3" variant="secondary" state={pendingAction === "rules" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={() => run("rules", () => setRules(rules), () => setSavedRules(rules))}>{intl.formatMessage({ id: "styleProfile.saveRules" })}</Button>
                 <h3 className="mb-3 mt-7 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "styleProfile.thisArticle" })}</h3>
                 <TextareaField id="style-profile-article-rules" aria-label={intl.formatMessage({ id: "styleProfile.articleRules" })} className="min-h-28" placeholder={intl.formatMessage({ id: "styleProfile.articleRules" })} value={articleRules} onChange={(event) => setArticleRulesDraft(event.target.value)} />
-                <Button className="mt-3" variant="secondary" state={pendingAction === "article-rules" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={() => run("article-rules", () => setArticleRules(articleId, articleRules))}>{intl.formatMessage({ id: "styleProfile.saveRules" })}</Button>
+                <p className="mt-2 text-xs text-muted" role="status">{intl.formatMessage({ id: ruleStatus(articleRules, savedArticleRules) })}</p>
+                <Button className="mt-3" variant="secondary" state={pendingAction === "article-rules" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={() => run("article-rules", () => setArticleRules(articleId, articleRules), () => setSavedArticleRules(articleRules))}>{intl.formatMessage({ id: "styleProfile.saveRules" })}</Button>
                 {findings && <h3 className="mb-3 mt-7 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "styleProfile.review" })}</h3>}
                 {findingsStale && <Banner className="mb-3" tone="warning" role="alert">{intl.formatMessage({ id: "styleProfile.staleReview" })}</Banner>}
                 {findings?.findings.map((finding) => <p key={finding.divergence} className="mt-3 text-sm">{finding.divergence}: {finding.suggestion}</p>)}
