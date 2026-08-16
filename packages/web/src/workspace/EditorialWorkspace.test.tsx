@@ -12,6 +12,7 @@ import { articleContentForWorkspace, sortArticlesByActivity } from "./EditorialW
 import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
+import { requestedTranslationLanguages } from "./state/assistant-messages-state.js";
 
 
 // Product scenarios: workspace.library.create-and-select, workspace.assistant.quick-action, workspace.empty.create-article, workspace.header.metadata-and-deletion, workspace.navigation.persisted-view, workspace.publishing.over-guidance, history-and-publishing.publishing-guidance, cross-cutting.accessible-workspace-separators
@@ -446,6 +447,11 @@ describe("Editorial Workspace", () => {
 
         await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalledTimes(2));
         expect(vi.mocked(client.streamAssistantRequest).mock.calls.map(([, request]) => request.scope.baseRevisionId)).toEqual([promoted.id, promoted.id]);
+    });
+
+
+    it("requests only the supported translation named in the Author guidance", () => {
+        expect(requestedTranslationLanguages("German", ["es", "en"])).toEqual(["de"]);
     });
 
 
