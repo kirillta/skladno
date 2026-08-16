@@ -6,12 +6,12 @@ import { SettingRow } from "./SettingRow.js";
 
 
 const languageMessageIds = {
-    en: "languages.english", 
-    es: "languages.spanish", 
-    pt: "languages.portuguese", 
-    ru: "languages.russian", 
-    fr: "languages.french", 
-    de: "languages.german", 
+    en: "languages.english",
+    es: "languages.spanish",
+    pt: "languages.portuguese",
+    ru: "languages.russian",
+    fr: "languages.french",
+    de: "languages.german",
     it: "languages.italian",
 } as const;
 
