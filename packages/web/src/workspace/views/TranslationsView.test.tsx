@@ -46,7 +46,7 @@ describe("TranslationsView", () => {
         </IntlProvider>);
 
         expect(screen.getByText("The source Article has changed since this translation proposal was made.")).toBeTruthy();
-        expect(screen.getByRole("button", { name: "Create translation article (Spanish)" }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("button", { name: "Create Spanish translation" }).hasAttribute("disabled")).toBe(true);
     });
 
     it("shows loading while creating a translation", async () => {
@@ -59,7 +59,7 @@ describe("TranslationsView", () => {
             <TranslationsView article={article} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "Borrador traducido", baseRevisionId: "revision-2" }]} stale={false} create={create} translate={vi.fn()} />
         </IntlProvider>);
 
-        const button = screen.getByRole("button", { name: "Create translation article (Spanish)" });
+        const button = screen.getByRole("button", { name: "Create Spanish translation" });
         await user.click(button);
 
         expect(button.getAttribute("aria-busy")).toBe("true");
@@ -81,7 +81,23 @@ describe("TranslationsView", () => {
         expect(screen.getByText("Deutscher Text")).toBeTruthy();
         await user.click(screen.getByRole("tab", { name: "Spanish" }));
         expect(screen.getByText("Texto en español")).toBeTruthy();
-        await user.click(screen.getByRole("button", { name: "Create translation article (Spanish)" }));
+        await user.click(screen.getByRole("button", { name: "Create Spanish translation" }));
         expect(create).toHaveBeenCalledWith("Spanish");
+    });
+
+    it("aligns source and translated paragraphs by order", async () => {
+        const user = userEvent.setup();
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={{ ...article, currentRevision: { ...article.currentRevision, content: "1. First source paragraph.\n2. Second source paragraph." } }} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "1. Primer párrafo traducido.\n2. Segundo párrafo traducido.", baseRevisionId: "revision-2" }]} stale={false} create={vi.fn()} translate={vi.fn()} />
+        </IntlProvider>);
+
+        await user.click(screen.getByRole("tab", { name: "Aligned paragraphs" }));
+
+        expect(screen.getByRole("tab", { name: "Aligned paragraphs" }).getAttribute("aria-selected")).toBe("true");
+        expect(screen.getByText("1. First source paragraph.")).toBeTruthy();
+        expect(screen.getByText("1. Primer párrafo traducido.")).toBeTruthy();
+        const sourceSecond = screen.getByText("2. Second source paragraph.");
+        const translatedSecond = screen.getByText("2. Segundo párrafo traducido.");
+        expect(sourceSecond.parentElement).toBe(translatedSecond.parentElement);
     });
 });
