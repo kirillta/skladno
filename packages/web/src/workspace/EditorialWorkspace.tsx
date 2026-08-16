@@ -53,6 +53,14 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         layout.setAssistantCollapsed(false);
         void assistant.request("", BUILT_IN_SKILL.FACT_CHECKING);
     };
+    const runTranslation = () => {
+        const languages = generalSettings.defaultTranslationLanguages.filter((language) => language !== workspace.selectedArticle?.language);
+        if (!languages.length)
+            return;
+
+        layout.setAssistantCollapsed(false);
+        void assistant.request("", BUILT_IN_SKILL.TRANSLATION, languages);
+    };
 
     useEffect(() => {
         restoreAssistantProposal(assistant.messages);
@@ -185,7 +193,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             onCancel={assistant.cancel}
             collapsed={layout.assistantCollapsed}
             setCollapsed={layout.setAssistantCollapsed}
-            language={layout.targetLanguage}
+            translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== workspace.selectedArticle?.language)}
             assistantMessages={assistant.messages}
             dispatcher={dispatcher}
             shortcutOverrides={keyBindingOverrides}
@@ -194,7 +202,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             generalSettings={generalSettings}
             clearSelection={() => setAssistantSelection(undefined)} />
         }>
-        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} runFactCheck={runFactCheck} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} assistantSelection={assistantSelection} />
+        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} runFactCheck={runFactCheck} runTranslation={runTranslation} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} assistantSelection={assistantSelection} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
         <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
     </ExtractedWorkspaceShell>;

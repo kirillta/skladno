@@ -12,6 +12,7 @@ import { articleContentForWorkspace, sortArticlesByActivity } from "./EditorialW
 import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 import { ArticleStatusBar } from "./components/ArticleStatusBar.js";
+import { requestedTranslationLanguages } from "./state/assistant-messages-state.js";
 
 
 // Product scenarios: workspace.library.create-and-select, workspace.assistant.quick-action, workspace.empty.create-article, workspace.header.metadata-and-deletion, workspace.navigation.persisted-view, workspace.publishing.over-guidance, history-and-publishing.publishing-guidance, cross-cutting.accessible-workspace-separators
@@ -80,6 +81,29 @@ describe("Editorial Workspace", () => {
 
         expect(await screen.findByText("Replacement · Change 1 of 1")).toBeTruthy();
         expect(screen.getByText("Improved Draft")).toBeTruthy();
+    });
+
+
+    it("restores the latest completed translation from local Assistant records", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "translations", selectedArticleId: "one" }));
+        client.listAssistantMessages = vi.fn().mockResolvedValue([{
+            id: "spanish-translation-message", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision",
+            translation: { content: "Borrador traducido", metadata: { targetLanguage: "Spanish", protectedSpans: [] } },
+            createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+        }, {
+            id: "german-translation-message", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision",
+            translation: { content: "Deutscher Entwurf", metadata: { targetLanguage: "German", protectedSpans: [] } },
+            createdAt: "2026-01-01T00:01:00.000Z", updatedAt: "2026-01-01T00:01:00.000Z",
+        }]);
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText("Deutscher Entwurf")).toBeTruthy();
+        await user.click(screen.getByRole("tab", { name: "Spanish" }));
+        expect(screen.getByText("Borrador traducido")).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Edit Spanish translation" })).toBeTruthy();
     });
 
     // product: application.desktop-shell-layout
@@ -324,7 +348,7 @@ describe("Editorial Workspace", () => {
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const updateArticle = vi.fn().mockResolvedValue(undefined);
 
-        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} article={article("one", "First Article")} updateArticle={updateArticle} />);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} translationLanguages={["Portuguese"]} assistantMessages={[{ id: "greeting", articleId: "one", role: "assistant", kind: "greeting", status: "completed", template: "greeting", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} article={article("one", "First Article")} updateArticle={updateArticle} />);
         const panelScope = within(panel.container);
 
         expect(panelScope.getByText(/I’m here to help shape this Article/)).toBeTruthy();
@@ -345,7 +369,7 @@ describe("Editorial Workspace", () => {
 
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
-        expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", "Portuguese", "Preserve the key claims.".length);
+        expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", ["Portuguese"], "Preserve the key claims.".length);
     });
 
 
@@ -388,6 +412,46 @@ describe("Editorial Workspace", () => {
         await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
 
         expect(onRequest).toHaveBeenCalledWith("", "flow_and_clarity", undefined, 0);
+    });
+
+    it("creates a translation proposal for every configured default language", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" translationLanguages={["Spanish", "German"]} assistantMessages={[]} />);
+        const panelScope = within(panel.container);
+
+        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
+        await user.click(panelScope.getByRole("button", { name: "Translation" }));
+        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+
+        expect(onRequest).toHaveBeenCalledWith("", "translation", ["Spanish", "German"], 0);
+    });
+
+
+    it("uses the promoted Revision for every configured translation", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        const promoted: ArticleRevision = { ...article("one", "First Article").currentRevision, id: "promoted-revision", content: "Changed Draft" };
+        const source = article("one", "First Article");
+        source.draft = { articleId: source.id, content: promoted.content, baseRevisionId: source.currentRevisionId, version: 1, updatedAt: promoted.createdAt };
+        client.listArticles = vi.fn().mockResolvedValue([source]);
+        client.getApplicationSettings = vi.fn().mockResolvedValue({ general: { ...defaultGeneralSettings, defaultTranslationLanguages: ["es", "de"] }, connections: [], modelPreferences: { defaultModel: "", skillOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} });
+        client.saveArticleDraft = vi.fn().mockResolvedValue(source.draft);
+        client.saveArticleRevision = vi.fn().mockResolvedValue(promoted);
+
+        render(<App client={client} />);
+        await screen.findByRole("textbox", { name: "Article draft" });
+        await user.click(screen.getByRole("button", { name: "Quick actions" }));
+        await user.click(screen.getByRole("button", { name: "Translation" }));
+        await user.click(screen.getByRole("button", { name: "Send editorial request" }));
+
+        await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalledTimes(2));
+        expect(vi.mocked(client.streamAssistantRequest).mock.calls.map(([, request]) => request.scope.baseRevisionId)).toEqual([promoted.id, promoted.id]);
+    });
+
+
+    it("requests only the supported translation named in the Author guidance", () => {
+        expect(requestedTranslationLanguages("German", ["es", "en"])).toEqual(["de"]);
     });
 
 

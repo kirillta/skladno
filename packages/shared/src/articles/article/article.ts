@@ -15,6 +15,7 @@ export interface Article {
     publishingProfileId?: string;
     sourceArticleId?: string;
     sourceRevisionId?: string;
+    sourceRevisionNumber?: number;
 }
 
 

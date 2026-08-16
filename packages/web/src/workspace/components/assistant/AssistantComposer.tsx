@@ -8,8 +8,9 @@ import { shortcutHint } from "../../../key-bindings/shortcut-hint.js";
 import { skillMessages } from "./assistant-messages.js";
 
 
-export function AssistantComposer({ state, guidance, selectedSkill, selection, composer, quickActionsOpen, availableSkills, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onCancel, onInput, onKeyDown, shortcutOverrides }: {
+export function AssistantComposer({ state, canSend, guidance, selectedSkill, selection, composer, quickActionsOpen, availableSkills, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onCancel, onInput, onKeyDown, shortcutOverrides }: {
     state: "idle" | "streaming" | "error";
+    canSend: boolean;
     guidance: string;
     selectedSkill?: BuiltInSkillId;
     selection?: string;
@@ -27,8 +28,6 @@ export function AssistantComposer({ state, guidance, selectedSkill, selection, c
     shortcutOverrides?: KeyBindingOverrides;
 }) {
     const intl = useIntl();
-    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill);
-
     return <footer className="shrink-0 border-t border-border px-5 py-4">
         <div className="relative mb-3">
             {quickActionsOpen && <div className="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "assistant.quickActions" })}>

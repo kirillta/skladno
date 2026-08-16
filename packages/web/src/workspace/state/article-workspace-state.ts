@@ -193,8 +193,11 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
 
         const session = draftLifecycle.sessionsRef.current[articleId];
         const current = articlesRef.current.find((article) => article.id === articleId);
-        if (!current || !session || current.currentRevision.content === session.content && session.draftVersion === undefined)
+        if (!current || !session)
             return undefined;
+
+        if (current.currentRevision.content === session.content && session.draftVersion === undefined)
+            return current.currentRevision;
 
         try {
             const content = session.content;

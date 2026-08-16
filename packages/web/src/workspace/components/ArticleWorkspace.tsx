@@ -17,7 +17,7 @@ import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import type { WorkspaceView } from "../workspace-views.js";
 
 
-export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, shortcutOverrides, onSelectionChange, assistantSelection }: {
+export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, runTranslation, shortcutOverrides, onSelectionChange, assistantSelection }: {
     workspace: ArticleWorkspaceState;
     layout: WorkspaceLayoutState;
     editorial: EditorialProposalState;
@@ -27,6 +27,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     generalSettings: GeneralSettings;
     createBlank: () => Promise<unknown>;
     runFactCheck: () => void;
+    runTranslation: () => void;
     shortcutOverrides?: KeyBindingOverrides;
     onSelectionChange?: (value: string | undefined) => void;
     assistantSelection?: string;
@@ -97,6 +98,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             publishing={publishing}
             generalSettings={generalSettings}
             runFactCheck={runFactCheck}
+            runTranslation={runTranslation}
             onSelectionChange={onSelectionChange}
             assistantSelection={assistantSelection}
             proposalWarningsDismissed={layout.proposalWarningsDismissed}

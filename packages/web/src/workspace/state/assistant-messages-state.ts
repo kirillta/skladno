@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { ApplicationClientError, ASSISTANT_EVENT, type AssistantEditorialResult, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
+import { ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantEditorialResult, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName } from "./editorial-language.js";
 
 type ProposalState = "idle" | "streaming" | "error";
+
+
+export function requestedTranslationLanguages(authorMessage: string, languages: readonly string[]): readonly string[] {
+    const unique = [...new Set(languages)];
+    const requested = articleLanguages.filter((language) => authorMessage.toLowerCase().includes(providerLanguageName(language).toLowerCase()));
+    return requested.length ? requested : unique;
+}
 
 
 export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: string | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => void, profileRebuilt?: { articleId: string; count: number; token: number }) {
@@ -85,10 +92,17 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         }));
     }, [article, profileRebuilt]);
 
-    const request = useCallback(async (authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string, skillOffset?: number) => {
+    const request = useCallback(async (authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string | readonly string[], skillOffset?: number) => {
         const current = workspace.selectedArticle;
         if (!current)
             return;
+
+        if (targetLanguage && typeof targetLanguage !== "string") {
+            for (const language of requestedTranslationLanguages(authorMessage, targetLanguage))
+                await request(authorMessage, explicitSkillId, language, skillOffset);
+
+            return;
+        }
 
         try {
             const saved = await workspace.save(current.id);

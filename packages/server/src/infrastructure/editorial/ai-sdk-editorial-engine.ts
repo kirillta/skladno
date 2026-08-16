@@ -236,13 +236,13 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
         const result = await generateText({
             model: this.openai.responses(this.options.model),
-            messages: createEditorialMessages({
+            ...responsesPrompt(createEditorialMessages({
                 operation: request.operation,
                 article: boundedArticleContext(request.article),
                 authorContext: request.authorContext,
                 styleProfile: request.styleProfile,
                 articleStyleRules: request.articleStyleRules,
-            }),
+            })),
             output: Output.object({ schema: styleReviewSchema }),
             abortSignal: signal,
             telemetry: { isEnabled: false },
@@ -269,7 +269,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         const protectedArticle = protectArticleSpans(boundedArticleContext(request.article));
         const result = await generateText({
             model: this.openai.responses(this.options.model),
-            messages: createEditorialMessages({ operation: request.operation, article: protectedArticle.protectedText, authorContext: request.authorContext, targetLanguage }),
+            ...responsesPrompt(createEditorialMessages({ operation: request.operation, article: protectedArticle.protectedText, authorContext: request.authorContext, targetLanguage })),
             output: Output.object({ schema: translationSchema }),
             abortSignal: signal,
             telemetry: { isEnabled: false },

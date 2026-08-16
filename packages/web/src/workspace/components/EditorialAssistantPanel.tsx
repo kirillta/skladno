@@ -11,16 +11,17 @@ import { composerCaretOffset, composerText, placeCaretAfterSkill, textBeforeSkil
 import { selectionPreview, skillMessages } from "./assistant/assistant-messages.js";
 
 
-export function EditorialAssistantPanel({ state, message, errorDetails, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, language, assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
+export function EditorialAssistantPanel({ state, message, errorDetails, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
     factCheckClaims?: FactCheckClaimPreview[];
-    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string, skillOffset?: number) => Promise<void>;
+    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
     onCancel: () => void;
     collapsed: boolean;
     setCollapsed: (value: boolean) => void;
-    language: string;
+    language?: string;
+    translationLanguages?: readonly string[];
     assistantMessages?: AssistantMessage[];
     article?: Article;
     updateArticle?: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
@@ -46,7 +47,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
         selectedSkill,
         skillOffset,
     });
-    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill);
+    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0);
     const availableSkills = builtInSkills.filter((skill) => !selection || builtInSkillScopeCompatibility[skill].includes("selection"));
 
     composerState.current = {
@@ -182,13 +183,13 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
         const requestSkill = selectedSkill && (!selection || builtInSkillScopeCompatibility[selectedSkill].includes("selection")) ? selectedSkill : undefined;
         const selectedSkillOffset = requestSkill ? Math.max(0, skillOffset - leadingWhitespace) : undefined;
 
-        void onRequest(authorMessage, requestSkill, requestSkill === BUILT_IN_SKILL.TRANSLATION ? language : undefined, selectedSkillOffset)
+        void onRequest(authorMessage, requestSkill, requestSkill === BUILT_IN_SKILL.TRANSLATION ? translationLanguages : undefined, selectedSkillOffset)
             .then(() => {
                 setGuidance("");
                 setSelectedSkill(undefined);
                 renderComposerContent("");
             });
-    }, [canSend, guidance, language, onRequest, renderComposerContent, selectedSkill, selection, skillOffset]);
+    }, [canSend, guidance, onRequest, renderComposerContent, selectedSkill, selection, skillOffset, translationLanguages]);
 
     useEffect(() => {
         const unregisterSend = dispatcher?.register(KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, send);
@@ -248,6 +249,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
         <AssistantTimeline state={state} message={message} errorDetails={errorDetails} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} generalSettings={generalSettings} elapsedDuration={elapsedDuration} />
         <AssistantComposer
             state={state}
+            canSend={canSend}
             guidance={guidance}
             selectedSkill={selectedSkill}
             selection={selection}

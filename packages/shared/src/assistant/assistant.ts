@@ -114,6 +114,7 @@ export interface AssistantMessage {
     baseRevisionId?: string;
     baseRevisionContent?: string;
     proposalContent?: string;
+    translation?: AssistantEditorialResult["translation"];
     proposalSummaries?: import("../articles/revision/revisions.js").ProposalChangeSummary[];
     proposalSummaryLocale?: string;
     createdAt: string;

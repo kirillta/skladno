@@ -317,6 +317,7 @@ test("translation carries its target language, preserves the source, and records
         });
         assert.equal(translated.language, "es");
         assert.equal(translated.sourceArticleId, source.id);
+        assert.equal(translated.sourceRevisionNumber, 1);
         assert.equal(repositories.articles.restoreRevision(translated.id, translated.currentRevisionId).content, translated.currentRevision.content);
     });
 });

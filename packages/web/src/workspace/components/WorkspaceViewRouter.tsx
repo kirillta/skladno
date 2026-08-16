@@ -15,7 +15,7 @@ import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
 
 
-export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, runFactCheck, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
+export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, runFactCheck, runTranslation, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
     view: WorkspaceView;
     article: Article;
     workspace: ArticleWorkspaceState;
@@ -25,6 +25,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     publishing: PublishingState;
     generalSettings: GeneralSettings;
     runFactCheck: () => void;
+    runTranslation: () => void;
     onSelectionChange?: (value: string | undefined) => void;
     assistantSelection?: string;
     proposalWarningsDismissed: boolean;
@@ -32,7 +33,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     openWrite: () => void;
     openAssistant: () => void;
 }) {
-    const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" || view === "revisions" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : view === "style-profile" ? "min-h-0 flex-1 overflow-hidden p-5" : "min-h-0 flex-1 overflow-y-auto p-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong"}>{children}</section>;
+    const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" || view === "revisions" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : view === "translations" ? "flex min-h-0 flex-1 flex-col overflow-hidden p-5" : view === "style-profile" ? "min-h-0 flex-1 overflow-hidden p-5" : "min-h-0 flex-1 overflow-y-auto p-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong"}>{children}</section>;
 
     if (view === "write")
         return panel(<ArticleEditorView articleId={article.id} content={workspace.content} setContent={workspace.setContent} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} />);
@@ -53,7 +54,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
         return panel(<StyleProfileView corpus={corpus.corpus} findings={editorial.styleReview} findingsStale={editorial.styleReviewStale} articleId={article.id} revisions={revisions.revisions} generalSettings={generalSettings} add={corpus.add} remove={corpus.remove} setIncluded={corpus.setIncluded} setRules={corpus.setRules} rebuild={corpus.rebuild} getArticleRules={corpus.getArticleRules} setArticleRules={corpus.setArticleRules} snapshotArticleRevision={corpus.snapshotArticleRevision} />);
 
     if (view === "translations")
-        return panel(<TranslationsView article={article} translation={editorial.translation} stale={editorial.translationStale} create={editorial.createTranslation} />);
+        return panel(<TranslationsView article={article} sourceArticle={article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined} linkedTranslations={workspace.articles.filter((item) => item.sourceArticleId === article.id)} translations={editorial.translations} stale={editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId)} create={editorial.createTranslation} edit={openWrite} openArticle={workspace.selectArticle} translate={runTranslation} translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language)} />);
 
     return panel(<PublishingPreviewView publishing={publishing} />);
 }
