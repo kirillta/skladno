@@ -103,7 +103,7 @@ describe("Editorial Workspace", () => {
         expect(await screen.findByText("Deutscher Entwurf")).toBeTruthy();
         await user.click(screen.getByRole("tab", { name: "Spanish" }));
         expect(screen.getByText("Borrador traducido")).toBeTruthy();
-        expect(screen.getByRole("button", { name: "Create translation article (Spanish)" })).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Edit Spanish translation" })).toBeTruthy();
     });
 
     // product: application.desktop-shell-layout
