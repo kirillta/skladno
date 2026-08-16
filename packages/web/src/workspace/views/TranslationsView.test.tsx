@@ -32,9 +32,10 @@ describe("TranslationsView", () => {
         const user = userEvent.setup();
         const translate = vi.fn();
         render(<IntlProvider locale="en" messages={messages}>
-            <TranslationsView article={{ ...article, language: "ru" }} stale={false} create={vi.fn()} translate={translate} translationLanguages={["es"]} />
+            <TranslationsView article={{ ...article, language: "ru" }} stale={false} create={vi.fn()} translate={translate} translationLanguages={["es", "de"]} />
         </IntlProvider>);
 
+        expect(screen.getByText("Use Translate to request translations. Completed proposals appear here for review.")).toBeTruthy();
         expect(screen.queryByText(/ru source/)).toBeNull();
         await user.click(screen.getByRole("button", { name: "Translate" }));
         expect(translate).toHaveBeenCalledOnce();
@@ -91,9 +92,9 @@ describe("TranslationsView", () => {
             <TranslationsView article={{ ...article, currentRevision: { ...article.currentRevision, content: "1. First source paragraph.\n2. Second source paragraph." } }} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "1. Primer párrafo traducido.\n2. Segundo párrafo traducido.", baseRevisionId: "revision-2" }]} stale={false} create={vi.fn()} translate={vi.fn()} />
         </IntlProvider>);
 
-        await user.click(screen.getByRole("tab", { name: "Aligned paragraphs" }));
+        await user.click(screen.getByRole("button", { name: "Aligned paragraphs" }));
 
-        expect(screen.getByRole("tab", { name: "Aligned paragraphs" }).getAttribute("aria-selected")).toBe("true");
+        expect(screen.getByRole("button", { name: "Aligned paragraphs" }).getAttribute("aria-pressed")).toBe("true");
         expect(screen.getByText("1. First source paragraph.")).toBeTruthy();
         expect(screen.getByText("1. Primer párrafo traducido.")).toBeTruthy();
         const sourceSecond = screen.getByText("2. Second source paragraph.");

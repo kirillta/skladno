@@ -19,6 +19,8 @@ export const CodeIcon = () => <FormatIcon><path d="m8 9-3 3 3 3M16 9l3 3-3 3" />
 export const LinkIcon = () => <FormatIcon><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" /></FormatIcon>;
 export const ListIcon = () => <FormatIcon><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" /></FormatIcon>;
 export const NumberedListIcon = () => <FormatIcon><path d="M10 6h10M10 12h10M10 18h10M4 5h1v3M4 15h2l-2 3h2" /></FormatIcon>;
+export const SideBySideIcon = () => <FormatIcon><path d="M4 7h6M4 11h6M4 15h6M14 7h6M14 11h4" /></FormatIcon>;
+export const AlignedParagraphsIcon = () => <FormatIcon><path d="M3.5 6h7M13.5 6h7M3.5 10h5M15.5 10h5M3.5 14h7M13.5 14h7M3.5 18h5M15.5 18h5" /></FormatIcon>;
 
 
 export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
