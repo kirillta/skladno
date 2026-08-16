@@ -57,7 +57,13 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     const [query, setQuery] = useState("");
     const searchRef = useRef<HTMLInputElement>(null);
     useEffect(() => dispatcher?.register(KEY_BINDING_COMMAND.SEARCH_ARTICLES, () => searchRef.current?.focus()), [dispatcher]);
-    const visibleArticles = articles.filter((article) => article.title.toLowerCase().includes(query.toLowerCase()));
+    const normalizedQuery = query.toLowerCase();
+    const matchesQuery = (article: Article) => article.title.toLowerCase().includes(normalizedQuery);
+    const articleIds = new Set(articles.map((article) => article.id));
+    const rootArticles = articles.filter((article) => !article.sourceArticleId || !articleIds.has(article.sourceArticleId));
+    const children = (articleId: string) => articles.filter((article) => article.sourceArticleId === articleId);
+    const visibleRoots = rootArticles.filter((article) => !query || matchesQuery(article) || children(article.id).some(matchesQuery));
+    const visibleArticles = visibleRoots.flatMap((article) => [article, ...children(article.id).filter((child) => !query || matchesQuery(article) || matchesQuery(child))]);
     const saveLabels: Record<SaveState, string> = {
         saved: intl.formatMessage({ id: "navigation.saved" }),
         unsaved: intl.formatMessage({ id: "navigation.unsaved" }),
@@ -112,7 +118,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                             const isSelected = article.id === selectedArticleId;
                             const detail = [article.language, formatUpdatedAt(article.updatedAt, intl.formatMessage)].filter(Boolean).join(" · ");
 
-                            return <button key={article.id} onClick={() => selectArticle(article.id)} className={`w-full rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-ink" : "text-ink/85 hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
+                            return <button key={article.id} onClick={() => selectArticle(article.id)} className={`${article.sourceArticleId ? "ml-4 w-[calc(100%-1rem)] border-l border-border" : "w-full"} rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-ink" : "text-ink/85 hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
                                 <span className="flex gap-2">
                                     <ArticleIcon className="mt-0.5 size-4 shrink-0 text-muted" />
                                     <span className="min-w-0">

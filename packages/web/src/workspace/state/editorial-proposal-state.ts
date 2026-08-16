@@ -260,6 +260,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             });
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            throw error;
         }
     }
 

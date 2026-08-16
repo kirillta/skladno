@@ -47,7 +47,7 @@ describe("TranslationsView", () => {
         </IntlProvider>);
 
         expect(screen.getByText("The source Article has changed since this translation proposal was made.")).toBeTruthy();
-        expect(screen.getByRole("button", { name: "Create Spanish translation" }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("button", { name: "Edit Spanish translation" }).hasAttribute("disabled")).toBe(true);
     });
 
     it("shows loading while creating a translation", async () => {
@@ -60,13 +60,51 @@ describe("TranslationsView", () => {
             <TranslationsView article={article} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "Borrador traducido", baseRevisionId: "revision-2" }]} stale={false} create={create} translate={vi.fn()} />
         </IntlProvider>);
 
-        const button = screen.getByRole("button", { name: "Create Spanish translation" });
+        const button = screen.getByRole("button", { name: "Edit Spanish translation" });
         await user.click(button);
 
         expect(button.getAttribute("aria-busy")).toBe("true");
         expect((button as HTMLButtonElement).disabled).toBe(true);
         resolveCreate?.();
         await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
+    });
+
+    it("opens a newly created translation in the existing Article editor", async () => {
+        const user = userEvent.setup();
+        const edit = vi.fn();
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "Borrador traducido", baseRevisionId: "revision-2" }]} stale={false} create={vi.fn().mockResolvedValue(undefined)} edit={edit} translate={vi.fn()} />
+        </IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: "Edit Spanish translation" }));
+        expect(edit).toHaveBeenCalledOnce();
+    });
+
+    it("names and opens the linked source while showing its Revision number and full target language", async () => {
+        const user = userEvent.setup();
+        const edit = vi.fn();
+        const openArticle = vi.fn();
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={{ ...article, language: "en", sourceArticleId: "source-article", sourceRevisionId: "source-revision", sourceRevisionNumber: 2 }} sourceArticle={{ ...article, id: "source-article", title: "Original Article" }} stale={false} create={vi.fn()} edit={edit} openArticle={openArticle} translate={vi.fn()} />
+        </IntlProvider>);
+
+        expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "This translation is linked to Original Article at source Revision 2.")).toBeTruthy();
+        expect(screen.getAllByText("English translation")).toHaveLength(2);
+        await user.click(screen.getByRole("button", { name: "Original Article" }));
+        expect(openArticle).toHaveBeenCalledWith("source-article");
+        await user.click(screen.getByRole("button", { name: "Edit translation" }));
+        expect(edit).toHaveBeenCalledOnce();
+    });
+
+    it("opens standalone translations from their source Article", async () => {
+        const user = userEvent.setup();
+        const openArticle = vi.fn();
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} linkedTranslations={[{ ...article, id: "spanish-article", title: "Source — Spanish", language: "es", sourceArticleId: article.id, sourceRevisionId: article.currentRevisionId, sourceRevisionNumber: 1 }]} stale={false} create={vi.fn()} openArticle={openArticle} translate={vi.fn()} />
+        </IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: "Spanish: Source — Spanish" }));
+        expect(openArticle).toHaveBeenCalledWith("spanish-article");
     });
 
     it("lets the author navigate every completed target language", async () => {
@@ -82,7 +120,7 @@ describe("TranslationsView", () => {
         expect(screen.getByText("Deutscher Text")).toBeTruthy();
         await user.click(screen.getByRole("tab", { name: "Spanish" }));
         expect(screen.getByText("Texto en español")).toBeTruthy();
-        await user.click(screen.getByRole("button", { name: "Create Spanish translation" }));
+        await user.click(screen.getByRole("button", { name: "Edit Spanish translation" }));
         expect(create).toHaveBeenCalledWith("Spanish");
     });
 

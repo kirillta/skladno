@@ -3,6 +3,7 @@ import type { Article, TranslationMetadata } from "@skladno/shared";
 import { AlignedParagraphsIcon, SideBySideIcon } from "../../ui/icons.js";
 import { Banner, Button, EmptyState, IconButton, Tab, TabList } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
+import { providerLanguageName } from "../state/editorial-language.js";
 
 
 function paragraphs(content: string): string[] {
@@ -10,13 +11,15 @@ function paragraphs(content: string): string[] {
 }
 
 
-export function TranslationsView({ article, sourceArticle, translations = [], sourceRevisionId, stale, create, translate, translationLanguages = [] }: {
+export function TranslationsView({ article, sourceArticle, linkedTranslations = [], translations = [], stale, create, edit, openArticle, translate, translationLanguages = [] }: {
     article: Article;
     sourceArticle?: Article;
+    linkedTranslations?: readonly Article[];
     translations?: readonly { metadata: TranslationMetadata; content: string; baseRevisionId: string }[];
-    sourceRevisionId?: string;
     stale: boolean;
     create: (targetLanguage: string) => Promise<void>;
+    edit?: () => void;
+    openArticle?: (articleId: string) => void;
     translate: () => void;
     translationLanguages?: readonly string[];
 }) {
@@ -35,11 +38,14 @@ export function TranslationsView({ article, sourceArticle, translations = [], so
             return;
 
         setCreating(true);
-        void create(translation.metadata.targetLanguage).then(() => setCreating(false), () => setCreating(false));
+        void create(translation.metadata.targetLanguage).then(() => {
+            setCreating(false);
+            edit?.();
+        }, () => setCreating(false));
     };
     const source = sourceArticle ?? article;
     const translatedContent = translation?.content ?? (sourceArticle ? article.currentRevision.content : undefined);
-    const targetLanguage = translation?.metadata.targetLanguage ?? article.language;
+    const targetLanguage = providerLanguageName(translation?.metadata.targetLanguage ?? article.language ?? "");
     const sourceParagraphs = paragraphs(source.currentRevision.content);
     const translatedParagraphs = translatedContent ? paragraphs(translatedContent) : [];
     const paragraphCount = Math.max(sourceParagraphs.length, translatedParagraphs.length);
@@ -59,14 +65,21 @@ export function TranslationsView({ article, sourceArticle, translations = [], so
                         <AlignedParagraphsIcon />
                     </IconButton>
                 </div>}
-                {translation && <Button variant="secondary" state={creating ? "loading" : "default"} disabled={stale || creating} onClick={startCreate}>{intl.formatMessage({ id: "views.createTranslation" }, { language: translation.metadata.targetLanguage })}</Button>}
+                {sourceArticle && edit && <Button variant="secondary" onClick={edit}>{intl.formatMessage({ id: "views.editTranslation" })}</Button>}
+                {translation && <Button variant="secondary" state={creating ? "loading" : "default"} disabled={stale || creating} onClick={startCreate}>{intl.formatMessage({ id: "views.editTranslationLanguage" }, { language: translation.metadata.targetLanguage })}</Button>}
                 <Button disabled={!translationLanguages.length} onClick={translate}>{intl.formatMessage({ id: "views.translate" })}</Button>
             </div>
         </header>
         {translations.length > 1 && <TabList className="mt-4">
             {translations.map((item) => <Tab key={item.metadata.targetLanguage} selected={item.metadata.targetLanguage === translation?.metadata.targetLanguage} onClick={() => setSelectedTargetLanguage(item.metadata.targetLanguage)}>{item.metadata.targetLanguage}</Tab>)}
         </TabList>}
-        {sourceRevisionId && <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: "views.sourceLinked" }, { revisionId: sourceRevisionId.slice(0, 8) })}</p>}
+        {linkedTranslations.length > 0 && openArticle && <nav className="mt-3 flex items-center gap-2" aria-label={intl.formatMessage({ id: "views.existingTranslations" })}>
+            <span className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "views.existingTranslations" })}</span>
+            {linkedTranslations.map((linked) => <Button key={linked.id} variant="quiet" onClick={() => openArticle(linked.id)}>{intl.formatMessage({ id: "views.openTranslation" }, { language: providerLanguageName(linked.language ?? ""), title: linked.title })}</Button>)}
+        </nav>}
+        {sourceArticle && openArticle && <p className="mt-1 text-xs text-muted">
+            {intl.formatMessage({ id: "views.sourceLinkedPrefix" })} <button type="button" className="font-semibold text-brand underline underline-offset-2" onClick={() => openArticle(sourceArticle.id)}>{sourceArticle.title}</button>{article.sourceRevisionNumber ? ` ${intl.formatMessage({ id: "views.sourceLinkedRevision" }, { revisionNumber: article.sourceRevisionNumber })}` : null}
+        </p>}
         {stale && <Banner className="mt-3" tone="warning">{intl.formatMessage({ id: "views.translationStale" })}</Banner>}
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             {!translatedContent
