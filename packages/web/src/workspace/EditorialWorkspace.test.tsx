@@ -85,16 +85,23 @@ describe("Editorial Workspace", () => {
 
     it("restores the latest completed translation from local Assistant records", async () => {
         const client = fakeClient();
+        const user = userEvent.setup();
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "translations", selectedArticleId: "one" }));
         client.listAssistantMessages = vi.fn().mockResolvedValue([{
-            id: "translation-message", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision",
+            id: "spanish-translation-message", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision",
             translation: { content: "Borrador traducido", metadata: { targetLanguage: "Spanish", protectedSpans: [] } },
             createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+        }, {
+            id: "german-translation-message", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision",
+            translation: { content: "Deutscher Entwurf", metadata: { targetLanguage: "German", protectedSpans: [] } },
+            createdAt: "2026-01-01T00:01:00.000Z", updatedAt: "2026-01-01T00:01:00.000Z",
         }]);
 
         render(<App client={client} />);
 
-        expect(await screen.findByText("Borrador traducido")).toBeTruthy();
+        expect(await screen.findByText("Deutscher Entwurf")).toBeTruthy();
+        await user.click(screen.getByRole("tab", { name: "Spanish" }));
+        expect(screen.getByText("Borrador traducido")).toBeTruthy();
         expect(screen.getByRole("button", { name: "Create translation article (Spanish)" })).toBeTruthy();
     });
 

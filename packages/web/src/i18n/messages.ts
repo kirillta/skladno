@@ -341,7 +341,7 @@ export const messages = {
     "views.translationOriginal": "Original",
     "views.translationResult": "{language} translation",
     "views.translationProtected": "Validated protected content",
-    "views.createTranslation": "Create translation article ({language})",
+    "views.createTranslation": "Create {language} translation",
     "views.publishingPreview": "Publishing Preview",
     "views.publishingProfile": "Publishing profile",
     "views.plainTextPreview": "Plain-text publishing preview",

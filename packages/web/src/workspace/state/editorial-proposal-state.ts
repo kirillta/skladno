@@ -34,6 +34,9 @@ interface EditorialResult<T> {
 }
 
 
+type TranslationResult = EditorialResult<{ metadata: TranslationMetadata; content: string }>;
+
+
 export function withFindingFreshness(factCheck: FactCheck, revisionId: string, content: string): FactCheck {
     const normalizedContent = content.replace(/\s+/g, " ").toLowerCase();
     return { ...factCheck, findings: factCheck.findings.map((finding) => ({
@@ -53,7 +56,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const [message, setMessage] = useState("");
     const [factCheckResult, setFactCheckResult] = useState<EditorialResult<FactCheck>>();
     const [styleReviewResult, setStyleReviewResult] = useState<EditorialResult<StyleReview>>();
-    const [translationResult, setTranslationResult] = useState<EditorialResult<{ metadata: TranslationMetadata; content: string }>>();
+    const [translationResults, setTranslationResults] = useState<TranslationResult[]>([]);
     const [proposalSummaries, setProposalSummaries] = useState<Record<string, string>>({});
     const [proposalSummaryState, setProposalSummaryState] = useState<"idle" | "loading" | "unavailable">("idle");
     const [proposalSummaryLocale, setProposalSummaryLocale] = useState<string>();
@@ -67,10 +70,16 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         ? withFindingFreshness(selectedFactCheck, workspace.selectedArticle.currentRevisionId, workspace.selectedArticle.currentRevision.content)
         : undefined;
     const styleReview = styleReviewResult?.articleId === selectedArticleId ? styleReviewResult?.value : undefined;
-    const translation = translationResult?.articleId === selectedArticleId ? translationResult?.value.metadata : undefined;
+    const translations = translationResults.filter((result) => result.articleId === selectedArticleId);
     const factCheckStale = factCheck?.findings.some((finding) => finding.stale) ?? false;
     const styleReviewStale = styleReviewResult?.articleId === selectedArticleId && styleReviewResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
-    const translationStale = translationResult?.articleId === selectedArticleId && translationResult?.baseRevisionId !== workspace.selectedArticle?.currentRevisionId;
+    const translationStale = translations.some((result) => result.baseRevisionId !== workspace.selectedArticle?.currentRevisionId);
+
+
+    function retainTranslation(result: TranslationResult) {
+        setTranslationResults((current) => [...current.filter((item) => item.articleId !== result.articleId || item.value.metadata.targetLanguage !== result.value.metadata.targetLanguage), result]);
+    }
+
 
     const loadFactChecks = useCallback(async () => {
         const article = workspace.selectedArticle;
@@ -162,7 +171,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
                         setStyleReviewResult({ articleId: article.id, baseRevisionId: revisionId, value: event.styleReview });
 
                     if (event.translation)
-                        setTranslationResult({ articleId: article.id, baseRevisionId: revisionId, value: { metadata: event.translation, content: event.text } });
+                        retainTranslation({ articleId: article.id, baseRevisionId: revisionId, value: { metadata: event.translation, content: event.text } });
 
                     setState("idle");
                 }
@@ -227,9 +236,10 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }
 
 
-    async function createTranslation() {
+    async function createTranslation(targetLanguage: string) {
         const article = workspace.selectedArticle;
-        if (!article || !translationResult || translationResult.articleId !== article.id || translationStale)
+        const translationResult = translations.find((result) => result.value.metadata.targetLanguage === targetLanguage);
+        if (!article || !translationResult || translationResult.baseRevisionId !== article.currentRevisionId)
             return;
 
         const translation = translationResult.value.metadata;
@@ -275,7 +285,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             setStyleReviewResult({ articleId, baseRevisionId, value: result.styleReview });
 
         if (result.translation)
-            setTranslationResult({ articleId, baseRevisionId, value: result.translation });
+            retainTranslation({ articleId, baseRevisionId, value: result.translation });
     }, [workspace.articles]);
 
     const restoreAssistantProposal = useCallback((messages: AssistantMessage[] | undefined) => {
@@ -284,8 +294,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             return;
 
         const message = [...(messages ?? [])].reverse().find((item) => item.responseKind !== "translation_proposal_prepared" && item.proposalContent && item.baseRevisionId && item.baseRevisionContent);
-        const translationMessage = [...(messages ?? [])].reverse().find((item) => item.translation && item.baseRevisionId);
-        if (!message && !translationMessage)
+        const translationMessages = (messages ?? []).filter((item) => item.translation && item.baseRevisionId);
+        if (!message && !translationMessages.length)
             return;
 
         restoredArticleIds.current.add(article.id);
@@ -297,8 +307,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             setDecisions({});
         }
 
-        if (translationMessage)
-            setTranslationResult({ articleId: article.id, baseRevisionId: translationMessage.baseRevisionId!, value: translationMessage.translation! });
+        for (const translationMessage of translationMessages)
+            retainTranslation({ articleId: article.id, baseRevisionId: translationMessage.baseRevisionId!, value: translationMessage.translation! });
     }, [workspace.selectedArticle]);
 
     return {
@@ -317,9 +327,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         factCheckStale,
         styleReview,
         styleReviewStale,
-        translation,
-        translationContent: translationResult && translationResult.articleId === selectedArticleId ? translationResult.value.content : undefined,
-        translationBaseRevisionId: translationResult && translationResult.articleId === selectedArticleId ? translationResult.baseRevisionId : undefined,
+        translation: translations.at(-1)?.value.metadata,
+        translations: translations.map((result) => ({ ...result.value, baseRevisionId: result.baseRevisionId })),
         translationStale,
         request,
         acceptAll: () => accept(new Set(review ? review.changes.map((change) => change.id) : []), true),

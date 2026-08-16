@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Article, TranslationMetadata } from "@skladno/shared";
 import { Banner, Button, EmptyState, Tab, TabList } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
@@ -8,32 +8,51 @@ const languageMessageIds = {
 } as const;
 
 
-export function TranslationsView({ article, sourceArticle, translation, translationContent, sourceRevisionId, stale, create, translate, translationLanguages = [] }: {
+export function TranslationsView({ article, sourceArticle, translations = [], sourceRevisionId, stale, create, translate, translationLanguages = [] }: {
     article: Article;
     sourceArticle?: Article;
-    translation: TranslationMetadata | undefined;
-    translationContent?: string;
+    translations?: readonly { metadata: TranslationMetadata; content: string; baseRevisionId: string }[];
     sourceRevisionId?: string;
     stale: boolean;
-    create: () => Promise<void>;
+    create: (targetLanguage: string) => Promise<void>;
     translate: () => void;
     translationLanguages?: readonly string[];
 }) {
     const intl = useIntl();
     const [creating, setCreating] = useState(false);
     const [visibleText, setVisibleText] = useState<"source" | "translation">("source");
+    const [selectedTargetLanguage, setSelectedTargetLanguage] = useState<string>();
+    const translation = translations.find((item) => item.metadata.targetLanguage === selectedTargetLanguage) ?? translations.at(-1);
+    useEffect(() => {
+        if (!translation && translations.length)
+            setSelectedTargetLanguage(translations.at(-1)?.metadata.targetLanguage);
+    }, [translation, translations]);
     const startCreate = () => {
+        if (!translation)
+            return;
+
         setCreating(true);
-        void create().then(() => setCreating(false), () => setCreating(false));
+        void create(translation.metadata.targetLanguage).then(() => setCreating(false), () => setCreating(false));
     };
     const source = sourceArticle ?? article;
-    const translatedContent = translationContent ?? (sourceArticle ? article.currentRevision.content : undefined);
-    const targetLanguage = translation?.targetLanguage ?? article.language;
+    const translatedContent = translation?.content ?? (sourceArticle ? article.currentRevision.content : undefined);
+    const targetLanguage = translation?.metadata.targetLanguage ?? article.language;
     const targets = translationLanguages.flatMap((language) => languageMessageIds[language as keyof typeof languageMessageIds] ? [intl.formatMessage({ id: languageMessageIds[language as keyof typeof languageMessageIds] })] : []).join(", ");
 
     return <div className="mx-auto max-w-6xl">
-        <header className="flex items-start justify-between gap-4"><div><h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.translations" })}</h2><p className="mt-1 text-sm text-muted">{targets ? intl.formatMessage({ id: "views.translationTargets" }, { languages: targets }) : intl.formatMessage({ id: "views.translationTargetsEmpty" })}</p></div><Button disabled={!translationLanguages.length} onClick={translate}>{intl.formatMessage({ id: "views.translate" })}</Button></header>
-        {translatedContent && <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: "views.translationPair" }, { source: source.language, target: targetLanguage })}</p>}
+        <header className="flex items-start justify-between gap-4">
+            <div>
+                <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.translations" })}</h2>
+                <p className="mt-1 text-xs text-muted">{targets ? intl.formatMessage({ id: "views.translationTargets" }, { languages: targets }) : intl.formatMessage({ id: "views.translationTargetsEmpty" })}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+                {translation && <Button variant="secondary" state={creating ? "loading" : "default"} disabled={stale || creating} onClick={startCreate}>{intl.formatMessage({ id: "views.createTranslation" }, { language: translation.metadata.targetLanguage })}</Button>}
+                <Button disabled={!translationLanguages.length} onClick={translate}>{intl.formatMessage({ id: "views.translate" })}</Button>
+            </div>
+        </header>
+        {translations.length > 1 && <TabList className="mt-4">
+            {translations.map((item) => <Tab key={item.metadata.targetLanguage} selected={item.metadata.targetLanguage === translation?.metadata.targetLanguage} onClick={() => setSelectedTargetLanguage(item.metadata.targetLanguage)}>{item.metadata.targetLanguage}</Tab>)}
+        </TabList>}
         {sourceRevisionId && <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: "views.sourceLinked" }, { revisionId: sourceRevisionId.slice(0, 8) })}</p>}
         {stale && <Banner className="mt-3" tone="warning">{intl.formatMessage({ id: "views.translationStale" })}</Banner>}
         {!translatedContent
@@ -53,10 +72,9 @@ export function TranslationsView({ article, sourceArticle, translation, translat
                         <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedContent}</pre>
                     </article>
                 </div>
-                {translation?.protectedSpans.length ? <Banner className="mt-4" tone="info">
-                    <span>{intl.formatMessage({ id: "views.translationProtected" })}: {translation.protectedSpans.join(", ")}</span>
+                {translation?.metadata.protectedSpans.length ? <Banner className="mt-4" tone="info">
+                    <span>{intl.formatMessage({ id: "views.translationProtected" })}: {translation.metadata.protectedSpans.join(", ")}</span>
                 </Banner> : null}
             </>}
-        {translation && <Button className="mt-4" state={creating ? "loading" : "default"} disabled={stale || creating} onClick={startCreate}>{intl.formatMessage({ id: "views.createTranslation" }, { language: translation.targetLanguage })}</Button>}
     </div>;
 }
