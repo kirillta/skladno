@@ -39,7 +39,7 @@ function PseudoLocaleFixture() {
         throw error;
     }}>
         <ArticleHeader article={article()} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} />
-        <ArticleStatusBar revisionNumber={1} length={{ count: 12, remaining: 2988, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />
+        <ArticleStatusBar revisionNumber={1} language="en" setLanguage={vi.fn()} length={{ count: 12, remaining: 2988, state: "within-limit" }} profile={publishLimitProfiles[1]!} customProfiles={[]} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />
         <EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="es" />
     </IntlProvider>;
 }

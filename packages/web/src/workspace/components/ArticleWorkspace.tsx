@@ -65,11 +65,6 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
             : { label: intl.formatMessage({ id: "workspace.badges.ready" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.ready" }), tone: "default" };
 
-    if (publishing.length.state !== "within-limit") {
-        const messageId = publishing.length.state === "over-limit" ? "workspace.badges.overLimit" : "workspace.badges.nearLimit";
-        badges.publish = { label: intl.formatMessage({ id: messageId }), accessibleLabel: intl.formatMessage({ id: messageId }), tone: "warning" };
-    }
-
     return <div className="flex h-full min-h-0 flex-col overflow-hidden" data-article-workspace tabIndex={-1}>
         <ArticleHeader article={article}
             updateArticle={workspace.updateArticle}
@@ -95,7 +90,6 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             editorial={editorial}
             revisions={revisions}
             corpus={corpus}
-            publishing={publishing}
             generalSettings={generalSettings}
             runFactCheck={runFactCheck}
             runTranslation={runTranslation}
@@ -108,6 +102,12 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
                 layout.setAssistantCollapsed(false);
                 layout.setView("write");
             }} />
-        <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} setProfile={publishing.setProfile} />
+        <ArticleStatusBar revisionNumber={revisionNumber} language={article.language ?? "en"} setLanguage={async (language) => {
+            try {
+                await workspace.updateArticle(article.id, { language });
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            }
+        }} length={publishing.length} profile={publishing.profile} customProfiles={publishing.settings.customProfiles} setProfile={publishing.setProfile} copyMarkdown={publishing.copyMarkdown} copyPlainText={publishing.copyPlainText} />
     </div>;
 }

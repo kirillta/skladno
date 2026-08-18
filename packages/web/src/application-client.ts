@@ -34,7 +34,7 @@ import {
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
     publishSettingsPath,
-    type PublishLimitProfileId,
+    type PublishingSettings,
     applicationSettingsPath,
     type EditorialWorkspaceClient,
     type ApplicationSettingsSnapshot,
@@ -288,18 +288,16 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     }
 
 
-    async getPublishLimitProfile(): Promise<PublishLimitProfileId> {
-        const response = await this.request<{ profileId: PublishLimitProfileId }>(publishSettingsPath);
-        return response.profileId;
+    async getPublishingSettings(): Promise<PublishingSettings> {
+        return this.request<PublishingSettings>(publishSettingsPath);
     }
 
 
-    async setPublishLimitProfile(profileId: PublishLimitProfileId): Promise<PublishLimitProfileId> {
-        const response = await this.request<{ profileId: PublishLimitProfileId }>(publishSettingsPath, {
+    async setPublishingSettings(settings: PublishingSettings): Promise<PublishingSettings> {
+        return this.request<PublishingSettings>(publishSettingsPath, {
             method: HTTP_METHOD.PUT,
-            body: JSON.stringify({ profileId }),
+            body: JSON.stringify(settings),
         });
-        return response.profileId;
     }
 
 

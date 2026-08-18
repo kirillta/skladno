@@ -70,7 +70,7 @@ The collapsed Navigation Rail uses `w-10`, keeps Style Profile and Settings as l
 
 ## Workspace tabs
 
-Use accessible tabs for Write, Proposals, Revisions, Fact Check, Style Profile, Translations, and Publish. Each tab requires a stable ID, `aria-controls`, matching tab panel, and Arrow/Home/End keyboard navigation. Use compact text badges only for actionable or stale content; the badge text must name the condition or count. Do not use dot-only badges in Workspace Tabs.
+Use accessible tabs for Write, Proposals, Revisions, Fact Check, Style Profile, and Translations. Each tab requires a stable ID, `aria-controls`, matching tab panel, and Arrow/Home/End keyboard navigation. Use compact text badges only for actionable or stale content; the badge text must name the condition or count. Do not use dot-only badges in Workspace Tabs.
 
 ## Article formatting
 
@@ -98,4 +98,4 @@ Style Profile views identify only local samples and the compact traits derived f
 
 Translations are independent linked Articles with their own Revisions. Show source language, source Revision, protected-span validation notes, and a stale-source warning when the source has changed; never synchronize or alter translation text automatically.
 
-Publishing previews are deterministic plain text. Profiles provide configurable guidance, not a hard block: show count, remaining or overflow, and the exact text that Copy plain text transfers. State that copying is explicit and destination formatting may differ. Publishing preview remains available when AI features are unavailable.
+The Article Status Bar Copy control transfers Markdown by default and offers Markdown or deterministic plain text from its menu. Profiles provide configurable guidance, not a hard block; show count, remaining, or overflow beside the control. Copying is explicit and remains available when AI features are unavailable.

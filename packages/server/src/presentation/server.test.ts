@@ -102,11 +102,11 @@ test("article API supports CRUD and revision-aware saves", async () => {
         const conflict = await fetch(`${baseUrl}/${created.id}/revisions`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ content: "stale", baseRevisionId: created.currentRevisionId }) });
         assert.equal(conflict.status, HTTP_STATUS.CONFLICT);
 
-        const renamed = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed draft", language: "es", publishingProfileId: "linkedin-short" }) });
+        const renamed = await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.PATCH, headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed draft", language: "es", publishingProfileId: "default" }) });
         const updated = await renamed.json() as Article;
         assert.equal(updated.title, "Renamed draft");
         assert.equal(updated.language, "es");
-        assert.equal(updated.publishingProfileId, "linkedin-short");
+        assert.equal(updated.publishingProfileId, "default");
         assert.equal(updated.currentRevisionId, restoredRevision.id);
         assert.equal((await (await fetch(`${baseUrl}/${created.id}/revisions`)).json() as unknown[]).length, 4);
 
@@ -118,18 +118,18 @@ test("article API supports CRUD and revision-aware saves", async () => {
         const settingsUrl = baseUrl.replace("/api/articles", publishSettingsPath);
         const defaultProfile = await fetch(settingsUrl);
         assert.equal(defaultProfile.status, HTTP_STATUS.OK);
-        assert.deepEqual(await defaultProfile.json(), { profileId: PUBLISH_LIMIT_PROFILE.LINKEDIN_POST });
+        assert.deepEqual(await defaultProfile.json(), { defaultProfileId: PUBLISH_LIMIT_PROFILE.DEFAULT, customProfiles: [] });
 
         const savedProfile = await fetch(settingsUrl, {
             method: HTTP_METHOD.PUT,
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ profileId: PUBLISH_LIMIT_PROFILE.LINKEDIN_SHORT }),
+            body: JSON.stringify({ defaultProfileId: "custom-00000000-0000-0000-0000-000000000001", customProfiles: [{ id: "custom-00000000-0000-0000-0000-000000000001", name: "Newsletter", characterLimit: 1200 }] }),
         });
         assert.equal(savedProfile.status, HTTP_STATUS.OK);
-        assert.deepEqual(await savedProfile.json(), { profileId: PUBLISH_LIMIT_PROFILE.LINKEDIN_SHORT });
+        assert.deepEqual(await savedProfile.json(), { defaultProfileId: "custom-00000000-0000-0000-0000-000000000001", customProfiles: [{ id: "custom-00000000-0000-0000-0000-000000000001", name: "Newsletter", characterLimit: 1200 }] });
 
         const reloadedProfile = await fetch(settingsUrl);
-        assert.deepEqual(await reloadedProfile.json(), { profileId: PUBLISH_LIMIT_PROFILE.LINKEDIN_SHORT });
+        assert.deepEqual(await reloadedProfile.json(), { defaultProfileId: "custom-00000000-0000-0000-0000-000000000001", customProfiles: [{ id: "custom-00000000-0000-0000-0000-000000000001", name: "Newsletter", characterLimit: 1200 }] });
 
         assert.equal((await fetch(baseUrl)).status, HTTP_STATUS.OK);
         assert.equal((await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.DELETE })).status, HTTP_STATUS.NO_CONTENT);

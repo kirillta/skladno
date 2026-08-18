@@ -9,7 +9,7 @@ import type { EditorialEvent, StartEditorialRequest } from "../editorial/editori
 import type { ApplicationSettingsSnapshot, BackupPolicy, GeneralSettings, ModelPreferences, OpenAiConnection } from "../settings/settings.js";
 import type { KeyBindingOverrides } from "../cross-cutting/key-bindings.js";
 import type { CreateStyleCorpusItemInput, StyleCorpus } from "../style/style.js";
-import type { PublishLimitProfileId } from "../publishing/publishing.js";
+import type { PublishingSettings } from "../publishing/publishing.js";
 
 
 export const ELECTRON_IPC_CHANNEL = {
@@ -54,8 +54,8 @@ export interface ElectronApplicationOperationMap {
     setArticleStyleRules: { args: [string, string]; result: string };
     addArticleRevisionStyleCorpusItem: { args: [string, string]; result: StyleCorpus };
     removeStyleCorpusItem: { args: [string]; result: void };
-    getPublishLimitProfile: { args: []; result: PublishLimitProfileId };
-    setPublishLimitProfile: { args: [PublishLimitProfileId]; result: PublishLimitProfileId };
+    getPublishingSettings: { args: []; result: PublishingSettings };
+    setPublishingSettings: { args: [PublishingSettings]; result: PublishingSettings };
 }
 
 
@@ -95,8 +95,8 @@ export const ELECTRON_APPLICATION_METHOD = {
     setArticleStyleRules: "setArticleStyleRules",
     addArticleRevisionStyleCorpusItem: "addArticleRevisionStyleCorpusItem",
     removeStyleCorpusItem: "removeStyleCorpusItem",
-    getPublishLimitProfile: "getPublishLimitProfile",
-    setPublishLimitProfile: "setPublishLimitProfile",
+    getPublishingSettings: "getPublishingSettings",
+    setPublishingSettings: "setPublishingSettings",
 } as const satisfies { [Method in ElectronApplicationMethod]: Method };
 
 export type ElectronInvokeRequest = {

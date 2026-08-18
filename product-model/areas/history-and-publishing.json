@@ -53,25 +53,24 @@
             "scenarioIds": ["history-and-publishing.translation-stale-source"]
         },
         {
-            "id": "history-and-publishing.publishing-preview",
-            "area": "Publishing preview",
-            "title": "Plain-text preparation, profile selection, character guidance, and copy-ready preview",
+            "id": "history-and-publishing.publishing-copy",
+            "area": "Publishing copy",
+            "title": "Explicit Markdown and plain-text copying with character guidance",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/PublishingPreviewView.tsx", "packages/shared/src/publishing/publishing.ts"],
-            "contract": "The preview prepares derived copy with Article-specific profile selection and shared character guidance; direct publishing is not performed.",
-            "persistence": "Preview output is derived from local Article and profile data.",
+            "owners": ["packages/web/src/workspace/components/ArticleStatusBar.tsx", "packages/web/src/workspace/state/publishing-state.ts", "packages/shared/src/publishing/publishing.ts"],
+            "contract": "The Status Bar main action copies current Article Markdown, while its menu offers Markdown or deterministically prepared plain text. Article-specific profile guidance, including configured custom profiles, remains available beside it. Copying is explicit and direct publishing is not performed.",
+            "persistence": "Copied output is derived from the local Article and locally persisted profile data.",
             "scenarioIds": ["history-and-publishing.publishing-guidance"]
         },
         {
             "id": "history-and-publishing.publishing-profiles",
             "area": "Publishing profiles",
             "title": "Named profiles with configurable limits",
-            "status": "partial",
+            "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/PublishingSettingsSection.tsx", "packages/server/src/presentation/routes/publish-settings-route.ts", "packages/server/src/application/publishing", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "An Article may select a named publishing profile that supplies character-limit guidance.",
-            "persistence": "The selected profile persists locally.",
-            "scenarioIds": ["history-and-publishing.publishing-profile-persistence"],
-            "limitations": ["The current UI exposes fixed legacy profile selection; custom profile management is incomplete."]
+            "contract": "Authors choose a predefined Default profile for new Articles and configure any number of named custom non-negative character limits with stable local IDs; Articles independently select Default, No restrictions, LinkedIn Post, LinkedIn Article, or a custom profile for advisory guidance.",
+            "persistence": "The default profile and custom name/limit persist locally in app_settings.publish-limit-profile; Article-specific selection persists locally.",
+            "scenarioIds": ["history-and-publishing.publishing-profile-persistence"]
         }
     ],
     "scenarios": [
@@ -127,11 +126,11 @@
         },
         {
             "id": "history-and-publishing.publishing-guidance",
-            "title": "Publishing preview offers guidance rather than direct publishing",
-            "capabilityIds": ["history-and-publishing.publishing-preview"],
+            "title": "Header copy offers Markdown and plain text without direct publishing",
+            "capabilityIds": ["history-and-publishing.publishing-copy"],
             "preconditions": ["The current Article has a selected publishing profile."],
-            "event": "The author opens Publishing Preview.",
-            "expected": ["Prepared plain text and character-limit guidance are available for review and copying."],
+            "event": "The author uses the Status Bar Copy control.",
+            "expected": ["The main action copies Markdown and the menu offers deterministic plain text without AI."],
             "forbidden": ["The application does not publish directly to a platform."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
         },
@@ -139,10 +138,10 @@
             "id": "history-and-publishing.publishing-profile-persistence",
             "title": "Publishing profile selection persists locally",
             "capabilityIds": ["history-and-publishing.publishing-profiles"],
-            "preconditions": ["A supported publishing profile is selected."],
+            "preconditions": ["A publishing default and custom profile name/limit are configured."],
             "event": "The service saves and reloads that selection.",
-            "expected": ["The selected profile is returned after reload."],
-            "forbidden": ["Unknown profiles are not accepted."],
+            "expected": ["The selected default and valid custom profile configuration are returned after reload."],
+            "forbidden": ["Unknown profiles and invalid custom limits are not accepted."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         }
     ]

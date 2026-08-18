@@ -20,7 +20,6 @@ describe("WorkspaceTabBar", () => {
                 proposal: { label: "Review", accessibleLabel: "Review", tone: "default" },
                 "fact-check": { label: "2", accessibleLabel: "2 findings", tone: "default" },
                 translations: { label: "Stale", accessibleLabel: "Stale", tone: "warning" },
-                publish: { label: "Over limit", accessibleLabel: "Over limit", tone: "warning" },
             }} />
         </IntlProvider>);
 
@@ -28,22 +27,19 @@ describe("WorkspaceTabBar", () => {
         const proposal = screen.getByRole("tab", { name: "Proposals: Review" });
         const factCheck = screen.getByRole("tab", { name: "Fact Check: 2 findings" });
         const translations = screen.getByRole("tab", { name: "Translations: Stale" });
-        const publish = screen.getByRole("tab", { name: "Publish: Over limit" });
 
         expect(write.getAttribute("aria-selected")).toBe("true");
         expect(proposal.getAttribute("aria-controls")).toBe("workspace-panel-proposal");
         expect(proposal.textContent).toContain("Review");
         expect(factCheck.textContent).toContain("2");
         expect(translations.textContent).toContain("Stale");
-        expect(publish.textContent).toContain("Over limit");
-        expect(publish.querySelector("span")?.className).toContain("border-warning");
         expect(screen.getByRole("tab", { name: "Revisions" }).textContent).toBe("Revisions");
 
         write.focus();
         await user.keyboard("{End}");
 
-        expect(setView).toHaveBeenCalledWith("publish");
-        expect(document.activeElement).toBe(publish);
+        expect(setView).toHaveBeenCalledWith("translations");
+        expect(document.activeElement).toBe(translations);
     });
 
 
@@ -57,7 +53,6 @@ describe("WorkspaceTabBar", () => {
                 "fact-check": { label: "1", accessibleLabel: "1 finding", tone: "default" },
                 "style-profile": { label: "0 findings", accessibleLabel: "0 findings", tone: "default" },
                 translations: { label: "Ready", accessibleLabel: "Ready", tone: "default" },
-                publish: { label: "Near limit", accessibleLabel: "Near limit", tone: "warning" },
             }} />
         </IntlProvider>);
 
@@ -82,11 +77,10 @@ describe("WorkspaceTabBar", () => {
         await user.keyboard("{Home}");
         expect(setView).toHaveBeenLastCalledWith("write");
         await user.keyboard("{End}");
-        expect(setView).toHaveBeenLastCalledWith("publish");
+        expect(setView).toHaveBeenLastCalledWith("translations");
 
         expect(screen.getByRole("tab", { name: "Revisions" }).textContent).toBe("Revisions");
         expect(screen.getByRole("tab", { name: "Proposals: Stale" }).textContent).toContain("Stale");
         expect(screen.getByRole("tab", { name: "Translations: Ready" }).textContent).toContain("Ready");
-        expect(screen.getByRole("tab", { name: "Publish: Near limit" }).textContent).toContain("Near limit");
     });
 });

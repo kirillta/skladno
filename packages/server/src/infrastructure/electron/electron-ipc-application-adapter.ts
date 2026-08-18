@@ -116,10 +116,10 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
             return services.styleCorpus.addArticleRevision(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.removeStyleCorpusItem:
             return services.styleCorpus.remove(String(args[0]));
-        case ELECTRON_APPLICATION_METHOD.getPublishLimitProfile:
-            return services.publishing.getProfile();
-        case ELECTRON_APPLICATION_METHOD.setPublishLimitProfile:
-            return services.publishing.setProfile(args[0] as import("@skladno/shared").PublishLimitProfileId);
+        case ELECTRON_APPLICATION_METHOD.getPublishingSettings:
+            return services.publishing.getSettings();
+        case ELECTRON_APPLICATION_METHOD.setPublishingSettings:
+            return services.publishing.setSettings(args[0] as import("@skladno/shared").PublishingSettings);
     }
 }
 

@@ -32,7 +32,7 @@ describe("ApplicationSettings", () => {
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
             updateGeneralSettings,
-            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
@@ -65,7 +65,7 @@ describe("ApplicationSettings", () => {
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
             updateGeneralSettings,
-            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
@@ -105,7 +105,7 @@ describe("ApplicationSettings", () => {
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), general }),
             updateGeneralSettings,
-            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
@@ -130,7 +130,7 @@ describe("ApplicationSettings", () => {
         });
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
-            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
             addOpenAiConnection,
             refreshOpenAiModels: vi.fn().mockResolvedValue([]),
         } as unknown as EditorialWorkspaceClient;
@@ -169,7 +169,7 @@ describe("ApplicationSettings", () => {
         const refreshOpenAiModels = vi.fn().mockResolvedValue(["gpt-5"]);
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id }),
-            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
             refreshOpenAiModels,
         } as unknown as EditorialWorkspaceClient;
 
@@ -187,7 +187,7 @@ describe("ApplicationSettings", () => {
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
             updateGeneralSettings,
-            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
@@ -205,6 +205,39 @@ describe("ApplicationSettings", () => {
         }));
     });
 
+    it("retains an editable custom profile until the author saves its name and limit", async () => {
+        const user = userEvent.setup();
+        const settings = { defaultProfileId: "default" as const, customProfiles: [] };
+        const setPublishingSettings = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue(settings),
+            setPublishingSettings,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: "Publishing" }));
+        await user.clear(screen.getByRole("textbox", { name: "Custom profile name" }));
+        await user.type(screen.getByRole("textbox", { name: "Custom profile name" }), "Newsletter");
+        const limit = screen.getByRole("spinbutton", { name: "Custom character limit" });
+        await user.clear(limit);
+        await user.type(limit, "1200");
+        await user.click(screen.getByRole("button", { name: "Save custom profile" }));
+
+        await waitFor(() => expect(setPublishingSettings).toHaveBeenCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Newsletter", characterLimit: 1200 })] })));
+        await user.type(screen.getByRole("textbox", { name: "Custom profile name" }), "Long read");
+        await user.type(screen.getByRole("spinbutton", { name: "Custom character limit" }), "5000");
+        await user.click(screen.getByRole("button", { name: "Save custom profile" }));
+
+        await waitFor(() => expect(setPublishingSettings).toHaveBeenLastCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Newsletter", characterLimit: 1200 }), expect.objectContaining({ name: "Long read", characterLimit: 5000 })] })));
+        await user.click(screen.getByRole("button", { name: "Remove Newsletter" }));
+        const dialog = screen.getByRole("dialog");
+        await user.click(within(dialog).getByRole("button", { name: "Remove" }));
+
+        await waitFor(() => expect(setPublishingSettings).toHaveBeenLastCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Long read", characterLimit: 5000 })] })));
+    });
+
     it("prevents duplicate environment-variable names and manages saved connections", async () => {
         const user = userEvent.setup();
         const firstConnection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "unchecked" as const };
@@ -213,7 +246,7 @@ describe("ApplicationSettings", () => {
         const removeOpenAiConnection = vi.fn().mockResolvedValue(undefined);
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [firstConnection, secondConnection], activeConnectionId: firstConnection.id }),
-            getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
             addOpenAiConnection: vi.fn(),
             setActiveOpenAiConnection,
             removeOpenAiConnection,

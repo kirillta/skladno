@@ -5,7 +5,8 @@ import { countPublishingCharacters, getPublishingLength, preparePlainTextForPubl
 
 
 test("publishing length guidance distinguishes within, near, and over the advisory limit", () => {
-    const profile = publishLimitProfiles[0]!;
+    const profile = publishLimitProfiles[1]!;
+    assert.ok(profile.warningThreshold !== undefined && profile.characterLimit !== undefined);
 
     assert.equal(getPublishingLength("a".repeat(profile.warningThreshold - 1), profile).state, "within-limit");
     assert.equal(getPublishingLength("a".repeat(profile.warningThreshold), profile).state, "near-limit");
