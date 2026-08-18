@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type PublishLimitProfile, type PublishLimitProfileId, type PublishingLength } from "@skladno/shared";
+import { PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type CustomPublishLimitProfile, type PublishLimitProfile, type PublishLimitProfileId, type PublishingLength } from "@skladno/shared";
 import { ChevronDownIcon, CopyIcon, StatusIcon, SuccessIcon } from "../../ui/icons.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
 
 
-export function ArticleStatusBar(props: { revisionNumber: number; length: PublishingLength; profile: PublishLimitProfile; setProfile: (id: PublishLimitProfileId) => Promise<void>; copyMarkdown: () => Promise<boolean>; copyPlainText: () => Promise<boolean> }) {
+export function ArticleStatusBar(props: { revisionNumber: number; length: PublishingLength; profile: PublishLimitProfile; customProfiles: readonly CustomPublishLimitProfile[]; setProfile: (id: PublishLimitProfileId) => Promise<void>; copyMarkdown: () => Promise<boolean>; copyPlainText: () => Promise<boolean> }) {
     return <LocalizedArticleStatusBar {...props} />;
 }
 
 
-function LocalizedArticleStatusBar({ revisionNumber, length, profile, setProfile, copyMarkdown, copyPlainText }: Parameters<typeof ArticleStatusBar>[0]) {
+function LocalizedArticleStatusBar({ revisionNumber, length, profile, customProfiles, setProfile, copyMarkdown, copyPlainText }: Parameters<typeof ArticleStatusBar>[0]) {
     const intl = useIntl();
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [copyMenuOpen, setCopyMenuOpen] = useState(false);
     const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
     const copyTimer = useRef<ReturnType<typeof setTimeout>>();
     const tone = length.state === "over-limit" ? "error" : length.state === "near-limit" ? "warning" : "info";
+    const profileOptions = [...publishLimitProfiles, ...customProfiles];
 
 
     async function selectProfile(profileId: PublishLimitProfileId) {
@@ -50,8 +51,8 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, setProfile
                 <ChevronDownIcon className={`size-3 transition-transform ${profileMenuOpen ? "rotate-180" : ""}`} />
             </button>
             {profileMenuOpen && <div className="absolute bottom-6 right-0 z-10 w-56 rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "status.characterLimitPresets" })}>
-                {publishLimitProfiles.map((preset) => <button key={preset.id} className="flex min-h-9 w-full items-center justify-between rounded-control px-2 py-1 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitemradio" aria-checked={preset.id === profile.id} onClick={() => void selectProfile(preset.id)}>
-                    <span>{preset.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS ? intl.formatMessage({ id: "publishing.noRestrictions" }) : intl.formatMessage({ id: publishingProfileMessageId(preset.id) })}</span>
+                {profileOptions.map((preset) => <button key={preset.id} className="flex min-h-9 w-full items-center justify-between rounded-control px-2 py-1 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitemradio" aria-checked={preset.id === profile.id} onClick={() => void selectProfile(preset.id)}>
+                    <span>{"name" in preset ? preset.name : preset.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS ? intl.formatMessage({ id: "publishing.noRestrictions" }) : intl.formatMessage({ id: publishingProfileMessageId(preset.id) })}</span>
                     {preset.characterLimit !== undefined && <span className="text-muted">{intl.formatNumber(preset.characterLimit)}</span>}
                 </button>)}
             </div>}

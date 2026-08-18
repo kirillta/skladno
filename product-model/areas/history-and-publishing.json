@@ -58,7 +58,7 @@
             "title": "Explicit Markdown and plain-text copying with character guidance",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/components/ArticleStatusBar.tsx", "packages/web/src/workspace/state/publishing-state.ts", "packages/shared/src/publishing/publishing.ts"],
-            "contract": "The Status Bar main action copies current Article Markdown, while its menu offers Markdown or deterministically prepared plain text. Article-specific profile guidance remains available beside it. Copying is explicit and direct publishing is not performed.",
+            "contract": "The Status Bar main action copies current Article Markdown, while its menu offers Markdown or deterministically prepared plain text. Article-specific profile guidance, including configured custom profiles, remains available beside it. Copying is explicit and direct publishing is not performed.",
             "persistence": "Copied output is derived from the local Article and locally persisted profile data.",
             "scenarioIds": ["history-and-publishing.publishing-guidance"]
         },

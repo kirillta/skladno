@@ -256,7 +256,7 @@
                 "packages/web/src/workspace/components/ArticleStatusBar.tsx",
                 "packages/web/src/workspace/state/publishing-state.ts"
             ],
-            "contract": "The Status Bar's main Copy action transfers the current Article Markdown; its menu offers Markdown or deterministic plain text. Character limits remain guidance only and direct platform publishing is not performed.",
+            "contract": "The Status Bar's main Copy action transfers the current Article Markdown; its menu offers Markdown or deterministic plain text, while its profile list includes built-in and configured custom profiles. Character limits remain guidance only and direct platform publishing is not performed.",
             "persistence": "Article publishing-profile metadata with persisted default fallback.",
             "scenarioIds": [
                 "workspace.publishing.over-guidance"

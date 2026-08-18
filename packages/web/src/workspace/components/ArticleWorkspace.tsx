@@ -102,6 +102,6 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
                 layout.setAssistantCollapsed(false);
                 layout.setView("write");
             }} />
-        <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} setProfile={publishing.setProfile} copyMarkdown={publishing.copyMarkdown} copyPlainText={publishing.copyPlainText} />
+        <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} customProfiles={publishing.settings.customProfiles} setProfile={publishing.setProfile} copyMarkdown={publishing.copyMarkdown} copyPlainText={publishing.copyPlainText} />
     </div>;
 }

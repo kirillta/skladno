@@ -581,7 +581,7 @@ describe("Editorial Workspace", () => {
         const user = userEvent.setup();
         const copyMarkdown = vi.fn().mockResolvedValue(true);
         const copyPlainText = vi.fn().mockResolvedValue(true);
-        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} copyMarkdown={copyMarkdown} copyPlainText={copyPlainText} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} customProfiles={[]} setProfile={vi.fn()} copyMarkdown={copyMarkdown} copyPlainText={copyPlainText} />);
         const statusBarScope = within(statusBar.container);
 
         await user.click(statusBarScope.getByRole("button", { name: "Copy" }));
@@ -606,9 +606,10 @@ describe("Editorial Workspace", () => {
     it("updates the publishing profile from the Status Bar without saving a Revision", async () => {
         const user = userEvent.setup();
         const setProfile = vi.fn().mockResolvedValue(undefined);
-        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={setProfile} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} customProfiles={[{ id: "custom-123e4567-e89b-12d3-a456-426614174000", name: "Newsletter", characterLimit: 1200 }]} setProfile={setProfile} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
 
         await user.click(within(statusBar.container).getByRole("button", { name: /Character count:/ }));
+        expect(within(statusBar.container).getByRole("menuitemradio", { name: /Newsletter/ })).toBeTruthy();
         await user.click(within(statusBar.container).getByRole("menuitemradio", { name: /LinkedIn article/ }));
 
         expect(setProfile).toHaveBeenCalledWith("linkedin-article");
@@ -649,7 +650,7 @@ describe("Editorial Workspace", () => {
 
 
     it("shows a sequential revision number and character count in the Article Status Bar", () => {
-        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={2} length={{ count: 1234, remaining: 1766, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={2} length={{ count: 1234, remaining: 1766, state: "within-limit" }} profile={publishLimitProfiles[1]!} customProfiles={[]} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
         expect(statusBarScope.getByText("v2")).toBeTruthy();
@@ -659,7 +660,7 @@ describe("Editorial Workspace", () => {
 
 
     it("shows an overflow state in the Article Status Bar without disabling its profile selector", () => {
-        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 3001, remaining: -1, state: "over-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 3001, remaining: -1, state: "over-limit" }} profile={publishLimitProfiles[1]!} customProfiles={[]} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
         expect(statusBarScope.getByRole("button", { name: /Character count: 3,001 of 3,000 characters/ })).toBeTruthy();
