@@ -47,7 +47,7 @@ async function exists(path) {
 }
 
 
-async function validateArea(area, path, validator) {
+async function validateArea(area, path, validator, allCapabilityIds) {
     const failures = [];
     if (!validator(area))
         failures.push(`${relativePath(path)}: ${errorsFor(validator)}`);
@@ -71,6 +71,11 @@ async function validateArea(area, path, validator) {
         for (const owner of capability.owners ?? []) {
             if (!await exists(resolve(root, owner)))
                 failures.push(`${relativePath(path)}: ${capability.id} references missing owner ${owner}`);
+        }
+
+        for (const relatedId of capability.relatedCapabilityIds ?? []) {
+            if (!allCapabilityIds.has(relatedId))
+                failures.push(`${relativePath(path)}: ${capability.id} references unknown related capability ${relatedId}`);
         }
     }
 
@@ -97,13 +102,6 @@ async function validateArea(area, path, validator) {
         }
     }
 
-    for (const capability of area.capabilities ?? []) {
-        for (const scenarioId of capability.scenarioIds ?? []) {
-            if (!scenarioIds.has(scenarioId))
-                failures.push(`${relativePath(path)}: capability ${capability.id} references unknown scenario ${scenarioId}`);
-        }
-    }
-
     return failures;
 }
 
@@ -126,10 +124,11 @@ function generatedInventoryPath(area) {
 function renderInventory(area) {
     const rows = area.capabilities.map((capability) => [
         capability.id,
-        capability.area,
         capability.title,
         titleCaseStatus(capability.status),
-        `${capability.owners.join(", ")}; ${capability.contract} ${capability.persistence}`,
+        capability.contract,
+        capability.persistence,
+        capability.relatedCapabilityIds?.join(", ") ?? "—",
     ].map((value) => value.replaceAll("|", "\\|")).join(" | "));
 
     return [
@@ -137,8 +136,8 @@ function renderInventory(area) {
         "",
         `This file is generated from \`product-model/areas/${area.area}.json\`. Edit the canonical product model, then run \`npm run product:docs -- ${area.area}\`.`,
         "",
-        "| ID | Area | Feature | Status | Owner / contract |",
-        "|---|---|---|---|---|",
+        "| ID | Feature | Status | Contract | Persistence | Related capabilities |",
+        "|---|---|---|---|---|---|",
         ...rows.map((row) => `| ${row} |`),
         "",
     ].join("\n");
@@ -164,7 +163,8 @@ async function check() {
     const validator = new Ajv({ allErrors: true, strict: true }).compile(schema);
     const files = await areaFiles();
     const areas = await Promise.all(files.map(readJson));
-    const failures = (await Promise.all(areas.map((area, index) => validateArea(area, files[index], validator)))).flat();
+    const capabilityIds = new Set(areas.flatMap((area) => area.capabilities.map((capability) => capability.id)));
+    const failures = (await Promise.all(areas.map((area, index) => validateArea(area, files[index], validator, capabilityIds)))).flat();
     for (const area of areas) {
         const generated = renderInventory(area);
         const inventoryPath = generatedInventoryPath(area);
@@ -200,9 +200,9 @@ async function impact() {
     const areas = await loadAreas();
     const matches = areas.flatMap((area) => {
         const capabilities = area.capabilities.filter((capability) => capability.owners.some((owner) => paths.some((path) => path === owner || path.startsWith(`${owner}/`))));
-        const scenarioIds = new Set(capabilities.flatMap((capability) => capability.scenarioIds ?? []));
+        const capabilityIds = new Set(capabilities.map((capability) => capability.id));
 
-        return capabilities.length === 0 ? [] : [{ area: area.area, capabilities, scenarios: area.scenarios.filter((scenario) => scenarioIds.has(scenario.id)) }];
+        return capabilities.length === 0 ? [] : [{ area: area.area, capabilities, scenarios: area.scenarios.filter((scenario) => scenario.capabilityIds.some((id) => capabilityIds.has(id))) }];
     });
 
     log(JSON.stringify(matches, null, 2));

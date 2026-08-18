@@ -1,5 +1,5 @@
 {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "area": "article-workspace",
     "capabilities": [
         {
@@ -11,10 +11,7 @@
                 "packages/web/src/workspace/components/WorkspaceShell.tsx"
             ],
             "contract": "The Article remains the central column at viewport height.",
-            "persistence": "Local workspace layout preferences only.",
-            "scenarioIds": [
-                "workspace.shell.responsive-collapse"
-            ]
+            "persistence": "Local workspace layout preferences only."
         },
         {
             "id": "workspace.shell.focus-mode",
@@ -25,10 +22,7 @@
                 "packages/web/src/workspace/components/WorkspaceShell.tsx"
             ],
             "contract": "Focus mode changes only local layout state.",
-            "persistence": "No Article metadata, Draft, or Revision changes.",
-            "scenarioIds": [
-                "workspace.shell.focus-mode"
-            ]
+            "persistence": "No Article metadata, Draft, or Revision changes."
         },
         {
             "id": "workspace.library.article-navigation",
@@ -41,10 +35,7 @@
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
             "contract": "Selected Article is restored locally, Article activity includes retained Draft checkpoints, and independently selectable translation Articles appear as children of their source Article.",
-            "persistence": "Article service plus local workspace preferences.",
-            "scenarioIds": [
-                "workspace.library.create-and-select"
-            ]
+            "persistence": "Article service plus local workspace preferences."
         },
         {
             "id": "workspace.assistant.explicit-request",
@@ -57,10 +48,7 @@
                 "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
             "contract": "A skill tag never sends a request, leaves the caret after a trailing space for continued guidance, and can run against the whole Article without additional guidance; Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
-            "persistence": "Per-Article Assistant records and explicit Editorial Requests.",
-            "scenarioIds": [
-                "workspace.assistant.quick-action"
-            ]
+            "persistence": "Per-Article Assistant records and explicit Editorial Requests."
         },
         {
             "id": "workspace.empty.create-article",
@@ -73,10 +61,7 @@
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
             "contract": "Creation does not create a Revision outside Article creation.",
-            "persistence": "New Article service request.",
-            "scenarioIds": [
-                "workspace.empty.create-article"
-            ]
+            "persistence": "New Article service request."
         },
         {
             "id": "workspace.header.article-metadata",
@@ -87,10 +72,7 @@
                 "packages/web/src/workspace/components/ArticleHeader.tsx"
             ],
             "contract": "Metadata changes do not create a Revision and deletion requires confirmation.",
-            "persistence": "Article metadata PATCH, local target-language guidance, and Article deletion route.",
-            "scenarioIds": [
-                "workspace.header.metadata-and-deletion"
-            ]
+            "persistence": "Article metadata PATCH, local target-language guidance, and Article deletion route."
         },
         {
             "id": "workspace.navigation.views",
@@ -104,11 +86,7 @@
                 "scripts/web-import-boundaries.mjs"
             ],
             "contract": "Each View has stable tab and panel identifiers, labels, and Arrow, Home, and End navigation; actionable and stale Workspace Tab badges use visible text rather than dots, and every scrollable supporting View uses the shared quiet scrollbar.",
-            "persistence": "Active View is a local workspace preference; results retain their Article and base Revision.",
-            "scenarioIds": [
-                "workspace.navigation.keyboard-tabs",
-                "workspace.navigation.persisted-view"
-            ]
+            "persistence": "Active View is a local workspace preference; results retain their Article and base Revision."
         },
         {
             "id": "workspace.editor.markdown-surface",
@@ -120,10 +98,7 @@
                 "packages/web/src/workspace/editor/paste.ts"
             ],
             "contract": "Article content is persisted as supported Markdown, never editor JSON or raw imported HTML.",
-            "persistence": "Draft lifecycle owns recoverable text persistence.",
-            "scenarioIds": [
-                "workspace.editor.safe-paste"
-            ]
+            "persistence": "Draft lifecycle owns recoverable text persistence."
         },
         {
             "id": "workspace.draft.checkpoint",
@@ -138,11 +113,6 @@
             "persistence": "Per-Article Draft checkpoint anchored to the current Revision.",
             "stateModelIds": [
                 "draft.lifecycle"
-            ],
-            "scenarioIds": [
-                "workspace.draft.checkpoint-after-idle",
-                "workspace.draft.flush-before-context-change",
-                "workspace.draft.stale-completion"
             ]
         },
         {
@@ -158,9 +128,6 @@
             "persistence": "Versioned Draft checkpoint and immutable Article Revision.",
             "stateModelIds": [
                 "draft.lifecycle"
-            ],
-            "scenarioIds": [
-                "workspace.draft.promote-exact-checkpoint"
             ]
         },
         {
@@ -177,9 +144,6 @@
             "persistence": "Conflict responses include current Article and retained Draft data when available.",
             "stateModelIds": [
                 "draft.lifecycle"
-            ],
-            "scenarioIds": [
-                "workspace.draft.conflict-recovery"
             ]
         },
         {
@@ -190,14 +154,11 @@
             "owners": [
                 "packages/web/src/workspace/views/ProposalReviewView.tsx",
                 "packages/web/src/workspace/views/proposal-review-presentation.ts",
-                "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/editorial-proposal-state.ts"
             ],
-            "contract": "AI-generated text never enters the Article without explicit acceptance; each reliable change may show a non-authoritative supporting summary in the Interface locale whose failure does not block review; Accept all and Reject all only select every available decision while a separate action applies accepted changes; stale or unreliable Proposals cannot be partially accepted, stale and preservation warnings precede a compact review-control band with labelled icon change navigation and diff, stale recovery includes explicitly dismissing the Proposal without Article changes, and fallback presentation identifies one complete Proposal while disclosing its underlying change count.",
+            "contract": "AI text stays outside the Article until explicit acceptance. Reliable changes may show non-authoritative Interface-locale summaries whose failure does not block review. Accept all and Reject all select decisions; a separate action applies accepted changes. Stale or unreliable Proposals cannot be partially accepted. Stale and preservation warnings precede labelled change navigation and patterned diffs; stale recovery permits dismissal without Article changes. Whole-Proposal fallback discloses its change count.",
             "persistence": "Completed Proposal content, localized summaries, and the base Revision are recovered from local Assistant and editorial artifact records; accepted Revision provenance records accepted changes or whole-proposal fallback, and dismissal is a local workspace preference.",
-            "scenarioIds": [
-                "workspace.proposal.stale-blocked"
-            ]
+            "relatedCapabilityIds": ["editorial-workflows.proposal-lifecycle", "editorial-workflows.ai-safety"]
         },
         {
             "id": "workspace.revisions.history-and-restore",
@@ -209,10 +170,7 @@
                 "packages/web/src/workspace/components/RestoreRevisionDialog.tsx"
             ],
             "contract": "Selecting a Revision is local-only and restoring creates a new Revision.",
-            "persistence": "Immutable Article Revisions and recoverable Draft checkpoints.",
-            "scenarioIds": [
-                "workspace.revisions.restore"
-            ]
+            "persistence": "Immutable Article Revisions and recoverable Draft checkpoints."
         },
         {
             "id": "workspace.findings.advisory-results",
@@ -223,11 +181,9 @@
                 "packages/web/src/workspace/views/FactCheckView.tsx",
                 "packages/web/src/workspace/views/StyleProfileView.tsx"
             ],
-            "contract": "Findings never modify Article text; unchanged Facts and accepted findings survive Revision updates, while changed unresolved Facts become stale. Raw style samples remain local, Article-specific style rules remain Article metadata outside Revision text, and the Style Profile identifies current profile contributors, rebuild time, applied rule evidence, and grounded style-review findings.",
+            "contract": "Findings never modify Article text. Unchanged Facts and accepted findings survive Revision updates; changed unresolved Facts become stale. Raw style samples remain local and Article rules remain metadata outside Revision text. Style Profile identifies contributors, rebuild time, applied-rule evidence, and grounded findings.",
             "persistence": "Completed Editorial artifacts and local Style corpus.",
-            "scenarioIds": [
-                "workspace.findings.advisory-only"
-            ]
+            "relatedCapabilityIds": ["history-and-publishing.fact-check-findings", "history-and-publishing.style-corpus"]
         },
         {
             "id": "workspace.translations.linked-article",
@@ -236,15 +192,11 @@
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/views/TranslationsView.tsx",
-                "packages/web/src/workspace/EditorialWorkspace.tsx",
-                "packages/web/src/workspace/state/editorial-proposal-state.ts",
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
             "contract": "A stale source blocks creation and translation text never overwrites its source Article.",
             "persistence": "Independent Article with source Article and Revision linkage.",
-            "scenarioIds": [
-                "workspace.translations.stale-source"
-            ]
+            "relatedCapabilityIds": ["history-and-publishing.translations", "editorial-workflows.translation-request"]
         },
         {
             "id": "workspace.publishing.guidance",
@@ -252,15 +204,12 @@
             "title": "Article language, explicit Markdown and plain-text copying, and Article-specific character guidance",
             "status": "implemented",
             "owners": [
-                "packages/web/src/workspace/components/ArticleWorkspace.tsx",
                 "packages/web/src/workspace/components/ArticleStatusBar.tsx",
                 "packages/web/src/workspace/state/publishing-state.ts"
             ],
-            "contract": "The Status Bar's language selector updates Article metadata without creating a Revision. Its main Copy action transfers the current Article Markdown; its menu offers Markdown or deterministic plain text, while its profile list includes built-in and configured custom profiles. Character limits remain guidance only and direct platform publishing is not performed.",
+            "contract": "The Status Bar language selector updates metadata without creating a Revision. Copy transfers Markdown by default and offers deterministic plain text. Built-in and custom profiles remain selectable; character limits are guidance only, and the application does not publish directly.",
             "persistence": "Article language and publishing-profile metadata with persisted default fallbacks.",
-            "scenarioIds": [
-                "workspace.publishing.over-guidance"
-            ]
+            "relatedCapabilityIds": ["history-and-publishing.publishing-copy", "settings.publishing-profiles"]
         }
     ],
     "scenarios": [
