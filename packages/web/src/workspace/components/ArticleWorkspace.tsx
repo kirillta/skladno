@@ -102,6 +102,12 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
                 layout.setAssistantCollapsed(false);
                 layout.setView("write");
             }} />
-        <ArticleStatusBar revisionNumber={revisionNumber} length={publishing.length} profile={publishing.profile} customProfiles={publishing.settings.customProfiles} setProfile={publishing.setProfile} copyMarkdown={publishing.copyMarkdown} copyPlainText={publishing.copyPlainText} />
+        <ArticleStatusBar revisionNumber={revisionNumber} language={article.language ?? "en"} setLanguage={async (language) => {
+            try {
+                await workspace.updateArticle(article.id, { language });
+            } catch (error) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            }
+        }} length={publishing.length} profile={publishing.profile} customProfiles={publishing.settings.customProfiles} setProfile={publishing.setProfile} copyMarkdown={publishing.copyMarkdown} copyPlainText={publishing.copyPlainText} />
     </div>;
 }

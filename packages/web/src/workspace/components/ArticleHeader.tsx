@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { articleLanguages, type Article, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
-import { Button, Dialog, Field, IconButton, Select } from "../../ui/primitives.js";
+import { type Article, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
+import { Button, Dialog, Field, IconButton } from "../../ui/primitives.js";
 import { DeleteIcon, FocusIcon, LeaveFocusIcon, SaveIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";
 import type { Notifications } from "../../notifications/notifications.js";
@@ -42,11 +42,6 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
     useEffect(() => () => {
         clearTimeout(renameTimer.current);
     }, []);
-
-
-    function updateMetadata(input: UpdateArticleInput) {
-        void updateArticle(article.id, input).catch((error) => reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) }));
-    }
 
 
     function persistTitle(value: string) {
@@ -113,9 +108,6 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
                 <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "articleHeader.deleteArticle" })} title={intl.formatMessage({ id: "articleHeader.deleteArticle" })} onClick={() => setDeleteConfirmationOpen(true)}>
                     <DeleteIcon className="size-4" />
                 </IconButton>
-                <Select className="min-w-28 !w-32" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} value={article.language ?? "en"} onChange={(event) => updateMetadata({ language: event.target.value })}>
-                    {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageId(language) })}</option>)}
-                </Select>
                 <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })} title={shortcutHint(intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" }), KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, shortcutOverrides)} onClick={() => setFocusMode(!focusMode)}>
                     {focusMode ? <LeaveFocusIcon className="size-4" /> : <FocusIcon className="size-4" />}
                 </IconButton>
@@ -134,9 +126,4 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             </div>
         </Dialog>}
     </header>;
-}
-
-
-function languageMessageId(language: string): "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" {
-    return ({ en: "languages.english", es: "languages.spanish", pt: "languages.portuguese", ru: "languages.russian", fr: "languages.french", de: "languages.german", it: "languages.italian" } as const)[language as "en" | "es" | "pt" | "ru" | "fr" | "de" | "it"];
 }

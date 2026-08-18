@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type CustomPublishLimitProfile, type PublishLimitProfile, type PublishLimitProfileId, type PublishingLength } from "@skladno/shared";
+import { articleLanguages, PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type CustomPublishLimitProfile, type PublishLimitProfile, type PublishLimitProfileId, type PublishingLength } from "@skladno/shared";
 import { ChevronDownIcon, CopyIcon, StatusIcon, SuccessIcon } from "../../ui/icons.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
 
 
-export function ArticleStatusBar(props: { revisionNumber: number; length: PublishingLength; profile: PublishLimitProfile; customProfiles: readonly CustomPublishLimitProfile[]; setProfile: (id: PublishLimitProfileId) => Promise<void>; copyMarkdown: () => Promise<boolean>; copyPlainText: () => Promise<boolean> }) {
+export function ArticleStatusBar(props: { revisionNumber: number; language: string; setLanguage: (language: string) => Promise<void>; length: PublishingLength; profile: PublishLimitProfile; customProfiles: readonly CustomPublishLimitProfile[]; setProfile: (id: PublishLimitProfileId) => Promise<void>; copyMarkdown: () => Promise<boolean>; copyPlainText: () => Promise<boolean> }) {
     return <LocalizedArticleStatusBar {...props} />;
 }
 
 
-function LocalizedArticleStatusBar({ revisionNumber, length, profile, customProfiles, setProfile, copyMarkdown, copyPlainText }: Parameters<typeof ArticleStatusBar>[0]) {
+function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, length, profile, customProfiles, setProfile, copyMarkdown, copyPlainText }: Parameters<typeof ArticleStatusBar>[0]) {
     const intl = useIntl();
+    const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [copyMenuOpen, setCopyMenuOpen] = useState(false);
     const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
@@ -23,6 +24,12 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, customProf
     async function selectProfile(profileId: PublishLimitProfileId) {
         await setProfile(profileId);
         setProfileMenuOpen(false);
+    }
+
+
+    async function selectLanguage(nextLanguage: string) {
+        await setLanguage(nextLanguage);
+        setLanguageMenuOpen(false);
     }
 
 
@@ -41,8 +48,27 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, customProf
 
     return <footer className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
         <span className="font-normal text-muted">{intl.formatMessage({ id: "status.revision" }, { revisionNumber })}</span>
+        <div className="relative ml-2">
+            <button className="inline-flex h-6 items-center gap-1 border-x border-border px-1.5 text-xs text-muted hover:bg-brand-soft hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} aria-expanded={languageMenuOpen} aria-haspopup="menu" onClick={() => {
+                setLanguageMenuOpen((open) => !open);
+                setProfileMenuOpen(false);
+                setCopyMenuOpen(false);
+            }} onKeyDown={(event) => {
+                if (event.key === "Escape")
+                    setLanguageMenuOpen(false);
+            }}>
+                <span>{intl.formatMessage({ id: languageMessageId(language) })}</span>
+                <ChevronDownIcon className={`size-3 transition-transform ${languageMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+            {languageMenuOpen && <div className="absolute bottom-6 left-0 z-10 w-40 rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })}>
+                {articleLanguages.map((option) => <button key={option} className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitemradio" aria-checked={option === language} onClick={() => void selectLanguage(option)}>{intl.formatMessage({ id: languageMessageId(option) })}</button>)}
+            </div>}
+        </div>
         <div className="relative ml-auto">
-            <button className={`inline-flex h-6 items-center gap-1 rounded-control px-1.5 hover:bg-brand-soft hover:text-brand focus:outline-none ${tone === "error" ? "font-semibold text-danger" : tone === "warning" ? "font-semibold text-warning" : "text-muted"}`} type="button" aria-expanded={profileMenuOpen} aria-haspopup="menu" aria-label={intl.formatMessage({ id: "status.characterCount.ariaLabel" }, { characterCount: intl.formatNumber(length.count), characterLimit: intl.formatNumber(profile.characterLimit ?? 0) })} title={length.remaining === undefined ? undefined : length.state === "over-limit" ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(length.remaining)) }) : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(length.remaining) })} onClick={() => setProfileMenuOpen((open) => !open)} onKeyDown={(event) => {
+            <button className={`inline-flex h-6 items-center gap-1 rounded-control px-1.5 hover:bg-brand-soft hover:text-brand focus:outline-none ${tone === "error" ? "font-semibold text-danger" : tone === "warning" ? "font-semibold text-warning" : "text-muted"}`} type="button" aria-expanded={profileMenuOpen} aria-haspopup="menu" aria-label={intl.formatMessage({ id: "status.characterCount.ariaLabel" }, { characterCount: intl.formatNumber(length.count), characterLimit: intl.formatNumber(profile.characterLimit ?? 0) })} title={length.remaining === undefined ? undefined : length.state === "over-limit" ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(length.remaining)) }) : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(length.remaining) })} onClick={() => {
+                setProfileMenuOpen((open) => !open);
+                setLanguageMenuOpen(false);
+            }} onKeyDown={(event) => {
                 if (event.key === "Escape")
                     setProfileMenuOpen(false);
             }}>
@@ -64,6 +90,7 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, customProf
             </button>
             <button className="grid size-6 place-items-center text-muted transition-colors hover:bg-brand-soft hover:text-brand" type="button" aria-label={intl.formatMessage({ id: "articleHeader.copyOptions" })} aria-expanded={copyMenuOpen} aria-haspopup="menu" onClick={() => {
                 setCopyMenuOpen((open) => !open);
+                setLanguageMenuOpen(false);
                 setProfileMenuOpen(false);
             }}>
                 <ChevronDownIcon className={`size-3 transition-transform ${copyMenuOpen ? "rotate-180" : ""}`} />
@@ -74,4 +101,9 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, customProf
             </div>}
         </div>
     </footer>;
+}
+
+
+function languageMessageId(language: string): "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" {
+    return ({ en: "languages.english", es: "languages.spanish", pt: "languages.portuguese", ru: "languages.russian", fr: "languages.french", de: "languages.german", it: "languages.italian" } as const)[language as "en" | "es" | "pt" | "ru" | "fr" | "de" | "it"];
 }

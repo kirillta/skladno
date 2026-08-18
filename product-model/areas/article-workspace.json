@@ -81,7 +81,7 @@
         {
             "id": "workspace.header.article-metadata",
             "area": "Article Header",
-            "title": "Title, language context, Revision promotion, focus mode, and confirmed Article deletion",
+            "title": "Title, Revision promotion, focus mode, and confirmed Article deletion",
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/ArticleHeader.tsx"
@@ -249,15 +249,15 @@
         {
             "id": "workspace.publishing.guidance",
             "area": "Article Status Bar",
-            "title": "Explicit Markdown and plain-text copying with Article-specific character guidance",
+            "title": "Article language, explicit Markdown and plain-text copying, and Article-specific character guidance",
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/ArticleWorkspace.tsx",
                 "packages/web/src/workspace/components/ArticleStatusBar.tsx",
                 "packages/web/src/workspace/state/publishing-state.ts"
             ],
-            "contract": "The Status Bar's main Copy action transfers the current Article Markdown; its menu offers Markdown or deterministic plain text, while its profile list includes built-in and configured custom profiles. Character limits remain guidance only and direct platform publishing is not performed.",
-            "persistence": "Article publishing-profile metadata with persisted default fallback.",
+            "contract": "The Status Bar's language selector updates Article metadata without creating a Revision. Its main Copy action transfers the current Article Markdown; its menu offers Markdown or deterministic plain text, while its profile list includes built-in and configured custom profiles. Character limits remain guidance only and direct platform publishing is not performed.",
+            "persistence": "Article language and publishing-profile metadata with persisted default fallbacks.",
             "scenarioIds": [
                 "workspace.publishing.over-guidance"
             ]
