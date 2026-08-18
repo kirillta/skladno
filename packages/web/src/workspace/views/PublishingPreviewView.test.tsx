@@ -13,7 +13,7 @@ describe("PublishingPreviewView", () => {
         const copy = vi.fn(() => new Promise<void>((resolve) => {
             resolveCopy = resolve;
         }));
-        render(<IntlProvider locale="en" messages={messages}><PublishingPreviewView publishing={{ text: "Prepared text", length: { count: 14, remaining: 86, state: "within-limit" }, copy }} /></IntlProvider>);
+        render(<IntlProvider locale="en" messages={messages}><PublishingPreviewView publishing={{ text: "Prepared text", profileId: "default", profile: { characterLimit: 100 }, settings: { customProfile: { name: "Custom" } }, length: { count: 14, remaining: 86, state: "within-limit" }, setProfile: vi.fn(), copy }} /></IntlProvider>);
 
         const button = screen.getByRole("button", { name: "Copy plain text" });
         await user.click(button);

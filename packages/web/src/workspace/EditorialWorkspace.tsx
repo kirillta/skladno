@@ -70,7 +70,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         try {
             const settings = await client.getApplicationSettings();
             const defaultLanguage = settings.general.defaultArticleLanguage;
-            const defaultProfileId = await client.getPublishLimitProfile();
+            const { defaultProfileId } = await client.getPublishingSettings();
             return await workspace.create({
                 title: intl.formatMessage({ id: "article.defaultTitle" }),
                 content: "",

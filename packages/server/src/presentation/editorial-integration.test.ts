@@ -452,7 +452,7 @@ test("Narrative Draft without guidance uses the whole Article and its selected c
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.articleService.createArticle({ title: "Draft", content: "The whole Article", publishingProfileId: "linkedin-short" });
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "The whole Article", publishingProfileId: "default" });
         await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -467,7 +467,7 @@ test("Narrative Draft without guidance uses the whole Article and its selected c
         assert.equal(engine.requests[0]?.article, "The whole Article");
         assert.equal(engine.requests[0]?.authorContext, "");
         assert.equal(engine.requests[0]?.skillId, "narrative_draft");
-        assert.equal(engine.requests[0]?.targetArticleCharacterLimit, 1_300);
+        assert.equal(engine.requests[0]?.targetArticleCharacterLimit, 3_000);
     });
 });
 

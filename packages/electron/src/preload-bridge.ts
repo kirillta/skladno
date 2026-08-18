@@ -153,8 +153,8 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         setArticleStyleRules: (articleId, rules) => invoke(ELECTRON_APPLICATION_METHOD.setArticleStyleRules, articleId, rules),
         addArticleRevisionStyleCorpusItem: (articleId, revisionId) => invoke(ELECTRON_APPLICATION_METHOD.addArticleRevisionStyleCorpusItem, articleId, revisionId),
         removeStyleCorpusItem: (materialId) => invoke(ELECTRON_APPLICATION_METHOD.removeStyleCorpusItem, materialId),
-        getPublishLimitProfile: () => invoke(ELECTRON_APPLICATION_METHOD.getPublishLimitProfile),
-        setPublishLimitProfile: (profileId) => invoke(ELECTRON_APPLICATION_METHOD.setPublishLimitProfile, profileId),
+        getPublishingSettings: () => invoke(ELECTRON_APPLICATION_METHOD.getPublishingSettings),
+        setPublishingSettings: (settings) => invoke(ELECTRON_APPLICATION_METHOD.setPublishingSettings, settings),
         streamEditorial: (articleId, input, onEvent, signal) => {
             const streamId = createStreamId();
 

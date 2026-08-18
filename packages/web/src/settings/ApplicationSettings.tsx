@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { defaultGeneralSettings, defaultPublishLimitProfileId, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection, type PublishLimitProfileId } from "@skladno/shared";
+import { defaultGeneralSettings, defaultPublishingSettings, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection, type PublishingSettings } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
@@ -22,7 +22,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
     const [preferences, setPreferences] = useState<ModelPreferences>({ defaultModel: "", skillOverrides: {} });
     const [backupPolicy, setBackupPolicy] = useState<BackupPolicy>({ schedule: "off", retention: { mode: "count", count: 7 } });
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>({});
-    const [publishingProfileId, setPublishingProfileId] = useState<PublishLimitProfileId>(defaultPublishLimitProfileId);
+    const [publishingSettings, setPublishingSettings] = useState<PublishingSettings>(defaultPublishingSettings);
     const [models, setModels] = useState<string[]>([]);
     const [connectionName, setConnectionName] = useState("");
     const [environmentName, setEnvironmentName] = useState("");
@@ -42,7 +42,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
             setStatus(intl.formatMessage({ id: "settings.loadingFailed" }));
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.loadingFailed" }) });
         });
-        void client.getPublishLimitProfile().then(setPublishingProfileId).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.loadingFailed" }) }));
+        void client.getPublishingSettings().then(setPublishingSettings).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.loadingFailed" }) }));
     }, [client, intl, notifyError]);
 
     useEffect(() => {
@@ -179,11 +179,11 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
     }
 
 
-    async function savePublishingProfile(profileId: PublishLimitProfileId) {
-        setPublishingProfileId(profileId);
+    async function savePublishingSettings(next: PublishingSettings) {
+        setPublishingSettings(next);
 
         try {
-            await client.setPublishLimitProfile(profileId);
+            await client.setPublishingSettings(next);
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.saveFailed" }) });
         }
@@ -198,7 +198,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated }: { cl
                 {!settings ? null : section === "general" ? <GeneralSettingsSection general={general} save={saveGeneral} /> : section === "keyBindings" ? <KeyBindingSettings overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
                     setEnvironmentName(value);
                     setConnectionError(undefined);
-                }} onAddConnection={() => void addConnection()} onSetActiveConnection={(connectionId) => void setActiveConnection(connectionId)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} /> : section === "publishing" ? <PublishingSettingsSection profileId={publishingProfileId} save={(profileId) => void savePublishingProfile(profileId)} general={general} saveGeneral={saveGeneral} /> : <DataBackupsSettingsSection backupPolicy={backupPolicy} setBackupPolicy={setBackupPolicy} save={saveBackupPolicy} />}
+                }} onAddConnection={() => void addConnection()} onSetActiveConnection={(connectionId) => void setActiveConnection(connectionId)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} /> : section === "publishing" ? <PublishingSettingsSection publishing={publishingSettings} save={(next) => void savePublishingSettings(next)} general={general} saveGeneral={saveGeneral} /> : <DataBackupsSettingsSection backupPolicy={backupPolicy} setBackupPolicy={setBackupPolicy} save={saveBackupPolicy} />}
             </div>
             {connectionPendingRemoval && <ConnectionRemovalDialog connection={connectionPendingRemoval} close={() => setConnectionPendingRemoval(undefined)} remove={() => void removeConnection()} />}
         </section>

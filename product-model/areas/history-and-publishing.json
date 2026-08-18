@@ -58,20 +58,19 @@
             "title": "Plain-text preparation, profile selection, character guidance, and copy-ready preview",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/PublishingPreviewView.tsx", "packages/shared/src/publishing/publishing.ts"],
-            "contract": "The preview prepares derived copy with Article-specific profile selection and shared character guidance; direct publishing is not performed.",
-            "persistence": "Preview output is derived from local Article and profile data.",
+            "contract": "The preview deterministically prepares plain text from the current Article, supports Article-specific Default, No restrictions, LinkedIn Post, LinkedIn Article, and custom profile selection, shows advisory count/remaining/overflow guidance, and copies exactly the displayed text. Copying is explicit and direct publishing is not performed.",
+            "persistence": "Preview output is derived from local Article and locally persisted profile data.",
             "scenarioIds": ["history-and-publishing.publishing-guidance"]
         },
         {
             "id": "history-and-publishing.publishing-profiles",
             "area": "Publishing profiles",
             "title": "Named profiles with configurable limits",
-            "status": "partial",
+            "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/PublishingSettingsSection.tsx", "packages/server/src/presentation/routes/publish-settings-route.ts", "packages/server/src/application/publishing", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "An Article may select a named publishing profile that supplies character-limit guidance.",
-            "persistence": "The selected profile persists locally.",
-            "scenarioIds": ["history-and-publishing.publishing-profile-persistence"],
-            "limitations": ["The current UI exposes fixed legacy profile selection; custom profile management is incomplete."]
+            "contract": "Authors choose a predefined Default profile for new Articles and configure one named custom non-negative character limit; Articles independently select Default, No restrictions, LinkedIn Post, LinkedIn Article, or the custom profile for advisory guidance.",
+            "persistence": "The default profile and custom name/limit persist locally in app_settings.publish-limit-profile; Article-specific selection persists locally.",
+            "scenarioIds": ["history-and-publishing.publishing-profile-persistence"]
         }
     ],
     "scenarios": [
@@ -131,7 +130,7 @@
             "capabilityIds": ["history-and-publishing.publishing-preview"],
             "preconditions": ["The current Article has a selected publishing profile."],
             "event": "The author opens Publishing Preview.",
-            "expected": ["Prepared plain text and character-limit guidance are available for review and copying."],
+            "expected": ["Prepared plain text, selected-profile count guidance, and exact copy-ready text are available without AI."],
             "forbidden": ["The application does not publish directly to a platform."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
         },
@@ -139,10 +138,10 @@
             "id": "history-and-publishing.publishing-profile-persistence",
             "title": "Publishing profile selection persists locally",
             "capabilityIds": ["history-and-publishing.publishing-profiles"],
-            "preconditions": ["A supported publishing profile is selected."],
+            "preconditions": ["A publishing default and custom profile name/limit are configured."],
             "event": "The service saves and reloads that selection.",
-            "expected": ["The selected profile is returned after reload."],
-            "forbidden": ["Unknown profiles are not accepted."],
+            "expected": ["The selected default and valid custom profile configuration are returned after reload."],
+            "forbidden": ["Unknown profiles and invalid custom limits are not accepted."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         }
     ]

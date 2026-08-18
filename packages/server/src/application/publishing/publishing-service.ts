@@ -1,4 +1,4 @@
-import { defaultPublishLimitProfileId, isPublishLimitProfileId, type PublishLimitProfileId } from "@skladno/shared";
+import { defaultPublishingSettings, isPublishLimitProfileId, type PublishingSettings } from "@skladno/shared";
 
 import type { SettingsStore } from "../ports/settings-store.js";
 
@@ -10,14 +10,22 @@ export class PublishingService {
     constructor(private readonly store: SettingsStore) { }
 
 
-    getProfile(): PublishLimitProfileId {
+    getSettings(): PublishingSettings {
         const saved = this.store.get(publishLimitProfileSettingKey)?.value;
-        return isPublishLimitProfileId(saved) ? saved : defaultPublishLimitProfileId;
+        if (saved && typeof saved === "object" && !Array.isArray(saved)) {
+            const candidate = saved as { defaultProfileId?: unknown; customProfile?: { name?: unknown; characterLimit?: unknown } };
+            const limit = candidate.customProfile?.characterLimit;
+
+            if (isPublishLimitProfileId(candidate.defaultProfileId) && typeof candidate.customProfile?.name === "string" && typeof limit === "number" && Number.isInteger(limit) && limit >= 0)
+                return { defaultProfileId: candidate.defaultProfileId, customProfile: { name: candidate.customProfile.name, characterLimit: limit } };
+        }
+
+        return { ...defaultPublishingSettings, customProfile: { ...defaultPublishingSettings.customProfile } };
     }
 
 
-    setProfile(profileId: PublishLimitProfileId): PublishLimitProfileId {
-        this.store.set(publishLimitProfileSettingKey, profileId);
-        return profileId;
+    setSettings(settings: PublishingSettings): PublishingSettings {
+        this.store.set(publishLimitProfileSettingKey, settings);
+        return settings;
     }
 }

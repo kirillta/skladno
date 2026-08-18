@@ -1,8 +1,11 @@
 export const publishSettingsPath = "/api/settings/publish-limit-profile";
 
 export const PUBLISH_LIMIT_PROFILE = {
-    LINKEDIN_SHORT: "linkedin-short",
+    DEFAULT: "default",
     LINKEDIN_POST: "linkedin-post",
+    LINKEDIN_ARTICLE: "linkedin-article",
+    NO_RESTRICTIONS: "no-restrictions",
+    CUSTOM: "custom",
 } as const;
 
 export type PublishLimitProfileId = typeof PUBLISH_LIMIT_PROFILE[keyof typeof PUBLISH_LIMIT_PROFILE];
@@ -10,28 +13,46 @@ export type PublishLimitProfileId = typeof PUBLISH_LIMIT_PROFILE[keyof typeof PU
 
 export interface PublishLimitProfile {
     id: PublishLimitProfileId;
-    label: string;
-    characterLimit: number;
-    warningThreshold: number;
+    characterLimit?: number;
+    warningThreshold?: number;
 }
 
 
 export const publishLimitProfiles: readonly PublishLimitProfile[] = [
     {
-        id: PUBLISH_LIMIT_PROFILE.LINKEDIN_SHORT,
-        label: "LinkedIn short post",
-        characterLimit: 1_300,
-        warningThreshold: 1_000,
+        id: PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS,
     },
     {
-        id: PUBLISH_LIMIT_PROFILE.LINKEDIN_POST,
-        label: "LinkedIn post",
+        id: PUBLISH_LIMIT_PROFILE.DEFAULT,
         characterLimit: 3_000,
         warningThreshold: 2_700,
     },
+    {
+        id: PUBLISH_LIMIT_PROFILE.LINKEDIN_POST,
+        characterLimit: 3_000,
+        warningThreshold: 2_700,
+    },
+    {
+        id: PUBLISH_LIMIT_PROFILE.LINKEDIN_ARTICLE,
+        characterLimit: 125_000,
+        warningThreshold: 112_500,
+    },
+    { id: PUBLISH_LIMIT_PROFILE.CUSTOM },
 ];
 
-export const defaultPublishLimitProfileId = PUBLISH_LIMIT_PROFILE.LINKEDIN_POST;
+export const defaultPublishLimitProfileId = PUBLISH_LIMIT_PROFILE.DEFAULT;
+
+
+export interface PublishingSettings {
+    defaultProfileId: PublishLimitProfileId;
+    customProfile: { name: string; characterLimit: number };
+}
+
+
+export const defaultPublishingSettings: PublishingSettings = {
+    defaultProfileId: defaultPublishLimitProfileId,
+    customProfile: { name: "Custom", characterLimit: 3_000 },
+};
 
 
 export function isPublishLimitProfileId(value: unknown): value is PublishLimitProfileId {
@@ -39,8 +60,10 @@ export function isPublishLimitProfileId(value: unknown): value is PublishLimitPr
 }
 
 
-export function getPublishLimitProfile(id: PublishLimitProfileId): PublishLimitProfile {
-    return publishLimitProfiles.find((profile) => profile.id === id) ?? publishLimitProfiles[0]!;
+export function getPublishLimitProfile(id: PublishLimitProfileId, settings = defaultPublishingSettings): PublishLimitProfile {
+    return id === PUBLISH_LIMIT_PROFILE.CUSTOM
+        ? { id, characterLimit: settings.customProfile.characterLimit, warningThreshold: Math.floor(settings.customProfile.characterLimit * .9) }
+        : publishLimitProfiles.find((profile) => profile.id === id) ?? publishLimitProfiles.find((profile) => profile.id === PUBLISH_LIMIT_PROFILE.DEFAULT)!;
 }
 
 
@@ -77,7 +100,7 @@ export type PublishingLengthState = "within-limit" | "near-limit" | "over-limit"
 
 export interface PublishingLength {
     count: number;
-    remaining: number;
+    remaining?: number;
     state: PublishingLengthState;
 }
 
@@ -85,6 +108,9 @@ export interface PublishingLength {
 /** Resolves advisory publishing guidance without restricting any Article action. */
 export function getPublishingLength(content: string, profile: PublishLimitProfile): PublishingLength {
     const count = countPublishingCharacters(content);
+    if (profile.characterLimit === undefined)
+        return { count, state: "within-limit" };
+
     const remaining = profile.characterLimit - count;
 
     return {
@@ -92,7 +118,7 @@ export function getPublishingLength(content: string, profile: PublishLimitProfil
         remaining,
         state: remaining < 0
             ? "over-limit"
-            : count >= profile.warningThreshold
+            : count >= (profile.warningThreshold ?? profile.characterLimit)
                 ? "near-limit"
                 : "within-limit",
     };
@@ -100,6 +126,6 @@ export function getPublishingLength(content: string, profile: PublishLimitProfil
 
 
 export interface PublishingClient {
-    getPublishLimitProfile(): Promise<PublishLimitProfileId>;
-    setPublishLimitProfile(profileId: PublishLimitProfileId): Promise<PublishLimitProfileId>;
+    getPublishingSettings(): Promise<PublishingSettings>;
+    setPublishingSettings(settings: PublishingSettings): Promise<PublishingSettings>;
 }

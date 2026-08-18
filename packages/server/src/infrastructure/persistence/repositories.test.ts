@@ -244,12 +244,12 @@ test("Article metadata updates preserve the current Revision", () => withReposit
     const updated = repositories.articles.update(article.id, {
         title: "Updated metadata",
         language: "es",
-        publishingProfileId: "linkedin-short",
+        publishingProfileId: "default",
     });
 
     assert.equal(updated.title, "Updated metadata");
     assert.equal(updated.language, "es");
-    assert.equal(updated.publishingProfileId, "linkedin-short");
+    assert.equal(updated.publishingProfileId, "default");
     assert.equal(updated.currentRevisionId, article.currentRevisionId);
     assert.equal(repositories.articles.listRevisions(article.id).length, 1);
     assert.throws(() => repositories.articles.update(article.id, { publishingProfileId: "unknown" }), /Unsupported publishing profile/);
