@@ -37,15 +37,21 @@ export function usePublishing(client: EditorialWorkspaceClient, article: Article
                 throw error;
             }
         },
-        copy: async () => {
-            try {
-                await navigator.clipboard.writeText(text);
-                notify({ tone: "success", title: intl.formatMessage({ id: "publishing.copied" }) });
-            } catch {
-                notify({ tone: "error", title: intl.formatMessage({ id: "publishing.copyFailed" }) });
-            }
-        }
+        copyMarkdown: () => copy(content, "publishing.markdownCopied"),
+        copyPlainText: () => copy(text, "publishing.plainTextCopied"),
     };
+
+
+    async function copy(value: string, successMessageId: "publishing.markdownCopied" | "publishing.plainTextCopied") {
+        try {
+            await navigator.clipboard.writeText(value);
+            notify({ tone: "success", title: intl.formatMessage({ id: successMessageId }) });
+            return true;
+        } catch {
+            notify({ tone: "error", title: intl.formatMessage({ id: "publishing.copyFailed" }) });
+            return false;
+        }
+    }
 }
 
 

@@ -95,7 +95,7 @@
         {
             "id": "workspace.navigation.views",
             "area": "Workspace Tab Bar",
-            "title": "Seven keyboard-operable Workspace Views with revision-aware actionable and stale badges",
+            "title": "Six keyboard-operable Workspace Views with revision-aware actionable and stale badges",
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/workspace-views.ts",
@@ -248,15 +248,15 @@
         },
         {
             "id": "workspace.publishing.guidance",
-            "area": "Publishing Preview and Article Status Bar",
-            "title": "Article-specific profile selection and deterministic copy-ready character guidance",
+            "area": "Article Status Bar",
+            "title": "Explicit Markdown and plain-text copying with Article-specific character guidance",
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/ArticleWorkspace.tsx",
                 "packages/web/src/workspace/components/ArticleStatusBar.tsx",
-                "packages/web/src/workspace/views/PublishingPreviewView.tsx"
+                "packages/web/src/workspace/state/publishing-state.ts"
             ],
-            "contract": "Character limits are guidance only and direct platform publishing is not performed; near-limit and over-limit workspace badges both use warning treatment.",
+            "contract": "The Status Bar's main Copy action transfers the current Article Markdown; its menu offers Markdown or deterministic plain text. Character limits remain guidance only and direct platform publishing is not performed.",
             "persistence": "Article publishing-profile metadata with persisted default fallback.",
             "scenarioIds": [
                 "workspace.publishing.over-guidance"
@@ -655,7 +655,7 @@
             "preconditions": [
                 "Publishing text exceeds the selected profile guidance"
             ],
-            "event": "Author views the Article Status Bar or Publishing Preview.",
+            "event": "Author views the Article Status Bar or uses its Copy control.",
             "expected": [
                 "Over-guidance state is visible without disabling profile selection or copying"
             ],

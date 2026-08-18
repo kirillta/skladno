@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defaultGeneralSettings, publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
+import { defaultGeneralSettings, defaultPublishingSettings, publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
 import { IntlProvider } from "react-intl";
 import { useState, type ReactElement } from "react";
 
@@ -31,7 +31,7 @@ function renderLocalized(element: ReactElement) {
 function fakeClient(): EditorialWorkspaceClient {
     const created = article("new", "New Article");
     return {
-        getHealth: vi.fn(), listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]), createArticle: vi.fn().mockResolvedValue(created), updateArticle: vi.fn(), deleteArticle: vi.fn(), saveArticleDraft: vi.fn(), discardArticleDraft: vi.fn(), saveArticleRevision: vi.fn(), listArticleRevisions: vi.fn().mockResolvedValue([]), listAssistantMessages: vi.fn().mockResolvedValue([]), streamAssistantRequest: vi.fn(), acceptProposal: vi.fn(), summarizeProposal: vi.fn().mockResolvedValue([]), restoreRevision: vi.fn(), streamEditorial: vi.fn(), getStyleCorpus: vi.fn().mockResolvedValue({ items: [], rules: "", status: "empty" }), addStyleCorpusItem: vi.fn(), removeStyleCorpusItem: vi.fn(), setStyleCorpusItemIncluded: vi.fn(), setStyleCorpusRules: vi.fn(), rebuildStyleCorpus: vi.fn(), getArticleStyleRules: vi.fn().mockResolvedValue(""), setArticleStyleRules: vi.fn(), getPublishLimitProfile: vi.fn().mockResolvedValue("linkedin_post"), setPublishLimitProfile: vi.fn(), getApplicationSettings: vi.fn().mockResolvedValue({ general: defaultGeneralSettings, connections: [], modelPreferences: { defaultModel: "", skillOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} }), updateGeneralSettings: vi.fn(), updateBackupPolicy: vi.fn(), updateKeyBindingOverrides: vi.fn(), addOpenAiConnection: vi.fn(), updateOpenAiConnection: vi.fn(), removeOpenAiConnection: vi.fn(), setActiveOpenAiConnection: vi.fn(), testOpenAiConnection: vi.fn(), refreshOpenAiModels: vi.fn(), updateModelPreferences: vi.fn(),
+        getHealth: vi.fn(), listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]), createArticle: vi.fn().mockResolvedValue(created), updateArticle: vi.fn(), deleteArticle: vi.fn(), saveArticleDraft: vi.fn(), discardArticleDraft: vi.fn(), saveArticleRevision: vi.fn(), listArticleRevisions: vi.fn().mockResolvedValue([]), listAssistantMessages: vi.fn().mockResolvedValue([]), streamAssistantRequest: vi.fn(), acceptProposal: vi.fn(), summarizeProposal: vi.fn().mockResolvedValue([]), restoreRevision: vi.fn(), streamEditorial: vi.fn(), getStyleCorpus: vi.fn().mockResolvedValue({ items: [], rules: "", status: "empty" }), addStyleCorpusItem: vi.fn(), removeStyleCorpusItem: vi.fn(), setStyleCorpusItemIncluded: vi.fn(), setStyleCorpusRules: vi.fn(), rebuildStyleCorpus: vi.fn(), getArticleStyleRules: vi.fn().mockResolvedValue(""), setArticleStyleRules: vi.fn(), getPublishingSettings: vi.fn().mockResolvedValue(defaultPublishingSettings), setPublishingSettings: vi.fn(), getApplicationSettings: vi.fn().mockResolvedValue({ general: defaultGeneralSettings, connections: [], modelPreferences: { defaultModel: "", skillOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} }), updateGeneralSettings: vi.fn(), updateBackupPolicy: vi.fn(), updateKeyBindingOverrides: vi.fn(), addOpenAiConnection: vi.fn(), updateOpenAiConnection: vi.fn(), removeOpenAiConnection: vi.fn(), setActiveOpenAiConnection: vi.fn(), testOpenAiConnection: vi.fn(), refreshOpenAiModels: vi.fn(), updateModelPreferences: vi.fn(),
     } as unknown as EditorialWorkspaceClient;
 }
 
@@ -577,6 +577,23 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("copies Markdown by default and offers plain-text copy from the Status Bar menu", async () => {
+        const user = userEvent.setup();
+        const copyMarkdown = vi.fn().mockResolvedValue(true);
+        const copyPlainText = vi.fn().mockResolvedValue(true);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} copyMarkdown={copyMarkdown} copyPlainText={copyPlainText} />);
+        const statusBarScope = within(statusBar.container);
+
+        await user.click(statusBarScope.getByRole("button", { name: "Copy" }));
+        expect(copyMarkdown).toHaveBeenCalledOnce();
+        expect(statusBarScope.getByRole("button", { name: "Copied" })).toBeTruthy();
+
+        await user.click(statusBarScope.getByLabelText("Copy options"));
+        await user.click(statusBarScope.getByRole("menuitem", { name: "Copy plain text" }));
+        expect(copyPlainText).toHaveBeenCalledOnce();
+    });
+
+
     it("keeps only the source language selector in the Article Header", () => {
         const header = renderLocalized(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} />);
         const headerScope = within(header.container);
@@ -589,7 +606,7 @@ describe("Editorial Workspace", () => {
     it("updates the publishing profile from the Status Bar without saving a Revision", async () => {
         const user = userEvent.setup();
         const setProfile = vi.fn().mockResolvedValue(undefined);
-        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={setProfile} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={setProfile} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
 
         await user.click(within(statusBar.container).getByRole("button", { name: /Character count:/ }));
         await user.click(within(statusBar.container).getByRole("menuitemradio", { name: /LinkedIn article/ }));
@@ -632,7 +649,7 @@ describe("Editorial Workspace", () => {
 
 
     it("shows a sequential revision number and character count in the Article Status Bar", () => {
-        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={2} length={{ count: 1234, remaining: 1766, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={2} length={{ count: 1234, remaining: 1766, state: "within-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
         expect(statusBarScope.getByText("v2")).toBeTruthy();
@@ -642,7 +659,7 @@ describe("Editorial Workspace", () => {
 
 
     it("shows an overflow state in the Article Status Bar without disabling its profile selector", () => {
-        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 3001, remaining: -1, state: "over-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} />);
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} length={{ count: 3001, remaining: -1, state: "over-limit" }} profile={publishLimitProfiles[1]!} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
         const statusBarScope = within(statusBar.container);
 
         expect(statusBarScope.getByRole("button", { name: /Character count: 3,001 of 3,000 characters/ })).toBeTruthy();

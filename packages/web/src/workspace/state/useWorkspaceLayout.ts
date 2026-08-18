@@ -10,7 +10,9 @@ export function useWorkspaceLayout() {
             try {
                 const parsed = JSON.parse(stored) as { version?: number; libraryWidth?: number; assistantWidth?: number; libraryCollapsed?: boolean; assistantCollapsed?: boolean; proposalWarningsDismissed?: boolean; selectedArticleId?: unknown; view?: unknown };
 
-                if ((parsed.version === 2 || parsed.version === 3) && isWorkspaceView(parsed.view))
+                const view = parsed.view === "publish" ? "write" : parsed.view;
+
+                if ((parsed.version === 2 || parsed.version === 3) && isWorkspaceView(view))
                     return {
                         version: 3,
                         libraryWidth: Math.min(280, Math.max(192, parsed.libraryWidth ?? 208)),
@@ -18,7 +20,7 @@ export function useWorkspaceLayout() {
                         libraryCollapsed: parsed.libraryCollapsed ?? false,
                         assistantCollapsed: parsed.assistantCollapsed ?? false,
                         proposalWarningsDismissed: parsed.proposalWarningsDismissed ?? false,
-                        view: parsed.view,
+                        view,
                         ...(typeof parsed.selectedArticleId === "string" && parsed.selectedArticleId.trim() ? { selectedArticleId: parsed.selectedArticleId } : {}),
                     };
 

@@ -3,26 +3,23 @@ import type { Article, GeneralSettings } from "@skladno/shared";
 import type { ArticleRevisionsState } from "../state/article-revisions-state.js";
 import type { ArticleWorkspaceState } from "../state/article-workspace-state.js";
 import type { EditorialProposalState } from "../state/editorial-proposal-state.js";
-import type { PublishingState } from "../state/publishing-state.js";
 import type { StyleCorpusState } from "../state/style-corpus-state.js";
 import { ArticleEditorView } from "../views/ArticleEditorView.js";
 import { FactCheckView } from "../views/FactCheckView.js";
 import { ProposalReviewView } from "../views/ProposalReviewView.js";
-import { PublishingPreviewView } from "../views/PublishingPreviewView.js";
 import type { WorkspaceView } from "../workspace-views.js";
 import { RevisionHistoryView } from "../views/RevisionHistoryView.js";
 import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
 
 
-export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, publishing, generalSettings, runFactCheck, runTranslation, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
+export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, generalSettings, runFactCheck, runTranslation, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
     view: WorkspaceView;
     article: Article;
     workspace: ArticleWorkspaceState;
     editorial: EditorialProposalState;
     revisions: ArticleRevisionsState;
     corpus: StyleCorpusState;
-    publishing: PublishingState;
     generalSettings: GeneralSettings;
     runFactCheck: () => void;
     runTranslation: () => void;
@@ -56,5 +53,5 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     if (view === "translations")
         return panel(<TranslationsView article={article} sourceArticle={article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined} linkedTranslations={workspace.articles.filter((item) => item.sourceArticleId === article.id)} translations={editorial.translations} stale={editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId)} create={editorial.createTranslation} edit={openWrite} openArticle={workspace.selectArticle} translate={runTranslation} translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language)} />);
 
-    return panel(<PublishingPreviewView publishing={publishing} />);
+    return null;
 }

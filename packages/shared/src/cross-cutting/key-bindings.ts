@@ -12,7 +12,6 @@ export const KEY_BINDING_COMMAND = {
     VIEW_FACT_CHECK: "view_fact_check",
     VIEW_STYLE_PROFILE: "view_style_profile",
     VIEW_TRANSLATIONS: "view_translations",
-    VIEW_PUBLISH: "view_publish",
     SEND_EDITORIAL_REQUEST: "send_editorial_request",
     STOP_EDITORIAL_REQUEST: "stop_editorial_request",
 } as const;
@@ -63,7 +62,6 @@ export const keyBindingCommands = [
     { id: KEY_BINDING_COMMAND.VIEW_FACT_CHECK, category: "workspace", labelMessageId: "keyBindings.viewFactCheck", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("4"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, category: "workspace", labelMessageId: "keyBindings.viewStyleProfile", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("5"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, category: "workspace", labelMessageId: "keyBindings.viewTranslations", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("6"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.VIEW_PUBLISH, category: "workspace", labelMessageId: "keyBindings.viewPublish", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("7"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.sendEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: binding("enter"), scope: "assistant", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.stopEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: { primary: false, shift: false, alt: false, key: "escape" }, scope: "assistant", allowInEditable: false },
 ] as const satisfies readonly KeyBindingCommand[];

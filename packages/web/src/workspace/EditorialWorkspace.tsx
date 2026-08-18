@@ -141,7 +141,6 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             dispatcher.register(KEY_BINDING_COMMAND.VIEW_FACT_CHECK, () => shortcutActions.current.setView("fact-check")),
             dispatcher.register(KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, () => shortcutActions.current.setView("style-profile")),
             dispatcher.register(KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, () => shortcutActions.current.setView("translations")),
-            dispatcher.register(KEY_BINDING_COMMAND.VIEW_PUBLISH, () => shortcutActions.current.setView("publish")),
         ];
 
         return () => unregister.forEach((remove) => remove());

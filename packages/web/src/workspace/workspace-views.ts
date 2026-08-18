@@ -9,7 +9,6 @@ export const workspaceViews = [
     "fact-check",
     "style-profile",
     "translations",
-    "publish",
 ] as const;
 
 export type WorkspaceView = typeof workspaceViews[number];
@@ -29,7 +28,6 @@ export const workspaceViewDefinitions: readonly WorkspaceViewDefinition[] = [
     { id: "fact-check", label: "workspace.tabs.factCheck", command: KEY_BINDING_COMMAND.VIEW_FACT_CHECK },
     { id: "style-profile", label: "workspace.tabs.styleProfile", command: KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE },
     { id: "translations", label: "workspace.tabs.translations", command: KEY_BINDING_COMMAND.VIEW_TRANSLATIONS },
-    { id: "publish", label: "workspace.tabs.publish", command: KEY_BINDING_COMMAND.VIEW_PUBLISH },
 ];
 
 

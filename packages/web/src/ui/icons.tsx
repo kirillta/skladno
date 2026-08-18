@@ -33,6 +33,11 @@ export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 
+export function CopyIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><rect x="9" y="8" width="10" height="11" rx="1" /><path d="M15 8V5a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" /></Icon>;
+}
+
+
 export function CloseIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="2" {...props}><path d="m6 6 12 12M18 6 6 18" /></Icon>;
 }

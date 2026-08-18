@@ -53,13 +53,13 @@
             "scenarioIds": ["history-and-publishing.translation-stale-source"]
         },
         {
-            "id": "history-and-publishing.publishing-preview",
-            "area": "Publishing preview",
-            "title": "Plain-text preparation, profile selection, character guidance, and copy-ready preview",
+            "id": "history-and-publishing.publishing-copy",
+            "area": "Publishing copy",
+            "title": "Explicit Markdown and plain-text copying with character guidance",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/PublishingPreviewView.tsx", "packages/shared/src/publishing/publishing.ts"],
-            "contract": "The preview deterministically prepares plain text from the current Article, supports Article-specific Default, No restrictions, LinkedIn Post, LinkedIn Article, and custom profile selection, shows advisory count/remaining/overflow guidance, and copies exactly the displayed text. Copying is explicit and direct publishing is not performed.",
-            "persistence": "Preview output is derived from local Article and locally persisted profile data.",
+            "owners": ["packages/web/src/workspace/components/ArticleStatusBar.tsx", "packages/web/src/workspace/state/publishing-state.ts", "packages/shared/src/publishing/publishing.ts"],
+            "contract": "The Status Bar main action copies current Article Markdown, while its menu offers Markdown or deterministically prepared plain text. Article-specific profile guidance remains available beside it. Copying is explicit and direct publishing is not performed.",
+            "persistence": "Copied output is derived from the local Article and locally persisted profile data.",
             "scenarioIds": ["history-and-publishing.publishing-guidance"]
         },
         {
@@ -126,11 +126,11 @@
         },
         {
             "id": "history-and-publishing.publishing-guidance",
-            "title": "Publishing preview offers guidance rather than direct publishing",
-            "capabilityIds": ["history-and-publishing.publishing-preview"],
+            "title": "Header copy offers Markdown and plain text without direct publishing",
+            "capabilityIds": ["history-and-publishing.publishing-copy"],
             "preconditions": ["The current Article has a selected publishing profile."],
-            "event": "The author opens Publishing Preview.",
-            "expected": ["Prepared plain text, selected-profile count guidance, and exact copy-ready text are available without AI."],
+            "event": "The author uses the Status Bar Copy control.",
+            "expected": ["The main action copies Markdown and the menu offers deterministic plain text without AI."],
             "forbidden": ["The application does not publish directly to a platform."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
         },

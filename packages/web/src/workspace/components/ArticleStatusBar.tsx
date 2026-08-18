@@ -1,24 +1,40 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type PublishLimitProfile, type PublishLimitProfileId, type PublishingLength } from "@skladno/shared";
-import { ChevronDownIcon, StatusIcon } from "../../ui/icons.js";
+import { ChevronDownIcon, CopyIcon, StatusIcon, SuccessIcon } from "../../ui/icons.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
 
 
-export function ArticleStatusBar(props: { revisionNumber: number; length: PublishingLength; profile: PublishLimitProfile; setProfile: (id: PublishLimitProfileId) => Promise<void> }) {
+export function ArticleStatusBar(props: { revisionNumber: number; length: PublishingLength; profile: PublishLimitProfile; setProfile: (id: PublishLimitProfileId) => Promise<void>; copyMarkdown: () => Promise<boolean>; copyPlainText: () => Promise<boolean> }) {
     return <LocalizedArticleStatusBar {...props} />;
 }
 
 
-function LocalizedArticleStatusBar({ revisionNumber, length, profile, setProfile }: { revisionNumber: number; length: PublishingLength; profile: PublishLimitProfile; setProfile: (id: PublishLimitProfileId) => Promise<void> }) {
+function LocalizedArticleStatusBar({ revisionNumber, length, profile, setProfile, copyMarkdown, copyPlainText }: Parameters<typeof ArticleStatusBar>[0]) {
     const intl = useIntl();
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+    const [copyMenuOpen, setCopyMenuOpen] = useState(false);
+    const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+    const copyTimer = useRef<ReturnType<typeof setTimeout>>();
     const tone = length.state === "over-limit" ? "error" : length.state === "near-limit" ? "warning" : "info";
 
 
     async function selectProfile(profileId: PublishLimitProfileId) {
         await setProfile(profileId);
         setProfileMenuOpen(false);
+    }
+
+
+    useEffect(() => () => clearTimeout(copyTimer.current), []);
+
+
+    function copy(copyText: () => Promise<boolean>) {
+        void copyText().then((copied) => {
+            setCopyStatus(copied ? "copied" : "failed");
+            setCopyMenuOpen(false);
+            clearTimeout(copyTimer.current);
+            copyTimer.current = setTimeout(() => setCopyStatus("idle"), 1200);
+        });
     }
 
 
@@ -38,6 +54,22 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, setProfile
                     <span>{preset.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS ? intl.formatMessage({ id: "publishing.noRestrictions" }) : intl.formatMessage({ id: publishingProfileMessageId(preset.id) })}</span>
                     {preset.characterLimit !== undefined && <span className="text-muted">{intl.formatNumber(preset.characterLimit)}</span>}
                 </button>)}
+            </div>}
+        </div>
+        <div className="relative ml-2 flex items-center border-l border-border pl-2">
+            <button className={`inline-flex h-6 items-center gap-1 px-1.5 transition-colors hover:bg-brand-soft hover:text-brand ${copyStatus === "failed" ? "text-danger" : "text-muted"}`} type="button" aria-live="polite" onClick={() => copy(copyMarkdown)}>
+                {copyStatus === "copied" ? <SuccessIcon className="size-3 motion-safe:animate-pulse" /> : <CopyIcon className="size-3" />}
+                <span>{intl.formatMessage({ id: copyStatus === "copied" ? "articleHeader.copied" : copyStatus === "failed" ? "articleHeader.copyFailed" : "articleHeader.copy" })}</span>
+            </button>
+            <button className="grid size-6 place-items-center text-muted transition-colors hover:bg-brand-soft hover:text-brand" type="button" aria-label={intl.formatMessage({ id: "articleHeader.copyOptions" })} aria-expanded={copyMenuOpen} aria-haspopup="menu" onClick={() => {
+                setCopyMenuOpen((open) => !open);
+                setProfileMenuOpen(false);
+            }}>
+                <ChevronDownIcon className={`size-3 transition-transform ${copyMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+            {copyMenuOpen && <div className="absolute bottom-6 right-0 z-10 w-40 rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "articleHeader.copyOptions" })}>
+                <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitem" onClick={() => copy(copyMarkdown)}>{intl.formatMessage({ id: "articleHeader.copyMarkdown" })}</button>
+                <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitem" onClick={() => copy(copyPlainText)}>{intl.formatMessage({ id: "articleHeader.copyPlainText" })}</button>
             </div>}
         </div>
     </footer>;

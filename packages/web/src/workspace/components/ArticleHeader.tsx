@@ -39,7 +39,9 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
         clearTimeout(renameTimer.current);
     }, [article.id, article.title]);
 
-    useEffect(() => () => clearTimeout(renameTimer.current), []);
+    useEffect(() => () => {
+        clearTimeout(renameTimer.current);
+    }, []);
 
 
     function updateMetadata(input: UpdateArticleInput) {
