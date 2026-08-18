@@ -7,7 +7,7 @@ Skladno is a local-first AI editorial workspace. It assists authors; it does not
 Before changing code:
 
 1. Read the active issue and the code, contracts, and tests on the affected path.
-2. Check the canonical capability records in [`product-model/areas`](product-model/areas). Preserve implemented capabilities unless the issue explicitly changes them.
+2. Run `npm run product:impact -- <affected paths>` and preserve the matched implemented capabilities unless the issue explicitly changes them. Read a whole canonical area only when path routing is insufficient.
 3. Follow the existing architecture and nearby conventions. Do not create parallel structures.
 
 The active issue is the source of truth for scope. [`README.md`](README.md) describes the product and development setup. Generated files in `docs/development/product/*-inventory.md` are not edited directly; update the product model and run `npm run product:docs -- <area>`.

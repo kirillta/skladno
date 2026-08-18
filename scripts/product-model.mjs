@@ -198,10 +198,14 @@ async function generate() {
 async function impact() {
     const paths = process.argv.slice(3).map((path) => path.replaceAll("\\", "/"));
     const areas = await loadAreas();
-    const matches = areas.flatMap((area) => area.capabilities.filter((capability) => capability.owners.some((owner) => paths.some((path) => path === owner || path.startsWith(`${owner}/`)))));
+    const matches = areas.flatMap((area) => {
+        const capabilities = area.capabilities.filter((capability) => capability.owners.some((owner) => paths.some((path) => path === owner || path.startsWith(`${owner}/`))));
+        const scenarioIds = new Set(capabilities.flatMap((capability) => capability.scenarioIds ?? []));
 
-    for (const capability of matches)
-        log(`${capability.id}: ${capability.title}`);
+        return capabilities.length === 0 ? [] : [{ area: area.area, capabilities, scenarios: area.scenarios.filter((scenario) => scenarioIds.has(scenario.id)) }];
+    });
+
+    log(JSON.stringify(matches, null, 2));
 }
 
 
