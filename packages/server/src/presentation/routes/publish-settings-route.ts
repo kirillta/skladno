@@ -18,12 +18,11 @@ export function handlePublishSettingsRoute(response: ServerResponse, publishing:
 
 export async function updatePublishSettingsRoute(request: IncomingMessage, response: ServerResponse, publishing: PublishingService): Promise<void> {
     const body = object(await readJson(request));
-    const customProfile = body.customProfile as { name?: unknown; characterLimit?: unknown } | undefined;
-    const limit = customProfile?.characterLimit;
-    if (!isPublishLimitProfileId(body.defaultProfileId) || !customProfile || typeof customProfile !== "object" || Array.isArray(customProfile) || typeof customProfile.name !== "string" || !customProfile.name.trim() || typeof limit !== "number" || !Number.isInteger(limit) || limit < 0)
+    const customProfiles = body.customProfiles;
+    if (!Array.isArray(customProfiles) || !customProfiles.every((profile) => profile && typeof profile === "object" && !Array.isArray(profile) && isPublishLimitProfileId((profile as { id?: unknown }).id) && typeof (profile as { name?: unknown }).name === "string" && Boolean((profile as { name: string }).name.trim()) && typeof (profile as { characterLimit?: unknown }).characterLimit === "number" && Number.isInteger((profile as { characterLimit: number }).characterLimit) && (profile as { characterLimit: number }).characterLimit >= 0) || new Set(customProfiles.map((profile) => (profile as { id: string }).id)).size !== customProfiles.length || !isPublishLimitProfileId(body.defaultProfileId) || (String(body.defaultProfileId).startsWith("custom-") && !customProfiles.some((profile) => (profile as { id: string }).id === body.defaultProfileId)))
         throw new ApplicationServiceError(APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE, HTTP_STATUS.BAD_REQUEST);
 
-    const settings: PublishingSettings = { defaultProfileId: body.defaultProfileId, customProfile: { name: customProfile.name.trim(), characterLimit: limit } };
+    const settings: PublishingSettings = { defaultProfileId: body.defaultProfileId, customProfiles: customProfiles.map((profile) => ({ id: (profile as { id: `custom-${string}` }).id, name: (profile as { name: string }).name.trim(), characterLimit: (profile as { characterLimit: number }).characterLimit })) };
 
     writeJson(response, HTTP_STATUS.OK, publishing.setSettings(settings));
 }

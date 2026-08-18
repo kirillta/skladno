@@ -68,7 +68,7 @@
             "title": "Named profiles with configurable limits",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/PublishingSettingsSection.tsx", "packages/server/src/presentation/routes/publish-settings-route.ts", "packages/server/src/application/publishing", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "Authors choose a predefined Default profile for new Articles and configure one named custom non-negative character limit; Articles independently select Default, No restrictions, LinkedIn Post, LinkedIn Article, or the custom profile for advisory guidance.",
+            "contract": "Authors choose a predefined Default profile for new Articles and configure any number of named custom non-negative character limits with stable local IDs; Articles independently select Default, No restrictions, LinkedIn Post, LinkedIn Article, or a custom profile for advisory guidance.",
             "persistence": "The default profile and custom name/limit persist locally in app_settings.publish-limit-profile; Article-specific selection persists locally.",
             "scenarioIds": ["history-and-publishing.publishing-profile-persistence"]
         }

@@ -5,10 +5,10 @@ export const PUBLISH_LIMIT_PROFILE = {
     LINKEDIN_POST: "linkedin-post",
     LINKEDIN_ARTICLE: "linkedin-article",
     NO_RESTRICTIONS: "no-restrictions",
-    CUSTOM: "custom",
 } as const;
 
-export type PublishLimitProfileId = typeof PUBLISH_LIMIT_PROFILE[keyof typeof PUBLISH_LIMIT_PROFILE];
+type BuiltInPublishLimitProfileId = typeof PUBLISH_LIMIT_PROFILE[keyof typeof PUBLISH_LIMIT_PROFILE];
+export type PublishLimitProfileId = BuiltInPublishLimitProfileId | `custom-${string}`;
 
 
 export interface PublishLimitProfile {
@@ -25,19 +25,18 @@ export const publishLimitProfiles: readonly PublishLimitProfile[] = [
     {
         id: PUBLISH_LIMIT_PROFILE.DEFAULT,
         characterLimit: 3_000,
-        warningThreshold: 2_700,
+        warningThreshold: 2_100,
     },
     {
         id: PUBLISH_LIMIT_PROFILE.LINKEDIN_POST,
         characterLimit: 3_000,
-        warningThreshold: 2_700,
+        warningThreshold: 2_100,
     },
     {
         id: PUBLISH_LIMIT_PROFILE.LINKEDIN_ARTICLE,
         characterLimit: 125_000,
-        warningThreshold: 112_500,
+        warningThreshold: 87_500,
     },
-    { id: PUBLISH_LIMIT_PROFILE.CUSTOM },
 ];
 
 export const defaultPublishLimitProfileId = PUBLISH_LIMIT_PROFILE.DEFAULT;
@@ -45,24 +44,32 @@ export const defaultPublishLimitProfileId = PUBLISH_LIMIT_PROFILE.DEFAULT;
 
 export interface PublishingSettings {
     defaultProfileId: PublishLimitProfileId;
-    customProfile: { name: string; characterLimit: number };
+    customProfiles: CustomPublishLimitProfile[];
+}
+
+
+export interface CustomPublishLimitProfile {
+    id: `custom-${string}`;
+    name: string;
+    characterLimit: number;
 }
 
 
 export const defaultPublishingSettings: PublishingSettings = {
     defaultProfileId: defaultPublishLimitProfileId,
-    customProfile: { name: "Custom", characterLimit: 3_000 },
+    customProfiles: [],
 };
 
 
 export function isPublishLimitProfileId(value: unknown): value is PublishLimitProfileId {
-    return publishLimitProfiles.some((profile) => profile.id === value);
+    return publishLimitProfiles.some((profile) => profile.id === value) || (typeof value === "string" && /^custom-[0-9a-f-]{36}$/i.test(value));
 }
 
 
 export function getPublishLimitProfile(id: PublishLimitProfileId, settings = defaultPublishingSettings): PublishLimitProfile {
-    return id === PUBLISH_LIMIT_PROFILE.CUSTOM
-        ? { id, characterLimit: settings.customProfile.characterLimit, warningThreshold: Math.floor(settings.customProfile.characterLimit * .9) }
+    const custom = settings.customProfiles.find((profile) => profile.id === id);
+    return custom
+        ? { id, characterLimit: custom.characterLimit, warningThreshold: Math.floor(custom.characterLimit * .7) }
         : publishLimitProfiles.find((profile) => profile.id === id) ?? publishLimitProfiles.find((profile) => profile.id === PUBLISH_LIMIT_PROFILE.DEFAULT)!;
 }
 

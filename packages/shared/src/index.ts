@@ -186,6 +186,7 @@ export {
     PUBLISH_LIMIT_PROFILE,
     type PublishLimitProfile,
     type PublishLimitProfileId,
+    type CustomPublishLimitProfile,
     type PublishingLength,
     type PublishingLengthState,
     type PublishingClient,

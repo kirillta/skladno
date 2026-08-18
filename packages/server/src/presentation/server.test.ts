@@ -118,18 +118,18 @@ test("article API supports CRUD and revision-aware saves", async () => {
         const settingsUrl = baseUrl.replace("/api/articles", publishSettingsPath);
         const defaultProfile = await fetch(settingsUrl);
         assert.equal(defaultProfile.status, HTTP_STATUS.OK);
-        assert.deepEqual(await defaultProfile.json(), { defaultProfileId: PUBLISH_LIMIT_PROFILE.DEFAULT, customProfile: { name: "Custom", characterLimit: 3000 } });
+        assert.deepEqual(await defaultProfile.json(), { defaultProfileId: PUBLISH_LIMIT_PROFILE.DEFAULT, customProfiles: [] });
 
         const savedProfile = await fetch(settingsUrl, {
             method: HTTP_METHOD.PUT,
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ defaultProfileId: PUBLISH_LIMIT_PROFILE.CUSTOM, customProfile: { name: "Newsletter", characterLimit: 1200 } }),
+            body: JSON.stringify({ defaultProfileId: "custom-00000000-0000-0000-0000-000000000001", customProfiles: [{ id: "custom-00000000-0000-0000-0000-000000000001", name: "Newsletter", characterLimit: 1200 }] }),
         });
         assert.equal(savedProfile.status, HTTP_STATUS.OK);
-        assert.deepEqual(await savedProfile.json(), { defaultProfileId: PUBLISH_LIMIT_PROFILE.CUSTOM, customProfile: { name: "Newsletter", characterLimit: 1200 } });
+        assert.deepEqual(await savedProfile.json(), { defaultProfileId: "custom-00000000-0000-0000-0000-000000000001", customProfiles: [{ id: "custom-00000000-0000-0000-0000-000000000001", name: "Newsletter", characterLimit: 1200 }] });
 
         const reloadedProfile = await fetch(settingsUrl);
-        assert.deepEqual(await reloadedProfile.json(), { defaultProfileId: PUBLISH_LIMIT_PROFILE.CUSTOM, customProfile: { name: "Newsletter", characterLimit: 1200 } });
+        assert.deepEqual(await reloadedProfile.json(), { defaultProfileId: "custom-00000000-0000-0000-0000-000000000001", customProfiles: [{ id: "custom-00000000-0000-0000-0000-000000000001", name: "Newsletter", characterLimit: 1200 }] });
 
         assert.equal((await fetch(baseUrl)).status, HTTP_STATUS.OK);
         assert.equal((await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.DELETE })).status, HTTP_STATUS.NO_CONTENT);

@@ -35,7 +35,7 @@ function LocalizedArticleStatusBar({ revisionNumber, length, profile, setProfile
             </button>
             {profileMenuOpen && <div className="absolute bottom-6 right-0 z-10 w-56 rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "status.characterLimitPresets" })}>
                 {publishLimitProfiles.map((preset) => <button key={preset.id} className="flex min-h-9 w-full items-center justify-between rounded-control px-2 py-1 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitemradio" aria-checked={preset.id === profile.id} onClick={() => void selectProfile(preset.id)}>
-                    <span>{preset.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS ? intl.formatMessage({ id: "publishing.noRestrictions" }) : preset.id === PUBLISH_LIMIT_PROFILE.CUSTOM ? intl.formatMessage({ id: "settings.customProfileName" }) : intl.formatMessage({ id: publishingProfileMessageId(preset.id) })}</span>
+                    <span>{preset.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS ? intl.formatMessage({ id: "publishing.noRestrictions" }) : intl.formatMessage({ id: publishingProfileMessageId(preset.id) })}</span>
                     {preset.characterLimit !== undefined && <span className="text-muted">{intl.formatNumber(preset.characterLimit)}</span>}
                 </button>)}
             </div>}
