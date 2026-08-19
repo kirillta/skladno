@@ -95,30 +95,32 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
             {!translatedContent
                 ? <EmptyState title={intl.formatMessage({ id: "views.translationEmptyTitle" })}>{intl.formatMessage({ id: "views.translationEmpty" })}</EmptyState>
                 : <>
-                    {displayMode === "side-by-side"
-                        ? <>
-                            <TabList className="mt-4 lg:hidden">
-                                <Tab selected={visibleText === "source"} onClick={() => setVisibleText("source")}>{intl.formatMessage({ id: "views.translationOriginal" })}</Tab>
-                                <Tab selected={visibleText === "translation"} onClick={() => setVisibleText("translation")}>{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</Tab>
-                            </TabList>
-                            <div className="grid gap-4 lg:grid-cols-2">
-                                <article className={`${visibleText === "source" ? "block" : "hidden"} mt-4 min-w-0 rounded-panel border border-border bg-surface-raised p-4 lg:block`}>
-                                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationOriginal" })}</h3>
-                                    <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{source.currentRevision.content}</pre>
-                                </article>
-                                <article className={`${visibleText === "translation" ? "block" : "hidden"} mt-4 min-w-0 rounded-panel border border-border bg-surface-raised p-4 lg:block`}>
-                                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</h3>
-                                    <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedContent}</pre>
-                                </article>
-                            </div>
-                        </>
-                        : <div className="mt-4 overflow-hidden rounded-panel border border-border bg-surface-raised">
-                            <div className="grid gap-4 border-b border-border px-4 py-3 md:grid-cols-2"><h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationOriginal" })}</h3><h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</h3></div>
-                            {Array.from({ length: paragraphCount }, (_, index) => <div className="grid gap-4 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-2" key={index}>
-                                <pre className="whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{sourceParagraphs[index] ?? <span className="font-ui text-xs italic text-muted">{intl.formatMessage({ id: "views.translationMissingOriginal" })}</span>}</pre>
-                                <pre className="whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedParagraphs[index] ?? <span className="font-ui text-xs italic text-muted">{intl.formatMessage({ id: "views.translationMissingResult" })}</span>}</pre>
-                            </div>)}
-                        </div>}
+                    <div className="@container">
+                        {displayMode === "side-by-side"
+                            ? <>
+                                <TabList className="mt-4 @[42rem]:hidden">
+                                    <Tab selected={visibleText === "source"} onClick={() => setVisibleText("source")}>{intl.formatMessage({ id: "views.translationOriginal" })}</Tab>
+                                    <Tab selected={visibleText === "translation"} onClick={() => setVisibleText("translation")}>{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</Tab>
+                                </TabList>
+                                <div className="grid gap-4 @[42rem]:grid-cols-2">
+                                    <article className={`${visibleText === "source" ? "block" : "hidden"} mt-4 min-w-0 rounded-panel border border-border bg-surface-raised p-4 @[42rem]:block`}>
+                                        <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationOriginal" })}</h3>
+                                        <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{source.currentRevision.content}</pre>
+                                    </article>
+                                    <article className={`${visibleText === "translation" ? "block" : "hidden"} mt-4 min-w-0 rounded-panel border border-border bg-surface-raised p-4 @[42rem]:block`}>
+                                        <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</h3>
+                                        <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedContent}</pre>
+                                    </article>
+                                </div>
+                            </>
+                            : <div className="mt-4 overflow-hidden rounded-panel border border-border bg-surface-raised">
+                                <div className="grid gap-4 border-b border-border px-4 py-3 @[42rem]:grid-cols-2"><h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationOriginal" })}</h3><h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</h3></div>
+                                {Array.from({ length: paragraphCount }, (_, index) => <div className="grid gap-4 border-b border-border px-4 py-3 last:border-b-0 @[42rem]:grid-cols-2" key={index}>
+                                    <pre className="whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{sourceParagraphs[index] ?? <span className="font-ui text-xs italic text-muted">{intl.formatMessage({ id: "views.translationMissingOriginal" })}</span>}</pre>
+                                    <pre className="whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedParagraphs[index] ?? <span className="font-ui text-xs italic text-muted">{intl.formatMessage({ id: "views.translationMissingResult" })}</span>}</pre>
+                                </div>)}
+                            </div>}
+                    </div>
                     {translation?.metadata.protectedSpans.length ? <Banner className="mt-4" tone="info">
                         <span>{intl.formatMessage({ id: "views.translationProtected" })}: {translation.metadata.protectedSpans.join(", ")}</span>
                     </Banner> : null}
