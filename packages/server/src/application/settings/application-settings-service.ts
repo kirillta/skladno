@@ -2,6 +2,7 @@ import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, find
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { AvailableModelsProvider } from "../ports/available-models-provider.js";
+import type { BackupManager } from "../ports/backup-manager.js";
 import type { SettingsStore } from "../ports/settings-store.js";
 import type { SystemDateTimeFormatProvider } from "../ports/system-date-time-format-provider.js";
 
@@ -34,7 +35,6 @@ function generalSettings(value: unknown, rejectInvalidPreferences = false): Gene
 function backupPolicy(value: unknown): BackupPolicy {
     const candidate = value && typeof value === "object" ? value as Partial<BackupPolicy> : {};
     return {
-        destinationPath: typeof candidate.destinationPath === "string" ? candidate.destinationPath : undefined,
         schedule: candidate.schedule === "daily" ? "daily" : "off",
         retention: candidate.retention?.mode === "unlimited"
             ? { mode: "unlimited" }
@@ -137,6 +137,7 @@ export class ApplicationSettingsService {
         private readonly dateTimeFormat: SystemDateTimeFormatProvider,
         private readonly models: AvailableModelsProvider,
         private readonly createConnectionId: () => string,
+        private readonly backups?: BackupManager,
     ) { }
 
 
@@ -165,6 +166,14 @@ export class ApplicationSettingsService {
         this.settings.set("application-backup-policy", normalized);
 
         return normalized;
+    }
+
+
+    createBackup(): { path: string; createdAt: string; cleanup(): void } {
+        if (!this.backups)
+            throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_REQUEST_FAILED, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+
+        return this.backups.createTemporary();
     }
 
 

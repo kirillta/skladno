@@ -4,6 +4,7 @@ import { createLocalService } from "./presentation/server.js";
 import { createApplicationServices } from "./application/create-application-services.js";
 import { EditorialService } from "./application/editorial/editorial-service.js";
 import { openDatabase } from "./infrastructure/persistence/database.js";
+import { SqliteBackupManager } from "./infrastructure/persistence/sqlite-backup-manager.js";
 import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/configured-editorial-engine-resolver.js";
 import { listAvailableModels } from "./infrastructure/editorial/available-models.js";
 import { readSystemDateTimeFormat } from "./infrastructure/configuration/system-date-time-format.js";
@@ -24,9 +25,10 @@ const assistant = new AssistantRepository(database);
 const engines = new ConfiguredEditorialEngineResolver(config, settings);
 
 assistant.seedGreetings();
-const services = createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: listAvailableModels }, randomUUID, factChecks);
+const services = createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: listAvailableModels }, randomUUID, factChecks, new SqliteBackupManager(database));
 const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled, factChecks);
 const service = createLocalService(config, editorial, services);
+
 let shuttingDown = false;
 
 

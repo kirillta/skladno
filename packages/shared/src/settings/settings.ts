@@ -6,6 +6,7 @@ export const aiConnectionsPath = `${applicationSettingsPath}/ai/connections`;
 export const aiModelsPath = `${applicationSettingsPath}/ai/models`;
 export const aiModelPreferencesPath = `${applicationSettingsPath}/ai/model-preferences`;
 export const keyBindingsPath = `${applicationSettingsPath}/key-bindings`;
+export const backupsPath = `${applicationSettingsPath}/backups`;
 
 export type ApplicationScreen = "editorial-workspace" | "application-settings";
 export const INTERFACE_LOCALE = {
@@ -99,7 +100,6 @@ export interface ModelPreferences {
 
 
 export interface BackupPolicy {
-    destinationPath?: string;
     schedule: "off" | "daily";
     retention: { mode: "count"; count: number } | { mode: "unlimited" };
 }
@@ -136,6 +136,8 @@ export interface ApplicationSettingsClient {
     getApplicationSettings(): Promise<ApplicationSettingsSnapshot>;
     updateGeneralSettings(input: GeneralSettings): Promise<GeneralSettings>;
     updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy>;
+    /** Available only in the web client, where the browser writes to the author-selected folder. */
+    createBackup?(): Promise<Blob>;
     updateKeyBindingOverrides(input: KeyBindingOverrides): Promise<KeyBindingOverrides>;
     addOpenAiConnection(input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection>;
     updateOpenAiConnection(connectionId: string, input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection>;
