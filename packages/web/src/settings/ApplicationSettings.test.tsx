@@ -105,7 +105,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} onThemeApplied={onThemeApplied} /></NotificationProvider></IntlProvider>);
 
         await screen.findByText("Preferred appearance");
-        await user.click(screen.getByRole("button", { name: "Apply selected scheme" }));
+        await user.click(screen.getByRole("button", { name: "Apply now" }));
 
         expect(onThemeApplied).toHaveBeenCalledWith("dark");
     });
