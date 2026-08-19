@@ -351,6 +351,8 @@ export const messages = {
     "views.translationMissingOriginal": "No matching original paragraph.",
     "views.translationMissingResult": "No matching translated paragraph.",
     "views.translationProtected": "Validated protected content",
+    "views.translationProtectedWarning": "Protected content changed or missing",
+    "views.translationPublishingGuidance": "{profile} guidance",
     "views.editTranslationLanguage": "Edit {language} translation",
     "views.editTranslation": "Edit translation",
     "views.characterCount": "{count} / {limit} characters",

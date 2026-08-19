@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Article, TranslationMetadata } from "@skladno/shared";
+import { getPublishingLength, type Article, type PublishLimitProfile, type TranslationMetadata } from "@skladno/shared";
 import { AlignedParagraphsIcon, SideBySideIcon } from "../../ui/icons.js";
 import { Banner, Button, EmptyState, IconButton, Tab, TabList } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
@@ -11,7 +11,16 @@ function paragraphs(content: string): string[] {
 }
 
 
-export function TranslationsView({ article, sourceArticle, linkedTranslations = [], translations = [], stale, create, edit, openArticle, translate, translationLanguages = [] }: {
+function changedProtectedSpans(content: string, protectedSpans: readonly string[]): string[] {
+    const expectedCounts = new Map<string, number>();
+    for (const span of protectedSpans)
+        expectedCounts.set(span, (expectedCounts.get(span) ?? 0) + 1);
+
+    return [...expectedCounts].flatMap(([span, expected]) => content.split(span).length - 1 === expected ? [] : [span]);
+}
+
+
+export function TranslationsView({ article, sourceArticle, linkedTranslations = [], translations = [], stale, create, edit, openArticle, translate, translationLanguages = [], publishProfile, publishProfileLabel }: {
     article: Article;
     sourceArticle?: Article;
     linkedTranslations?: readonly Article[];
@@ -22,6 +31,8 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
     openArticle?: (articleId: string) => void;
     translate: () => void;
     translationLanguages?: readonly string[];
+    publishProfile?: PublishLimitProfile;
+    publishProfileLabel?: string;
 }) {
     const intl = useIntl();
     const [creating, setCreating] = useState(false);
@@ -49,6 +60,11 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
     const sourceParagraphs = paragraphs(source.currentRevision.content);
     const translatedParagraphs = translatedContent ? paragraphs(translatedContent) : [];
     const paragraphCount = Math.max(sourceParagraphs.length, translatedParagraphs.length);
+    const publishingGuidance = translatedContent && publishProfile
+        ? { length: getPublishingLength(translatedContent, publishProfile), profile: publishProfile }
+        : undefined;
+    const protectedSpanWarnings = translation ? changedProtectedSpans(translation.content, translation.metadata.protectedSpans) : [];
+    const protectedSpansValid = protectedSpanWarnings.length === 0;
 
     return <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-col">
         <header className="flex items-start justify-between gap-4">
@@ -66,7 +82,7 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
                     </IconButton>
                 </div>}
                 {sourceArticle && edit && <Button variant="secondary" onClick={edit}>{intl.formatMessage({ id: "views.editTranslation" })}</Button>}
-                {translation && <Button variant="secondary" state={creating ? "loading" : "default"} disabled={stale || creating} onClick={startCreate}>{intl.formatMessage({ id: "views.editTranslationLanguage" }, { language: translation.metadata.targetLanguage })}</Button>}
+                {translation && <Button variant="secondary" state={creating ? "loading" : "default"} disabled={stale || creating || !protectedSpansValid} onClick={startCreate}>{intl.formatMessage({ id: "views.editTranslationLanguage" }, { language: translation.metadata.targetLanguage })}</Button>}
                 <Button disabled={!translationLanguages.length} onClick={translate}>{intl.formatMessage({ id: "views.translate" })}</Button>
             </div>
         </header>
@@ -81,36 +97,43 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
             {intl.formatMessage({ id: "views.sourceLinkedPrefix" })} <button type="button" className="font-semibold text-brand underline underline-offset-2" onClick={() => openArticle(sourceArticle.id)}>{sourceArticle.title}</button>{article.sourceRevisionNumber ? ` ${intl.formatMessage({ id: "views.sourceLinkedRevision" }, { revisionNumber: article.sourceRevisionNumber })}` : null}
         </p>}
         {stale && <Banner className="mt-3" tone="warning">{intl.formatMessage({ id: "views.translationStale" })}</Banner>}
+        {publishingGuidance && <p className={`mt-3 text-xs ${publishingGuidance.length.state === "over-limit" ? "font-semibold text-danger" : publishingGuidance.length.state === "near-limit" ? "font-semibold text-warning" : "text-muted"}`} aria-live="polite">
+            <span>{intl.formatMessage({ id: "views.translationPublishingGuidance" }, { profile: publishProfileLabel })}</span>
+            <span>{` · ${intl.formatMessage({ id: "publishing.characterCount" }, { count: intl.formatNumber(publishingGuidance.length.count) })}`}</span>
+            {publishingGuidance.profile.characterLimit !== undefined && <span>{` / ${intl.formatNumber(publishingGuidance.profile.characterLimit)} · ${publishingGuidance.length.remaining! < 0 ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(publishingGuidance.length.remaining!)) }) : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(publishingGuidance.length.remaining!) })}`}</span>}
+        </p>}
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             {!translatedContent
                 ? <EmptyState title={intl.formatMessage({ id: "views.translationEmptyTitle" })}>{intl.formatMessage({ id: "views.translationEmpty" })}</EmptyState>
                 : <>
-                    {displayMode === "side-by-side"
-                        ? <>
-                            <TabList className="mt-4 lg:hidden">
-                                <Tab selected={visibleText === "source"} onClick={() => setVisibleText("source")}>{intl.formatMessage({ id: "views.translationOriginal" })}</Tab>
-                                <Tab selected={visibleText === "translation"} onClick={() => setVisibleText("translation")}>{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</Tab>
-                            </TabList>
-                            <div className="grid gap-4 lg:grid-cols-2">
-                                <article className={`${visibleText === "source" ? "block" : "hidden"} mt-4 min-w-0 rounded-panel border border-border bg-surface-raised p-4 lg:block`}>
-                                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationOriginal" })}</h3>
-                                    <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{source.currentRevision.content}</pre>
-                                </article>
-                                <article className={`${visibleText === "translation" ? "block" : "hidden"} mt-4 min-w-0 rounded-panel border border-border bg-surface-raised p-4 lg:block`}>
-                                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</h3>
-                                    <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedContent}</pre>
-                                </article>
-                            </div>
-                        </>
-                        : <div className="mt-4 overflow-hidden rounded-panel border border-border bg-surface-raised">
-                            <div className="grid gap-4 border-b border-border px-4 py-3 md:grid-cols-2"><h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationOriginal" })}</h3><h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</h3></div>
-                            {Array.from({ length: paragraphCount }, (_, index) => <div className="grid gap-4 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-2" key={index}>
-                                <pre className="whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{sourceParagraphs[index] ?? <span className="font-ui text-xs italic text-muted">{intl.formatMessage({ id: "views.translationMissingOriginal" })}</span>}</pre>
-                                <pre className="whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedParagraphs[index] ?? <span className="font-ui text-xs italic text-muted">{intl.formatMessage({ id: "views.translationMissingResult" })}</span>}</pre>
-                            </div>)}
-                        </div>}
-                    {translation?.metadata.protectedSpans.length ? <Banner className="mt-4" tone="info">
-                        <span>{intl.formatMessage({ id: "views.translationProtected" })}: {translation.metadata.protectedSpans.join(", ")}</span>
+                    <div className="@container">
+                        {displayMode === "side-by-side"
+                            ? <>
+                                <TabList className="mt-4 @[42rem]:hidden">
+                                    <Tab selected={visibleText === "source"} onClick={() => setVisibleText("source")}>{intl.formatMessage({ id: "views.translationOriginal" })}</Tab>
+                                    <Tab selected={visibleText === "translation"} onClick={() => setVisibleText("translation")}>{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</Tab>
+                                </TabList>
+                                <div className="grid gap-4 @[42rem]:grid-cols-2">
+                                    <article className={`${visibleText === "source" ? "block" : "hidden"} mt-4 min-w-0 rounded-panel border border-border bg-surface-raised p-4 @[42rem]:block`}>
+                                        <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationOriginal" })}</h3>
+                                        <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{source.currentRevision.content}</pre>
+                                    </article>
+                                    <article className={`${visibleText === "translation" ? "block" : "hidden"} mt-4 min-w-0 rounded-panel border border-border bg-surface-raised p-4 @[42rem]:block`}>
+                                        <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</h3>
+                                        <pre className="mt-3 whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedContent}</pre>
+                                    </article>
+                                </div>
+                            </>
+                            : <div className="mt-4 overflow-hidden rounded-panel border border-border bg-surface-raised">
+                                <div className="grid gap-4 border-b border-border px-4 py-3 @[42rem]:grid-cols-2"><h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationOriginal" })}</h3><h3 className="text-sm font-semibold">{intl.formatMessage({ id: "views.translationResult" }, { language: targetLanguage })}</h3></div>
+                                {Array.from({ length: paragraphCount }, (_, index) => <div className="grid gap-4 border-b border-border px-4 py-3 last:border-b-0 @[42rem]:grid-cols-2" key={index}>
+                                    <pre className="whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{sourceParagraphs[index] ?? <span className="font-ui text-xs italic text-muted">{intl.formatMessage({ id: "views.translationMissingOriginal" })}</span>}</pre>
+                                    <pre className="whitespace-pre-wrap font-serif text-sm leading-7 text-ink">{translatedParagraphs[index] ?? <span className="font-ui text-xs italic text-muted">{intl.formatMessage({ id: "views.translationMissingResult" })}</span>}</pre>
+                                </div>)}
+                            </div>}
+                    </div>
+                    {translation?.metadata.protectedSpans.length ? <Banner className="mt-4" tone={protectedSpansValid ? "info" : "warning"} role={protectedSpansValid ? undefined : "alert"}>
+                        <span>{intl.formatMessage({ id: protectedSpansValid ? "views.translationProtected" : "views.translationProtectedWarning" })}: {(protectedSpansValid ? translation.metadata.protectedSpans : protectedSpanWarnings).join(", ")}</span>
                     </Banner> : null}
                 </>}
         </div>

@@ -12,8 +12,9 @@ import { WorkspaceTabBar, type WorkspaceTabBadgeDescriptor } from "./WorkspaceTa
 import { WorkspaceViewRouter } from "./WorkspaceViewRouter.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 import type { GeneralSettings, KeyBindingOverrides } from "@skladno/shared";
-import { KEY_BINDING_COMMAND } from "@skladno/shared";
+import { KEY_BINDING_COMMAND, PUBLISH_LIMIT_PROFILE } from "@skladno/shared";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
+import { publishingProfileMessageId } from "../../i18n/publishing.js";
 import type { WorkspaceView } from "../workspace-views.js";
 
 
@@ -43,6 +44,10 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
 
     const revisionIndex = revisions.revisions.findIndex((revision) => revision.id === article.currentRevisionId);
     const revisionNumber = revisionIndex < 0 ? 1 : revisionIndex + 1;
+    const publishProfileLabel = publishing.settings.customProfiles.find((profile) => profile.id === publishing.profile.id)?.name
+        ?? (publishing.profile.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS
+            ? intl.formatMessage({ id: "publishing.noRestrictions" })
+            : intl.formatMessage({ id: publishingProfileMessageId(publishing.profile.id) }));
     const badges: Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>> = {};
 
     if (editorial.review)
@@ -91,6 +96,8 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             revisions={revisions}
             corpus={corpus}
             generalSettings={generalSettings}
+            publishProfile={publishing.profile}
+            publishProfileLabel={publishProfileLabel}
             runFactCheck={runFactCheck}
             runTranslation={runTranslation}
             onSelectionChange={onSelectionChange}

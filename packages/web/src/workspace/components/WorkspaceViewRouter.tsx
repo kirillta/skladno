@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Article, GeneralSettings } from "@skladno/shared";
+import type { Article, GeneralSettings, PublishLimitProfile } from "@skladno/shared";
 import type { ArticleRevisionsState } from "../state/article-revisions-state.js";
 import type { ArticleWorkspaceState } from "../state/article-workspace-state.js";
 import type { EditorialProposalState } from "../state/editorial-proposal-state.js";
@@ -13,7 +13,7 @@ import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
 
 
-export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, generalSettings, runFactCheck, runTranslation, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
+export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile, publishProfileLabel, runFactCheck, runTranslation, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
     view: WorkspaceView;
     article: Article;
     workspace: ArticleWorkspaceState;
@@ -21,6 +21,8 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     revisions: ArticleRevisionsState;
     corpus: StyleCorpusState;
     generalSettings: GeneralSettings;
+    publishProfile: PublishLimitProfile;
+    publishProfileLabel: string;
     runFactCheck: () => void;
     runTranslation: () => void;
     onSelectionChange?: (value: string | undefined) => void;
@@ -51,7 +53,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
         return panel(<StyleProfileView corpus={corpus.corpus} findings={editorial.styleReview} findingsStale={editorial.styleReviewStale} articleId={article.id} revisions={revisions.revisions} generalSettings={generalSettings} add={corpus.add} remove={corpus.remove} setIncluded={corpus.setIncluded} setRules={corpus.setRules} rebuild={corpus.rebuild} getArticleRules={corpus.getArticleRules} setArticleRules={corpus.setArticleRules} snapshotArticleRevision={corpus.snapshotArticleRevision} />);
 
     if (view === "translations")
-        return panel(<TranslationsView article={article} sourceArticle={article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined} linkedTranslations={workspace.articles.filter((item) => item.sourceArticleId === article.id)} translations={editorial.translations} stale={editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId)} create={editorial.createTranslation} edit={openWrite} openArticle={workspace.selectArticle} translate={runTranslation} translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language)} />);
+        return panel(<TranslationsView article={article} sourceArticle={article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined} linkedTranslations={workspace.articles.filter((item) => item.sourceArticleId === article.id)} translations={editorial.translations} stale={editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId)} create={editorial.createTranslation} edit={openWrite} openArticle={workspace.selectArticle} translate={runTranslation} translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language)} publishProfile={publishProfile} publishProfileLabel={publishProfileLabel} />);
 
     return null;
 }
