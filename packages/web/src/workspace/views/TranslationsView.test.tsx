@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import type { Article } from "@skladno/shared";
+import { publishLimitProfiles, type Article } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
 import { TranslationsView } from "./TranslationsView.js";
 
@@ -122,6 +122,20 @@ describe("TranslationsView", () => {
         expect(screen.getByText("Texto en español")).toBeTruthy();
         await user.click(screen.getByRole("button", { name: "Edit Spanish translation" }));
         expect(create).toHaveBeenCalledWith("Spanish");
+    });
+
+    it("shows selected-profile character guidance for the selected translation", async () => {
+        const user = userEvent.setup();
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} translations={[
+                { metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "a".repeat(3_001), baseRevisionId: "revision-2" },
+                { metadata: { targetLanguage: "German", protectedSpans: [] }, content: "Kurz", baseRevisionId: "revision-2" },
+            ]} stale={false} create={vi.fn()} translate={vi.fn()} publishProfile={publishLimitProfiles[2]!} publishProfileLabel="LinkedIn post" />
+        </IntlProvider>);
+
+        expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "LinkedIn post guidance · 4 characters / 3,000 · 2,996 characters remaining (guidance)")).toBeTruthy();
+        await user.click(screen.getByRole("tab", { name: "Spanish" }));
+        expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "LinkedIn post guidance · 3,001 characters / 3,000 · 1 characters over guidance")).toBeTruthy();
     });
 
     it("aligns source and translated paragraphs by order", async () => {

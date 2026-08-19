@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Article, TranslationMetadata } from "@skladno/shared";
+import { getPublishingLength, type Article, type PublishLimitProfile, type TranslationMetadata } from "@skladno/shared";
 import { AlignedParagraphsIcon, SideBySideIcon } from "../../ui/icons.js";
 import { Banner, Button, EmptyState, IconButton, Tab, TabList } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
@@ -11,7 +11,7 @@ function paragraphs(content: string): string[] {
 }
 
 
-export function TranslationsView({ article, sourceArticle, linkedTranslations = [], translations = [], stale, create, edit, openArticle, translate, translationLanguages = [] }: {
+export function TranslationsView({ article, sourceArticle, linkedTranslations = [], translations = [], stale, create, edit, openArticle, translate, translationLanguages = [], publishProfile, publishProfileLabel }: {
     article: Article;
     sourceArticle?: Article;
     linkedTranslations?: readonly Article[];
@@ -22,6 +22,8 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
     openArticle?: (articleId: string) => void;
     translate: () => void;
     translationLanguages?: readonly string[];
+    publishProfile?: PublishLimitProfile;
+    publishProfileLabel?: string;
 }) {
     const intl = useIntl();
     const [creating, setCreating] = useState(false);
@@ -49,6 +51,9 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
     const sourceParagraphs = paragraphs(source.currentRevision.content);
     const translatedParagraphs = translatedContent ? paragraphs(translatedContent) : [];
     const paragraphCount = Math.max(sourceParagraphs.length, translatedParagraphs.length);
+    const publishingGuidance = translatedContent && publishProfile
+        ? { length: getPublishingLength(translatedContent, publishProfile), profile: publishProfile }
+        : undefined;
 
     return <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-col">
         <header className="flex items-start justify-between gap-4">
@@ -81,6 +86,11 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
             {intl.formatMessage({ id: "views.sourceLinkedPrefix" })} <button type="button" className="font-semibold text-brand underline underline-offset-2" onClick={() => openArticle(sourceArticle.id)}>{sourceArticle.title}</button>{article.sourceRevisionNumber ? ` ${intl.formatMessage({ id: "views.sourceLinkedRevision" }, { revisionNumber: article.sourceRevisionNumber })}` : null}
         </p>}
         {stale && <Banner className="mt-3" tone="warning">{intl.formatMessage({ id: "views.translationStale" })}</Banner>}
+        {publishingGuidance && <p className={`mt-3 text-xs ${publishingGuidance.length.state === "over-limit" ? "font-semibold text-danger" : publishingGuidance.length.state === "near-limit" ? "font-semibold text-warning" : "text-muted"}`} aria-live="polite">
+            <span>{intl.formatMessage({ id: "views.translationPublishingGuidance" }, { profile: publishProfileLabel })}</span>
+            <span>{` · ${intl.formatMessage({ id: "publishing.characterCount" }, { count: intl.formatNumber(publishingGuidance.length.count) })}`}</span>
+            {publishingGuidance.profile.characterLimit !== undefined && <span>{` / ${intl.formatNumber(publishingGuidance.profile.characterLimit)} · ${publishingGuidance.length.remaining! < 0 ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(publishingGuidance.length.remaining!)) }) : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(publishingGuidance.length.remaining!) })}`}</span>}
+        </p>}
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             {!translatedContent
                 ? <EmptyState title={intl.formatMessage({ id: "views.translationEmptyTitle" })}>{intl.formatMessage({ id: "views.translationEmpty" })}</EmptyState>
