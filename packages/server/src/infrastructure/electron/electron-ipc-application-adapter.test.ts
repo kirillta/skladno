@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { ELECTRON_IPC_CHANNEL, type ElectronApplicationMethod, type ElectronApplicationOperationMap, type ElectronIpcError, type ElectronInvokeResult } from "@skladno/shared";
+import { ELECTRON_APPLICATION_METHOD, ELECTRON_IPC_CHANNEL, type ElectronApplicationMethod, type ElectronApplicationOperationMap, type ElectronIpcError, type ElectronInvokeResult } from "@skladno/shared";
 
 import { createApplicationServices } from "../../application/create-application-services.js";
 import { EditorialService } from "../../application/editorial/editorial-service.js";
@@ -84,6 +84,25 @@ test("Electron IPC invokes application services and serializes conflict details"
         assert.equal(error.status, 409);
         assert.equal(error.article?.id, article.id);
         assert.equal(error.draft?.version, 1);
+    } finally {
+        adapter.close();
+    }
+});
+
+
+test("Electron IPC rejects invalid publishing settings before persistence", async () => {
+    const adapter = createAdapter();
+    try {
+        const invalid = await adapter.ipcMain.invoke({ method: ELECTRON_APPLICATION_METHOD.setPublishingSettings, args: [{ defaultProfileId: "custom-00000000-0000-0000-0000-000000000001", customProfiles: [] } as never] });
+        assert.equal(invalid.ok, false);
+        if (invalid.ok)
+            return;
+
+        assert.equal(invalid.error.code, "unsupported_publishing_profile");
+        assert.equal(invalid.error.status, 400);
+
+        const settings = await adapter.ipcMain.invoke({ method: ELECTRON_APPLICATION_METHOD.getPublishingSettings, args: [] });
+        assert.deepEqual(settings, { ok: true, value: { defaultProfileId: "default", customProfiles: [] } });
     } finally {
         adapter.close();
     }
