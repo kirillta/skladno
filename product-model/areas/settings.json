@@ -58,24 +58,13 @@
             "persistence": "app_settings.publish-limit-profile"
         },
         {
-            "id": "settings.active-data-directory",
-            "area": "Data",
-            "title": "Active data directory",
-            "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/server/src/infrastructure/configuration/config.ts"],
-            "contract": "The active local data directory and server-only environment values are determined at startup; project .env values are loaded before the local service starts and Settings displays the active data directory.",
-            "persistence": "Startup configuration rather than a Settings-managed value.",
-            "limitations": ["The data-directory UI is incomplete."]
-        },
-        {
             "id": "settings.backup-policy",
             "area": "Backups",
-            "title": "Backup destination, schedule, and retention",
-            "status": "partial",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "Authors can save a backup destination, schedule, and retention policy.",
-            "persistence": "app_settings.application-backup-policy",
-            "limitations": ["Validation, backup snapshots, and retention execution remain incomplete."]
+            "title": "Browser-selected backup folder, schedule, and retention",
+            "status": "implemented",
+            "owners": ["packages/web/src/App.tsx", "packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/web/src/settings/web-backups.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/backup-manager.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/sqlite-backup-manager.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
+            "contract": "In supported web browsers, authors explicitly choose a local backup folder. The browser writes consistent SQLite snapshots there; daily startup writes at most one automatic snapshot when the previously selected folder remains permitted, and retention removes only automatic snapshots.",
+            "persistence": "app_settings.application-backup-policy plus the browser's local folder permission handle; snapshots exclude environment variables and API keys."
         }
     ],
     "scenarios": [
@@ -150,24 +139,14 @@
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         },
         {
-            "id": "settings.active-data-directory-human-reviewed",
-            "title": "Settings show the configured local data location",
-            "capabilityIds": ["settings.active-data-directory"],
-            "preconditions": ["The local service starts with a configured data directory."],
-            "event": "The author opens Data & backups Settings.",
-            "expected": ["The active local data location is shown."],
-            "forbidden": ["The UI does not imply that the directory can already be changed in Settings."],
-            "evidence": { "kind": "human-reviewed", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
-        },
-        {
             "id": "settings.backup-policy-human-reviewed",
-            "title": "Backup policy preferences are persisted separately from backups",
+            "title": "Backups are recoverable without interrupting editing",
             "capabilityIds": ["settings.backup-policy"],
             "preconditions": ["The author opens Data & backups Settings."],
-            "event": "The author changes destination, schedule, or retention preferences.",
-            "expected": ["The local backup policy is saved through Settings."],
-            "forbidden": ["Saving policy preferences does not claim that backup snapshots or retention execution are complete."],
-            "evidence": { "kind": "human-reviewed", "path": "packages/web/src/settings/ApplicationSettings.tsx" }
+            "event": "The author chooses a backup folder, creates a manual backup, or the daily schedule runs at application startup.",
+            "expected": ["A consistent local SQLite snapshot is written through the browser permission handle and automatic retention leaves manual snapshots untouched."],
+            "forbidden": ["A backup failure does not interrupt Article editing or include environment-variable secrets."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         }
     ]
 }

@@ -2,6 +2,7 @@ import type { ApplicationServices } from "./application-services.js";
 import { ArticleService } from "./articles/article-service.js";
 import { AssistantService } from "./assistant/assistant-service.js";
 import type { AvailableModelsProvider } from "./ports/available-models-provider.js";
+import type { BackupManager } from "./ports/backup-manager.js";
 import type { AssistantArtifactStore } from "./ports/assistant-artifact-store.js";
 import type { AssistantStore } from "./ports/assistant-store.js";
 import type { EditorialEngineResolver } from "./ports/editorial-engine-resolver.js";
@@ -26,12 +27,13 @@ export function createApplicationServices(
     dateTimeFormat: SystemDateTimeFormatProvider,
     models: AvailableModelsProvider,
     createConnectionId: () => string,
-    factChecks: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void } = { list: () => [], resolve: () => undefined, save: () => undefined }
+    factChecks: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void } = { list: () => [], resolve: () => undefined, save: () => undefined },
+    backups?: BackupManager,
 ): ApplicationServices {
     return {
         articles: new ArticleService(articles, assistant),
         assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks),
-        settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId),
+        settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId, backups),
         publishing: new PublishingService(settings),
         styleCorpus: new StyleCorpusService(styleCorpus, engines, articles),
         proposalSummaries: new ProposalSummaryService(engines, artifacts),

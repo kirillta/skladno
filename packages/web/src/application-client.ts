@@ -36,6 +36,7 @@ import {
     publishSettingsPath,
     type PublishingSettings,
     applicationSettingsPath,
+    backupsPath,
     type EditorialWorkspaceClient,
     type ApplicationSettingsSnapshot,
     type BackupPolicy,
@@ -99,6 +100,15 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
 
     async updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy> {
         return this.request<BackupPolicy>(`${applicationSettingsPath}/backup-policy`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+
+    async createBackup(): Promise<Blob> {
+        const response = await fetch(`${this.serviceUrl}${backupsPath}`, { method: HTTP_METHOD.POST });
+        if (!response.ok)
+            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
+
+        return response.blob();
     }
 
 

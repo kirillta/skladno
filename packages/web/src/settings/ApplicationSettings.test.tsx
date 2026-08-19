@@ -8,6 +8,13 @@ import { messages } from "../i18n/messages.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
 
+vi.mock("./web-backups.js", () => ({
+    chooseBackupFolder: vi.fn().mockResolvedValue("Skladno backups"),
+    saveWebBackup: vi.fn().mockResolvedValue("skladno-manual.sqlite"),
+    saveScheduledWebBackup: vi.fn(),
+    selectedBackupFolderName: vi.fn().mockResolvedValue(undefined),
+}));
+
 
 // Product scenarios: settings.general-time-zone-preferences, settings.ai-connection-lifecycle, settings.available-model-list
 
@@ -221,6 +228,27 @@ describe("ApplicationSettings", () => {
             ...defaultGeneralSettings,
             defaultTranslationLanguages: ["es", "de"],
         }));
+    });
+
+
+    // product: settings.backup-policy-human-reviewed
+    it("chooses a browser backup folder and creates a manual backup", async () => {
+        const user = userEvent.setup();
+        const backupPolicy = { schedule: "daily" as const, retention: { mode: "count" as const, count: 7 } };
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), backupPolicy }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            createBackup: vi.fn().mockResolvedValue(new Blob()),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: "Data & backups" }));
+        await user.click(screen.getByRole("button", { name: "Choose backup folder" }));
+        await screen.findByText("Using Skladno backups");
+        await user.click(screen.getByRole("button", { name: "Create backup" }));
+
+        await waitFor(() => expect(screen.getByText("Created skladno-manual.sqlite")).toBeTruthy());
     });
 
     it("retains an editable custom profile until the author saves its name and limit", async () => {

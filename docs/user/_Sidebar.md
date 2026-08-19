@@ -1,2 +1,3 @@
 - [Home](Home.md)
 - [Glossary](Glossary.md)
+- [Backups and recovery](Backups-and-recovery.md)

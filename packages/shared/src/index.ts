@@ -25,6 +25,7 @@ export {
     aiConnectionsPath,
     aiModelsPath,
     aiModelPreferencesPath,
+    backupsPath,
     keyBindingsPath,
     defaultGeneralSettings,
     defaultInterfaceLocale,

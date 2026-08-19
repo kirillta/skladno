@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { readFileSync } from "node:fs";
 import { HTTP_STATUS } from "@skladno/shared";
 
 import { ApplicationSettingsService } from "../../application/settings/application-settings-service.js";
@@ -17,6 +18,20 @@ export async function handleGeneralSettingsRoute(request: IncomingMessage, respo
 
 export async function handleBackupPolicyRoute(request: IncomingMessage, response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
     writeJson(response, HTTP_STATUS.OK, settings.updateBackupPolicy(object(await readJson(request))));
+}
+
+
+export function handleCreateBackupRoute(response: ServerResponse, settings: ApplicationSettingsService): void {
+    const backup = settings.createBackup();
+    try {
+        response.writeHead(HTTP_STATUS.CREATED, {
+            "content-type": "application/vnd.sqlite3",
+            "content-disposition": `attachment; filename="skladno-backup-${backup.createdAt.replaceAll(/[:.]/g, "-")}.sqlite"`,
+        });
+        response.end(readFileSync(backup.path));
+    } finally {
+        backup.cleanup();
+    }
 }
 
 
