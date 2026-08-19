@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isDateFormatPreference, isKeyBindingCommandId, isTimeFormatPreference, isTimeZonePreference, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { AvailableModelsProvider } from "../ports/available-models-provider.js";
@@ -9,7 +9,8 @@ import type { SystemDateTimeFormatProvider } from "../ports/system-date-time-for
 function generalSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
     const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
     if (rejectInvalidPreferences && (
-        (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
+        (candidate.theme !== undefined && !isThemePreference(candidate.theme))
+        || (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
         || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
         || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
     ))
@@ -18,6 +19,7 @@ function generalSettings(value: unknown, rejectInvalidPreferences = false): Gene
     return {
         ...defaultGeneralSettings,
         ...candidate,
+        theme: isThemePreference(candidate.theme) ? candidate.theme : defaultGeneralSettings.theme,
         interfaceLocale: candidate.interfaceLocale === INTERFACE_LOCALE.EN ? candidate.interfaceLocale : defaultInterfaceLocale,
         dateFormat: isDateFormatPreference(candidate.dateFormat) ? candidate.dateFormat : defaultGeneralSettings.dateFormat,
         timeFormat: isTimeFormatPreference(candidate.timeFormat) ? candidate.timeFormat : defaultGeneralSettings.timeFormat,

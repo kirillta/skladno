@@ -27,7 +27,7 @@ export { articleContentForWorkspace, sortArticlesByActivity };
 export type { ArticleWorkspaceState, ArticleRevisionsState, EditorialProposalState, StyleCorpusState, PublishingState, WorkspaceLayoutState, AssistantMessagesState };
 
 
-export function EditorialWorkspaceProvider({ client, screen, openSettings, backToWorkspace, dispatcher, keyBindingOverrides, onKeyBindingsUpdated }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; openSettings: () => void; backToWorkspace: () => void; dispatcher: KeyBindingDispatcher; keyBindingOverrides: KeyBindingOverrides; onKeyBindingsUpdated: (overrides: KeyBindingOverrides) => void }) {
+export function EditorialWorkspaceProvider({ client, screen, openSettings, backToWorkspace, dispatcher, keyBindingOverrides, onKeyBindingsUpdated, onThemeApplied }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; openSettings: () => void; backToWorkspace: () => void; dispatcher: KeyBindingDispatcher; keyBindingOverrides: KeyBindingOverrides; onKeyBindingsUpdated: (overrides: KeyBindingOverrides) => void; onThemeApplied: (theme: import("@skladno/shared").ThemePreference) => void }) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const layout = useWorkspaceLayout();
@@ -157,7 +157,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         </main>;
 
     if (screen === "application-settings")
-        return <ApplicationSettings client={client} back={backToWorkspace} onKeyBindingsUpdated={onKeyBindingsUpdated} />;
+        return <ApplicationSettings client={client} back={backToWorkspace} onKeyBindingsUpdated={onKeyBindingsUpdated} onThemeApplied={onThemeApplied} />;
 
     return <ExtractedWorkspaceShell
         focusMode={layout.focusMode}

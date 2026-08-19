@@ -32,6 +32,71 @@
     --radius-panel: 0.4375rem;
     --shadow-raised: 0 1px 2px rgb(37 37 33 / 5%), 0 4px 12px rgb(37 37 33 / 4%);
     --shadow-dialog: 0 0 0 100vmax rgb(37 37 33 / 35%), 0 1px 2px rgb(37 37 33 / 8%), 0 6px 18px rgb(37 37 33 / 6%);
+    color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+    --color-canvas: #171918;
+    --color-surface: #202321;
+    --color-surface-supporting: #2a2e2b;
+    --color-surface-raised: #303532;
+    --color-border: #3b433e;
+    --color-border-strong: #59645d;
+    --color-ink: #edf1ed;
+    --color-muted: #adb8af;
+    --color-brand: #6fc3c0;
+    --color-brand-hover: #8bd3cf;
+    --color-brand-soft: #244443;
+    --color-on-brand: #10201f;
+    --color-success: #82d2a5;
+    --color-success-soft: #1f3b2d;
+    --color-warning: #e7bf72;
+    --color-warning-soft: #42351d;
+    --color-danger: #f08e84;
+    --color-danger-soft: #472522;
+    --color-info: #82c3e2;
+    --color-info-soft: #203a49;
+    --color-diff-added: #214532;
+    --color-diff-added-stripe: #1b3829;
+    --color-diff-removed: #4a2926;
+    --color-diff-removed-stripe: #3e2220;
+    --color-focus: #8bd3cf;
+    --shadow-raised: 0 1px 2px rgb(0 0 0 / 20%), 0 4px 12px rgb(0 0 0 / 18%);
+    --shadow-dialog: 0 0 0 100vmax rgb(0 0 0 / 55%), 0 1px 2px rgb(0 0 0 / 30%), 0 6px 18px rgb(0 0 0 / 25%);
+    color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --color-canvas: #171918;
+        --color-surface: #202321;
+        --color-surface-supporting: #2a2e2b;
+        --color-surface-raised: #303532;
+        --color-border: #3b433e;
+        --color-border-strong: #59645d;
+        --color-ink: #edf1ed;
+        --color-muted: #adb8af;
+        --color-brand: #6fc3c0;
+        --color-brand-hover: #8bd3cf;
+        --color-brand-soft: #244443;
+        --color-on-brand: #10201f;
+        --color-success: #82d2a5;
+        --color-success-soft: #1f3b2d;
+        --color-warning: #e7bf72;
+        --color-warning-soft: #42351d;
+        --color-danger: #f08e84;
+        --color-danger-soft: #472522;
+        --color-info: #82c3e2;
+        --color-info-soft: #203a49;
+        --color-diff-added: #214532;
+        --color-diff-added-stripe: #1b3829;
+        --color-diff-removed: #4a2926;
+        --color-diff-removed-stripe: #3e2220;
+        --color-focus: #8bd3cf;
+        --shadow-raised: 0 1px 2px rgb(0 0 0 / 20%), 0 4px 12px rgb(0 0 0 / 18%);
+        --shadow-dialog: 0 0 0 100vmax rgb(0 0 0 / 55%), 0 1px 2px rgb(0 0 0 / 30%), 0 6px 18px rgb(0 0 0 / 25%);
+        color-scheme: dark;
+    }
 }
 
 @theme inline {
