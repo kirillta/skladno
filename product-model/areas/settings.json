@@ -8,7 +8,7 @@
             "title": "Appearance, locale, and date/time/time-zone",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/GeneralSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/application/ports/system-date-time-format-provider.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "General Settings supports the Interface locale, device-local or explicit IANA time zones, device-local date and time formatting, and explicit date and time formats. Revision History honors saved formatting while generated supporting UI text uses the Interface locale independently of Article language.",
+            "contract": "General Settings persists a System, Light, or Dark appearance preference; the shared resolver maps System to the current device appearance for visual application. It also supports the Interface locale, device-local or explicit IANA time zones, device-local date and time formatting, and explicit date and time formats. Revision History honors saved formatting while generated supporting UI text uses the Interface locale independently of Article language.",
             "persistence": "app_settings.application-general"
         },
         {

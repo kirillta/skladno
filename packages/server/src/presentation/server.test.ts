@@ -187,6 +187,13 @@ test("General settings preserve valid formatting preferences and reject invalid 
         assert.equal((await invalid.json() as { error: { code: string } }).error.code, "invalid_request");
         assert.equal((repositories.settings.get("application-general")?.value as GeneralSettings).timeZone, "America/Argentina/Buenos_Aires");
 
+        const invalidTheme = await fetch(`${settingsUrl}/general`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ...defaultGeneralSettings, theme: "high-contrast" }),
+        });
+        assert.equal(invalidTheme.status, HTTP_STATUS.BAD_REQUEST);
+
         const invalidDateFormat = await fetch(`${settingsUrl}/general`, {
             method: HTTP_METHOD.PUT,
             headers: { "content-type": "application/json" },
@@ -202,7 +209,7 @@ test("General settings preserve valid formatting preferences and reject invalid 
         });
         assert.equal(invalidTimeFormat.status, HTTP_STATUS.BAD_REQUEST);
 
-        repositories.settings.set("application-general", { ...defaultGeneralSettings, dateFormat: "dashes", timeFormat: "military", timeZone: "invalid-zone" });
+        repositories.settings.set("application-general", { ...defaultGeneralSettings, theme: "high-contrast", dateFormat: "dashes", timeFormat: "military", timeZone: "invalid-zone" });
         const recovered = await fetch(settingsUrl);
         assert.deepEqual((await recovered.json() as { general: GeneralSettings }).general, defaultGeneralSettings);
     } finally {

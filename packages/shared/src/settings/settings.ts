@@ -15,6 +15,7 @@ export const INTERFACE_LOCALE = {
 export type InterfaceLocale = typeof INTERFACE_LOCALE[keyof typeof INTERFACE_LOCALE];
 export const defaultInterfaceLocale: InterfaceLocale = INTERFACE_LOCALE.EN;
 export type ThemePreference = "system" | "light" | "dark";
+export type ResolvedTheme = Exclude<ThemePreference, "system">;
 export type DateFormatPreference = "system" | "day-first" | "day-first-dots" | "month-first" | "iso";
 export type TimeFormatPreference = "system" | "12-hour" | "24-hour";
 export type TimeZonePreference = "system" | string;
@@ -26,6 +27,16 @@ export function isDateFormatPreference(value: unknown): value is DateFormatPrefe
         || value === "day-first-dots"
         || value === "month-first"
         || value === "iso";
+}
+
+
+export function isThemePreference(value: unknown): value is ThemePreference {
+    return value === "system" || value === "light" || value === "dark";
+}
+
+
+export function resolveTheme(theme: ThemePreference, systemTheme: ResolvedTheme): ResolvedTheme {
+    return theme === "system" ? systemTheme : theme;
 }
 
 
