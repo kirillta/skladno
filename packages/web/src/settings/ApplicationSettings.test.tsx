@@ -93,6 +93,24 @@ describe("ApplicationSettings", () => {
     });
 
 
+    it("applies the selected appearance", async () => {
+        const user = userEvent.setup();
+        const general = { ...defaultGeneralSettings, theme: "dark" as const };
+        const onThemeApplied = vi.fn();
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), general }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} onThemeApplied={onThemeApplied} /></NotificationProvider></IntlProvider>);
+
+        await screen.findByText("Preferred appearance");
+        await user.click(screen.getByRole("button", { name: "Apply selected scheme" }));
+
+        expect(onThemeApplied).toHaveBeenCalledWith("dark");
+    });
+
+
     it("resets an explicit time format without changing date or time-zone preferences", async () => {
         const user = userEvent.setup();
         const general = {

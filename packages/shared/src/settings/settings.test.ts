@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { isThemePreference, resolveTheme } from "./settings.js";
 
+// Product scenarios: settings.theme-appearance
 
 test("theme preferences validate and resolve the device preference", () => {
     assert.equal(isThemePreference("system"), true);

@@ -90,6 +90,16 @@
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
         {
+            "id": "settings.theme-appearance",
+            "title": "Theme preference applies to the application shell",
+            "capabilityIds": ["settings.general-preferences"],
+            "preconditions": ["The author has saved a System, Light, or Dark appearance preference."],
+            "event": "The application shell loads the preference or the device appearance changes while System is selected.",
+            "expected": ["Semantic UI tokens apply the selected appearance, and System follows the current device preference."],
+            "forbidden": ["Changing appearance does not change Article content or saved timestamps."],
+            "evidence": { "kind": "automated", "path": "packages/shared/src/settings/settings.test.ts" }
+        },
+        {
             "id": "settings.key-binding-overrides",
             "title": "Key-binding overrides remain conflict-aware",
             "capabilityIds": ["settings.key-bindings"],
