@@ -50,6 +50,15 @@ describe("TranslationsView", () => {
         expect(screen.getByRole("button", { name: "Edit Spanish translation" }).hasAttribute("disabled")).toBe(true);
     });
 
+    it("warns and blocks creation when protected content changed", () => {
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: ["https://example.com", "API-v2"] }, content: "Texto sin los valores protegidos.", baseRevisionId: "revision-2" }]} stale={false} create={vi.fn()} translate={vi.fn()} />
+        </IntlProvider>);
+
+        expect(screen.getByRole("alert").textContent).toBe("Protected content changed or missing: https://example.com, API-v2");
+        expect(screen.getByRole("button", { name: "Edit Spanish translation" }).hasAttribute("disabled")).toBe(true);
+    });
+
     it("shows loading while creating a translation", async () => {
         const user = userEvent.setup();
         let resolveCreate: (() => void) | undefined;

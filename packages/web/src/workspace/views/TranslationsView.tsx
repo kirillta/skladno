@@ -11,6 +11,15 @@ function paragraphs(content: string): string[] {
 }
 
 
+function changedProtectedSpans(content: string, protectedSpans: readonly string[]): string[] {
+    const expectedCounts = new Map<string, number>();
+    for (const span of protectedSpans)
+        expectedCounts.set(span, (expectedCounts.get(span) ?? 0) + 1);
+
+    return [...expectedCounts].flatMap(([span, expected]) => content.split(span).length - 1 === expected ? [] : [span]);
+}
+
+
 export function TranslationsView({ article, sourceArticle, linkedTranslations = [], translations = [], stale, create, edit, openArticle, translate, translationLanguages = [], publishProfile, publishProfileLabel }: {
     article: Article;
     sourceArticle?: Article;
@@ -54,6 +63,8 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
     const publishingGuidance = translatedContent && publishProfile
         ? { length: getPublishingLength(translatedContent, publishProfile), profile: publishProfile }
         : undefined;
+    const protectedSpanWarnings = translation ? changedProtectedSpans(translation.content, translation.metadata.protectedSpans) : [];
+    const protectedSpansValid = protectedSpanWarnings.length === 0;
 
     return <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-col">
         <header className="flex items-start justify-between gap-4">
@@ -71,7 +82,7 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
                     </IconButton>
                 </div>}
                 {sourceArticle && edit && <Button variant="secondary" onClick={edit}>{intl.formatMessage({ id: "views.editTranslation" })}</Button>}
-                {translation && <Button variant="secondary" state={creating ? "loading" : "default"} disabled={stale || creating} onClick={startCreate}>{intl.formatMessage({ id: "views.editTranslationLanguage" }, { language: translation.metadata.targetLanguage })}</Button>}
+                {translation && <Button variant="secondary" state={creating ? "loading" : "default"} disabled={stale || creating || !protectedSpansValid} onClick={startCreate}>{intl.formatMessage({ id: "views.editTranslationLanguage" }, { language: translation.metadata.targetLanguage })}</Button>}
                 <Button disabled={!translationLanguages.length} onClick={translate}>{intl.formatMessage({ id: "views.translate" })}</Button>
             </div>
         </header>
@@ -121,8 +132,8 @@ export function TranslationsView({ article, sourceArticle, linkedTranslations = 
                                 </div>)}
                             </div>}
                     </div>
-                    {translation?.metadata.protectedSpans.length ? <Banner className="mt-4" tone="info">
-                        <span>{intl.formatMessage({ id: "views.translationProtected" })}: {translation.metadata.protectedSpans.join(", ")}</span>
+                    {translation?.metadata.protectedSpans.length ? <Banner className="mt-4" tone={protectedSpansValid ? "info" : "warning"} role={protectedSpansValid ? undefined : "alert"}>
+                        <span>{intl.formatMessage({ id: protectedSpansValid ? "views.translationProtected" : "views.translationProtectedWarning" })}: {(protectedSpansValid ? translation.metadata.protectedSpans : protectedSpanWarnings).join(", ")}</span>
                     </Banner> : null}
                 </>}
         </div>
