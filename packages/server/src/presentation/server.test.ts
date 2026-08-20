@@ -6,11 +6,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { aiConnectionsPath, applicationSettingsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article, type GeneralSettings } from "@skladno/shared";
+import { aiConnectionsPath, applicationSettingsPath, backupsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article, type GeneralSettings } from "@skladno/shared";
 import { createLocalService } from "./server.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
+import { createLocalDiagnostics } from "../infrastructure/diagnostics/local-diagnostics.js";
 import { createTestPersistence } from "../test-support/test-persistence.js";
 
 // Product scenarios: editorial-workflows.ai-connection-management, editorial-workflows.ai-model-preferences, history-and-publishing.publishing-profile-persistence, settings.publish-profile-default
@@ -25,6 +26,16 @@ test("article API supports CRUD and revision-aware saves", async () => {
     const repositories = createTestPersistence(database);
     const engines = { resolve: () => undefined };
     const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, false);
+    const diagnosticLines: string[] = [];
+    const diagnostics = createLocalDiagnostics({
+        stdout: (line) => {
+            diagnosticLines.push(line);
+        },
+        stderr: (line) => {
+            diagnosticLines.push(line);
+        },
+        environment: {},
+    });
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -32,7 +43,7 @@ test("article API supports CRUD and revision-aware saves", async () => {
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId));
+    }, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId), diagnostics);
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -134,6 +145,12 @@ test("article API supports CRUD and revision-aware saves", async () => {
         assert.equal((await fetch(baseUrl)).status, HTTP_STATUS.OK);
         assert.equal((await fetch(`${baseUrl}/${created.id}`, { method: HTTP_METHOD.DELETE })).status, HTTP_STATUS.NO_CONTENT);
         assert.deepEqual(await (await fetch(baseUrl)).json(), []);
+
+        const failedBackup = await fetch(baseUrl.replace("/api/articles", backupsPath), { method: HTTP_METHOD.POST });
+        assert.equal(failedBackup.status, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+
+        const events = diagnosticLines.map((line) => JSON.parse(line) as { event: string; method?: string; status?: number });
+        assert.ok(events.some((event) => event.event === "backup.failed" && event.status === HTTP_STATUS.INTERNAL_SERVER_ERROR));
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));
         database.close();

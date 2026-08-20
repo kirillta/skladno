@@ -37,6 +37,7 @@ These terms describe concepts visible to authors and the domain language used th
 - **Default translation languages**: ordered languages offered first for translation requests. They never start translations automatically.
 - **Backup destination**: a local directory where Skladno writes Backup snapshots.
 - **Backup snapshot**: a consistent point-in-time copy of local data, separate from the active database and excluding credentials.
+- **Diagnostics event**: a redacted local service record written to the host process logs for startup or recoverable failure support. It never includes private Article content, model bodies, or environment-variable values.
 
 ## Interface
 

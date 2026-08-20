@@ -6,6 +6,7 @@ import { ArticleDraftConflictError } from "../application/errors/article-draft-c
 import { ArticleRevisionConflictError } from "../application/errors/article-revision-conflict-error.js";
 import type { EditorialService } from "../application/editorial/editorial-service.js";
 import type { ServerConfig } from "../infrastructure/configuration/config.js";
+import type { LocalDiagnostics } from "../infrastructure/diagnostics/local-diagnostics.js";
 import { ApplicationServiceError } from "./errors/application-error.js";
 import { createPresentationRouter } from "./routes/create-presentation-router.js";
 import { writeJson } from "./transport/json.js";
@@ -16,8 +17,8 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 }
 
 
-export function createLocalService(config: ServerConfig, editorial: EditorialService, services: ApplicationServices) {
-    const router = createPresentationRouter(editorial, services);
+export function createLocalService(config: ServerConfig, editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics) {
+    const router = createPresentationRouter(editorial, services, diagnostics);
 
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {
@@ -64,6 +65,7 @@ export function createLocalService(config: ServerConfig, editorial: EditorialSer
                 return;
             }
 
+            diagnostics?.write("request.failed", { method: request.method ?? "unknown", status: HTTP_STATUS.INTERNAL_SERVER_ERROR }, error);
             writeJson(response, HTTP_STATUS.INTERNAL_SERVER_ERROR, { error: { code: APPLICATION_ERROR.EDITORIAL_REQUEST_FAILED } });
             return;
         }

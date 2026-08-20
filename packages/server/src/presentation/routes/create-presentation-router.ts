@@ -2,6 +2,7 @@ import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModels
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
+import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, updateArticleRoute } from "./articles-route.js";
 import { createAssistantRequestRoute, listAssistantMessagesRoute } from "./assistant-route.js";
@@ -41,7 +42,7 @@ const ACTIVE_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PAR
 const TEST_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/test`);
 
 
-export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices): Router {
+export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics): Router {
     const { articles, assistant, factChecks, proposalSummaries, publishing, settings, styleCorpus } = services;
     const router = new Router();
 
@@ -63,7 +64,7 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.GET, applicationSettingsPath, (_request, response) => handleSettingsSnapshotRoute(response, settings));
     router.register(HTTP_METHOD.PUT, `${applicationSettingsPath}/general`, (request, response) => handleGeneralSettingsRoute(request, response, settings));
     router.register(HTTP_METHOD.PUT, `${applicationSettingsPath}/backup-policy`, (request, response) => handleBackupPolicyRoute(request, response, settings));
-    router.register(HTTP_METHOD.POST, backupsPath, (_request, response) => handleCreateBackupRoute(response, settings));
+    router.register(HTTP_METHOD.POST, backupsPath, (_request, response) => handleCreateBackupRoute(response, settings, diagnostics));
     router.register(HTTP_METHOD.PUT, keyBindingsPath, (request, response) => handleKeyBindingsRoute(request, response, settings));
     router.register(HTTP_METHOD.PUT, aiModelPreferencesPath, (request, response) => handleModelPreferencesRoute(request, response, settings));
     router.register(HTTP_METHOD.POST, aiConnectionsPath, (request, response) => handleCreateAiConnectionRoute(request, response, settings));
