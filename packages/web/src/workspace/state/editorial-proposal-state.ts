@@ -272,7 +272,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
         if (result.proposal) {
             restoredArticleIds.current.delete(articleId);
-            setBase({ articleId, content: article.currentRevision.content, revisionId: baseRevisionId, ...(editorialArtifactId ? { editorialArtifactId } : {}) });
+            setBase({ articleId, content: workspace.content, revisionId: baseRevisionId, ...(editorialArtifactId ? { editorialArtifactId } : {}) });
             setProposal(result.proposal);
             setProposalSummaries({});
             setProposalSummaryLocale(undefined);
@@ -287,7 +287,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
         if (result.translation)
             retainTranslation({ articleId, baseRevisionId, value: result.translation });
-    }, [workspace.articles]);
+    }, [workspace.articles, workspace.content]);
 
     const restoreAssistantProposal = useCallback((messages: AssistantMessage[] | undefined) => {
         const article = workspace.selectedArticle;
