@@ -51,7 +51,7 @@ function validInvokeRequest(value: unknown): value is ElectronInvokeRequest {
 async function invokeApplicationMethod(method: ElectronApplicationMethod, args: readonly unknown[], services: ApplicationServices, now: () => string): Promise<unknown> {
     switch (method) {
         case ELECTRON_APPLICATION_METHOD.getHealth:
-            return { status: HTTP_STATUS.OK, service: "skladno-local-service", timestamp: now() };
+            return { status: "ok", service: "skladno-local-service", timestamp: now() };
         case ELECTRON_APPLICATION_METHOD.getApplicationSettings:
             return services.settings.getSnapshot();
         case ELECTRON_APPLICATION_METHOD.updateGeneralSettings:
