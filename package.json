@@ -16,10 +16,12 @@
         "product:impact": "node scripts/product-model.mjs impact",
         "build": "npm run build --workspaces --if-present",
         "postbuild": "npm run lint",
-        "test": "npm run test --workspaces --if-present"
+        "test": "npm run test --workspaces --if-present",
+        "test:e2e": "playwright test"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
+        "@playwright/test": "^1.62.1",
         "@stylistic/eslint-plugin": "^5.10.0",
         "@types/node": "^22.10.2",
         "ajv": "^8.20.0",
