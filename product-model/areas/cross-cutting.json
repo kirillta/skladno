@@ -53,9 +53,9 @@
             "area": "Privacy",
             "title": "Server-side secrets, local materials, minimal context, redacted diagnostics, and storage opt-in",
             "status": "implemented",
-            "owners": ["packages/server/src/infrastructure/configuration/config.ts", "packages/server/src/infrastructure/persistence", "packages/server/src/index.ts", "packages/server/src/application/editorial", "packages/web/src/notifications"],
-            "contract": "Secrets remain server-side, including custom-named values loaded from the project .env file before local-service startup; materials remain local, only necessary request context is sent, and supporting Proposal summaries explicitly disable provider-side response storage. On POSIX, the Skladno data directory and SQLite files are owner-only; Windows ACLs and browser-selected backup folders remain platform-controlled.",
-            "persistence": "Private content is not logged or traced by default; provider-side response storage is disabled unless enabled. POSIX local databases are restricted to the current user."
+            "owners": ["packages/server/src/infrastructure/configuration/config.ts", "packages/server/src/infrastructure/diagnostics", "packages/server/src/infrastructure/persistence", "packages/server/src/index.ts", "packages/server/src/application/editorial", "packages/web/src/notifications"],
+            "contract": "Secrets remain server-side, including custom-named values loaded from the project .env file before local-service startup; materials remain local, only necessary request context is sent, and supporting Proposal summaries explicitly disable provider-side response storage. The local service emits redacted JSON Lines diagnostics for startup, recoverable request failures, and backup failures without exposing Article or model bodies. On POSIX, the Skladno data directory and SQLite files are owner-only; Windows ACLs and browser-selected backup folders remain platform-controlled.",
+            "persistence": "Private content is not logged or traced by default; diagnostics write to process stdout or stderr without a log file. Provider-side response storage is disabled unless enabled. POSIX local databases are restricted to the current user."
         },
         {
             "id": "cross-cutting.database-lifecycle",
@@ -156,6 +156,16 @@
             "expected": ["Provider response storage is disabled by default and tracing is rejected."],
             "forbidden": ["Ambiguous storage values or remote tracing are not enabled."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/configuration/config.test.ts" }
+        },
+        {
+            "id": "cross-cutting.private-diagnostics",
+            "title": "Local diagnostics redact private data",
+            "capabilityIds": ["cross-cutting.privacy"],
+            "preconditions": ["The local service has environment-variable values and private Article or model content."],
+            "event": "The service records startup, recoverable request, or backup diagnostics.",
+            "expected": ["Structured local events include stable event context and safe error metadata."],
+            "forbidden": ["Diagnostics do not include API keys, environment-variable values, full Article or model bodies, raw error messages, or stacks.", "A diagnostics write failure does not interrupt the local service."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/diagnostics/local-diagnostics.test.ts" }
         },
         {
             "id": "cross-cutting.database-transition-human-reviewed",
