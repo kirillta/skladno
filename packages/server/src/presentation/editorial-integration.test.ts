@@ -155,6 +155,28 @@ test("storage-disabled editorial requests clear hidden session continuation", as
 });
 
 
+test("editorial continuation stays within its Article", async () => {
+    const engine = new FixtureEngine([{ type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "resp-new", text: "A proposal" }]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const firstArticle = repositories.articleService.createArticle({ title: "First", content: "First Article" });
+        const secondArticle = repositories.articleService.createArticle({ title: "Second", content: "Second Article" });
+        repositories.editorialSessions.save(firstArticle.id, "resp-first");
+
+        for (const [article, requestId] of [[firstArticle, "request-first"], [secondArticle, "request-second"]] as const) {
+            await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
+                method: HTTP_METHOD.POST,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ requestId, operation: EDITORIAL_OPERATION.FLOW_REVISION }),
+            });
+        }
+
+        assert.equal(engine.requests[0]?.previousResponseId, "resp-first");
+        assert.equal(engine.requests[1]?.previousResponseId, undefined);
+    });
+});
+
+
 test("expired provider session is cleared and can be retried as a fresh session", async () => {
     const engine: EditorialEngine = {
         async *stream(): AsyncIterable<EditorialEngineEvent> {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { responsesPrompt } from "./ai-sdk-editorial-engine.js";
+import { responsesPrompt, responsesProviderOptions } from "./ai-sdk-editorial-engine.js";
 
 
 test("moves system messages into Responses API instructions", () => {
@@ -13,4 +13,11 @@ test("moves system messages into Responses API instructions", () => {
         instructions: "Assistant guidance\n\nArticle context",
         messages: [{ role: "user", content: "ping" }],
     });
+});
+
+
+test("Responses storage is opt-in and continuation stays scoped to it", () => {
+    assert.deepEqual(responsesProviderOptions(false, "resp-earlier"), { openai: { store: false } });
+    assert.deepEqual(responsesProviderOptions(true), { openai: { store: true } });
+    assert.deepEqual(responsesProviderOptions(true, "resp-earlier"), { openai: { store: true, previousResponseId: "resp-earlier" } });
 });
