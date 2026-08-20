@@ -53,9 +53,9 @@
             "area": "Privacy",
             "title": "Server-side secrets, local materials, minimal context, redacted diagnostics, and storage opt-in",
             "status": "implemented",
-            "owners": ["packages/server/src/infrastructure/configuration/config.ts", "packages/server/src/index.ts", "packages/server/src/application/editorial", "packages/web/src/notifications"],
-            "contract": "Secrets remain server-side, including custom-named values loaded from the project .env file before local-service startup; materials remain local, only necessary request context is sent, and supporting Proposal summaries explicitly disable provider-side response storage.",
-            "persistence": "Private content is not logged or traced by default; provider-side response storage is disabled unless enabled."
+            "owners": ["packages/server/src/infrastructure/configuration/config.ts", "packages/server/src/infrastructure/persistence", "packages/server/src/index.ts", "packages/server/src/application/editorial", "packages/web/src/notifications"],
+            "contract": "Secrets remain server-side, including custom-named values loaded from the project .env file before local-service startup; materials remain local, only necessary request context is sent, and supporting Proposal summaries explicitly disable provider-side response storage. On POSIX, the Skladno data directory and SQLite files are owner-only; Windows ACLs and browser-selected backup folders remain platform-controlled.",
+            "persistence": "Private content is not logged or traced by default; provider-side response storage is disabled unless enabled. POSIX local databases are restricted to the current user."
         },
         {
             "id": "cross-cutting.database-lifecycle",
