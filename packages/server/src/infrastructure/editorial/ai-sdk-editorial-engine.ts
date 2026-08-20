@@ -104,6 +104,16 @@ export function responsesPrompt(messages: ModelMessage[]) {
 }
 
 
+export function responsesProviderOptions(storeResponses: boolean, previousResponseId?: string) {
+    return {
+        openai: {
+            store: storeResponses,
+            ...(storeResponses && previousResponseId ? { previousResponseId } : {}),
+        },
+    };
+}
+
+
 function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StyleProfile, articleRules = ""): StyleReview {
     const availableTraits = new Set([...profile.traits.map((trait) => trait.id), ...profile.rules.split("\n").filter(Boolean).map((_rule, index) => `global-rule-${index + 1}`), ...articleRules.split("\n").filter(Boolean).map((_rule, index) => `article-rule-${index + 1}`)]);
     if (value.findings.some((finding) => finding.traitIds.some((traitId) => !availableTraits.has(traitId))))
@@ -186,12 +196,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
 
     private providerOptions(previousResponseId?: string) {
-        return {
-            openai: {
-                store: this.options.storeResponses,
-                ...(this.options.storeResponses && previousResponseId ? { previousResponseId } : {}),
-            },
-        };
+        return responsesProviderOptions(this.options.storeResponses, previousResponseId);
     }
 
 

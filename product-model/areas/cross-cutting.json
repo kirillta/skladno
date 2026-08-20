@@ -153,8 +153,8 @@
             "capabilityIds": ["cross-cutting.privacy"],
             "preconditions": ["Server configuration is loaded with or without storage settings."],
             "event": "The configuration parser resolves privacy settings.",
-            "expected": ["Provider response storage is disabled by default and tracing is rejected."],
-            "forbidden": ["Ambiguous storage values or remote tracing are not enabled."],
+            "expected": ["Provider response storage is disabled by default."],
+            "forbidden": ["Ambiguous storage values do not enable provider response storage."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/configuration/config.test.ts" }
         },
         {
