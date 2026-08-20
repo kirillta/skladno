@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { existsSync, unlinkSync } from "node:fs";
+import { chmodSync, existsSync, unlinkSync } from "node:fs";
 
 const migrations = [
     {
@@ -197,6 +197,18 @@ const migrations = [
 export type SqliteDatabase = DatabaseSync;
 
 
+function restrictFilePermissions(path: string): void {
+    if (process.platform !== "win32" && existsSync(path))
+        chmodSync(path, 0o600);
+}
+
+
+function restrictDatabasePermissions(filename: string): void {
+    for (const path of [filename, `${filename}-wal`, `${filename}-shm`, `${filename}-journal`])
+        restrictFilePermissions(path);
+}
+
+
 function isLegacyDatabase(filename: string): boolean {
     if (!existsSync(filename))
         return false;
@@ -232,10 +244,12 @@ function removeLegacyDatabase(filename: string): void {
 
 
 export function openDatabase(filename: string): SqliteDatabase {
+    restrictDatabasePermissions(filename);
     if (isLegacyDatabase(filename))
         removeLegacyDatabase(filename);
 
     const database = new DatabaseSync(filename);
+    restrictDatabasePermissions(filename);
     database.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;");
     database.exec(`
         CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -266,5 +280,6 @@ export function openDatabase(filename: string): SqliteDatabase {
         }
     }
 
+    restrictDatabasePermissions(filename);
     return database;
 }

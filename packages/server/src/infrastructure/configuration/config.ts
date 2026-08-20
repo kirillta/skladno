@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,7 +53,9 @@ function readBoolean(value: string | undefined, name: string): boolean {
 
 export function loadServerConfig(environment = process.env): ServerConfig {
     const dataDirectory = environment.SKLADNO_DATA_DIR || join(homedir(), ".skladno");
-    mkdirSync(dataDirectory, { recursive: true });
+    mkdirSync(dataDirectory, { recursive: true, mode: 0o700 });
+    if (process.platform !== "win32")
+        chmodSync(dataDirectory, 0o700);
 
     return {
         host: environment.SKLADNO_SERVER_HOST || "127.0.0.1",

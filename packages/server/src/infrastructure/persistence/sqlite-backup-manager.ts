@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,9 +26,14 @@ export class SqliteBackupManager implements BackupManager {
 
     createTemporary(): { path: string; createdAt: string; cleanup(): void } {
         const destination = mkdtempSync(join(tmpdir(), "skladno-backup-"));
+        if (process.platform !== "win32")
+            chmodSync(destination, 0o700);
+
         const created = this.now();
         const path = join(destination, backupFilename(created));
         this.database.exec(`VACUUM INTO '${quotedSqlPath(path)}'`);
+        if (process.platform !== "win32")
+            chmodSync(path, 0o600);
 
         return { path, createdAt: created.toISOString(), cleanup: () => rmSync(destination, { recursive: true, force: true }) };
     }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import test from "node:test";
 
 import { loadServerConfig, loadServerEnvironment } from "./config.js";
@@ -64,5 +64,15 @@ test("the local service loads custom named keys from the project environment fil
 test("AI session continuation configuration rejects ambiguous values", () => {
     withConfigEnvironment({ SKLADNO_AI_SESSION_CONTINUATION: "yes" }, (environment) => {
         assert.throws(() => loadServerConfig(environment), /SKLADNO_AI_SESSION_CONTINUATION must be either true or false/);
+    });
+});
+
+
+test("the local data directory is owner-only on POSIX", { skip: process.platform === "win32" }, () => {
+    withConfigEnvironment({}, (environment) => {
+        chmodSync(environment.SKLADNO_DATA_DIR!, 0o755);
+        const { databasePath } = loadServerConfig(environment);
+        const dataDirectory = dirname(databasePath);
+        assert.equal(statSync(dataDirectory).mode & 0o777, 0o700);
     });
 });
