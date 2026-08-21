@@ -104,7 +104,7 @@
             "preconditions": ["A locale catalog is registered for the application."],
             "event": "The catalog validation suite runs.",
             "expected": ["The complete English catalog validates and is the only installed catalog."],
-            "forbidden": ["Incomplete catalogs are not selectable."],
+            "forbidden": ["An incomplete catalog becomes selectable."],
             "evidence": { "kind": "automated", "path": "packages/web/src/i18n/catalog-validation.test.ts" }
         },
         {
@@ -114,7 +114,7 @@
             "preconditions": ["The desktop workspace is rendered."],
             "event": "The author navigates or resizes workspace panels.",
             "expected": ["Panel controls expose accessible labels and semantic separators."],
-            "forbidden": ["Panel behavior is not conveyed by color alone."],
+            "forbidden": ["Panel behavior conveyed by color alone."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
         },
         {
@@ -124,7 +124,7 @@
             "preconditions": ["Default bindings and an author override are available."],
             "event": "The binding resolver normalizes and compares key chords.",
             "expected": ["Defaults, explicit unassignment, and duplicate chords are resolved deterministically."],
-            "forbidden": ["Conflicting effective chords are not silently accepted."],
+            "forbidden": ["Silent acceptance of conflicting effective chords."],
             "evidence": { "kind": "automated", "path": "packages/shared/src/cross-cutting/key-bindings.test.ts" }
         },
         {
@@ -134,7 +134,7 @@
             "preconditions": ["An application client error or unknown exception occurs."],
             "event": "The notification provider presents the failure.",
             "expected": ["A useful localized failure notification is shown."],
-            "forbidden": ["Private diagnostic detail is not displayed."],
+            "forbidden": ["Private diagnostic detail displayed to the author."],
             "evidence": { "kind": "automated", "path": "packages/web/src/notifications/NotificationProvider.test.tsx" }
         },
         {
@@ -144,7 +144,7 @@
             "preconditions": ["A health response is received from the local service."],
             "event": "The shared contract validates the response.",
             "expected": ["Valid health data is accepted and malformed data is rejected."],
-            "forbidden": ["Malformed transport data does not become application state."],
+            "forbidden": ["Malformed transport data becomes application state."],
             "evidence": { "kind": "automated", "path": "packages/shared/src/application/health.test.ts" }
         },
         {
@@ -154,7 +154,7 @@
             "preconditions": ["Server configuration is loaded with or without storage settings."],
             "event": "The configuration parser resolves privacy settings.",
             "expected": ["Provider response storage is disabled by default."],
-            "forbidden": ["Ambiguous storage values do not enable provider response storage."],
+            "forbidden": ["An ambiguous storage value enables provider response storage."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/configuration/config.test.ts" }
         },
         {
@@ -164,7 +164,7 @@
             "preconditions": ["The local service has environment-variable values and private Article or model content."],
             "event": "The service records startup, recoverable request, or backup diagnostics.",
             "expected": ["Structured local events include stable event context and safe error metadata."],
-            "forbidden": ["Diagnostics do not include API keys, environment-variable values, full Article or model bodies, raw error messages, or stacks.", "A diagnostics write failure does not interrupt the local service."],
+            "forbidden": ["Diagnostics containing API keys, environment-variable values, full Article or model bodies, raw error messages, or stacks.", "A diagnostics write failure interrupts the local service."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/diagnostics/local-diagnostics.test.ts" }
         },
         {
@@ -174,7 +174,7 @@
             "preconditions": ["A legacy Documents database exists before local service startup."],
             "event": "The service starts for the first time after the Article migration.",
             "expected": ["The legacy database and sidecars are replaced once with the Article schema."],
-            "forbidden": ["Future starts do not delete the resulting Article database."],
+            "forbidden": ["A later start deletes the resulting Article database."],
             "evidence": { "kind": "human-reviewed", "path": "packages/server/src/infrastructure/persistence/database.ts" }
         },
         {
@@ -184,7 +184,7 @@
             "preconditions": ["An Article has an Assistant greeting and author request."],
             "event": "The repository persists assistant records.",
             "expected": ["Greeting templates and resolved author skill metadata remain available for the Article."],
-            "forbidden": ["Conversation state does not cross Article boundaries."],
+            "forbidden": ["Conversation state crossing Article boundaries."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.test.ts" }
         },
         {
@@ -194,7 +194,7 @@
             "preconditions": ["The MVP scope is evaluated."],
             "event": "A change proposes persistent activity-center work.",
             "expected": ["The work is tracked as post-MVP rather than inferred into current scope."],
-            "forbidden": ["Popup notification history is not treated as the activity center."],
+            "forbidden": ["Treating popup notification history as the activity center."],
             "evidence": { "kind": "human-reviewed", "path": "AGENTS.md" }
         },
         {
@@ -204,7 +204,7 @@
             "preconditions": ["A future-enhancement capability is considered."],
             "event": "An MVP implementation change is planned.",
             "expected": ["The capability remains deferred unless the active issue explicitly changes scope."],
-            "forbidden": ["Deferred product surface is not silently introduced."],
+            "forbidden": ["Silent introduction of deferred product surface."],
             "evidence": { "kind": "human-reviewed", "path": "AGENTS.md" }
         }
     ]

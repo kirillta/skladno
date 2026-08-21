@@ -98,7 +98,7 @@
                 "The client throws the typed renderer-safe conflict error."
             ],
             "forbidden": [
-                "The renderer does not receive server internals or credentials."
+                "Renderer access to server internals or credentials."
             ],
             "evidence": {
                 "kind": "automated",
@@ -119,7 +119,7 @@
                 "The client exposes a stable error code for recoverable UI handling."
             ],
             "forbidden": [
-                "Raw provider details are not rendered as the user-facing failure."
+                "Raw provider details rendered as the user-facing failure."
             ],
             "evidence": {
                 "kind": "automated",
@@ -140,7 +140,7 @@
                 "Application Settings is displayed without creating an empty Article workspace."
             ],
             "forbidden": [
-                "Opening Settings does not alter Article Revision history."
+                "Opening Settings alters Article Revision history."
             ],
             "evidence": {
                 "kind": "automated",
@@ -161,7 +161,7 @@
                 "The persisted local data can be read after reopening."
             ],
             "forbidden": [
-                "Persistence does not require a remote application database."
+                "Requiring a remote application database."
             ],
             "evidence": {
                 "kind": "automated",
@@ -182,7 +182,7 @@
                 "The desktop shell restores its panel layout and clears migrated legacy keys."
             ],
             "forbidden": [
-                "A missing preference does not prevent the workspace from rendering."
+                "A missing preference prevents the workspace from rendering."
             ],
             "evidence": {
                 "kind": "automated",

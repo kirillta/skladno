@@ -47,17 +47,8 @@ This drill proves recovery from a backup snapshot; it intentionally replaces the
 
 If backup creation fails, leave the active database alone, check the folder permission, and retry. Browser backups require a browser with directory-picker support and retained folder permission. Manual backups are never removed by automatic-backup retention.
 
-## Privacy and MVP limits
+## Release boundaries
 
-- Articles, Draft checkpoints, Revisions, Assistant records, Settings, style samples, and backup snapshots are local SQLite data. Snapshots exclude `.env` files and API keys.
-- Credentials are read only by the local service from environment variables; the browser receives neither their values nor direct filesystem or SQLite access.
-- An author action is required before an AI request. Generated content stays a Proposal until accepted. Incomplete, cancelled, or failed requests do not modify the Article.
-- The requested editorial context goes to the configured AI provider. Provider response storage is disabled by default; setting `SKLADNO_AI_SESSION_CONTINUATION=true` explicitly opts into eligible same-Article continuation.
-- Diagnostics are local process output and redact credentials, Article/model bodies, raw error messages, and stacks. Windows backup-folder permissions are controlled by the selected folder's ACLs.
-- The MVP has no accounts, sync, teams, analytics, direct publishing, import/export workflow, alternate providers, mobile/offline client, or packaged Electron application. Publishing profiles are guidance and Copy is the only publishing action.
+Verify local data and recovery against [ADR-005](../architecture/adr-005-article-state-and-consistency.md) and [ADR-006](../architecture/adr-006-sqlite-lifecycle-and-recovery.md). Verify diagnostics, AI completion and storage, and renderer isolation against [ADR-004](../architecture/adr-004-local-diagnostics.md), [ADR-007](../architecture/adr-007-completion-gated-editorial-engine.md), and [ADR-008](../architecture/adr-008-loopback-service-trust-boundary.md).
 
-## Electron boundary
-
-The repository contains typed Electron IPC and a context-isolated preload bridge, but no Electron window/bootstrap or packaged desktop runtime. Do not represent the browser MVP as an Electron app.
-
-Future desktop packaging is tracked in [#32](https://github.com/kirillta/skladno/issues/32). Native folder choice, secure credential storage, in-app backup restore, and data relocation are tracked in [#34](https://github.com/kirillta/skladno/issues/34); they are not implemented by this guide.
+The supported release is the browser-based local-first MVP. The [cross-cutting inventory](../product/cross-cutting-inventory.md) owns deferred product boundaries. Publishing profiles remain guidance and Copy remains the only publishing action.
