@@ -130,7 +130,7 @@ Editorial Assistant Panel and selection scope, Article Header controls,
 Workspace Tab Bar and all supporting Workspace Views, Draft checkpoint and
 revision-promotion recovery, explicit Proposal review and acceptance,
 revision-bound Fact Check and Style Review findings, independently recoverable
-Translations, Publishing Preview guidance, Settings navigation, keyboard
+Translations, Article Status Bar publishing guidance, Settings navigation, keyboard
 commands, internationalization, accessibility, responsive collapse behavior,
 and renderer isolation from secrets and privileged systems.
 

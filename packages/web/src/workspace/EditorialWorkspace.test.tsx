@@ -594,6 +594,25 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("operates Status Bar menus with the keyboard and restores focus on Escape", async () => {
+        const user = userEvent.setup();
+        const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} language="en" setLanguage={vi.fn()} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} customProfiles={[]} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
+        const statusBarScope = within(statusBar.container);
+        const options = statusBarScope.getByLabelText("Copy options");
+
+        options.focus();
+        await user.keyboard("{ArrowDown}");
+
+        await waitFor(() => expect(document.activeElement).toBe(statusBarScope.getByRole("menuitem", { name: "Copy Markdown" })));
+        await user.keyboard("{ArrowDown}");
+        expect(document.activeElement).toBe(statusBarScope.getByRole("menuitem", { name: "Copy plain text" }));
+        await user.keyboard("{Escape}");
+
+        expect(document.activeElement).toBe(options);
+        expect(statusBarScope.queryByRole("menu")).toBeNull();
+    });
+
+
     it("moves the source language selector from the Article Header to the Status Bar", async () => {
         const header = renderLocalized(<ArticleHeader article={article("one", "First Article")} updateArticle={vi.fn()} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} />);
         const headerScope = within(header.container);

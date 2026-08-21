@@ -28,7 +28,7 @@ These terms describe concepts visible to authors and the domain language used th
 ## Publishing and settings
 
 - **Publishing profile**: configurable platform guidance, including a character limit. Its default applies only to new Articles.
-- **Publishing preview**: derived copy prepared for review or copying.
+- **Publishing copy**: Markdown or plain text explicitly copied from the current Article through the Article Status Bar. Skladno does not provide a Publishing Preview Workspace View.
 - **Application Settings**: workspace-level preferences, AI configuration, Publishing profiles, and local data management. Settings never belong to Article Revision history.
 - **AI connection**: a named server-side provider configuration that references an environment-variable name without exposing its value. The **active AI connection** is used for new Editorial requests.
 - **Model preference**: a default model identifier or an Editorial operation-specific override.
@@ -44,7 +44,7 @@ These terms describe concepts visible to authors and the domain language used th
 - **Editorial Workspace**: the main authoring screen containing the Article Library Panel, Article Workspace, and Editorial Assistant Panel.
 - **Article Library Panel**: Article search, the Article list, and workspace-level entry points. Its collapsed form is the **Navigation Rail**; its temporary small-screen form is the **Navigation Drawer**.
 - **Article Workspace**: the Article Header, Workspace Tab Bar, selected Workspace View, and Article Status Bar.
-- **Workspace View**: the selected Article Editor or supporting view: Proposal Review, Revision History, Fact Check, Style Profile, Translations, or Publishing Preview.
+- **Workspace View**: the selected Article Editor or supporting view: Proposal Review, Revision History, Fact Check, Style Profile, or Translations.
 - **Article Editor**: the writing view. Its main editing area is the **writing surface**.
 - **Editorial Assistant Panel**: Editorial guidance, actions, request status, and activity. Its temporary small-screen form is the **Assistant Drawer**.
 - **Application Settings Navigation**: navigation among the General, AI, Publishing profiles, and Data & backups Settings sections.
