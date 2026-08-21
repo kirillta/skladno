@@ -1,4 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
+
+
+async function activateWithKeyboard(page: import("@playwright/test").Page, target: Locator): Promise<void> {
+    await target.focus();
+    await page.keyboard.press("Enter");
+}
 
 
 async function createArticle(page: import("@playwright/test").Page): Promise<void> {
@@ -78,3 +84,28 @@ test("a provider failure does not change the Article", async ({ page }) => {
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(page.getByText("Original fixture Article.").first()).toBeVisible();
 });
+
+
+for (const run of [
+    { name: "1440 x 1024 light", viewport: { width: 1440, height: 1024 }, colorScheme: "light" as const },
+    { name: "1280 x 800 dark", viewport: { width: 1280, height: 800 }, colorScheme: "dark" as const },
+]) {
+    test(`keyboard release coverage at ${run.name}`, async ({ page }) => {
+        await page.setViewportSize(run.viewport);
+        await page.emulateMedia({ colorScheme: run.colorScheme });
+        await page.goto("/");
+
+        await activateWithKeyboard(page, page.getByRole("button", { name: "Settings" }));
+        for (const section of ["General", "Key bindings", "AI", "Publishing", "Data & backups"])
+            await activateWithKeyboard(page, page.getByRole("button", { name: section }));
+
+        await activateWithKeyboard(page, page.getByRole("button", { name: "Back to workspace" }));
+
+        await page.keyboard.press("Tab");
+        await expect(page.evaluate(() => document.activeElement?.tagName))
+            .resolves.toBe("BUTTON");
+
+        await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+            .resolves.toBeTruthy();
+    });
+}

@@ -20,20 +20,20 @@ The table uses P for pass, F for fail, B for blocked, and N/A for a check outsid
 
 | ID | Area and expected observable result | A: 1440 x 1024 light | B: 1280 x 800 dark |
 | --- | --- | --- | --- |
-| WS-01 | Article Library Panel, Navigation Rail, Article Header, Editor, Status Bar, and Editorial Assistant remain reachable in reading order. Panel collapse controls have names and visible focus. | P | P |
-| WS-02 | Write supports keyboard editing, save, draft recovery, and current-save feedback. No content is clipped or overlaps a focused control. | P | P |
-| WS-03 | Proposal Review exposes labelled decision controls and non-color diff cues. Accepting a Proposal returns focus to a usable Write control. | P | P |
-| WS-04 | Revision History navigation and revision preview are keyboard reachable. Restore confirmation contains focus and returns it to the invoking control after cancel or restore. | P | P |
-| WS-05 | Fact Check exposes Findings, source links, uncertainty, empty, stale, loading, and recoverable-error states with text cues. | P | P |
-| WS-06 | Style Profile exposes populated and empty states, controls have names, and status does not rely on color. | P | P |
-| WS-07 | Translations exposes ready, stale, empty, loading, and editing states. Creating and opening a translation remains keyboard-complete. | P | P |
-| WS-08 | Article Status Bar exposes publishing-profile selection plus Markdown and plain-text copy controls with names, status feedback, and a non-color cue. | P | P |
-| WS-09 | Editorial Assistant reaches populated, loading, cancelled, and recoverable-error states. Stop request and error feedback remain reachable by keyboard. | P | P |
-| ST-01 | General Settings supports theme selection and keyboard focus in logical order. | P | P |
-| ST-02 | Keyboard shortcuts exposes named controls, shortcut state, conflict feedback, and keyboard navigation. | P | P |
-| ST-03 | AI Settings exposes named connection and model controls. Confirmation and removal dialogs contain and restore focus. | P | P |
-| ST-04 | Publishing Settings exposes profile controls and Default translation languages as labelled checkboxes. Destructive profile removal has a recovery path. | P | P |
-| ST-05 | Data & backups exposes keyboard-complete backup and restore controls, including confirmation and recoverable-error feedback. | P | P |
+| WS-01 | Article Library Panel, Navigation Rail, Article Header, Editor, Status Bar, and Editorial Assistant remain reachable in reading order. Panel collapse controls have names and visible focus. | B, manual run pending | B, manual run pending |
+| WS-02 | Write supports keyboard editing, save, draft recovery, and current-save feedback. No content is clipped or overlaps a focused control. | B, manual run pending | B, manual run pending |
+| WS-03 | Proposal Review exposes labelled decision controls and non-color diff cues. Accepting a Proposal returns focus to a usable Write control. | B, manual run pending | B, manual run pending |
+| WS-04 | Revision History navigation and revision preview are keyboard reachable. Restore confirmation contains focus and returns it to the invoking control after cancel or restore. | B, manual run pending | B, manual run pending |
+| WS-05 | Fact Check exposes Findings, source links, uncertainty, empty, stale, loading, and recoverable-error states with text cues. | B, manual run pending | B, manual run pending |
+| WS-06 | Style Profile exposes populated and empty states, controls have names, and status does not rely on color. | B, manual run pending | B, manual run pending |
+| WS-07 | Translations exposes ready, stale, empty, loading, and editing states. Creating and opening a translation remains keyboard-complete. | B, manual run pending | B, manual run pending |
+| WS-08 | Article Status Bar exposes publishing-profile selection plus Markdown and plain-text copy controls with names, status feedback, and a non-color cue. | B, manual run pending | B, manual run pending |
+| WS-09 | Editorial Assistant reaches populated, loading, cancelled, and recoverable-error states. Stop request and error feedback remain reachable by keyboard. | B, manual run pending | B, manual run pending |
+| ST-01 | General Settings supports theme selection and keyboard focus in logical order. | B, manual run pending | B, manual run pending |
+| ST-02 | Keyboard shortcuts exposes named controls, shortcut state, conflict feedback, and keyboard navigation. | B, manual run pending | B, manual run pending |
+| ST-03 | AI Settings exposes named connection and model controls. Confirmation and removal dialogs contain and restore focus. | B, manual run pending | B, manual run pending |
+| ST-04 | Publishing Settings exposes profile controls and Default translation languages as labelled checkboxes. Destructive profile removal has a recovery path. | B, manual run pending | B, manual run pending |
+| ST-05 | Data & backups exposes keyboard-complete backup and restore controls, including confirmation and recoverable-error feedback. | B, manual run pending | B, manual run pending |
 | SR-01 | Roles, names, selected or expanded states, status announcements, dialog behavior, and reading order are suitable for a vendor-neutral screen-reader pass. The NVDA procedure below records the human result. | N/A, #137 | N/A, #137 |
 
 ## Screen-reader verification
@@ -75,15 +75,15 @@ Record P, F, B, or N/A in each cell. A blocked cell states why. A failed cell li
 
 ### Evidence and result
 
-The deterministic author journeys passed in the local Chromium run: 3 passed. They cover configured translation languages, Article creation, Proposal acceptance, Revision restoration, Findings, translation editing, persisted theme, cancellation, and recoverable provider failure. The focused Settings, shared primitive, workspace tab, restore-dialog, and Workspace suites also passed: 46 tests in 5 files.
+The deterministic author journeys passed in the local Chromium run: 5 passed. Two keyboard-driven runs open every Settings section at 1440 x 1024 light and 1280 x 800 dark, and assert that the page has no horizontal overflow. The other three cover configured translation languages, Article creation, Proposal acceptance, Revision restoration, Findings, translation editing, persisted theme, cancellation, and recoverable provider failure. The focused Settings, shared primitive, workspace tab, restore-dialog, and Workspace suites also passed: 46 tests in 5 files.
 
-All A and B checklist rows above passed through the deterministic release run and the focused semantic and keyboard regression coverage. No layout failure required a screenshot. The separate system-theme follow check passed: setting General to System delegates theme selection to `prefers-color-scheme`; manual Windows theme switching remains a release-host verification because the deterministic Chromium runner cannot change the Windows theme.
+This automated coverage supports, but does not replace, the manual A/B walkthrough. The system-theme follow check is blocked until a Windows theme change is observed on the release host.
 
 `npm run test:e2e` passed on 2026-08-21 with 3 deterministic author journeys. NVDA was not installed on this release host, so SR-02 through SR-09 are recorded as blocked rather than inferred from browser automation. The vendor-neutral SR-01 checkpoint remains valid.
 
 ### Blocking defects
 
-No application defect was found in the deterministic run. The screen-reader release result is blocked until SR-02 through SR-09 are completed with the supported setup.
+No application defect was found in the deterministic run. The A/B manual walkthrough, Windows system-theme check, and screen-reader release result are blocked until completed on the supported release host.
 
 ### Linked follow-ups
 
