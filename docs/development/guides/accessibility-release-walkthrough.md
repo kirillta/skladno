@@ -88,15 +88,14 @@ No application defect was found in the deterministic run. The screen-reader rele
 ### Linked follow-ups
 
 - [#137](https://github.com/kirillta/skladno/issues/137): repeatable NVDA or equivalent screen-reader verification.
-- [#138](https://github.com/kirillta/skladno/issues/138): resolve glossary and ADR routing for the Publishing Preview mismatch.
 
 ### Decisions discovered
 
-None.
+See [accessibility review routing](accessibility-review-routing.md). This finding does not require an ADR: it corrects terminology and does not change a lasting architecture boundary.
 
 ### Domain terms discovered
 
-`Publishing Preview` appears in the glossary, but the implemented renderer uses publishing-profile selection and Markdown or plain-text copy controls in the Article Status Bar. It is not a Workspace View. This walkthrough reviews those controls without changing the glossary or adding a View.
+The glossary now uses `Publishing copy` for the Article Status Bar's explicit Markdown and plain-text copy controls. `Publishing Preview` was retired because the renderer has no such Workspace View. See [accessibility review routing](accessibility-review-routing.md).
 
 ### Remaining manual verification
 
