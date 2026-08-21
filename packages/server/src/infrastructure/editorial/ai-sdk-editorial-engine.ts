@@ -58,6 +58,13 @@ interface AiSdkEditorialEngineOptions {
 }
 
 
+interface FactCheckResearch {
+    claim: string;
+    evidence: string;
+    sources: unknown;
+}
+
+
 function boundedArticleContext(content: string): string {
     const maximumCharacters = 24_000;
     if (content.length <= maximumCharacters)
@@ -292,12 +299,8 @@ export class AiSdkEditorialEngine implements EditorialEngine {
     }
 
 
-    private async *streamFactCheck(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const stages = ["claim_extraction", "openai_web_research", "evidence_evaluation", "classification", "citation_assembly"];
-        for (const tool of stages)
-            yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "started" };
-
-        const extraction = await generateText({
+    private async extractFactCheckClaims(request: EditorialEngineRequest, signal: AbortSignal): Promise<{ responseId: string; claims: { claim: string }[] }> {
+        const result = await generateText({
             model: this.openai.responses(this.options.model),
             prompt: `Extract up to 12 externally verifiable factual claims from this article. Exclude opinions and advice.\n\n${boundedArticleContext(request.article)}`,
             output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12) }) }),
@@ -305,34 +308,17 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             telemetry: { isEnabled: false },
             providerOptions: this.providerOptions(),
         });
-        const extractionResponseId = responseId(extraction.providerMetadata);
-        if (!extraction.output || !extractionResponseId || !isAcceptedFinish(extraction.finishReason))
+        const completedResponseId = responseId(result.providerMetadata);
+        if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "OpenAI returned incomplete fact-check claims. Retry the request.");
 
-        const reusableByClaim = new Map<string, FactCheckFinding>();
-        for (const finding of request.reusableFactFindings ?? []) {
-            const key = finding.claim.trim().toLowerCase().replace(/\s+/g, " ");
-            if (finding.status === FACT_CHECK_STATUS.SUPPORTED && !reusableByClaim.has(key))
-                reusableByClaim.set(key, finding);
-        }
+        return { responseId: completedResponseId, claims: result.output.claims };
+    }
 
-        const reusedFindings: FactCheckFinding[] = [];
-        const claimsToCheck = extraction.output.claims.filter(({ claim }) => {
-            const reusable = reusableByClaim.get(claim.trim().toLowerCase().replace(/\s+/g, " "));
-            if (!reusable)
-                return true;
 
-            reusedFindings.push({ ...reusable, claim });
-            return false;
-        });
-
-        yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "completed", claims: [
-            ...reusedFindings.map(({ claim }) => ({ claim, checked: true })),
-            ...claimsToCheck.map(({ claim }) => ({ claim, checked: false })),
-        ] };
-
-        const research: { claim: string; evidence: string; sources: unknown }[] = [];
-        for (const { claim } of claimsToCheck) {
+    private async researchFactCheckClaims(claims: { claim: string }[], signal: AbortSignal): Promise<FactCheckResearch[]> {
+        const research: FactCheckResearch[] = [];
+        for (const { claim } of claims) {
             const result = await generateText({
                 model: this.openai.responses(this.options.model),
                 prompt: `Research this factual claim using OpenAI web search. Prefer primary sources, report source URLs, publication dates when available, and brief supporting or contradicting evidence. Do not infer missing evidence.\n\nClaim: ${claim}`,
@@ -346,15 +332,12 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             research.push({ claim, evidence: result.text, sources: result.sources });
         }
 
-        if (!claimsToCheck.length) {
-            for (const tool of stages.filter((tool) => tool !== "claim_extraction"))
-                yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "completed" };
+        return research;
+    }
 
-            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: extractionResponseId, text: "", factCheck: { findings: reusedFindings } };
-            return;
-        }
 
-        const evaluation = await generateText({
+    private async evaluateFactCheck(research: FactCheckResearch[], signal: AbortSignal): Promise<{ responseId: string; findings: z.infer<typeof findingSchema>[] }> {
+        const result = await generateText({
             model: this.openai.responses(this.options.model),
             prompt: `Evaluate each article claim using the web-research evidence below. A missing source must be classified as unverifiable. Return only sources actually present in the evidence, with an explicit source-quality rating and uncertainty.\n\n${JSON.stringify(research)}`,
             output: Output.object({ schema: z.object({ findings: z.array(findingSchema) }) }),
@@ -362,12 +345,54 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             telemetry: { isEnabled: false },
             providerOptions: this.providerOptions(),
         });
-        const completedResponseId = responseId(evaluation.providerMetadata);
-        if (!evaluation.output || !completedResponseId || !isAcceptedFinish(evaluation.finishReason))
+        const completedResponseId = responseId(result.providerMetadata);
+        if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, "OpenAI returned incomplete fact-check findings. Retry the request.");
 
+        return { responseId: completedResponseId, findings: result.output.findings };
+    }
+
+
+    private async *streamFactCheck(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        const stages = ["claim_extraction", "openai_web_research", "evidence_evaluation", "classification", "citation_assembly"];
+        for (const tool of stages)
+            yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "started" };
+
+        const extraction = await this.extractFactCheckClaims(request, signal);
+        const reusableByClaim = new Map<string, FactCheckFinding>();
+        for (const finding of request.reusableFactFindings ?? []) {
+            const key = finding.claim.trim().toLowerCase().replace(/\s+/g, " ");
+            if (finding.status === FACT_CHECK_STATUS.SUPPORTED && !reusableByClaim.has(key))
+                reusableByClaim.set(key, finding);
+        }
+
+        const reusedFindings: FactCheckFinding[] = [];
+        const claimsToCheck = extraction.claims.filter(({ claim }) => {
+            const reusable = reusableByClaim.get(claim.trim().toLowerCase().replace(/\s+/g, " "));
+            if (!reusable)
+                return true;
+
+            reusedFindings.push({ ...reusable, claim });
+            return false;
+        });
+
+        yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "completed", claims: [
+            ...reusedFindings.map(({ claim }) => ({ claim, checked: true })),
+            ...claimsToCheck.map(({ claim }) => ({ claim, checked: false })),
+        ] };
+
+        if (!claimsToCheck.length) {
+            for (const tool of stages.filter((tool) => tool !== "claim_extraction"))
+                yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "completed" };
+
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: extraction.responseId, text: "", factCheck: { findings: reusedFindings } };
+            return;
+        }
+
+        const research = await this.researchFactCheckClaims(claimsToCheck, signal);
+        const evaluation = await this.evaluateFactCheck(research, signal);
         const factCheck: FactCheck = {
-            findings: [...reusedFindings, ...evaluation.output.findings.map((finding) => ({
+            findings: [...reusedFindings, ...evaluation.findings.map((finding) => ({
                 ...finding,
                 sources: finding.sources
                     .filter((source) => /^https:\/\//.test(source.url))
@@ -382,6 +407,6 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         for (const tool of stages.filter((tool) => tool !== "claim_extraction"))
             yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "completed" };
 
-        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: completedResponseId, text: "", factCheck };
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: evaluation.responseId, text: "", factCheck };
     }
 }

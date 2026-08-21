@@ -79,14 +79,21 @@ function modelPreferences(value: unknown): ModelPreferences {
 }
 
 
-function keyBindingOverrides(value: unknown): KeyBindingOverrides {
+function normalizeKeyBindingOverrides(value: unknown, rejectInvalid: boolean): KeyBindingOverrides {
     if (!value || typeof value !== "object" || Array.isArray(value))
-        return {};
+        if (rejectInvalid)
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+        else
+            return {};
 
     const overrides: KeyBindingOverrides = {};
     for (const [commandId, binding] of Object.entries(value)) {
-        if (!isKeyBindingCommandId(commandId))
+        if (!isKeyBindingCommandId(commandId)) {
+            if (rejectInvalid)
+                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+
             continue;
+        }
 
         if (binding === null) {
             overrides[commandId] = null;
@@ -94,40 +101,33 @@ function keyBindingOverrides(value: unknown): KeyBindingOverrides {
         }
 
         const normalized = normalizeKeyBinding(binding);
-        if (normalized)
-            overrides[commandId] = normalized;
+        if (!normalized) {
+            if (rejectInvalid)
+                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+
+            continue;
+        }
+
+        overrides[commandId] = normalized;
+    }
+
+    if (rejectInvalid) {
+        const conflict = findKeyBindingConflict(resolveKeyBindings(overrides));
+        if (conflict)
+            throw new ApplicationServiceError(APPLICATION_ERROR.KEY_BINDING_CONFLICT, HTTP_STATUS.BAD_REQUEST, { firstCommandId: conflict[0], secondCommandId: conflict[1] });
     }
 
     return overrides;
 }
 
 
+function keyBindingOverrides(value: unknown): KeyBindingOverrides {
+    return normalizeKeyBindingOverrides(value, false);
+}
+
+
 function requestedKeyBindingOverrides(value: unknown): KeyBindingOverrides {
-    if (!value || typeof value !== "object" || Array.isArray(value))
-        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-    const overrides: KeyBindingOverrides = {};
-    for (const [commandId, binding] of Object.entries(value)) {
-        if (!isKeyBindingCommandId(commandId))
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-        if (binding === null) {
-            overrides[commandId] = null;
-            continue;
-        }
-
-        const normalized = normalizeKeyBinding(binding);
-        if (!normalized)
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-        overrides[commandId] = normalized;
-    }
-
-    const conflict = findKeyBindingConflict(resolveKeyBindings(overrides));
-    if (conflict)
-        throw new ApplicationServiceError(APPLICATION_ERROR.KEY_BINDING_CONFLICT, HTTP_STATUS.BAD_REQUEST, { firstCommandId: conflict[0], secondCommandId: conflict[1] });
-
-    return overrides;
+    return normalizeKeyBindingOverrides(value, true);
 }
 
 
