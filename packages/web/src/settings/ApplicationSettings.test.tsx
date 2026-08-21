@@ -7,6 +7,7 @@ import type { EditorialWorkspaceClient } from "../application-client.js";
 import { messages } from "../i18n/messages.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
+import { saveWebBackup } from "./web-backups.js";
 
 vi.mock("./web-backups.js", () => ({
     chooseBackupFolder: vi.fn().mockResolvedValue("Skladno backups"),
@@ -249,6 +250,25 @@ describe("ApplicationSettings", () => {
         await user.click(screen.getByRole("button", { name: "Create backup" }));
 
         await waitFor(() => expect(screen.getByText("Created skladno-manual.sqlite")).toBeTruthy());
+    });
+
+    it("reports a backup failure without blocking Settings", async () => {
+        const user = userEvent.setup();
+        vi.mocked(saveWebBackup).mockRejectedValueOnce(new Error("write failed"));
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: "Data & backups" }));
+        await user.click(screen.getByRole("button", { name: "Choose backup folder" }));
+        await user.click(screen.getByRole("button", { name: "Create backup" }));
+
+        await screen.findByText("Couldn’t create a backup. Your editing session is still safe.");
+        expect(screen.getByRole("button", { name: "Create backup" }).hasAttribute("disabled")).toBe(false);
+        expect(screen.getByRole("button", { name: "Publishing" }).hasAttribute("disabled")).toBe(false);
     });
 
     it("retains an editable custom profile until the author saves its name and limit", async () => {

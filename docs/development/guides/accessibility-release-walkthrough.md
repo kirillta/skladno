@@ -33,7 +33,7 @@ The table uses P for pass, F for fail, B for blocked, and N/A for a check outsid
 | ST-02 | Keyboard shortcuts exposes named controls, shortcut state, conflict feedback, and keyboard navigation. | B, manual run pending | B, manual run pending |
 | ST-03 | AI Settings exposes named connection and model controls. Confirmation and removal dialogs contain and restore focus. | B, manual run pending | B, manual run pending |
 | ST-04 | Publishing Settings exposes local, advisory profile controls and Default translation languages as labelled checkboxes. LinkedIn Post guidance appears on a new Article as 3,000-character guidance, Copy remains the only publishing action, and destructive profile removal has a recovery path. | B, manual run pending | B, manual run pending |
-| ST-05 | Data & backups exposes keyboard-complete backup and restore controls, including confirmation and recoverable-error feedback. | B, manual run pending | B, manual run pending |
+| ST-05 | Data & backups exposes keyboard-complete backup creation and recoverable-error feedback. Recovery instructions explain the required manual database replacement. | B, manual run pending | B, manual run pending |
 | SR-01 | Roles, names, selected or expanded states, status announcements, dialog behavior, and reading order are suitable for a vendor-neutral screen-reader pass. The NVDA procedure below records the human result. | N/A, #137 | N/A, #137 |
 
 ## Screen-reader verification
