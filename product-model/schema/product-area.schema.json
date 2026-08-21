@@ -159,6 +159,7 @@
                 "expected": {
                     "type": "array",
                     "minItems": 1,
+                    "description": "Required observable outcomes stated directly.",
                     "items": {
                         "type": "string",
                         "minLength": 1
@@ -167,6 +168,7 @@
                 "forbidden": {
                     "type": "array",
                     "minItems": 1,
+                    "description": "Bad outcomes named directly, for example: Rewriting existing Revision records.",
                     "items": {
                         "type": "string",
                         "minLength": 1

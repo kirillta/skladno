@@ -75,7 +75,7 @@
             "preconditions": ["An Article has initial and subsequent Revisions."],
             "event": "The author selects an earlier Revision in history.",
             "expected": ["A formatted read-only preview and distinct provenance timeline icon are shown."],
-            "forbidden": ["Selecting history does not alter the current Article or Draft."],
+            "forbidden": ["Selecting history alters the current Article or Draft."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/RevisionHistoryView.test.tsx" }
         },
         {
@@ -85,7 +85,7 @@
             "preconditions": ["An author has selected an earlier Revision."],
             "event": "The author requests restoration.",
             "expected": ["The restore request identifies the selected Revision and the repository creates a new Revision."],
-            "forbidden": ["Existing Revision records are not rewritten."],
+            "forbidden": ["Rewriting existing Revision records."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.test.ts" }
         },
         {
@@ -95,7 +95,7 @@
             "preconditions": ["The author adds a writing sample, optionally without a source name."],
             "event": "The style corpus or global rules change.",
             "expected": ["A submitted blank source name is generated with the configured text model; a confirmed Article Revision snapshot retains its source Revision; removing a sample requires confirmation; the current profile is marked outdated until an explicit rebuild creates the next compact version, and the rebuild is recorded in the selected Article's Assistant chat."],
-            "forbidden": ["Raw style samples are not treated as remote application data except for the author-explicit name-generation request."],
+            "forbidden": ["Treating raw style samples as remote application data outside the author-explicit name-generation request."],
             "evidence": { "kind": "automated", "path": "packages/server/src/application/editorial/style-corpus-service.test.ts" }
         },
         {
@@ -105,7 +105,7 @@
             "preconditions": ["The author requests a fact check for the current Revision."],
             "event": "The fact-check operation completes.",
             "expected": ["Findings retain source citations, uncertainty, and the reviewed Revision identifier."],
-            "forbidden": ["Fact-check output does not modify Article text."],
+            "forbidden": ["Fact-check output modifies Article text."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
@@ -115,7 +115,7 @@
             "preconditions": ["A translation proposal's source Revision is stale."],
             "event": "The author opens Translations.",
             "expected": ["The stale-source warning is shown."],
-            "forbidden": ["Creating a translation Article is disabled until a current translation is generated."],
+            "forbidden": ["Creating a translation Article from stale source content."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/TranslationsView.test.tsx" }
         },
         {
@@ -125,7 +125,7 @@
             "preconditions": ["The current Article has a selected publishing profile."],
             "event": "The author uses the Status Bar Copy control.",
             "expected": ["The main action copies Markdown and the menu offers deterministic plain text without AI."],
-            "forbidden": ["The application does not publish directly to a platform."],
+            "forbidden": ["Direct publishing to a platform."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
         },
         {
@@ -135,7 +135,7 @@
             "preconditions": ["A publishing default and custom profile name/limit are configured."],
             "event": "The service saves and reloads that selection.",
             "expected": ["The selected default and valid custom profile configuration are returned after reload."],
-            "forbidden": ["Unknown profiles and invalid custom limits are not accepted."],
+            "forbidden": ["Accepting unknown profiles or invalid custom limits."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         }
     ]

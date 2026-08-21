@@ -75,7 +75,7 @@
             "preconditions": ["The author opens General Settings."],
             "event": "The author selects an explicit IANA time zone or restores the system setting.",
             "expected": ["The preference is saved with an accessible label, hint, and timestamp preview."],
-            "forbidden": ["Changing display preferences does not rewrite saved timestamps or Revision history."],
+            "forbidden": ["Changing display preferences rewrites saved timestamps or Revision history."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
         {
@@ -85,7 +85,7 @@
             "preconditions": ["The author has saved a System, Light, or Dark appearance preference."],
             "event": "The application shell loads the preference or the device appearance changes while System is selected.",
             "expected": ["Semantic UI tokens apply the selected appearance, and System follows the current device preference."],
-            "forbidden": ["Changing appearance does not change Article content or saved timestamps."],
+            "forbidden": ["Changing appearance modifies Article content or saved timestamps."],
             "evidence": { "kind": "automated", "path": "packages/shared/src/settings/settings.test.ts" }
         },
         {
@@ -95,7 +95,7 @@
             "preconditions": ["The author configures an application shortcut."],
             "event": "A key binding is normalized and checked against effective commands.",
             "expected": ["The override can be persisted and conflicts are identified."],
-            "forbidden": ["An override does not silently replace a conflicting command."],
+            "forbidden": ["An override silently replaces a conflicting command."],
             "evidence": { "kind": "automated", "path": "packages/shared/src/cross-cutting/key-bindings.test.ts" }
         },
         {
@@ -105,7 +105,7 @@
             "preconditions": ["The author is in the AI Settings section."],
             "event": "The author adds, selects, or confirms removal of a connection.",
             "expected": ["Only connection labels and environment-variable names are managed; duplicate names are blocked."],
-            "forbidden": ["API key values are not shown or persisted."],
+            "forbidden": ["Displaying or persisting API key values."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
         {
@@ -115,7 +115,7 @@
             "preconditions": ["A default model, text generation model, or skill override is saved."],
             "event": "A new editorial request is prepared.",
             "expected": ["Editorial work resolves its built-in-skill override or default model, while supporting text resolves its text generation model or default-model fallback."],
-            "forbidden": ["Unknown legacy override keys are not exposed."],
+            "forbidden": ["Exposing unknown legacy override keys."],
             "evidence": { "kind": "human-reviewed", "path": "packages/server/src/presentation/server.ts" }
         },
         {
@@ -125,7 +125,7 @@
             "preconditions": ["An active AI connection is configured."],
             "event": "The author opens AI Settings, changes the active connection, or manually refreshes the list.",
             "expected": ["The current provider list is offered for selection."],
-            "forbidden": ["The refreshed list is not persisted as a model preference."],
+            "forbidden": ["Persisting the refreshed list as a model preference."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
         {
@@ -135,7 +135,7 @@
             "preconditions": ["The author selects a supported profile and may configure a custom name and non-negative limit."],
             "event": "The service saves and reloads the profile default.",
             "expected": ["The selected publishing profile, custom configuration, and language defaults are returned for new Articles and translation requests."],
-            "forbidden": ["Unknown profiles are not accepted."],
+            "forbidden": ["Accepting an unknown profile."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         },
         {
@@ -145,7 +145,7 @@
             "preconditions": ["The author opens Data & backups Settings."],
             "event": "The author chooses a backup folder, creates a manual backup, or the daily schedule runs at application startup.",
             "expected": ["A consistent local SQLite snapshot is written through the browser permission handle and automatic retention leaves manual snapshots untouched."],
-            "forbidden": ["A backup failure does not interrupt Article editing or include environment-variable secrets."],
+            "forbidden": ["A backup failure interrupts Article editing or exposes environment-variable secrets."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         }
     ]

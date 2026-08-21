@@ -2,7 +2,7 @@
 
 Use the semantic tokens in `styles.css` and the shared components in `packages/web/src/ui/primitives.tsx`. Feature code must not introduce raw palette, radius, focus, elevation, font-size, or tracking values.
 
-The [visual atlas](visual-atlas.md) is the source of truth for typography, color, and visual roles. Add a genuinely new role there and in the token layer before using it.
+The [visual atlas](visual-atlas.md) maps typography, color, and visual roles to the token layer. `styles.css` owns token values. Add a genuinely new role to both before using it.
 
 ## Components and feedback
 

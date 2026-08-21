@@ -21,7 +21,6 @@ Use these decisions for the desktop Editorial Assistant Panel and its collapsed 
 
 ## Shared state and safety
 
-- Keep the target-language selector in the Article Header alongside article-level controls, not in the Assistant Panel. The advisory workflow selector belongs in the Editorial Assistant Panel.
-- Store the target language in shared workspace state so translation requests use the language selected in the header.
+- Use the default translation languages from General Settings. Translation requests may target every configured language other than the current Article language; completed targets are selected in the Translations View.
 - Keep generated output and request status in the conversation area distinct from the Article.
 - Preserve explicit approval for proposals and retain clear streaming, error, and cancellation controls.

@@ -114,7 +114,7 @@
             "preconditions": ["The author explicitly selects Narrative Draft."],
             "event": "The author requests a narrative from an Article or selection, optionally with a composer message and publishing-profile limit." ,
             "expected": ["Author direction has priority, an active selection replaces whole Article content as the Article source, and the selected character limit is advisory guidance for the resulting complete Article.", "The proposal develops supplied ideas simply unless the Author requests otherwise."],
-            "forbidden": ["The Assistant does not invent unsupported arguments, use unselected Article content, or treat the character hint as an output-token limit."],
+            "forbidden": ["Inventing unsupported arguments, using unselected Article content, or treating the character hint as an output-token limit."],
             "evidence": { "kind": "automated", "path": "packages/server/src/application/editorial/workflow-prompt.test.ts" }
         },
         {
@@ -124,7 +124,7 @@
             "preconditions": ["The author explicitly selects Talking Points."],
             "event": "The author requests theses with or without a composer message.",
             "expected": ["An Article selection is the primary thesis source when present and the Author message may guide or explicitly extend it; otherwise a non-empty Author message is used, then Article content.", "The default output is 3–5 theses, or focused clarifying questions when direction is ambiguous."],
-            "forbidden": ["Unselected whole Article content is not used when an Article selection is present."],
+            "forbidden": ["Using unselected whole Article content when an Article selection is present."],
             "evidence": { "kind": "automated", "path": "packages/server/src/application/editorial/workflow-prompt.test.ts" }
         },
         {
@@ -134,7 +134,7 @@
             "preconditions": ["The author has an Article and requests a selected-text improvement."],
             "event": "The Assistant resolves an eligible skill and completes its request." ,
             "expected": ["The request, messages, and revision-bound Proposal artifact are retained locally."],
-            "forbidden": ["The source Article text is not silently changed."],
+            "forbidden": ["Silent changes to the source Article text."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
@@ -144,7 +144,7 @@
             "preconditions": ["An Assistant or editorial stream is in progress."],
             "event": "The stream fails, is incomplete, or is cancelled." ,
             "expected": ["A stable error can be shown and unfinished output is not persisted as valid work."],
-            "forbidden": ["The Article is not modified by incomplete output."],
+            "forbidden": ["Modifying the Article with incomplete output."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
@@ -154,7 +154,7 @@
             "preconditions": ["The author explicitly requests an editorial operation."],
             "event": "The server completes a composition or flow-revision operation." ,
             "expected": ["A reviewable Proposal is produced with the source Article unchanged."],
-            "forbidden": ["Generated text is not applied without author approval."],
+            "forbidden": ["Applying generated text without author approval."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
@@ -164,7 +164,7 @@
             "preconditions": ["The author explicitly requests a fact or style review."],
             "event": "The review operation completes." ,
             "expected": ["Revision-tied advisory findings and citations are retained."],
-            "forbidden": ["Review output does not overwrite Article text or send raw style corpus text."],
+            "forbidden": ["Review output overwriting Article text or sending raw style corpus text."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
@@ -174,7 +174,7 @@
             "preconditions": ["The author explicitly requests a translation target language."],
             "event": "The translation operation completes and the author creates its linked Article." ,
             "expected": ["The linked translation retains source metadata and protected spans."],
-            "forbidden": ["The source Article is not overwritten."],
+            "forbidden": ["Overwriting the source Article."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
         },
         {
@@ -184,7 +184,7 @@
             "preconditions": ["A Proposal base Revision is no longer current."],
             "event": "The author opens Proposal Review." ,
             "expected": ["The stale warning is shown before review controls, selection actions are disabled, and recovery actions including proposal dismissal remain available."],
-            "forbidden": ["Acceptance cannot create a Revision from a stale Proposal."],
+            "forbidden": ["Creating a Revision from a stale Proposal."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/ProposalReviewView.test.tsx" }
         },
         {
@@ -194,7 +194,7 @@
             "preconditions": ["The author configures OpenAI connection metadata."],
             "event": "The author adds, selects, or removes a connection." ,
             "expected": ["Only environment-variable references and active connection metadata persist."],
-            "forbidden": ["Secret values are not stored or exposed."],
+            "forbidden": ["Storing or exposing secret values."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         },
         {
@@ -204,7 +204,7 @@
             "preconditions": ["A default model, text generation model, or skill-specific override is configured."],
             "event": "A new editorial request resolves its model." ,
             "expected": ["The applicable editorial override, supporting-text preference, or default model is selected."],
-            "forbidden": ["A refreshed provider list is not treated as persisted preference data."],
+            "forbidden": ["Treating a refreshed provider list as persisted preference data."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
         }
     ]
