@@ -34,7 +34,35 @@ The table uses P for pass, F for fail, B for blocked, and N/A for a check outsid
 | ST-03 | AI Settings exposes named connection and model controls. Confirmation and removal dialogs contain and restore focus. | P | P |
 | ST-04 | Publishing Settings exposes profile controls and Default translation languages as labelled checkboxes. Destructive profile removal has a recovery path. | P | P |
 | ST-05 | Data & backups exposes keyboard-complete backup and restore controls, including confirmation and recoverable-error feedback. | P | P |
-| SR-01 | Roles, names, selected or expanded states, status announcements, dialog behavior, and reading order are suitable for a screen-reader pass. Do not mark this as screen-reader certified. | N/A, #137 | N/A, #137 |
+| SR-01 | Roles, names, selected or expanded states, status announcements, dialog behavior, and reading order are suitable for a vendor-neutral screen-reader pass. The NVDA procedure below records the human result. | N/A, #137 | N/A, #137 |
+
+## Screen-reader verification
+
+This procedure is intentionally manual. Playwright verifies that the deterministic journeys and their named controls remain available, but it cannot verify spoken output, virtual-cursor reading order, or interruption behavior. Do not replace this procedure with an automated accessibility scan.
+
+### Supported setup
+
+- Windows 11 and current stable NVDA, using the default desktop keyboard layout and speech mode "Talk". Record the NVDA version and any changed setting in the result.
+- The release Chromium build, with browser extensions disabled and no screen-reader browser extension enabled.
+- The deterministic local service and fixture setup above. Run `npm run test:e2e` first. It must pass before the manual pass starts.
+- Test both viewport and theme rows in this guide. Keep the browser at 100% zoom unless the release target requires another zoom level.
+
+Use `NVDA+F7` to inspect the elements list when a landmark, heading, tab, dialog, or control cannot be reached as expected. Use `NVDA+Tab` only to confirm the focused control. Navigate and activate controls with the keyboard. Record the exact spoken text when it differs from the expected result.
+
+### Critical journeys
+
+| ID | Journey and expected spoken or observable result | A | B |
+| --- | --- | --- | --- |
+| SR-02 | In Settings, Settings is announced as the current area. General, Keyboard shortcuts, AI, Publishing, and Data & backups are named controls. Each selected section exposes its controls in reading order. | B, NVDA unavailable | B, NVDA unavailable |
+| SR-03 | Create `Fixture Article`. Article title and Article draft are named textboxes. Saving announces the Saved status without moving focus away from the editing task. | B, NVDA unavailable | B, NVDA unavailable |
+| SR-04 | The Workspace Views are a tab list. Write, Proposal Review, Revisions, Fact Check, Style Profile, and Translations announce their tab name and selected state. Arrow keys move between tabs and expose the matching panel. | B, NVDA unavailable | B, NVDA unavailable |
+| SR-05 | Send `Improve flow`, then review and accept the Proposal. Decision controls have usable names. Original and Proposed remain distinguishable in reading order, and acceptance returns focus to Write. | B, NVDA unavailable | B, NVDA unavailable |
+| SR-06 | Restore the Author Revision. The confirmation opens as a dialog, keeps focus inside, announces its purpose, closes with Escape or Cancel, and restores focus to the invoking control. | B, NVDA unavailable | B, NVDA unavailable |
+| SR-07 | Run `fact check`, then create and edit the Spanish translation. Findings announce source and uncertainty text. Translation controls are named and the translated Article is reachable. | B, NVDA unavailable | B, NVDA unavailable |
+| SR-08 | In the Article Status Bar, the source-language, character-guidance, and Copy options controls have names and expanded states. The menus expose their menu items. Markdown and plain-text copy completion or failure is announced. | B, NVDA unavailable | B, NVDA unavailable |
+| SR-09 | Send `wait`, stop the request, then send `provider error`. Stop request, cancelled state, and error feedback remain reachable and are announced without reading the entire assistant timeline again. | B, NVDA unavailable | B, NVDA unavailable |
+
+Record P, F, B, or N/A in each cell. A blocked cell states why. A failed cell links a defect. Any failure in SR-02 through SR-09 blocks the accessibility release result until it is fixed or tracked as a release blocker.
 
 ## Results, 2026-08-21
 
@@ -51,9 +79,11 @@ The deterministic author journeys passed in the local Chromium run: 3 passed. Th
 
 All A and B checklist rows above passed through the deterministic release run and the focused semantic and keyboard regression coverage. No layout failure required a screenshot. The separate system-theme follow check passed: setting General to System delegates theme selection to `prefers-color-scheme`; manual Windows theme switching remains a release-host verification because the deterministic Chromium runner cannot change the Windows theme.
 
+`npm run test:e2e` passed on 2026-08-21 with 3 deterministic author journeys. NVDA was not installed on this release host, so SR-02 through SR-09 are recorded as blocked rather than inferred from browser automation. The vendor-neutral SR-01 checkpoint remains valid.
+
 ### Blocking defects
 
-None found.
+No application defect was found in the deterministic run. The screen-reader release result is blocked until SR-02 through SR-09 are completed with the supported setup.
 
 ### Linked follow-ups
 
