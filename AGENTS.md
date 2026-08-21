@@ -10,7 +10,9 @@ Before changing code:
 2. Run `npm run product:impact -- <affected paths>` and preserve the matched implemented capabilities unless the issue explicitly changes them. Read a whole canonical area only when path routing is insufficient.
 3. Follow the existing architecture and nearby conventions. Do not create parallel structures.
 
-The active issue is the source of truth for scope. [`README.md`](README.md) describes the product and development setup. Generated files in `docs/development/product/*-inventory.md` are not edited directly; update the product model and run `npm run product:docs -- <area>`.
+The user-provided issue or task is the active source of truth for scope; do not infer another issue from repository history. [`README.md`](README.md) describes the product and development setup. Generated files in `docs/development/product/*-inventory.md` are not edited directly; update the product model and run `npm run product:docs -- <area>`.
+
+Keep `docs/development/plans` for active work only. When a plan is complete, move lasting decisions into an ADR or guide and delete the plan. Keep ADRs focused on durable choices and consequences; source trees, progress logs, and release evidence belong in the repository, issue, or dated guide result.
 
 ## Product invariants
 
