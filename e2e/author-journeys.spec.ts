@@ -24,6 +24,7 @@ async function createArticle(page: import("@playwright/test").Page): Promise<voi
 
 test("critical local-first author journeys use deterministic provider output", async ({ page }) => {
     await page.goto("/");
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:5173" });
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("button", { name: "Publishing" }).click();
     await page.getByRole("group", { name: "Default translation languages" }).getByRole("checkbox", { name: "Spanish" }).check();
@@ -55,6 +56,16 @@ test("critical local-first author journeys use deterministic provider output", a
     await expect(page.getByRole("tab", { name: /Fact Check/ })).toBeVisible();
     await page.getByRole("tab", { name: /Fact Check/ }).click();
     await expect(page.getByText("The fixture claim is supported.").first()).toBeVisible();
+
+    await page.getByRole("tab", { name: /Style Profile/ }).click();
+    await expect(page.getByRole("heading", { name: "Style Profile" })).toBeVisible();
+
+    await page.getByRole("tab", { name: "Write" }).click();
+    await page.getByRole("button", { name: "Copy", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain("Original fixture Article.");
+    await page.getByRole("button", { name: "Copy options" }).click();
+    await page.getByRole("menuitem", { name: "Copy plain text" }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain("Original fixture Article.");
 
     await page.getByRole("tab", { name: "Translations" }).click();
     await page.getByRole("button", { name: "Translate" }).click();
@@ -88,6 +99,18 @@ test("a provider failure does not change the Article", async ({ page }) => {
     await page.getByRole("button", { name: "Send editorial request" }).click();
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(page.getByText("Original fixture Article.").first()).toBeVisible();
+});
+
+
+test("an unavailable automatic backup does not prevent editing", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Data & backups" }).click();
+    await page.getByRole("combobox").first().selectOption("daily");
+    await page.getByRole("button", { name: "Back to workspace" }).click();
+    await page.reload();
+
+    await createArticle(page);
 });
 
 

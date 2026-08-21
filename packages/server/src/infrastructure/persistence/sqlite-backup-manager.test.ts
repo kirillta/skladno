@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { copyFileSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -34,6 +34,31 @@ test("creates a restorable temporary snapshot", () => {
         }
     } finally {
         database.close();
+        rmSync(directory, { recursive: true, force: true });
+    }
+});
+
+
+test("a snapshot restores the active local database", () => {
+    const directory = mkdtempSync(join(tmpdir(), "skladno-backup-"));
+    const databasePath = join(directory, "skladno.sqlite");
+    const database = openDatabase(databasePath);
+
+    try {
+        database.prepare("INSERT INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?)").run("release-fixture", JSON.stringify({ revision: 1 }), "2026-08-18T00:00:00.000Z");
+        const backup = new SqliteBackupManager(database).createTemporary();
+        database.prepare("UPDATE app_settings SET value_json = ? WHERE key = 'release-fixture'").run(JSON.stringify({ revision: 2 }));
+        database.close();
+        copyFileSync(backup.path, databasePath);
+
+        const restored = openDatabase(databasePath);
+        try {
+            assert.deepEqual(JSON.parse(String(restored.prepare("SELECT value_json FROM app_settings WHERE key = 'release-fixture'").get()?.value_json)), { revision: 1 });
+        } finally {
+            restored.close();
+            backup.cleanup();
+        }
+    } finally {
         rmSync(directory, { recursive: true, force: true });
     }
 });
