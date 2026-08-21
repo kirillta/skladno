@@ -27,8 +27,13 @@ test("critical local-first author journeys use deterministic provider output", a
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("button", { name: "Publishing" }).click();
     await page.getByRole("group", { name: "Default translation languages" }).getByRole("checkbox", { name: "Spanish" }).check();
+    const publishingProfileSaved = page.waitForResponse((response) => response.url().endsWith("/api/settings/publish-limit-profile") && response.request().method() === "PUT");
+    await page.getByRole("combobox", { name: "Character-limit profile" }).selectOption("linkedin-post");
+    await publishingProfileSaved;
     await page.getByRole("button", { name: "Back to workspace" }).click();
     await createArticle(page);
+    await expect(page.getByRole("button", { name: "Character count: 25 of 3,000 characters" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /publish/i })).toHaveCount(0);
 
     await page.getByRole("textbox", { name: "Editorial guidance" }).fill("Improve flow");
     await page.getByRole("button", { name: "Send editorial request" }).click();

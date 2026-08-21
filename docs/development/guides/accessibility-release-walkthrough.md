@@ -6,7 +6,7 @@ This is the release checklist for the Windows Chromium application. It covers Ap
 
 1. Start the deterministic service and web client with `npm run test:e2e`. It starts the local service with `.e2e-data`, never uses an API key, and stops both processes when the run ends.
 2. In a manual Chromium session, open the web client at `http://127.0.0.1:5173` with the same deterministic service settings from `playwright.config.ts`.
-3. In Settings, open Publishing and select Spanish under Default translation languages.
+3. In Settings, open Publishing, select LinkedIn Post as the default publishing profile, and select Spanish under Default translation languages.
 4. Create an Article named `Fixture Article`, enter `Original fixture Article.`, and save a Revision.
 5. Send `Improve flow`, accept the resulting Proposal, restore the original Author Revision, then send `fact check`.
 6. Open Translations, create the Spanish translation, and open it for editing. This produces the Article, Revisions, Proposal, Findings, translation, and publishing-profile state used below.
@@ -29,10 +29,10 @@ The table uses P for pass, F for fail, B for blocked, and N/A for a check outsid
 | WS-07 | Translations exposes ready, stale, empty, loading, and editing states. Creating and opening a translation remains keyboard-complete. | B, manual run pending | B, manual run pending |
 | WS-08 | Article Status Bar exposes publishing-profile selection plus Markdown and plain-text copy controls with names, status feedback, and a non-color cue. | B, manual run pending | B, manual run pending |
 | WS-09 | Editorial Assistant reaches populated, loading, cancelled, and recoverable-error states. Stop request and error feedback remain reachable by keyboard. | B, manual run pending | B, manual run pending |
-| ST-01 | General Settings supports theme selection and keyboard focus in logical order. | B, manual run pending | B, manual run pending |
+| ST-01 | General Settings supports System, Light, and Dark theme selection in logical keyboard order. Persisted selection applies without changing the Article; System follows a Windows appearance change. | B, manual run pending | B, manual run pending |
 | ST-02 | Keyboard shortcuts exposes named controls, shortcut state, conflict feedback, and keyboard navigation. | B, manual run pending | B, manual run pending |
 | ST-03 | AI Settings exposes named connection and model controls. Confirmation and removal dialogs contain and restore focus. | B, manual run pending | B, manual run pending |
-| ST-04 | Publishing Settings exposes profile controls and Default translation languages as labelled checkboxes. Destructive profile removal has a recovery path. | B, manual run pending | B, manual run pending |
+| ST-04 | Publishing Settings exposes local, advisory profile controls and Default translation languages as labelled checkboxes. LinkedIn Post guidance appears on a new Article as 3,000-character guidance, Copy remains the only publishing action, and destructive profile removal has a recovery path. | B, manual run pending | B, manual run pending |
 | ST-05 | Data & backups exposes keyboard-complete backup and restore controls, including confirmation and recoverable-error feedback. | B, manual run pending | B, manual run pending |
 | SR-01 | Roles, names, selected or expanded states, status announcements, dialog behavior, and reading order are suitable for a vendor-neutral screen-reader pass. The NVDA procedure below records the human result. | N/A, #137 | N/A, #137 |
 
@@ -75,7 +75,7 @@ Record P, F, B, or N/A in each cell. A blocked cell states why. A failed cell li
 
 ### Evidence and result
 
-The deterministic author journeys passed in the local Chromium run: 5 passed. Two keyboard-driven runs open every Settings section at 1440 x 1024 light and 1280 x 800 dark, and assert that the page has no horizontal overflow. The other three cover configured translation languages, Article creation, Proposal acceptance, Revision restoration, Findings, translation editing, persisted theme, cancellation, and recoverable provider failure. The focused Settings, shared primitive, workspace tab, restore-dialog, and Workspace suites also passed: 46 tests in 5 files.
+The deterministic author journeys passed in the local Chromium run: 5 passed. Two keyboard-driven runs open every Settings section at 1440 x 1024 light and 1280 x 800 dark, and assert that the page has no horizontal overflow. The other three cover configured translation languages, Article creation, Proposal acceptance, Revision restoration, Findings, translation editing, persisted theme, advisory LinkedIn Post guidance with Copy-only publishing, cancellation, and recoverable provider failure. The focused Settings, shared primitive, workspace tab, restore-dialog, and Workspace suites also passed: 46 tests in 5 files.
 
 This automated coverage supports, but does not replace, the manual A/B walkthrough. The system-theme follow check is blocked until a Windows theme change is observed on the release host.
 
