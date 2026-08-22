@@ -45,11 +45,22 @@ function abortError(): Error {
 }
 
 
-function createStream<Event extends ElectronStreamEvent["event"]>(
+type ElectronStreamSubscription =
+    | {
+        kind: "assistant";
+        request: Extract<ElectronStreamRequest, { kind: "assistant" }>;
+        onEvent: (event: Extract<ElectronStreamEvent, { kind: "assistant" }>["event"]) => void;
+    }
+    | {
+        kind: "editorial";
+        request: Extract<ElectronStreamRequest, { kind: "editorial" }>;
+        onEvent: (event: Extract<ElectronStreamEvent, { kind: "editorial" }>["event"]) => void;
+    };
+
+
+function createStream(
     ipcRenderer: ElectronIpcRenderer,
-    streamId: string,
-    request: ElectronStreamRequest,
-    onEvent: (event: Event) => void,
+    subscription: ElectronStreamSubscription,
     signal?: AbortSignal,
 ): Promise<void> {
     if (signal?.aborted)
@@ -58,10 +69,24 @@ function createStream<Event extends ElectronStreamEvent["event"]>(
     return new Promise<void>((resolve, reject) => {
         let settled = false;
         const listener = (_event: unknown, payload: ElectronStreamEvent) => {
-            if (payload.streamId !== streamId)
+            if (payload.streamId !== subscription.request.streamId || payload.kind !== subscription.kind)
                 return;
 
-            onEvent(payload.event as Event);
+            switch (subscription.kind) {
+                case "assistant":
+                    if (payload.kind !== "assistant")
+                        return;
+
+                    subscription.onEvent(payload.event);
+                    break;
+                case "editorial":
+                    if (payload.kind !== "editorial")
+                        return;
+
+                    subscription.onEvent(payload.event);
+                    break;
+            }
+
             if (payload.event.type === "error") {
                 const parameters = "parameters" in payload.event ? payload.event.parameters : undefined;
                 settle(clientError({ code: payload.event.errorCode, status: 500, ...(parameters ? { parameters } : {}) }));
@@ -92,14 +117,14 @@ function createStream<Event extends ElectronStreamEvent["event"]>(
                 return;
 
             settled = true;
-            ipcRenderer.send(ELECTRON_IPC_CHANNEL.cancel, { streamId });
+            ipcRenderer.send(ELECTRON_IPC_CHANNEL.cancel, { streamId: subscription.request.streamId });
             cleanup();
             reject(abortError());
         };
 
         ipcRenderer.on(ELECTRON_IPC_CHANNEL.streamEvent, listener);
         signal?.addEventListener("abort", abort, { once: true });
-        ipcRenderer.send(ELECTRON_IPC_CHANNEL.stream, request);
+        ipcRenderer.send(ELECTRON_IPC_CHANNEL.stream, subscription.request);
     });
 }
 
@@ -142,7 +167,7 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         streamAssistantRequest: (articleId, input, onEvent, signal) => {
             const streamId = createStreamId();
 
-            return createStream<import("@skladno/shared").AssistantEvent>(ipcRenderer, streamId, { streamId, kind: "assistant", articleId, input }, onEvent, signal);
+            return createStream(ipcRenderer, { kind: "assistant", request: { streamId, kind: "assistant", articleId, input }, onEvent }, signal);
         },
         getStyleCorpus: () => invoke(ELECTRON_APPLICATION_METHOD.getStyleCorpus),
         addStyleCorpusItem: (input) => invoke(ELECTRON_APPLICATION_METHOD.addStyleCorpusItem, input),
@@ -158,7 +183,7 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         streamEditorial: (articleId, input, onEvent, signal) => {
             const streamId = createStreamId();
 
-            return createStream<import("@skladno/shared").EditorialEvent>(ipcRenderer, streamId, { streamId, kind: "editorial", articleId, input }, onEvent, signal);
+            return createStream(ipcRenderer, { kind: "editorial", request: { streamId, kind: "editorial", articleId, input }, onEvent }, signal);
         },
     };
 }

@@ -1,4 +1,4 @@
-import { articleLanguages, PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type CustomPublishLimitProfile, type GeneralSettings, type PublishingSettings } from "@skladno/shared";
+import { articleLanguages, isPublishLimitProfileId, PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type CustomPublishLimitProfile, type GeneralSettings, type PublishingSettings } from "@skladno/shared";
 import { useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Field, Select } from "../../ui/primitives.js";
@@ -45,7 +45,11 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
 
     return <>
         <SettingRow label={intl.formatMessage({ id: "settings.publishingProfile" })} hint={intl.formatMessage({ id: "settings.publishingProfileHint" })}>
-            <Select aria-label={intl.formatMessage({ id: "settings.publishingProfile" })} value={publishing.defaultProfileId} onChange={(event) => save({ ...publishing, defaultProfileId: event.target.value as PublishingSettings["defaultProfileId"] })}>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{label(profile.id)}{profile.characterLimit === undefined ? "" : ` (${intl.formatNumber(profile.characterLimit)})`}</option>)}</Select>
+            <Select aria-label={intl.formatMessage({ id: "settings.publishingProfile" })} value={publishing.defaultProfileId} onChange={(event) => {
+                const value = event.target.value;
+                if (isPublishLimitProfileId(value) && profiles.some((profile) => profile.id === value))
+                    save({ ...publishing, defaultProfileId: value });
+            }}>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{label(profile.id)}{profile.characterLimit === undefined ? "" : ` (${intl.formatNumber(profile.characterLimit)})`}</option>)}</Select>
         </SettingRow>
         <SettingRow label={intl.formatMessage({ id: "settings.customProfiles" })} hint={intl.formatMessage({ id: "settings.customProfilesHint" })} status={!valid && (name || limit) ? intl.formatMessage({ id: "settings.customProfileInvalid" }) : undefined} action={<Button variant="secondary" disabled={!valid} onClick={addCustomProfile}>{intl.formatMessage({ id: "settings.saveCustomProfile" })}</Button>}>
             <div className="space-y-2">

@@ -37,6 +37,11 @@ interface EditorialResult<T> {
 type TranslationResult = EditorialResult<{ metadata: TranslationMetadata; content: string }>;
 
 
+function isProposalOperation(operation: EditorialOperation): boolean {
+    return operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review";
+}
+
+
 export function withFindingFreshness(factCheck: FactCheck, revisionId: string, content: string): FactCheck {
     const normalizedContent = content.replace(/\s+/g, " ").toLowerCase();
     return { ...factCheck, findings: factCheck.findings.map((finding) => ({
@@ -127,6 +132,38 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     }, [base?.editorialArtifactId, client, intl.locale, proposal, proposalSummaryLocale, review, selectedArticleId, stale, state]);
 
 
+    function handleEditorialEvent(event: EditorialEvent, articleId: string, content: string, revisionId: string, operation: EditorialOperation, correctedFindingIds?: string[]) {
+        if (event.type === "text_delta" && isProposalOperation(operation))
+            setProposal((value) => value + event.delta);
+
+        if (event.type === "completed") {
+            if (isProposalOperation(operation))
+                setProposal(event.text);
+
+            if (isProposalOperation(operation) && event.editorialArtifactId)
+                setBase({ articleId, content, revisionId, editorialArtifactId: event.editorialArtifactId, ...(correctedFindingIds?.length ? { correctedFindingIds } : {}) });
+
+            if (event.factCheck) {
+                setFactCheckResult({ articleId, baseRevisionId: revisionId, value: event.factCheck });
+                void loadFactChecks();
+            }
+
+            if (event.styleReview)
+                setStyleReviewResult({ articleId, baseRevisionId: revisionId, value: event.styleReview });
+
+            if (event.translation)
+                retainTranslation({ articleId, baseRevisionId: revisionId, value: { metadata: event.translation, content: event.text } });
+
+            setState("idle");
+        }
+
+        if (event.type === "error") {
+            setState("error");
+            setMessage(intl.formatMessage({ id: errorMessageId(event.errorCode) }, event.parameters));
+        }
+    }
+
+
     async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string, correctedFindingIds?: string[]) {
         const article = workspace.selectedArticle;
         if (!article)
@@ -137,7 +174,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
             const revisionId = saved?.id ?? article.currentRevisionId;
             const content = saved?.content ?? workspace.content;
 
-            if (operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review") {
+            if (isProposalOperation(operation)) {
                 setBase({ articleId: article.id, content, revisionId, ...(correctedFindingIds?.length ? { correctedFindingIds } : {}) });
                 setProposal("");
                 setDecisions({});
@@ -150,39 +187,9 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
             controller.current = new AbortController();
 
-            await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}) }, (event: EditorialEvent) => {
-                if (event.type === "text_delta" && (operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review"))
-                    setProposal((value) => value + event.delta);
-
-                if (event.type === "completed") {
-                    if (operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review")
-                        setProposal(event.text);
-
-                    if ((operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review") && event.editorialArtifactId)
-                        setBase({ articleId: article.id, content, revisionId, editorialArtifactId: event.editorialArtifactId, ...(correctedFindingIds?.length ? { correctedFindingIds } : {}) });
-
-                    if (event.factCheck)
-                        setFactCheckResult({ articleId: article.id, baseRevisionId: revisionId, value: event.factCheck });
-
-                    if (event.factCheck)
-                        void loadFactChecks();
-
-                    if (event.styleReview)
-                        setStyleReviewResult({ articleId: article.id, baseRevisionId: revisionId, value: event.styleReview });
-
-                    if (event.translation)
-                        retainTranslation({ articleId: article.id, baseRevisionId: revisionId, value: { metadata: event.translation, content: event.text } });
-
-                    setState("idle");
-                }
-
-                if (event.type === "error") {
-                    setState("error");
-                    setMessage(intl.formatMessage({ id: errorMessageId(event.errorCode) }, event.parameters));
-                }
-            }, controller.current.signal);
+            await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}) }, (event) => handleEditorialEvent(event, article.id, content, revisionId, operation, correctedFindingIds), controller.current.signal);
         } catch (error) {
-            if ((error as DOMException).name !== "AbortError") {
+            if (!(error instanceof DOMException && error.name === "AbortError")) {
                 setState("error");
                 if (error instanceof ApplicationClientError)
                     setMessage(intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters));

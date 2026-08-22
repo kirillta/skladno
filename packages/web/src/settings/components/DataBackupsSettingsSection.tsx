@@ -6,6 +6,11 @@ import { SettingRow } from "./SettingRow.js";
 import { chooseBackupFolder, saveWebBackup, selectedBackupFolderName } from "../web-backups.js";
 
 
+function isBackupSchedule(value: string): value is BackupPolicy["schedule"] {
+    return value === "off" || value === "daily";
+}
+
+
 export function DataBackupsSettingsSection({ client, backupPolicy, save }: { client: EditorialWorkspaceClient; backupPolicy: BackupPolicy; save: (next: BackupPolicy) => Promise<void> }) {
     const intl = useIntl();
     const [creating, setCreating] = useState(false);
@@ -24,7 +29,11 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
         }, () => setFolderStatus(intl.formatMessage({ id: "settings.backupFolderFailed" })))}>{intl.formatMessage({ id: "settings.chooseBackupFolder" })}</Button>
         </SettingRow>
         <SettingRow label={intl.formatMessage({ id: "settings.automaticBackups" })} hint={intl.formatMessage({ id: "settings.automaticBackupsHint" })}>
-            <Select value={backupPolicy.schedule} onChange={(event) => void save({ ...backupPolicy, schedule: event.target.value as BackupPolicy["schedule"] })}>
+            <Select value={backupPolicy.schedule} onChange={(event) => {
+                const value = event.target.value;
+                if (isBackupSchedule(value))
+                    void save({ ...backupPolicy, schedule: value });
+            }}>
                 <option value="off">{intl.formatMessage({ id: "settings.off" })}</option>
                 <option value="daily">{intl.formatMessage({ id: "settings.daily" })}</option>
             </Select>

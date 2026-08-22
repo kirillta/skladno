@@ -59,12 +59,9 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
 
 
     function replaceArticles(update: (items: Article[]) => Article[]) {
-        setArticles((items) => {
-            const next = sortArticlesByActivity(update(items));
-            articlesRef.current = next;
-
-            return next;
-        });
+        const next = sortArticlesByActivity(update(articlesRef.current));
+        articlesRef.current = next;
+        setArticles(next);
     }
 
 
@@ -307,15 +304,15 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
 
     async function remove(articleId: string) {
         await client.deleteArticle(articleId);
-        replaceArticles((items) => {
-            const next = items.filter((item) => item.id !== articleId);
-            if (selectedArticleId === articleId) {
-                setSelectedArticleId(next[0]?.id);
-                setPersistedSelectedArticleId(next[0]?.id);
-            }
+        const nextSelectedArticleId = selectedArticleId === articleId
+            ? sortArticlesByActivity(articlesRef.current.filter((item) => item.id !== articleId))[0]?.id
+            : selectedArticleId;
+        replaceArticles((items) => items.filter((item) => item.id !== articleId));
 
-            return next;
-        });
+        if (selectedArticleId === articleId) {
+            setSelectedArticleId(nextSelectedArticleId);
+            setPersistedSelectedArticleId(nextSelectedArticleId);
+        }
     }
 
 

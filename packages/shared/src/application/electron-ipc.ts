@@ -120,18 +120,32 @@ export interface ElectronIpcError extends ApplicationErrorPayload {
 }
 
 
-export interface ElectronStreamRequest {
-    streamId: string;
-    kind: "assistant" | "editorial";
-    articleId: string;
-    input: StartAssistantRequest | StartEditorialRequest;
-}
+export type ElectronStreamRequest =
+    | {
+        streamId: string;
+        kind: "assistant";
+        articleId: string;
+        input: StartAssistantRequest;
+    }
+    | {
+        streamId: string;
+        kind: "editorial";
+        articleId: string;
+        input: StartEditorialRequest;
+    };
 
 
-export interface ElectronStreamEvent {
-    streamId: string;
-    event: AssistantEvent | EditorialEvent;
-}
+export type ElectronStreamEvent =
+    | {
+        streamId: string;
+        kind: "assistant";
+        event: AssistantEvent;
+    }
+    | {
+        streamId: string;
+        kind: "editorial";
+        event: EditorialEvent;
+    };
 
 
 export interface ElectronCancelRequest {
