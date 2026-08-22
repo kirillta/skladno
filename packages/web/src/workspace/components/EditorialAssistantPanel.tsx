@@ -11,6 +11,32 @@ import { composerCaretOffset, composerText, placeCaretAfterSkill, textBeforeSkil
 import { selectionPreview, skillMessages } from "./assistant/assistant-messages.js";
 
 
+function closeButton({ label, className, onClick }: { label: string; className: string; onClick: () => void }): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className;
+    button.ariaLabel = label;
+
+    const closeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    closeIcon.setAttribute("viewBox", "0 0 16 16");
+    closeIcon.setAttribute("fill", "none");
+    closeIcon.setAttribute("aria-hidden", "true");
+    closeIcon.classList.add("size-3");
+
+    const closePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    closePath.setAttribute("d", "m4 4 8 8m0-8-8 8");
+    closePath.setAttribute("stroke", "currentColor");
+    closePath.setAttribute("stroke-linecap", "round");
+    closePath.setAttribute("stroke-width", "1.5");
+    closeIcon.append(closePath);
+    button.append(closeIcon);
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", onClick);
+
+    return button;
+}
+
+
 export function EditorialAssistantPanel({ state, message, errorDetails, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
     state: "idle" | "streaming" | "error";
     message: string;
@@ -76,27 +102,11 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
             preview.append(selectionPreview(selection));
             selectionChip.append(preview);
 
-            const clearButton = document.createElement("button");
-            clearButton.type = "button";
-            clearButton.className = "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-muted hover:bg-surface-supporting";
-            clearButton.ariaLabel = intl.formatMessage({ id: "assistant.clearArticleSelection" });
-            clearButton.textContent = "×";
-
-            const closeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            closeIcon.setAttribute("viewBox", "0 0 16 16");
-            closeIcon.setAttribute("fill", "none");
-            closeIcon.setAttribute("aria-hidden", "true");
-            closeIcon.classList.add("size-3");
-
-            const closePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            closePath.setAttribute("d", "m4 4 8 8m0-8-8 8");
-            closePath.setAttribute("stroke", "currentColor");
-            closePath.setAttribute("stroke-linecap", "round");
-            closePath.setAttribute("stroke-width", "1.5");
-            closeIcon.append(closePath);
-            clearButton.replaceChildren(closeIcon);
-            clearButton.addEventListener("mousedown", (event) => event.preventDefault());
-            clearButton.addEventListener("click", () => clearSelection?.());
+            const clearButton = closeButton({
+                label: intl.formatMessage({ id: "assistant.clearArticleSelection" }),
+                className: "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-muted hover:bg-surface-supporting",
+                onClick: () => clearSelection?.(),
+            });
             selectionChip.append(clearButton);
 
             element.append(selectionChip);
@@ -119,27 +129,14 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
             skillLabelElement.append(skillLabel);
             skillChip.append(skillLabelElement);
 
-            const removeButton = document.createElement("button");
-            removeButton.type = "button";
-            removeButton.className = "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-brand/70 hover:bg-brand-soft hover:text-brand";
-            removeButton.ariaLabel = intl.formatMessage({ id: "assistant.removeSkill" }, { skill: skillLabel });
-            const closeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            closeIcon.setAttribute("viewBox", "0 0 16 16");
-            closeIcon.setAttribute("fill", "none");
-            closeIcon.setAttribute("aria-hidden", "true");
-            closeIcon.classList.add("size-3");
-            const closePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            closePath.setAttribute("d", "m4 4 8 8m0-8-8 8");
-            closePath.setAttribute("stroke", "currentColor");
-            closePath.setAttribute("stroke-linecap", "round");
-            closePath.setAttribute("stroke-width", "1.5");
-            closeIcon.append(closePath);
-            removeButton.append(closeIcon);
-            removeButton.addEventListener("mousedown", (event) => event.preventDefault());
-            removeButton.addEventListener("click", () => {
-                renderComposerContent(value);
-                setSelectedSkill(undefined);
-                composer.current?.focus();
+            const removeButton = closeButton({
+                label: intl.formatMessage({ id: "assistant.removeSkill" }, { skill: skillLabel }),
+                className: "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-brand/70 hover:bg-brand-soft hover:text-brand",
+                onClick: () => {
+                    renderComposerContent(value);
+                    setSelectedSkill(undefined);
+                    composer.current?.focus();
+                },
             });
             skillChip.append(removeButton);
             element.append(skillChip);

@@ -130,6 +130,32 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("repairs malformed persisted workspace dimensions", async () => {
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({
+            version: 3,
+            libraryWidth: "wide",
+            assistantWidth: null,
+            libraryCollapsed: "true",
+            assistantCollapsed: false,
+            proposalWarningsDismissed: "yes",
+            view: "write",
+        }));
+
+        render(<App client={fakeClient()} />);
+        await screen.findByRole("heading", { name: "First Article" });
+
+        await waitFor(() => expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toMatchObject({
+            version: 3,
+            libraryWidth: 208,
+            assistantWidth: 384,
+            libraryCollapsed: false,
+            assistantCollapsed: false,
+            proposalWarningsDismissed: false,
+            view: "write",
+        }));
+    });
+
+
     it("restores the selected Article and Workspace View from local preferences", async () => {
         const client = fakeClient();
         client.listArticles = vi.fn().mockResolvedValue([article("one", "First Article"), article("two", "Second Article")]);
