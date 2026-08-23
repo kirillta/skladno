@@ -199,18 +199,18 @@ function assistantErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_
 
 
 function editorialFailure(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
-    const category = error instanceof EditorialEngineError
-        ? error.code === EDITORIAL_ENGINE_ERROR.NETWORK
-            ? EDITORIAL_ERROR_CATEGORY.NETWORK
-            : error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED
-                ? EDITORIAL_ERROR_CATEGORY.SESSION_EXPIRED
-                : EDITORIAL_ERROR_CATEGORY.PROVIDER
-        : error instanceof Error && /network|fetch|connect|timeout|ECONN|ENOTFOUND/i.test(error.message)
-            ? EDITORIAL_ERROR_CATEGORY.NETWORK
-            : EDITORIAL_ERROR_CATEGORY.PROVIDER;
+    let category: Extract<EditorialEvent, { type: "error" }>["code"] = EDITORIAL_ERROR_CATEGORY.PROVIDER;
+    if (error instanceof EditorialEngineError) {
+        if (error.code === EDITORIAL_ENGINE_ERROR.NETWORK)
+            category = EDITORIAL_ERROR_CATEGORY.NETWORK;
+        else if (error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
+            category = EDITORIAL_ERROR_CATEGORY.SESSION_EXPIRED;
+    } else if (error instanceof Error && /network|fetch|connect|timeout|ECONN|ENOTFOUND/i.test(error.message)) {
+        category = EDITORIAL_ERROR_CATEGORY.NETWORK;
+    }
 
     return {
-        category: category ?? EDITORIAL_ERROR_CATEGORY.MALFORMED_STREAM,
+        category,
         errorCode: error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
             ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
             : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED,

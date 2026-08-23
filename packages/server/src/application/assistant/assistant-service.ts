@@ -169,17 +169,36 @@ export class AssistantService {
                 .map((finding) => ({ ...finding, reusedFromRevisionId: factCheck.reviewedRevisionId })))
             : [];
 
-        return { ...request, articleContent, ...(publishingCharacterLimit ? { publishingCharacterLimit } : {}), resolvedSkillId, operation, engine, ...(reusableFactFindings.length ? { reusableFactFindings } : {}) };
+        return { 
+            ...request, 
+            articleContent, 
+            ...(publishingCharacterLimit ? { publishingCharacterLimit } : {}), 
+            resolvedSkillId, 
+            operation, 
+            engine, 
+            ...(reusableFactFindings.length ? { reusableFactFindings } : {}) 
+        };
     }
 
 
     async *stream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<AssistantEvent> {
-        this.assistant.createRequest({ id: request.requestId, articleId: request.articleId, scope: request.scope, explicitSkillId: request.explicitSkillId, skillOffset: request.skillOffset, retryOfRequestId: request.retryOfRequestId });
+        this.assistant.createRequest({ 
+            id: request.requestId, 
+            articleId: request.articleId, 
+            scope: request.scope, 
+            explicitSkillId: request.explicitSkillId, 
+            skillOffset: request.skillOffset, 
+            retryOfRequestId: request.retryOfRequestId 
+        });
         this.assistant.setAuthorMessage(request.requestId, request.authorMessage);
         this.assistant.resolveRequest(request.requestId, request.resolvedSkillId, request.explicitSkillId ? "explicit" : request.resolvedSkillId ? "inferred" : undefined);
 
         yield { type: ASSISTANT_EVENT.ACCEPTED, requestId: request.requestId };
-        yield { type: ASSISTANT_EVENT.SKILL_RESOLVED, requestId: request.requestId, ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {}) };
+        yield { 
+            type: ASSISTANT_EVENT.SKILL_RESOLVED, 
+            requestId: request.requestId, 
+            ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {}) 
+        };
 
         let completed = false;
         try {
@@ -195,7 +214,7 @@ export class AssistantService {
             }
 
             if (!completed && !signal.aborted)
-                throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, "The Assistant stream ended before completing.");
+                throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
         } catch (error) {
             this.assistant.failRequest(request.requestId, signal.aborted ? "cancelled" : "failed", signal.aborted ? "request_cancelled" : errorCode(error));
             throw error;
@@ -220,12 +239,21 @@ export class AssistantService {
                 ...(request.scope.kind === "selection" ? { surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
                 ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
                 ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile, articleStyleRules: this.styleCorpus.getArticleRules(request.articleId) } : {}),
+                ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW 
+                    ? { styleProfile: this.styleCorpus.get().profile, articleStyleRules: this.styleCorpus.getArticleRules(request.articleId) } 
+                    : {}
+                ),
                 ...(request.reusableFactFindings ? { reusableFactFindings: request.reusableFactFindings } : {})
             }, signal);
 
-        const history = this.assistant.listMessages(request.articleId)
-            .flatMap((message) => message.role === "author" || (message.role === "assistant" && message.kind === "response") ? message.content ? [{ role: message.role, content: message.content }] : [] : []);
+        const history = this.assistant.listMessages(request.articleId).flatMap((message) => {
+            const isHistoryMessage = message.role === "author" || (message.role === "assistant" && message.kind === "response");
+            if (!isHistoryMessage || !message.content)
+                return [];
+
+            const role: "author" | "assistant" = message.role === "author" ? "author" : "assistant";
+            return [{ role, content: message.content }];
+        });
 
         return request.engine.streamConversation({ message: request.authorMessage, article: excerpt, scope: request.scope.kind, history }, signal);
     }
@@ -262,11 +290,22 @@ export class AssistantService {
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING && factCheck ? { factCheck } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { proposal: content, ...(event.styleReview ? { styleReview: event.styleReview } : {}) } : {}),
                 ...(request.resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && event.translation ? { translation: { metadata: event.translation, content } } : {}),
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.TALKING_POINTS || request.resolvedSkillId === BUILT_IN_SKILL.NARRATIVE_DRAFT || request.resolvedSkillId === BUILT_IN_SKILL.FLOW_AND_CLARITY ? { proposal: content } : {}),
+                ...(request.resolvedSkillId === BUILT_IN_SKILL.TALKING_POINTS 
+                    || request.resolvedSkillId === BUILT_IN_SKILL.NARRATIVE_DRAFT 
+                    || request.resolvedSkillId === BUILT_IN_SKILL.FLOW_AND_CLARITY ? { proposal: content } : {}
+                ),
             }
             : undefined;
 
-        const message = this.assistant.completeRequest({ requestId: request.requestId, articleId: request.articleId, skillId: request.resolvedSkillId, responseKind: kind, content: request.resolvedSkillId ? "" : content, proposalContent: result?.proposal, editorialArtifactId: artifactId });
+        const message = this.assistant.completeRequest({ 
+            requestId: request.requestId, 
+            articleId: request.articleId, 
+            skillId: request.resolvedSkillId, 
+            responseKind: kind, 
+            content: request.resolvedSkillId ? "" : content, 
+            proposalContent: result?.proposal, 
+            editorialArtifactId: artifactId 
+        });
 
         return { responseKind: kind, messageId: message.id, ...(artifactId ? { editorialArtifactId: artifactId } : {}), ...(result ? { result } : {}) };
     }

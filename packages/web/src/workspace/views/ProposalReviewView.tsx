@@ -43,8 +43,27 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
     const allResolved = counts.pending === 0 && presentation.changes.length > 0;
 
     return <div className="mx-auto w-full max-w-6xl pb-6">
-        {stale && <Banner className="mb-4" tone="warning"><div><p>{intl.formatMessage({ id: "views.proposalStale" })}</p><div className="mt-2 flex gap-2"><Button variant="secondary" onClick={openWrite}>{intl.formatMessage({ id: "views.reviewCurrentArticle" })}</Button><Button variant="secondary" onClick={openAssistant}>{intl.formatMessage({ id: "views.regenerateInAssistant" })}</Button><Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button></div></div></Banner>}
-        {presentation.warnings.length > 0 && !warningsDismissed && <div className="relative mb-4"><Status label={intl.formatMessage({ id: "views.preservationWarnings" })} tone="warning"><ul className="mt-1 list-disc pl-4 pr-8">{presentation.warnings.map((warning) => <li key={warning}>{intl.formatMessage({ id: `views.warning.${warning}` as never })}</li>)}</ul></Status><IconButton className="absolute right-2 top-2" label={intl.formatMessage({ id: "views.dismissPreservationWarnings" })} onClick={dismissWarnings}><CloseIcon className="size-4" /></IconButton></div>}
+        {stale && <Banner className="mb-4" tone="warning">
+            <div>
+                <p>{intl.formatMessage({ id: "views.proposalStale" })}</p>
+                <div className="mt-2 flex gap-2">
+                    <Button variant="secondary" onClick={openWrite}>{intl.formatMessage({ id: "views.reviewCurrentArticle" })}</Button>
+                    <Button variant="secondary" onClick={openAssistant}>{intl.formatMessage({ id: "views.regenerateInAssistant" })}</Button>
+                    <Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button>
+                </div>
+            </div>
+        </Banner>
+        }
+        {presentation.warnings.length > 0 && !warningsDismissed
+            && <div className="relative mb-4">
+                <Status label={intl.formatMessage({ id: "views.preservationWarnings" })} tone="warning">
+                    <ul className="mt-1 list-disc pl-4 pr-8">{presentation.warnings.map((warning) => <li key={warning}>{intl.formatMessage({ id: `views.warning.${warning}` as never })}</li>)}</ul>
+                </Status>
+                <IconButton className="absolute right-2 top-2" label={intl.formatMessage({ id: "views.dismissPreservationWarnings" })} onClick={dismissWarnings}>
+                    <CloseIcon className="size-4" />
+                </IconButton>
+            </div>
+        }
         <header className="-mx-5 border-b border-border bg-canvas px-5 py-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -64,20 +83,40 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
                 </div>
             </div>
         </header>
-        {(!presentation.reliable || stale) && <div className="mt-4">{!presentation.reliable && <Banner className="mb-3" tone="warning">{intl.formatMessage({ id: "views.proposalFallback" })}</Banner>}<Diff layout="columns" removed={review.baseContent} added={review.proposedContent} /></div>}
-        {presentation.changes.length === 0 ? <EmptyState title={intl.formatMessage({ id: "views.proposalNoChanges" })}><Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button></EmptyState> : presentation.reliable && !stale && <div className="mt-4 space-y-4">{presentation.changes.map((change, index) => {
-            const decision = decisions[change.id] ?? "pending";
-            const decisionClasses = decision === "accepted" ? "border-success bg-success-soft" : decision === "rejected" ? "border-danger bg-danger-soft" : "border-border bg-surface-raised";
-            return <article key={change.id} ref={(element) => {
-                cards.current[index] = element;
-            }} tabIndex={-1} className={`rounded-panel border p-4 ${decisionClasses}`}>
-                <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-semibold">{intl.formatMessage({ id: `views.changeType.${change.kind}` as never }, { index: index + 1, total: presentation.changes.length })}</h3><p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: `views.decision.${decision}` as never })}</p></div><div className="flex gap-2"><Button variant="secondary" state={decision === "rejected" ? "error" : "default"} disabled={stale} onClick={() => setDecision(change.id, "rejected")}>{intl.formatMessage({ id: "views.rejectChange" })}</Button><Button state={decision === "accepted" ? "success" : "default"} disabled={stale} onClick={() => setDecision(change.id, "accepted")}>{intl.formatMessage({ id: "views.acceptChange" })}</Button></div></div>
-                <div className="mt-4 flex min-h-9 items-start gap-2 border-y border-border py-3 text-sm" aria-live="polite">
-                    <AssistantIcon className="mt-0.5 size-4 shrink-0 text-brand" />
-                    <p>{summaries?.[change.id] ?? (summaryState === "loading" ? intl.formatMessage({ id: "views.proposalSummaryLoading" }) : intl.formatMessage({ id: "views.proposalSummaryUnavailable" }))}</p>
-                </div>
-                <div className="mt-4"><Diff layout="columns" state={decision} removed={change.baseLines.join("\n")} added={change.proposalLines.join("\n")} /></div>
-            </article>;
-        })}</div>}
+        {(!presentation.reliable || stale)
+            && <div className="mt-4">{!presentation.reliable
+                && <Banner className="mb-3" tone="warning">{intl.formatMessage({ id: "views.proposalFallback" })}</Banner>}
+                <Diff layout="columns" removed={review.baseContent} added={review.proposedContent} />
+            </div>}
+        {presentation.changes.length === 0
+            ? <EmptyState title={intl.formatMessage({ id: "views.proposalNoChanges" })}>
+                <Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button>
+            </EmptyState>
+            : presentation.reliable && !stale && <div className="mt-4 space-y-4">{presentation.changes.map((change, index) => {
+                const decision = decisions[change.id] ?? "pending";
+                const decisionClasses = decision === "accepted" ? "border-success bg-success-soft" : decision === "rejected" ? "border-danger bg-danger-soft" : "border-border bg-surface-raised";
+                return <article key={change.id} ref={(element) => {
+                    cards.current[index] = element;
+                }} tabIndex={-1} className={`rounded-panel border p-4 ${decisionClasses}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-semibold">{intl.formatMessage({ id: `views.changeType.${change.kind}` as never }, { index: index + 1, total: presentation.changes.length })}</h3>
+                            <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: `views.decision.${decision}` as never })}</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="secondary" state={decision === "rejected" ? "error" : "default"} disabled={stale} onClick={() => setDecision(change.id, "rejected")}>{intl.formatMessage({ id: "views.rejectChange" })}</Button>
+                            <Button state={decision === "accepted" ? "success" : "default"} disabled={stale} onClick={() => setDecision(change.id, "accepted")}>{intl.formatMessage({ id: "views.acceptChange" })}</Button>
+                        </div>
+                    </div>
+                    <div className="mt-4 flex min-h-9 items-start gap-2 border-y border-border py-3 text-sm" aria-live="polite">
+                        <AssistantIcon className="mt-0.5 size-4 shrink-0 text-brand" />
+                        <p>{summaries?.[change.id] ?? (summaryState === "loading" ? intl.formatMessage({ id: "views.proposalSummaryLoading" }) : intl.formatMessage({ id: "views.proposalSummaryUnavailable" }))}</p>
+                    </div>
+                    <div className="mt-4">
+                        <Diff layout="columns" state={decision} removed={change.baseLines.join("\n")} added={change.proposalLines.join("\n")} />
+                    </div>
+                </article>;
+            })}</div>
+        }
     </div>;
 }

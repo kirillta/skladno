@@ -15,6 +15,16 @@ const toneClasses: Record<Tone, string> = {
 };
 
 
+export function notificationClasses(tone: Tone): string {
+    return {
+        info: "border-info bg-info-soft text-info",
+        success: "border-success bg-success-soft text-success",
+        warning: "border-warning bg-warning-soft text-warning",
+        error: "border-danger bg-danger-soft text-danger",
+    }[tone];
+}
+
+
 function joinClassNames(...names: (string | undefined)[]): string {
     return names.filter(Boolean).join(" ");
 }

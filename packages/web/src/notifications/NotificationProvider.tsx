@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useIntl } from "react-intl";
+import { useIntl, type IntlShape } from "react-intl";
 import { ApplicationClientError } from "@skladno/shared";
 import { errorMessageId } from "../i18n/errors.js";
 import { NotificationViewport } from "./NotificationViewport.js";
@@ -30,18 +30,15 @@ function NotificationTimer({ notification, paused, dismiss, start }: {
 }
 
 
-export function NotificationProvider({ children }: { children: ReactNode }) {
-    const intl = useIntl();
+type SetPaused = (id: string, reason: PauseReason, paused: boolean) => void;
+
+
+function useNotificationState(intl: IntlShape) {
     const [notifications, setNotifications] = useState<StoredNotification[]>([]);
     const [pauseReasons, setPauseReasons] = useState<Record<string, PauseReason[]>>({});
-    const notificationsRef = useRef<StoredNotification[]>([]);
     const pauseReasonsRef = useRef<Record<string, PauseReason[]>>({});
     const timerStartedAt = useRef(new Map<string, number>());
     const nextId = useRef(0);
-
-    useEffect(() => {
-        notificationsRef.current = notifications;
-    }, [notifications]);
 
     useEffect(() => {
         pauseReasonsRef.current = pauseReasons;
@@ -123,6 +120,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         });
     }, []);
 
+    return { notifications, pauseReasons, dismiss, dismissAll, notify, notifyError, setPaused, startTimer };
+}
+
+
+function useDocumentVisibilityPause(notifications: StoredNotification[], setPaused: SetPaused) {
+    const notificationsRef = useRef<StoredNotification[]>(notifications);
+
+    useEffect(() => {
+        notificationsRef.current = notifications;
+    }, [notifications]);
+
     useEffect(() => {
         function updateDocumentPause() {
             notificationsRef.current.slice(0, MAX_VISIBLE_NOTIFICATIONS).forEach((notification) => setPaused(notification.id, "document", document.hidden));
@@ -134,6 +142,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
         return () => document.removeEventListener("visibilitychange", updateDocumentPause);
     }, [setPaused]);
+}
+
+
+export function NotificationProvider({ children }: { children: ReactNode }) {
+    const intl = useIntl();
+    const { notifications, pauseReasons, dismiss, dismissAll, notify, notifyError, setPaused, startTimer } = useNotificationState(intl);
+    useDocumentVisibilityPause(notifications, setPaused);
 
     const value = useMemo<Notifications>(() => ({ notify, notifyError, dismiss, dismissAll }), [dismiss, dismissAll, notify, notifyError]);
     const visibleNotifications = notifications.slice(0, MAX_VISIBLE_NOTIFICATIONS);

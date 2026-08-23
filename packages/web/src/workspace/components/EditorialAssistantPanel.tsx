@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useIntl } from "react-intl";
+import { useCallback, useEffect, useRef, useState, type FormEventHandler, type KeyboardEventHandler } from "react";
+import { useIntl, type IntlShape } from "react-intl";
 import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, type Article, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
@@ -37,28 +37,87 @@ function closeButton({ label, className, onClick }: { label: string; className: 
 }
 
 
-export function EditorialAssistantPanel({ state, message, errorDetails, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
-    state: "idle" | "streaming" | "error";
-    message: string;
-    errorDetails?: string;
-    factCheckClaims?: FactCheckClaimPreview[];
+type AssistantState = "idle" | "streaming" | "error";
+
+
+function renderAssistantComposerContent({ element, value, skill, offset = 0, selection, intl, clearSelection, removeSkill }: {
+    element: HTMLDivElement | null;
+    value: string;
+    skill?: BuiltInSkillId;
+    offset?: number;
+    selection?: string;
+    intl: IntlShape;
+    clearSelection?: () => void;
+    removeSkill: () => void;
+}) {
+    if (!element)
+        return;
+
+    element.replaceChildren();
+
+    if (selection) {
+        const selectionChip = document.createElement("span");
+        selectionChip.dataset.assistantComposerDecoration = "";
+        selectionChip.contentEditable = "false";
+        selectionChip.className = "mx-1 inline-flex h-5 min-h-0 max-w-[calc(100%-0.5rem)] items-center gap-1 align-middle rounded-full border border-border bg-surface px-1.5 text-xs font-semibold text-muted";
+        selectionChip.ariaLabel = intl.formatMessage({ id: "assistant.articleSelection" });
+        selectionChip.title = selection;
+
+        const preview = document.createElement("span");
+        preview.className = "relative -top-px max-w-48 truncate";
+        preview.append(selectionPreview(selection));
+        selectionChip.append(preview);
+
+        const clearButton = closeButton({
+            label: intl.formatMessage({ id: "assistant.clearArticleSelection" }),
+            className: "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-muted hover:bg-surface-supporting",
+            onClick: () => clearSelection?.(),
+        });
+        selectionChip.append(clearButton);
+
+        element.append(selectionChip);
+    }
+
+    element.append(value.slice(0, offset));
+
+    if (skill) {
+        const skillChip = document.createElement("span");
+        skillChip.dataset.assistantComposerDecoration = "";
+        skillChip.dataset.assistantSkillChip = "";
+        skillChip.contentEditable = "false";
+        skillChip.className = "mx-1 inline-flex h-5 min-h-0 max-w-[calc(100%-0.5rem)] items-center gap-1 align-middle rounded-full border border-brand/45 bg-brand-soft px-1.5 text-xs font-semibold text-brand";
+
+        const skillLabel = intl.formatMessage({ id: skillMessages[skill] });
+        skillChip.ariaLabel = intl.formatMessage({ id: "assistant.selectedSkill" }, { skill: skillLabel });
+
+        const skillLabelElement = document.createElement("span");
+        skillLabelElement.className = "relative -top-px";
+        skillLabelElement.append(skillLabel);
+        skillChip.append(skillLabelElement);
+
+        const removeButton = closeButton({
+            label: intl.formatMessage({ id: "assistant.removeSkill" }, { skill: skillLabel }),
+            className: "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-brand/70 hover:bg-brand-soft hover:text-brand",
+            onClick: removeSkill,
+        });
+        skillChip.append(removeButton);
+        element.append(skillChip);
+    }
+
+    element.append(value.slice(offset));
+}
+
+
+function useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection }: {
+    intl: IntlShape;
+    state: AssistantState;
     onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
     onCancel: () => void;
-    collapsed: boolean;
-    setCollapsed: (value: boolean) => void;
-    language?: string;
-    translationLanguages?: readonly string[];
-    assistantMessages?: AssistantMessage[];
-    article?: Article;
-    updateArticle?: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
+    translationLanguages: readonly string[];
     dispatcher?: KeyBindingDispatcher;
-    shortcutOverrides?: KeyBindingOverrides;
-    openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
     selection?: string;
     clearSelection?: () => void;
-    generalSettings?: GeneralSettings;
 }) {
-    const intl = useIntl();
     const [guidance, setGuidance] = useState("");
     const [quickActionsOpen, setQuickActionsOpen] = useState(false);
     const [selectedSkill, setSelectedSkill] = useState<BuiltInSkillId>();
@@ -66,84 +125,27 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
     const [slashTriggerOffset, setSlashTriggerOffset] = useState<number>();
     const [composerOffset, setComposerOffset] = useState(0);
     const [activeSkillIndex, setActiveSkillIndex] = useState(0);
-    const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const composer = useRef<HTMLDivElement>(null);
-    const composerState = useRef({
-        guidance,
-        selectedSkill,
-        skillOffset,
-    });
+    const composerState = useRef({ guidance, selectedSkill, skillOffset });
     const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0);
     const availableSkills = builtInSkills.filter((skill) => !selection || builtInSkillScopeCompatibility[skill].includes("selection"));
 
-    composerState.current = {
-        guidance,
-        selectedSkill,
-        skillOffset,
-    };
+    composerState.current = { guidance, selectedSkill, skillOffset };
 
-    const renderComposerContent = useCallback((value: string, skill?: BuiltInSkillId, offset = 0) => {
-        const element = composer.current;
-        if (!element)
-            return;
-
-        element.replaceChildren();
-
-        if (selection) {
-            const selectionChip = document.createElement("span");
-            selectionChip.dataset.assistantComposerDecoration = "";
-            selectionChip.contentEditable = "false";
-            selectionChip.className = "mx-1 inline-flex h-5 min-h-0 max-w-[calc(100%-0.5rem)] items-center gap-1 align-middle rounded-full border border-border bg-surface px-1.5 text-xs font-semibold text-muted";
-            selectionChip.ariaLabel = intl.formatMessage({ id: "assistant.articleSelection" });
-            selectionChip.title = selection;
-
-            const preview = document.createElement("span");
-            preview.className = "relative -top-px max-w-48 truncate";
-            preview.append(selectionPreview(selection));
-            selectionChip.append(preview);
-
-            const clearButton = closeButton({
-                label: intl.formatMessage({ id: "assistant.clearArticleSelection" }),
-                className: "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-muted hover:bg-surface-supporting",
-                onClick: () => clearSelection?.(),
-            });
-            selectionChip.append(clearButton);
-
-            element.append(selectionChip);
-        }
-
-        element.append(value.slice(0, offset));
-
-        if (skill) {
-            const skillChip = document.createElement("span");
-            skillChip.dataset.assistantComposerDecoration = "";
-            skillChip.dataset.assistantSkillChip = "";
-            skillChip.contentEditable = "false";
-            skillChip.className = "mx-1 inline-flex h-5 min-h-0 max-w-[calc(100%-0.5rem)] items-center gap-1 align-middle rounded-full border border-brand/45 bg-brand-soft px-1.5 text-xs font-semibold text-brand";
-
-            const skillLabel = intl.formatMessage({ id: skillMessages[skill] });
-            skillChip.ariaLabel = intl.formatMessage({ id: "assistant.selectedSkill" }, { skill: skillLabel });
-
-            const skillLabelElement = document.createElement("span");
-            skillLabelElement.className = "relative -top-px";
-            skillLabelElement.append(skillLabel);
-            skillChip.append(skillLabelElement);
-
-            const removeButton = closeButton({
-                label: intl.formatMessage({ id: "assistant.removeSkill" }, { skill: skillLabel }),
-                className: "inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-brand/70 hover:bg-brand-soft hover:text-brand",
-                onClick: () => {
-                    renderComposerContent(value);
-                    setSelectedSkill(undefined);
-                    composer.current?.focus();
-                },
-            });
-            skillChip.append(removeButton);
-            element.append(skillChip);
-        }
-
-        element.append(value.slice(offset));
-    }, [clearSelection, intl, selection]);
+    const renderComposerContent = useCallback((value: string, skill?: BuiltInSkillId, offset = 0) => renderAssistantComposerContent({
+        element: composer.current,
+        value,
+        skill,
+        offset,
+        selection,
+        intl,
+        clearSelection,
+        removeSkill: () => {
+            renderComposerContent(value);
+            setSelectedSkill(undefined);
+            composer.current?.focus();
+        },
+    }), [clearSelection, intl, selection]);
 
 
     function focusQuickAction(index: number) {
@@ -198,20 +200,6 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
     }, [dispatcher, onCancel, send]);
 
     useEffect(() => {
-        if (state !== "streaming") {
-            setElapsedSeconds(0);
-            return;
-        }
-
-        const startedAt = Date.now();
-        const interval = window.setInterval(() => {
-            setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1_000));
-        }, 1_000);
-
-        return () => window.clearInterval(interval);
-    }, [state]);
-
-    useEffect(() => {
         const currentState = composerState.current;
         renderComposerContent(currentState.guidance, currentState.selectedSkill, currentState.skillOffset);
     }, [renderComposerContent]);
@@ -225,10 +213,95 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
         renderComposerContent(guidance);
     }, [guidance, renderComposerContent, selectedSkill, selection]);
 
+    const onInput: FormEventHandler<HTMLDivElement> = (event) => {
+        const element = event.currentTarget;
+        const text = composerText(element);
+        const caretOffset = composerCaretOffset(element);
+        const currentComposerOffset = caretOffset === 0 && text.length > 0 ? text.length : caretOffset;
+        setGuidance(text);
+        setComposerOffset(currentComposerOffset);
+        if (selectedSkill)
+            setSkillOffset(textBeforeSkill(element));
+
+        if (text[currentComposerOffset - 1] === "/" || text.endsWith("/")) {
+            setQuickActionsOpen(true);
+            setActiveSkillIndex(-1);
+            setSlashTriggerOffset(text[currentComposerOffset - 1] === "/" ? currentComposerOffset : text.length);
+        }
+    };
+
+    const onKeyDown: KeyboardEventHandler<HTMLDivElement> = (event) => {
+        if (!quickActionsOpen)
+            return;
+
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            focusQuickAction(activeSkillIndex + 1);
+        }
+
+        if (event.key === "ArrowUp") {
+            event.preventDefault();
+            focusQuickAction(activeSkillIndex - 1);
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            setQuickActionsOpen(false);
+        }
+    };
+
+    return { canSend, guidance, selectedSkill, composer, quickActionsOpen, availableSkills, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onInput, onKeyDown };
+}
+
+
+function useElapsedDuration(state: AssistantState, intl: IntlShape) {
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+    useEffect(() => {
+        if (state !== "streaming") {
+            setElapsedSeconds(0);
+            return;
+        }
+
+        const startedAt = Date.now();
+        const interval = window.setInterval(() => {
+            setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1_000));
+        }, 1_000);
+
+        return () => window.clearInterval(interval);
+    }, [state]);
+
     const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-    const elapsedDuration = elapsedMinutes > 0
+    return elapsedMinutes > 0
         ? intl.formatMessage({ id: "assistant.duration.minutesAndSeconds" }, { minutes: elapsedMinutes, seconds: elapsedSeconds % 60 })
         : intl.formatMessage({ id: "assistant.duration.seconds" }, { seconds: elapsedSeconds });
+}
+
+
+export function EditorialAssistantPanel({ state, message, errorDetails, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
+    state: AssistantState;
+    message: string;
+    errorDetails?: string;
+    factCheckClaims?: FactCheckClaimPreview[];
+    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
+    onCancel: () => void;
+    collapsed: boolean;
+    setCollapsed: (value: boolean) => void;
+    language?: string;
+    translationLanguages?: readonly string[];
+    assistantMessages?: AssistantMessage[];
+    article?: Article;
+    updateArticle?: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
+    dispatcher?: KeyBindingDispatcher;
+    shortcutOverrides?: KeyBindingOverrides;
+    openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
+    selection?: string;
+    clearSelection?: () => void;
+    generalSettings?: GeneralSettings;
+}) {
+    const intl = useIntl();
+    const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection });
+    const elapsedDuration = useElapsedDuration(state, intl);
 
     if (collapsed)
         return <aside data-workspace-panel="editorial-assistant" className="flex h-full w-full flex-col border-l border-border bg-surface-supporting p-1" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
@@ -244,56 +317,6 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
             </Button>
         </header>
         <AssistantTimeline state={state} message={message} errorDetails={errorDetails} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} generalSettings={generalSettings} elapsedDuration={elapsedDuration} />
-        <AssistantComposer
-            state={state}
-            canSend={canSend}
-            guidance={guidance}
-            selectedSkill={selectedSkill}
-            selection={selection}
-            composer={composer}
-            quickActionsOpen={quickActionsOpen}
-            availableSkills={availableSkills}
-            setQuickActionsOpen={setQuickActionsOpen}
-            setActiveSkillIndex={setActiveSkillIndex}
-            selectSkill={selectSkill}
-            focusQuickAction={focusQuickAction}
-            send={send}
-            onCancel={onCancel}
-            onInput={(event) => {
-                const element = event.currentTarget;
-                const text = composerText(element);
-                const caretOffset = composerCaretOffset(element);
-                const currentComposerOffset = caretOffset === 0 && text.length > 0 ? text.length : caretOffset;
-                setGuidance(text);
-                setComposerOffset(currentComposerOffset);
-                if (selectedSkill)
-                    setSkillOffset(textBeforeSkill(element));
-
-                if (text[currentComposerOffset - 1] === "/" || text.endsWith("/")) {
-                    setQuickActionsOpen(true);
-                    setActiveSkillIndex(-1);
-                    setSlashTriggerOffset(text[currentComposerOffset - 1] === "/" ? currentComposerOffset : text.length);
-                }
-            }}
-            onKeyDown={(event) => {
-                if (!quickActionsOpen)
-                    return;
-
-                if (event.key === "ArrowDown") {
-                    event.preventDefault();
-                    focusQuickAction(activeSkillIndex + 1);
-                }
-
-                if (event.key === "ArrowUp") {
-                    event.preventDefault();
-                    focusQuickAction(activeSkillIndex - 1);
-                }
-
-                if (event.key === "Escape") {
-                    event.preventDefault();
-                    setQuickActionsOpen(false);
-                }
-            }}
-            shortcutOverrides={shortcutOverrides} />
+        <AssistantComposer {...composerState} state={state} selection={selection} onCancel={onCancel} shortcutOverrides={shortcutOverrides} />
     </aside>;
 }

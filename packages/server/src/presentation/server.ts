@@ -66,6 +66,7 @@ export function createLocalService(config: ServerConfig, editorial: EditorialSer
             }
 
             diagnostics?.write("request.failed", { method: request.method ?? "unknown", status: HTTP_STATUS.INTERNAL_SERVER_ERROR }, error);
+            
             writeJson(response, HTTP_STATUS.INTERNAL_SERVER_ERROR, { error: { code: APPLICATION_ERROR.EDITORIAL_REQUEST_FAILED } });
             return;
         }

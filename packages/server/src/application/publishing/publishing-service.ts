@@ -1,5 +1,11 @@
-import { APPLICATION_ERROR, defaultPublishingSettings, HTTP_STATUS, isPublishLimitProfileId, type CustomPublishLimitProfile, type PublishingSettings } from "@skladno/shared";
-
+import {
+    APPLICATION_ERROR,
+    defaultPublishingSettings,
+    HTTP_STATUS,
+    isPublishLimitProfileId,
+    type CustomPublishLimitProfile,
+    type PublishingSettings
+} from "@skladno/shared";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { SettingsStore } from "../ports/settings-store.js";
 

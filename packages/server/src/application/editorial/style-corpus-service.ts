@@ -26,7 +26,7 @@ export class StyleCorpusService {
         if (name)
             return this.store.add({ ...input, name });
 
-        const generator = this.engines?.resolveSourceNameGenerator?.();
+        const generator = this.engines?.resolveArticleTitleGenerator?.();
         if (!generator)
             throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 

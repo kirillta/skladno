@@ -26,10 +26,16 @@ export function FactCheckView({ factCheck, revisionNumber, reusedRevisionNumbers
     const findingElements = useRef<Record<string, HTMLElement | null>>({});
     const findingDetails = useRef<HTMLDivElement>(null);
     if (!factCheck)
-        return <EmptyState title={intl.formatMessage({ id: "views.factCheckEmptyTitle" })}>{intl.formatMessage({ id: "views.factCheckEmpty" })}<Button onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheck" })}</Button></EmptyState>;
+        return <EmptyState title={intl.formatMessage({ id: "views.factCheckEmptyTitle" })}>{intl.formatMessage({ id: "views.factCheckEmpty" })}
+            <Button onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheck" })}</Button>
+        </EmptyState>;
 
     const isStale = (finding: FactCheckFinding) => stale && finding.stale !== false;
-    const eligible = factCheck.findings.filter((finding) => !isStale(finding) && !finding.resolution && (finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE) && finding.occurrenceId);
+    const eligible = factCheck.findings.filter((finding) => !isStale(finding)
+        && !finding.resolution
+        && (finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE)
+        && finding.occurrenceId
+    );
     const toggle = (id: string) => setSelected((current) => {
         const next = new Set(current);
         if (next.has(id))
@@ -81,10 +87,30 @@ export function FactCheckView({ factCheck, revisionNumber, reusedRevisionNumbers
                 return <article className="scroll-mt-4 rounded-panel border border-border bg-surface-raised p-4" key={id} ref={(element) => {
                     findingElements.current[id] = element;
                 }}>
-                    <div className="flex flex-wrap items-start justify-between gap-3"><Status compact label={intl.formatMessage({ id: `views.factStatus.${finding.status}` })} tone={tone[finding.status]}>{finding.importance && <span className="ml-2">{intl.formatMessage({ id: "views.factImportance" }, { importance: finding.importance })}</span>}{finding.resolution && <span className="ml-2">{resolutionMessage(finding.resolution)}</span>}</Status>{!finding.resolution && !isStale(finding) && finding.occurrenceId && <div className="flex flex-wrap gap-2">{(finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE) && <Button onClick={() => proposeCorrections([finding])}>{intl.formatMessage({ id: "views.proposeFactCorrection" })}</Button>}<Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button><Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button></div>}</div>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <Status compact label={intl.formatMessage({ id: `views.factStatus.${finding.status}` })} tone={tone[finding.status]}>
+                            {finding.importance && <span className="ml-2">{intl.formatMessage({ id: "views.factImportance" }, { importance: finding.importance })}</span>}
+                            {finding.resolution && <span className="ml-2">{resolutionMessage(finding.resolution)}</span>}
+                        </Status>
+                        {!finding.resolution
+                            && !isStale(finding)
+                            && finding.occurrenceId && <div className="flex flex-wrap gap-2">{(finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE)
+                                && <Button onClick={() => proposeCorrections([finding])}>{intl.formatMessage({ id: "views.proposeFactCorrection" })}</Button>}
+                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
+                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
+                            </div>
+                        }
+                    </div>
                     {finding.reusedFromRevisionId && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factEvidenceReused" }, { revision: revisionLabel(finding.reusedFromRevisionId) })}</p>}
-                    <h3 className="mt-4 font-editor text-lg">{finding.claim}</h3><p className="mt-3">{finding.rationale}</p><p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.uncertainty" }, { value: finding.uncertainty })}</p>
-                    <div className="mt-4 space-y-2">{finding.sources.map((source) => <a className="block px-3 py-1.5 text-sm text-brand underline" key={source.url} href={source.url} title={source.url} target="_blank" rel="noreferrer"><strong>{source.title}</strong><span className="ml-2 text-muted">{source.quality}{source.publishedAt ? ` · ${source.publishedAt}` : ""}</span></a>)}</div>
+                    <h3 className="mt-4 font-editor text-lg">{finding.claim}</h3>
+                    <p className="mt-3">{finding.rationale}</p>
+                    <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.uncertainty" }, { value: finding.uncertainty })}</p>
+                    <div className="mt-4 space-y-2">
+                        {finding.sources.map((source) => <a className="block px-3 py-1.5 text-sm text-brand underline" key={source.url} href={source.url} title={source.url} target="_blank" rel="noreferrer">
+                            <strong>{source.title}</strong>
+                            <span className="ml-2 text-muted">{source.quality}{source.publishedAt ? ` · ${source.publishedAt}` : ""}</span>
+                        </a>)}
+                    </div>
                 </article>;
             })}</div>
         </div>

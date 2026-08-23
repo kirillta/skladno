@@ -9,7 +9,11 @@ export function configureSystemDateTimeFormat(value: SystemDateTimeFormat | unde
 
 
 function timeOptions(timeFormat: TimeFormatPreference): Intl.DateTimeFormatOptions {
-    const hourCycle = timeFormat === "12-hour" ? "h12" : timeFormat === "24-hour" ? "h23" : undefined;
+    let hourCycle: "h12" | "h23" | undefined;
+    if (timeFormat === "12-hour") 
+        hourCycle = "h12";
+    else if (timeFormat === "24-hour") 
+        hourCycle = "h23";
 
     return {
         hour: "2-digit",

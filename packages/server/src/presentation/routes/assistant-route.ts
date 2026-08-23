@@ -19,7 +19,12 @@ function scope(value: unknown): AssistantRequestScope {
     if (candidate.kind === "article")
         return { kind: "article", baseRevisionId };
 
-    if (candidate.kind !== "selection" || !Number.isInteger(candidate.startOffset) || !Number.isInteger(candidate.endOffset) || Number(candidate.startOffset) < 0 || Number(candidate.endOffset) <= Number(candidate.startOffset))
+    if (candidate.kind !== "selection" 
+        || !Number.isInteger(candidate.startOffset) 
+        || !Number.isInteger(candidate.endOffset) 
+        || Number(candidate.startOffset) < 0 
+        || Number(candidate.endOffset) <= Number(candidate.startOffset)
+    )
         throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SELECTION_INVALID, HTTP_STATUS.BAD_REQUEST);
 
     return { kind: "selection", baseRevisionId, startOffset: Number(candidate.startOffset), endOffset: Number(candidate.endOffset) };
