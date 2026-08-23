@@ -13,3 +13,8 @@ declare global {
 export function createRendererApplicationClient(host: Pick<Window, "skladno"> = window): EditorialWorkspaceClient {
     return host.skladno ?? new HttpApplicationClient();
 }
+
+
+export function getDesktopSettingsClient(host: Pick<Window, "skladnoDesktop"> = window): DesktopSettingsClient | undefined {
+    return host.skladnoDesktop;
+}

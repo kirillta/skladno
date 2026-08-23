@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defaultGeneralSettings, type ApplicationSettingsSnapshot } from "@skladno/shared";
+import { defaultGeneralSettings, type ApplicationSettingsSnapshot, type DesktopSettingsClient } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { messages } from "../i18n/messages.js";
 import { message } from "../i18n/test-message.js";
@@ -32,7 +32,10 @@ function settingsSnapshot(): ApplicationSettingsSnapshot {
 
 
 describe("ApplicationSettings", () => {
-    afterEach(cleanup);
+    afterEach(() => {
+        cleanup();
+        window.skladnoDesktop = undefined;
+    });
 
 
     it("persists an accessible explicit time-zone selection and previews it", async () => {
@@ -188,6 +191,37 @@ describe("ApplicationSettings", () => {
         expect(screen.getByText("Configured connections")).toBeTruthy();
         expect(screen.getAllByText("Personal AI")).toHaveLength(1);
         expect(screen.getByText("AI_API_KEY")).toBeTruthy();
+    });
+
+    it("adds an API key through the desktop credential client without rendering it again", async () => {
+        const user = userEvent.setup();
+        const addManagedAiConnection = vi.fn().mockResolvedValue({ id: "connection-1", provider: "openai", label: "Personal AI", credentialSource: { kind: "managed" as const }, status: "connected" as const });
+        const desktop: DesktopSettingsClient = {
+            getLocations: vi.fn().mockResolvedValue({ dataDirectory: "", dataDirectoryExternallyControlled: false }),
+            chooseBackupDirectory: vi.fn(),
+            revealBackupDirectory: vi.fn(),
+            revealDataDirectory: vi.fn(),
+            createNativeBackup: vi.fn(),
+            addManagedAiConnection,
+            renameManagedAiConnection: vi.fn(),
+            removeManagedAiConnection: vi.fn(),
+        };
+        window.skladnoDesktop = desktop;
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue([]),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.type(screen.getAllByPlaceholderText("For example, Personal AI")[0]!, "Personal AI");
+        await user.type(screen.getByPlaceholderText("Paste your API key"), "<REDACTED>");
+        await user.click(screen.getByRole("button", { name: message("settings.addApiKeyButton") }));
+
+        await waitFor(() => expect(addManagedAiConnection).toHaveBeenCalledWith({ label: "Personal AI", apiKey: "<REDACTED>" }));
+        expect(screen.queryByDisplayValue("<REDACTED>")).toBeNull();
     });
 
     it("loads available models when AI Settings opens", async () => {

@@ -4,6 +4,7 @@ import type { EditorialWorkspaceClient } from "../application-client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
 import { AiSettingsSection } from "./components/AiSettingsSection.js";
+import { getDesktopSettingsClient } from "../desktop-client.js";
 import { ConnectionRemovalDialog } from "./components/ConnectionRemovalDialog.js";
 import { DataBackupsSettingsSection } from "./components/DataBackupsSettingsSection.js";
 import { GeneralSettingsSection } from "./components/GeneralSettingsSection.js";
@@ -26,9 +27,11 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
     const [models, setModels] = useState<string[]>([]);
     const [connectionName, setConnectionName] = useState("");
     const [environmentName, setEnvironmentName] = useState("");
+    const [apiKey, setApiKey] = useState("");
     const [connectionError, setConnectionError] = useState<string>();
     const [connectionPendingRemoval, setConnectionPendingRemoval] = useState<AiConnection>();
     const [status, setStatus] = useState(() => intl.formatMessage({ id: "settings.loading" }));
+    const desktopSettings = getDesktopSettingsClient();
 
     useEffect(() => {
         void client.getApplicationSettings().then((loaded) => {
@@ -134,6 +137,29 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
     }
 
 
+    async function addManagedConnection() {
+        if (!desktopSettings)
+            return;
+
+        setConnectionError(undefined);
+        setStatus(intl.formatMessage({ id: "settings.saving" }));
+        try {
+            const connection = await desktopSettings.addManagedAiConnection({ label: connectionName, apiKey });
+            setSettings((current) => current ? {
+                ...current,
+                connections: [...current.connections, connection],
+                activeConnectionId: current.activeConnectionId ?? connection.id,
+            } : current);
+            setConnectionName("");
+            setApiKey("");
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
+        } catch (error) {
+            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        }
+    }
+
+
     async function setActiveConnection(connectionId: string) {
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
@@ -195,10 +221,10 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         <section className="min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             <div className="mx-auto w-full max-w-3xl px-5 py-8">
                 <h1 className="text-2xl font-semibold">{intl.formatMessage({ id: settingsSections.find((item) => item.id === section)?.label ?? "settings.general" })}</h1>
-                {!settings ? null : section === "general" ? <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} /> : section === "keyBindings" ? <KeyBindingSettings overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
+                {!settings ? null : section === "general" ? <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} /> : section === "keyBindings" ? <KeyBindingSettings overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} apiKey={apiKey} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
                     setEnvironmentName(value);
                     setConnectionError(undefined);
-                }} onAddConnection={() => void addConnection()} onSetActiveConnection={(connectionId) => void setActiveConnection(connectionId)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} /> : section === "publishing" ? <PublishingSettingsSection publishing={publishingSettings} save={(next) => void savePublishingSettings(next)} general={general} saveGeneral={saveGeneral} /> : <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />}
+                }} setApiKey={setApiKey} onAddConnection={() => void addConnection()} onAddManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} onSetActiveConnection={(connectionId) => void setActiveConnection(connectionId)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} /> : section === "publishing" ? <PublishingSettingsSection publishing={publishingSettings} save={(next) => void savePublishingSettings(next)} general={general} saveGeneral={saveGeneral} /> : <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />}
             </div>
             {connectionPendingRemoval && <ConnectionRemovalDialog connection={connectionPendingRemoval} close={() => setConnectionPendingRemoval(undefined)} remove={() => void removeConnection()} />}
         </section>

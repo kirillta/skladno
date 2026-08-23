@@ -257,7 +257,7 @@ export class ApplicationSettingsService {
             const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
             saved.connections.push({ ...connection, status: "connected", lastCheckedAt: new Date().toISOString() });
             this.settings.set("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
-            
+
             return saved.connections.at(-1)!;
         } catch (error) {
             this.credentials.delete(connection.id);

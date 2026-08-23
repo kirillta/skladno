@@ -36,16 +36,19 @@ function credentialSourceLabel(connection: AiConnection, managedLabel: string): 
 }
 
 
-export function AiSettingsSection({ settings, preferences, models, connectionName, environmentName, connectionError, setConnectionName, setEnvironmentName, onAddConnection, onSetActiveConnection, onRequestConnectionRemoval, onRefreshModels, savePreferences }: {
+export function AiSettingsSection({ settings, preferences, models, connectionName, environmentName, apiKey, connectionError, setConnectionName, setEnvironmentName, setApiKey, onAddConnection, onAddManagedConnection, onSetActiveConnection, onRequestConnectionRemoval, onRefreshModels, savePreferences }: {
     settings: ApplicationSettingsSnapshot;
     preferences: ModelPreferences;
     models: string[];
     connectionName: string;
     environmentName: string;
+    apiKey: string;
     connectionError?: string;
     setConnectionName: (value: string) => void;
     setEnvironmentName: (value: string) => void;
+    setApiKey: (value: string) => void;
     onAddConnection: () => void;
+    onAddManagedConnection?: () => void;
     onSetActiveConnection: (connectionId: string) => void;
     onRequestConnectionRemoval: (connection: AiConnection) => void;
     onRefreshModels: () => void;
@@ -54,6 +57,17 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
     const intl = useIntl();
 
     return <>
+        {onAddManagedConnection && <SettingRow label={intl.formatMessage({ id: "settings.addApiKey" })} hint={intl.formatMessage({ id: "settings.addApiKeyHint" })}>
+            <div className="grid gap-4">
+                <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
+                    <Field type="text" value={connectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setConnectionName(event.target.value)} />
+                </Control>
+                <Control label={intl.formatMessage({ id: "settings.apiKey" })} hint={intl.formatMessage({ id: "settings.apiKeyHint" })}>
+                    <Field type="password" value={apiKey} placeholder={intl.formatMessage({ id: "settings.apiKeyPlaceholder" })} autoComplete="off" onChange={(event) => setApiKey(event.target.value)} />
+                </Control>
+                <Button className="w-fit" variant="secondary" onClick={onAddManagedConnection}>{intl.formatMessage({ id: "settings.addApiKeyButton" })}</Button>
+            </div>
+        </SettingRow>}
         <SettingRow label={intl.formatMessage({ id: "settings.addConnection" })} hint={intl.formatMessage({ id: "settings.connectionHint" })}>
             <div className="grid gap-4">
                 <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
