@@ -4,6 +4,9 @@
         "paths": {
             "@skladno/shared": [
                 "../shared/src/index.ts"
+            ],
+            "@skladno/server/electron": [
+                "../server/src/electron.ts"
             ]
         },
         "composite": true,
@@ -20,6 +23,9 @@
     "references": [
         {
             "path": "../shared"
+        },
+        {
+            "path": "../server"
         }
     ],
     "include": [

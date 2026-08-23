@@ -64,7 +64,7 @@ export default defineConfig(
         },
     },
     {
-        files: ["packages/server/**/*.{ts,tsx}", "packages/web/vite.config.ts"],
+        files: ["packages/server/**/*.{ts,tsx}", "packages/electron/**/*.{js,ts}", "packages/web/vite.config.ts", "scripts/**/*.{js,mjs,cjs}"],
         languageOptions: {
             globals: globals.node,
         },

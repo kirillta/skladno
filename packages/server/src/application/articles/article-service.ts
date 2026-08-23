@@ -1,6 +1,4 @@
-import { REVISION_PROVENANCE_KIND, type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
-
-import { ArticleRevisionConflictError } from "../errors/article-revision-conflict-error.js";
+import { type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
 import type { ArticleStore, AssistantGreetingStore } from "../ports/article-store.js";
 
@@ -66,28 +64,11 @@ export class ArticleService {
 
 
     acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision {
-        const article = this.requireArticle(articleId);
-        if (article.currentRevisionId !== input.baseRevisionId)
-            throw new ArticleRevisionConflictError(article);
-
-        return this.store.appendRevision(articleId, input.content, input.provenance);
+        return this.store.acceptProposal(articleId, input);
     }
 
 
     restoreRevision(articleId: string, revisionId: string): ArticleRevision {
-        const revision = this.store.getRevision(articleId, revisionId);
-        if (!revision)
-            throw new Error("Revision not found for this article.");
-
-        return this.store.appendRevision(articleId, revision.content, { kind: REVISION_PROVENANCE_KIND.RESTORE, restoredFromRevisionId: revisionId }, revisionId);
-    }
-
-
-    private requireArticle(articleId: string): Article {
-        const article = this.store.get(articleId);
-        if (!article)
-            throw new Error("Article not found.");
-
-        return article;
+        return this.store.restoreRevision(articleId, revisionId);
     }
 }

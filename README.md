@@ -57,7 +57,9 @@ npm run build
 - `packages/web`: React interface.
 - `packages/server`: local service, AI integration, and SQLite persistence.
 - `packages/shared`: domain types and application contracts.
-- `packages/electron`: typed desktop bridge.
+- `packages/electron`: secured Electron desktop runtime and Windows preview packaging.
+
+Run `npm run dev:electron` to open the existing Vite application in Electron without starting the HTTP server. On Windows, `npm run package:electron` creates an unpacked x64 application and `npm run make:electron` creates the unsigned Squirrel installer.
 
 User documentation lives in [`docs/user`](docs/user). Technical documentation lives in [`docs/development`](docs/development). Product capabilities are maintained in [`product-model`](product-model).
 

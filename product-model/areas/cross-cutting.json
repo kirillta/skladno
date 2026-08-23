@@ -7,8 +7,8 @@
             "area": "Internationalization",
             "title": "Typed, validated catalogs and English interface catalog",
             "status": "implemented",
-            "owners": ["packages/web/src/i18n"],
-            "contract": "English is the only complete installed catalog. Application copy, including skill-specific Assistant completion labels and fallback Proposal summaries, is catalog-validated, production surfaces inherit the root locale provider, localized text is excluded from selectors and logic, and generated supporting UI text requests the active Interface locale independently of Article language.",
+            "owners": ["packages/shared/src/application/electron-messages.ts", "packages/web/src/i18n", "packages/electron/src/main.ts"],
+            "contract": "English is the only complete installed catalog. Application copy, including Electron-native dialogs, skill-specific Assistant completion labels, and fallback Proposal summaries, is catalog-validated; production surfaces use the selected Interface locale, localized text is excluded from selectors and logic, and generated supporting UI text requests the active Interface locale independently of Article language.",
             "persistence": "Localized defaults become Article data only when author-editable content is created."
         },
         {
@@ -88,10 +88,10 @@
         {
             "id": "cross-cutting.deferred-mvp-boundary",
             "area": "Deferred MVP",
-            "title": "Accounts, sync, teams, analytics, direct publishing, imports, exports, additional providers, and alternate clients",
+            "title": "Accounts, sync, teams, analytics, direct publishing, imports, exports, additional providers, and remaining alternate clients",
             "status": "deferred",
-            "owners": ["AGENTS.md", "packages/electron/src"],
-            "contract": "These capabilities remain outside the validated MVP editorial loop. The Electron IPC adapter is an architectural hook only; the Electron window/bootstrap and packaged alternate client remain deferred.",
+            "owners": ["AGENTS.md"],
+            "contract": "These capabilities remain outside the validated MVP editorial loop. The Windows Electron preview is tracked as an implemented Application capability; signed releases, macOS, Linux, mobile, and browser-offline clients remain separate work.",
             "persistence": "No persistence or network surface is introduced for deferred MVP work.",
             "tracking": "Future enhancements (post-MVP) milestone in AGENTS.md."
         }
@@ -106,6 +106,16 @@
             "expected": ["The complete English catalog validates and is the only installed catalog."],
             "forbidden": ["An incomplete catalog becomes selectable."],
             "evidence": { "kind": "automated", "path": "packages/web/src/i18n/catalog-validation.test.ts" }
+        },
+        {
+            "id": "cross-cutting.electron-native-copy-catalogued",
+            "title": "Electron native dialogs use the interface locale catalog",
+            "capabilityIds": ["cross-cutting.internationalization"],
+            "preconditions": ["The Electron main process needs to show a startup, shutdown, or Draft-checkpoint dialog."],
+            "event": "The native dialog options are created.",
+            "expected": ["Titles, messages, details, and buttons come from the catalog for the selected Interface locale."],
+            "forbidden": ["User-visible English literals in the Electron main process."],
+            "evidence": { "kind": "automated", "path": "packages/electron/src/electron-messages.test.ts" }
         },
         {
             "id": "cross-cutting.accessible-workspace-separators",

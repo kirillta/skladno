@@ -59,34 +59,33 @@ export function openDatabase(filename: string): SqliteDatabase {
 
     const database = new DatabaseSync(filename);
     restrictDatabasePermissions(filename);
-    database.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;");
-    database.exec(`
-        CREATE TABLE IF NOT EXISTS schema_migrations (
-        version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL
+    database.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
+    database.exec("BEGIN IMMEDIATE;");
+    try {
+        database.exec(`
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+            version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL
+            );
+        `);
+        const applied = new Set(
+            database.prepare("SELECT version FROM schema_migrations ORDER BY version")
+                .all()
+                .map((row) => Number(row.version)),
         );
-    `);
 
-    const applied = new Set(
-        database.prepare("SELECT version FROM schema_migrations ORDER BY version")
-            .all()
-            .map((row) => Number(row.version)),
-    );
+        for (const migration of migrations) {
+            if (applied.has(migration.version))
+                continue;
 
-    for (const migration of migrations) {
-        if (applied.has(migration.version))
-            continue;
-
-        database.exec("BEGIN IMMEDIATE;");
-        try {
             database.exec(migration.sql);
             database.prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)")
                 .run(migration.version, migration.name, new Date().toISOString());
-
-            database.exec("COMMIT;");
-        } catch (error) {
-            database.exec("ROLLBACK;");
-            throw error;
         }
+
+        database.exec("COMMIT;");
+    } catch (error) {
+        database.exec("ROLLBACK;");
+        throw error;
     }
 
     restrictDatabasePermissions(filename);
