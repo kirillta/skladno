@@ -4,6 +4,7 @@ import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Article } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
+import { message } from "../../i18n/test-message.js";
 import { ArticleLibraryPanel } from "./ArticleLibraryPanel.js";
 
 
@@ -32,7 +33,7 @@ describe("ArticleLibraryPanel", () => {
         const sourceButton = screen.getByRole("button", { name: /Mother Article/ });
         const translationButton = screen.getByRole("button", { name: /Spanish edition/ });
         expect(sourceButton.compareDocumentPosition(translationButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        await user.type(screen.getByRole("textbox", { name: "Search articles" }), "Spanish");
+        await user.type(screen.getByRole("textbox", { name: message("navigation.searchArticles") }), "Spanish");
         await user.click(screen.getByRole("button", { name: /Spanish edition/ }));
         expect(screen.getByRole("button", { name: /Mother Article/ })).toBeTruthy();
         expect(selectArticle).toHaveBeenCalledWith("translation");

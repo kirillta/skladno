@@ -4,6 +4,7 @@ import { IntlProvider } from "react-intl";
 import { ApplicationClientError } from "@skladno/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../i18n/messages.js";
+import { message } from "../i18n/test-message.js";
 import { NotificationProvider, useNotifications } from "./NotificationProvider.js";
 import type { Notifications } from "./notifications.js";
 
@@ -127,7 +128,7 @@ describe("NotificationProvider", () => {
         const onAction = vi.fn();
         notifications.notify({ tone: "error", title: "Could not save", action: { label: "Retry", onAction } });
 
-        fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+        fireEvent.click(screen.getByRole("button", { name: message("draftSave.retry") }));
 
         expect(onAction).toHaveBeenCalledTimes(1);
         expect(screen.queryByText("Could not save")).toBeNull();
@@ -152,7 +153,7 @@ describe("NotificationProvider", () => {
 
         expect(screen.getByRole("status").textContent).toContain("Information");
         expect(screen.getByRole("alert").textContent).toContain("Save failed");
-        const dismiss = screen.getByRole("button", { name: "Dismiss notification: Save failed" });
+        const dismiss = screen.getByRole("button", { name: message("notifications.dismiss", { title: "Save failed" }) });
         expect(dismiss).toBeTruthy();
         expect(dismiss.querySelector("svg")?.classList.contains("size-4")).toBe(true);
         expect(dismiss.classList.contains("right-1")).toBe(true);

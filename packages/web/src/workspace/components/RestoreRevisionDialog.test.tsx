@@ -4,6 +4,7 @@ import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
 import type { ArticleRevision } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
+import { message } from "../../i18n/test-message.js";
 import { RestoreRevisionDialog } from "./RestoreRevisionDialog.js";
 
 
@@ -25,13 +26,13 @@ describe("RestoreRevisionDialog", () => {
         }));
         render(<IntlProvider locale="en" messages={messages}><RestoreRevisionDialog candidate={candidate} hasUncommittedChanges close={vi.fn()} restore={restore} /></IntlProvider>);
 
-        const button = screen.getByRole("button", { name: "Save and restore" });
+        const button = screen.getByRole("button", { name: message("views.saveAndRestore") });
         await user.click(button);
 
         expect(button.getAttribute("aria-busy")).toBe("true");
         expect((button as HTMLButtonElement).disabled).toBe(true);
-        expect((screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled).toBe(true);
-        expect((screen.getByRole("button", { name: "Discard Draft and restore" }) as HTMLButtonElement).disabled).toBe(true);
+        expect((screen.getByRole("button", { name: message("draftConflict.cancel") }) as HTMLButtonElement).disabled).toBe(true);
+        expect((screen.getByRole("button", { name: message("views.discardDraftAndRestore") }) as HTMLButtonElement).disabled).toBe(true);
         resolveRestore?.();
         await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
     });

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultGeneralSettings, type ApplicationSettingsSnapshot } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { messages } from "../i18n/messages.js";
+import { message } from "../i18n/test-message.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
 import { saveWebBackup } from "./web-backups.js";
@@ -61,7 +62,7 @@ describe("ApplicationSettings", () => {
             timeZone: "America/Buenos_Aires",
         }));
 
-        await user.click(screen.getByRole("button", { name: "Use system time zone" }));
+        await user.click(screen.getByRole("button", { name: message("settings.resetTimeZone") }));
 
         await waitFor(() => expect(updateGeneralSettings).toHaveBeenLastCalledWith(defaultGeneralSettings));
     });
@@ -92,7 +93,7 @@ describe("ApplicationSettings", () => {
             dateFormat: "day-first-dots",
         }));
 
-        const reset = screen.getByRole("button", { name: "Use system date format" });
+        const reset = screen.getByRole("button", { name: message("settings.resetDateFormat") });
         expect((reset as HTMLButtonElement).disabled).toBe(false);
         await user.click(reset);
 
@@ -113,7 +114,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} onThemeApplied={onThemeApplied} /></NotificationProvider></IntlProvider>);
 
         await screen.findByText("Preferred appearance");
-        await user.click(screen.getByRole("button", { name: "Apply now" }));
+        await user.click(screen.getByRole("button", { name: message("settings.applyAppearance") }));
 
         expect(onThemeApplied).toHaveBeenCalledWith("dark");
     });
@@ -137,7 +138,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await screen.findByText("Time format");
-        await user.click(screen.getByRole("button", { name: "Use system time format" }));
+        await user.click(screen.getByRole("button", { name: message("settings.resetTimeFormat") }));
 
         await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({
             ...general,
@@ -163,7 +164,7 @@ describe("ApplicationSettings", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: "AI" }));
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
         const connectionName = screen.getByPlaceholderText("For example, Personal OpenAI");
         const environmentName = screen.getByPlaceholderText("For example, OPENAI_API_KEY");
 
@@ -176,7 +177,7 @@ describe("ApplicationSettings", () => {
                 getData: () => "OPENAI_API_KEY",
             },
         });
-        await user.click(screen.getByRole("button", { name: "Add connection" }));
+        await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
 
         await waitFor(() => expect(addOpenAiConnection).toHaveBeenCalledWith({
             label: "Personal OpenAI",
@@ -201,7 +202,7 @@ describe("ApplicationSettings", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: "AI" }));
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
 
         await waitFor(() => expect(refreshOpenAiModels).toHaveBeenCalledOnce());
         expect(screen.getAllByRole("option", { name: "gpt-5" })).not.toHaveLength(0);
@@ -218,12 +219,12 @@ describe("ApplicationSettings", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: "Publishing" }));
-        const languages = screen.getByRole("group", { name: "Default translation languages" });
+        await user.click(await screen.findByRole("button", { name: message("settings.publishing") }));
+        const languages = screen.getByRole("group", { name: message("settings.defaultTranslationLanguages") });
         expect(languages.getAttribute("aria-describedby")).toBeTruthy();
 
-        await user.click(screen.getByRole("checkbox", { name: "Spanish" }));
-        await user.click(screen.getByRole("checkbox", { name: "German" }));
+        await user.click(screen.getByRole("checkbox", { name: message("languages.spanish") }));
+        await user.click(screen.getByRole("checkbox", { name: message("languages.german") }));
 
         await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({
             ...defaultGeneralSettings,
@@ -244,10 +245,10 @@ describe("ApplicationSettings", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: "Data & backups" }));
-        await user.click(screen.getByRole("button", { name: "Choose backup folder" }));
+        await user.click(await screen.findByRole("button", { name: message("settings.dataBackups") }));
+        await user.click(screen.getByRole("button", { name: message("settings.chooseBackupFolder") }));
         await screen.findByText("Using Skladno backups");
-        await user.click(screen.getByRole("button", { name: "Create backup" }));
+        await user.click(screen.getByRole("button", { name: message("settings.createBackup") }));
 
         await waitFor(() => expect(screen.getByText("Created skladno-manual.sqlite")).toBeTruthy());
     });
@@ -262,13 +263,13 @@ describe("ApplicationSettings", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: "Data & backups" }));
-        await user.click(screen.getByRole("button", { name: "Choose backup folder" }));
-        await user.click(screen.getByRole("button", { name: "Create backup" }));
+        await user.click(await screen.findByRole("button", { name: message("settings.dataBackups") }));
+        await user.click(screen.getByRole("button", { name: message("settings.chooseBackupFolder") }));
+        await user.click(screen.getByRole("button", { name: message("settings.createBackup") }));
 
         await screen.findByText("Couldn’t create a backup. Your editing session is still safe.");
-        expect(screen.getByRole("button", { name: "Create backup" }).hasAttribute("disabled")).toBe(false);
-        expect(screen.getByRole("button", { name: "Publishing" }).hasAttribute("disabled")).toBe(false);
+        expect(screen.getByRole("button", { name: message("settings.createBackup") }).hasAttribute("disabled")).toBe(false);
+        expect(screen.getByRole("button", { name: message("settings.publishing") }).hasAttribute("disabled")).toBe(false);
     });
 
     it("retains an editable custom profile until the author saves its name and limit", async () => {
@@ -283,23 +284,23 @@ describe("ApplicationSettings", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: "Publishing" }));
-        await user.clear(screen.getByRole("textbox", { name: "Custom profile name" }));
-        await user.type(screen.getByRole("textbox", { name: "Custom profile name" }), "Newsletter");
-        const limit = screen.getByRole("spinbutton", { name: "Custom character limit" });
+        await user.click(await screen.findByRole("button", { name: message("settings.publishing") }));
+        await user.clear(screen.getByRole("textbox", { name: message("settings.customProfileName") }));
+        await user.type(screen.getByRole("textbox", { name: message("settings.customProfileName") }), "Newsletter");
+        const limit = screen.getByRole("spinbutton", { name: message("settings.customProfileLimit") });
         await user.clear(limit);
         await user.type(limit, "1200");
-        await user.click(screen.getByRole("button", { name: "Save custom profile" }));
+        await user.click(screen.getByRole("button", { name: message("settings.saveCustomProfile") }));
 
         await waitFor(() => expect(setPublishingSettings).toHaveBeenCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Newsletter", characterLimit: 1200 })] })));
-        await user.type(screen.getByRole("textbox", { name: "Custom profile name" }), "Long read");
-        await user.type(screen.getByRole("spinbutton", { name: "Custom character limit" }), "5000");
-        await user.click(screen.getByRole("button", { name: "Save custom profile" }));
+        await user.type(screen.getByRole("textbox", { name: message("settings.customProfileName") }), "Long read");
+        await user.type(screen.getByRole("spinbutton", { name: message("settings.customProfileLimit") }), "5000");
+        await user.click(screen.getByRole("button", { name: message("settings.saveCustomProfile") }));
 
         await waitFor(() => expect(setPublishingSettings).toHaveBeenLastCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Newsletter", characterLimit: 1200 }), expect.objectContaining({ name: "Long read", characterLimit: 5000 })] })));
-        await user.click(screen.getByRole("button", { name: "Remove Newsletter" }));
+        await user.click(screen.getByRole("button", { name: message("settings.removeCustomProfile", { name: "Newsletter" }) }));
         const dialog = screen.getByRole("dialog");
-        await user.click(within(dialog).getByRole("button", { name: "Remove" }));
+        await user.click(within(dialog).getByRole("button", { name: message("settings.remove") }));
 
         await waitFor(() => expect(setPublishingSettings).toHaveBeenLastCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Long read", characterLimit: 5000 })] })));
     });
@@ -321,22 +322,22 @@ describe("ApplicationSettings", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: "AI" }));
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
         await waitFor(() => expect(client.refreshOpenAiModels).toHaveBeenCalledOnce());
         await user.type(screen.getByPlaceholderText("For example, OPENAI_API_KEY"), "OPENAI_API_KEY");
-        await user.click(screen.getByRole("button", { name: "Add connection" }));
+        await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
 
         expect(screen.getByRole("alert").textContent).toContain("already saved");
         expect(client.addOpenAiConnection).not.toHaveBeenCalled();
-        expect(screen.getAllByRole("button", { name: "Remove connection" })).toHaveLength(1);
+        expect(screen.getAllByRole("button", { name: message("settings.removeConnection") })).toHaveLength(1);
 
-        await user.click(screen.getByRole("button", { name: "Use this connection" }));
+        await user.click(screen.getByRole("button", { name: message("settings.useConnection") }));
         await waitFor(() => expect(setActiveOpenAiConnection).toHaveBeenCalledWith(secondConnection.id));
         await waitFor(() => expect(client.refreshOpenAiModels).toHaveBeenCalledTimes(2));
 
-        await user.click(screen.getAllByRole("button", { name: "Remove connection" })[0]!);
+        await user.click(screen.getAllByRole("button", { name: message("settings.removeConnection") })[0]!);
         const dialog = screen.getByRole("dialog");
-        await user.click(within(dialog).getByRole("button", { name: "Remove connection" }));
+        await user.click(within(dialog).getByRole("button", { name: message("settings.removeConnection") }));
 
         await waitFor(() => expect(removeOpenAiConnection).toHaveBeenCalledWith(firstConnection.id));
         expect(screen.queryByText("Personal OpenAI")).toBeNull();
