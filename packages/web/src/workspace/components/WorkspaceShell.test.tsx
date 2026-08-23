@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
+import { message } from "../../i18n/test-message.js";
 import { WorkspaceShell } from "./WorkspaceShell.js";
 
 // Product scenarios: workspace.shell.responsive-collapse, workspace.shell.focus-mode
@@ -55,8 +56,8 @@ describe("WorkspaceShell", () => {
         renderShell();
 
         const main = screen.getByRole("main");
-        const libraryResize = screen.getByRole("separator", { name: "Resize Article Library Panel" });
-        const assistantResize = screen.getByRole("separator", { name: "Resize Editorial Assistant Panel" });
+        const libraryResize = screen.getByRole("separator", { name: message("navigation.resizeArticleLibrary") });
+        const assistantResize = screen.getByRole("separator", { name: message("assistant.resize") });
 
         expect(main.firstElementChild?.textContent).toContain("Article Workspace");
         expect(screen.getByLabelText("Article Library Panel")).toBeTruthy();
@@ -79,15 +80,15 @@ describe("WorkspaceShell", () => {
             assistantWidth: 384,
         });
 
-        expect(screen.getByRole("separator", { name: "Resize Editorial Assistant Panel" })).toBeTruthy();
+        expect(screen.getByRole("separator", { name: message("assistant.resize") })).toBeTruthy();
 
         setViewportWidth(1280);
-        expect(screen.queryByRole("separator", { name: "Resize Editorial Assistant Panel" })).toBeNull();
+        expect(screen.queryByRole("separator", { name: message("assistant.resize") })).toBeNull();
         expect(screen.getByLabelText("Editorial Assistant Panel").textContent).toContain("Assistant");
-        expect(screen.getByRole("separator", { name: "Resize Article Library Panel" })).toBeTruthy();
+        expect(screen.getByRole("separator", { name: message("navigation.resizeArticleLibrary") })).toBeTruthy();
 
         setViewportWidth(1440);
-        expect(screen.getByRole("separator", { name: "Resize Editorial Assistant Panel" })).toBeTruthy();
+        expect(screen.getByRole("separator", { name: message("assistant.resize") })).toBeTruthy();
         view.unmount();
     });
 
@@ -99,8 +100,8 @@ describe("WorkspaceShell", () => {
             assistantWidth: 384,
         });
 
-        expect(screen.queryByRole("separator", { name: "Resize Editorial Assistant Panel" })).toBeNull();
-        expect(screen.queryByRole("separator", { name: "Resize Article Library Panel" })).toBeNull();
+        expect(screen.queryByRole("separator", { name: message("assistant.resize") })).toBeNull();
+        expect(screen.queryByRole("separator", { name: message("navigation.resizeArticleLibrary") })).toBeNull();
         expect(screen.getByLabelText("Article Library Panel").textContent).toContain("Library");
     });
 

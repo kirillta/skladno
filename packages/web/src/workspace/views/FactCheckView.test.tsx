@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
+import { message } from "../../i18n/test-message.js";
 import { FactCheckView } from "./FactCheckView.js";
 
 // product: history-and-publishing.fact-findings-advisory
@@ -20,7 +21,7 @@ describe("FactCheckView", () => {
         expect(screen.getByRole("link", { name: /Primary source/ }).getAttribute("title")).toBe("https://example.com/source");
         expect(screen.getByRole("link", { name: /Primary source/ }).getAttribute("target")).toBe("_blank");
         expect(screen.queryByRole("button", { name: /Propose corrections/ })).toBeNull();
-        await user.click(screen.getByRole("button", { name: "Run Fact Check again" }));
+        await user.click(screen.getByRole("button", { name: message("views.runFactCheckAgain") }));
     });
 
 
@@ -32,7 +33,7 @@ describe("FactCheckView", () => {
         ];
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings }} stale runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
-        expect(screen.getAllByRole("button", { name: "Propose correction" })).toHaveLength(1);
+        expect(screen.getAllByRole("button", { name: message("views.proposeFactCorrection") })).toHaveLength(1);
         expect(screen.getByText("Corrected or removed")).toBeTruthy();
     });
 
@@ -45,8 +46,8 @@ describe("FactCheckView", () => {
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={factCheck} revisionNumber={3} stale={false} runAgain={runAgain} resolve={resolve} proposeCorrections={proposeCorrections} /></IntlProvider>);
 
         expect(screen.getByText("Reviewed Revision: v3")).toBeTruthy();
-        await user.click(screen.getByRole("button", { name: "Propose correction" }));
-        await user.click(screen.getByRole("button", { name: "Accept as written" }));
+        await user.click(screen.getByRole("button", { name: message("views.proposeFactCorrection") }));
+        await user.click(screen.getByRole("button", { name: message("views.acceptFactAsWritten") }));
         expect(proposeCorrections).toHaveBeenCalledWith([factCheck.findings[0]]);
         expect(resolve).toHaveBeenCalledWith("revision-1:fact-1", "accepted_as_written");
     });
@@ -70,7 +71,7 @@ describe("FactCheckView", () => {
         const runAgain = vi.fn();
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={undefined} stale={false} runAgain={runAgain} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
-        await user.click(screen.getByRole("button", { name: "Run Fact Check" }));
+        await user.click(screen.getByRole("button", { name: message("views.runFactCheck") }));
         expect(runAgain).toHaveBeenCalledOnce();
     });
 });

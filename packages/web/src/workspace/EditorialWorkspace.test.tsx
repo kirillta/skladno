@@ -8,6 +8,7 @@ import { useState, type ReactElement } from "react";
 import { App } from "../App.js";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { messages } from "../i18n/messages.js";
+import { message } from "../i18n/test-message.js";
 import { articleContentForWorkspace, sortArticlesByActivity } from "./EditorialWorkspace.js";
 import { ArticleHeader } from "./components/ArticleHeader.js";
 import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
@@ -233,7 +234,7 @@ describe("Editorial Workspace", () => {
 
         await screen.findByRole("heading", { name: "First Article" });
         await user.type(screen.getByRole("textbox", { name: "Editorial guidance" }), "Please help.");
-        await user.click(screen.getByRole("button", { name: "Send editorial request" }));
+        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
 
         expect((await screen.findByRole("alert")).textContent).toContain("complete this editorial request.");
         const errorDetails = screen.getByText("Error details").closest("details");
@@ -286,8 +287,8 @@ describe("Editorial Workspace", () => {
 
         await screen.findByRole("heading", { name: "First Article" });
 
-        const libraryResize = screen.getByRole("separator", { name: "Resize Article Library Panel" });
-        const assistantResize = screen.getByRole("separator", { name: "Resize Editorial Assistant Panel" });
+        const libraryResize = screen.getByRole("separator", { name: message("navigation.resizeArticleLibrary") });
+        const assistantResize = screen.getByRole("separator", { name: message("assistant.resize") });
         const main = libraryResize.closest("main")!;
 
         expect(main.firstElementChild?.tagName).toBe("SECTION");
@@ -320,7 +321,7 @@ describe("Editorial Workspace", () => {
         const user = userEvent.setup();
         render(<App client={fakeClient()} />);
         expect(await screen.findByRole("heading", { name: "First Article" })).toBeTruthy();
-        await user.click(screen.getByRole("button", { name: "New article" }));
+        await user.click(screen.getByRole("button", { name: message("navigation.newArticle") }));
         expect(await screen.findByRole("heading", { name: "New Article" })).toBeTruthy();
     });
 
@@ -348,9 +349,9 @@ describe("Editorial Workspace", () => {
         const user = userEvent.setup();
         render(<App client={fakeClient()} />);
 
-        await user.click((await screen.findAllByRole("button", { name: "Settings" })).at(-1)!);
+        await user.click((await screen.findAllByRole("button", { name: message("navigation.settings") })).at(-1)!);
 
-        expect(screen.getByRole("heading", { name: "General" })).toBeTruthy();
+        expect(screen.getByRole("heading", { name: message("settings.general") })).toBeTruthy();
         expect(screen.getByText("Preferred appearance")).toBeTruthy();
     });
 
@@ -361,7 +362,7 @@ describe("Editorial Workspace", () => {
         const user = userEvent.setup();
 
         render(<App client={client} />);
-        await user.click((await screen.findAllByRole("button", { name: "Settings" })).at(-1)!);
+        await user.click((await screen.findAllByRole("button", { name: message("navigation.settings") })).at(-1)!);
         await user.selectOptions(screen.getAllByRole("combobox")[0]!, "dark");
 
         expect((await screen.findByRole("alert")).textContent).toContain("Couldn’t save your changes.");
@@ -380,7 +381,7 @@ describe("Editorial Workspace", () => {
         expect(panelScope.getByText(/I’m here to help shape this Article/)).toBeTruthy();
         expect(panelScope.queryByRole("button", { name: "Talking points" })).toBeNull();
 
-        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.quickActions") }));
 
         expect(panelScope.getByRole("button", { name: "Talking points" })).toBeTruthy();
         expect(panelScope.getByRole("button", { name: "Narrative draft" })).toBeTruthy();
@@ -389,11 +390,11 @@ describe("Editorial Workspace", () => {
         expect(panelScope.getByRole("button", { name: "Style review" })).toBeTruthy();
         expect(panelScope.getByRole("button", { name: "Translation" })).toBeTruthy();
 
-        await user.type(panelScope.getByRole("textbox", { name: "Editorial guidance" }), "Preserve the key claims.");
-        await user.click(panelScope.getByRole("button", { name: "Translation" }));
+        await user.type(panelScope.getByRole("textbox", { name: message("assistant.guidance") }), "Preserve the key claims.");
+        await user.click(panelScope.getByRole("button", { name: message("assistant.skill.translation.label") }));
         expect(onRequest).not.toHaveBeenCalled();
 
-        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", ["Portuguese"], "Preserve the key claims.".length);
     });
@@ -404,7 +405,7 @@ describe("Editorial Workspace", () => {
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} article={article("one", "First Article")} updateArticle={vi.fn()} />);
         const panelScope = within(panel.container);
-        const composer = panelScope.getByRole("textbox", { name: "Editorial guidance" });
+        const composer = panelScope.getByRole("textbox", { name: message("assistant.guidance") });
 
         await user.type(composer, "Keep this /");
         await user.keyboard("{ArrowDown}{Enter}");
@@ -418,7 +419,7 @@ describe("Editorial Workspace", () => {
         expect((composer.childNodes[1] as HTMLElement | undefined)?.contentEditable).toBe("false");
         expect([...composer.childNodes].slice(2).map((node) => node.textContent).join("")).toBe(" focused.");
 
-        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("Keep this focused.", "talking_points", undefined, "Keep this".length);
     });
@@ -430,12 +431,12 @@ describe("Editorial Workspace", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} />);
         const panelScope = within(panel.container);
 
-        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
-        await user.click(panelScope.getByRole("button", { name: "Flow and clarity" }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.skill.flowAndClarity.label") }));
 
-        expect(panelScope.getByRole("button", { name: "Send editorial request" }).hasAttribute("disabled")).toBe(false);
+        expect(panelScope.getByRole("button", { name: message("assistant.send") }).hasAttribute("disabled")).toBe(false);
 
-        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("", "flow_and_clarity", undefined, 0);
     });
@@ -446,9 +447,9 @@ describe("Editorial Workspace", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" translationLanguages={["Spanish", "German"]} assistantMessages={[]} />);
         const panelScope = within(panel.container);
 
-        await user.click(panelScope.getByRole("button", { name: "Quick actions" }));
-        await user.click(panelScope.getByRole("button", { name: "Translation" }));
-        await user.click(panelScope.getByRole("button", { name: "Send editorial request" }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.skill.translation.label") }));
+        await user.click(panelScope.getByRole("button", { name: message("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("", "translation", ["Spanish", "German"], 0);
     });
@@ -467,9 +468,9 @@ describe("Editorial Workspace", () => {
 
         render(<App client={client} />);
         await screen.findByRole("textbox", { name: "Article draft" });
-        await user.click(screen.getByRole("button", { name: "Quick actions" }));
-        await user.click(screen.getByRole("button", { name: "Translation" }));
-        await user.click(screen.getByRole("button", { name: "Send editorial request" }));
+        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(screen.getByRole("button", { name: message("assistant.skill.translation.label") }));
+        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
 
         await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalledTimes(2));
         expect(vi.mocked(client.streamAssistantRequest).mock.calls.map(([, request]) => request.scope.baseRevisionId)).toEqual([promoted.id, promoted.id]);
@@ -488,7 +489,7 @@ describe("Editorial Workspace", () => {
 
         expect(selectionChip.textContent).toBe("The first selected s…");
         expect(selectionChip.getAttribute("title")).toBe(selection);
-        expect(within(selectionChip).getByRole("button", { name: "Clear Article selection" })).toBeTruthy();
+        expect(within(selectionChip).getByRole("button", { name: message("assistant.clearArticleSelection") })).toBeTruthy();
     });
 
 
@@ -499,16 +500,16 @@ describe("Editorial Workspace", () => {
         const composer = within(panel.container).getByRole("textbox", { name: "Editorial guidance" });
 
         await user.type(composer, "Review this selection.");
-        await user.click(within(panel.container).getByRole("button", { name: "Quick actions" }));
-        await user.click(within(panel.container).getByRole("button", { name: "Talking points" }));
+        await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(within(panel.container).getByRole("button", { name: message("assistant.skill.talkingPoints.label") }));
         expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy();
 
         panel.rerender(<IntlProvider locale="en" messages={messages}><EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection="Selected Article text" clearSelection={vi.fn()} /></IntlProvider>);
 
         await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy());
-        await user.click(within(panel.container).getByRole("button", { name: "Quick actions" }));
-        expect(within(panel.container).getByRole("button", { name: "Narrative draft" })).toBeTruthy();
-        await user.click(within(panel.container).getByRole("button", { name: "Send editorial request" }));
+        await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));
+        expect(within(panel.container).getByRole("button", { name: message("assistant.skill.narrativeDraft.label") })).toBeTruthy();
+        await user.click(within(panel.container).getByRole("button", { name: message("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("Review this selection.", "talking_points", undefined, "Review this selection.".length);
     });
@@ -539,8 +540,8 @@ describe("Editorial Workspace", () => {
 
             expect(timeline().scrollTop).toBe(640);
 
-            await user.click(within(panel.container).getByRole("button", { name: "Collapse Editorial Assistant Panel" }));
-            await user.click(within(panel.container).getByRole("button", { name: "Expand Editorial Assistant Panel" }));
+            await user.click(within(panel.container).getByRole("button", { name: message("assistant.collapse") }));
+            await user.click(within(panel.container).getByRole("button", { name: message("assistant.expand") }));
 
             expect(timeline().scrollTop).toBe(640);
         } finally {

@@ -4,6 +4,7 @@ import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultGeneralSettings, type ArticleRevision, type GeneralSettings } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
+import { message } from "../../i18n/test-message.js";
 import { RevisionHistoryView } from "./RevisionHistoryView.js";
 
 
@@ -44,8 +45,8 @@ describe("RevisionHistoryView", () => {
         expect(screen.getByText("Current text")).toBeTruthy();
         expect(screen.getByText("This is the current Revision.")).toBeTruthy();
         expect(screen.getByText("Current Revision")).toBeTruthy();
-        expect(screen.queryByRole("button", { name: "Restore this revision" })).toBeNull();
-        expect((screen.getByRole("combobox", { name: "Select a Revision" }) as HTMLSelectElement).value).toBe("current");
+        expect(screen.queryByRole("button", { name: message("revisions.restore") })).toBeNull();
+        expect((screen.getByRole("combobox", { name: message("revisions.select") }) as HTMLSelectElement).value).toBe("current");
     });
 
 
@@ -58,8 +59,8 @@ describe("RevisionHistoryView", () => {
         await user.click(screen.getAllByRole("button", { name: /Initial Revision/ })[0]!);
 
         expect(screen.getByText("Initial text")).toBeTruthy();
-        expect((screen.getByRole("button", { name: "Restore this revision" }) as HTMLButtonElement).disabled).toBe(false);
-        await user.click(screen.getByRole("button", { name: "Restore this revision" }));
+        expect((screen.getByRole("button", { name: message("revisions.restore") }) as HTMLButtonElement).disabled).toBe(false);
+        await user.click(screen.getByRole("button", { name: message("revisions.restore") }));
         expect(select).toHaveBeenCalledWith(initial);
     });
 

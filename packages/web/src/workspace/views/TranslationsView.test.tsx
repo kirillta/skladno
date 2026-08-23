@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { publishLimitProfiles, type Article } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
+import { message } from "../../i18n/test-message.js";
 import { TranslationsView } from "./TranslationsView.js";
 
 // product: history-and-publishing.translation-stale-source
@@ -37,7 +38,7 @@ describe("TranslationsView", () => {
 
         expect(screen.getByText("Use Translate to request translations. Completed proposals appear here for review.")).toBeTruthy();
         expect(screen.queryByText(/ru source/)).toBeNull();
-        await user.click(screen.getByRole("button", { name: "Translate" }));
+        await user.click(screen.getByRole("button", { name: message("views.translate") }));
         expect(translate).toHaveBeenCalledOnce();
     });
 
@@ -47,7 +48,7 @@ describe("TranslationsView", () => {
         </IntlProvider>);
 
         expect(screen.getByText("The source Article has changed since this translation proposal was made.")).toBeTruthy();
-        expect(screen.getByRole("button", { name: "Edit Spanish translation" }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("button", { name: message("views.editTranslationLanguage", { language: "Spanish" }) }).hasAttribute("disabled")).toBe(true);
     });
 
     it("warns and blocks creation when protected content changed", () => {
@@ -56,7 +57,7 @@ describe("TranslationsView", () => {
         </IntlProvider>);
 
         expect(screen.getByRole("alert").textContent).toBe("Protected content changed or missing: https://example.com, API-v2");
-        expect(screen.getByRole("button", { name: "Edit Spanish translation" }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("button", { name: message("views.editTranslationLanguage", { language: "Spanish" }) }).hasAttribute("disabled")).toBe(true);
     });
 
     it("shows loading while creating a translation", async () => {
@@ -69,7 +70,7 @@ describe("TranslationsView", () => {
             <TranslationsView article={article} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "Borrador traducido", baseRevisionId: "revision-2" }]} stale={false} create={create} translate={vi.fn()} />
         </IntlProvider>);
 
-        const button = screen.getByRole("button", { name: "Edit Spanish translation" });
+        const button = screen.getByRole("button", { name: message("views.editTranslationLanguage", { language: "Spanish" }) });
         await user.click(button);
 
         expect(button.getAttribute("aria-busy")).toBe("true");
@@ -85,7 +86,7 @@ describe("TranslationsView", () => {
             <TranslationsView article={article} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "Borrador traducido", baseRevisionId: "revision-2" }]} stale={false} create={vi.fn().mockResolvedValue(undefined)} edit={edit} translate={vi.fn()} />
         </IntlProvider>);
 
-        await user.click(screen.getByRole("button", { name: "Edit Spanish translation" }));
+        await user.click(screen.getByRole("button", { name: message("views.editTranslationLanguage", { language: "Spanish" }) }));
         expect(edit).toHaveBeenCalledOnce();
     });
 
@@ -99,9 +100,9 @@ describe("TranslationsView", () => {
 
         expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "This translation is linked to Original Article at source Revision 2.")).toBeTruthy();
         expect(screen.getAllByText("English translation")).toHaveLength(2);
-        await user.click(screen.getByRole("button", { name: "Original Article" }));
+        await user.click(screen.getByRole("button", { name: message("views.translationOriginal") + " Article" }));
         expect(openArticle).toHaveBeenCalledWith("source-article");
-        await user.click(screen.getByRole("button", { name: "Edit translation" }));
+        await user.click(screen.getByRole("button", { name: message("views.editTranslation") }));
         expect(edit).toHaveBeenCalledOnce();
     });
 
@@ -129,7 +130,7 @@ describe("TranslationsView", () => {
         expect(screen.getByText("Deutscher Text")).toBeTruthy();
         await user.click(screen.getByRole("tab", { name: "Spanish" }));
         expect(screen.getByText("Texto en español")).toBeTruthy();
-        await user.click(screen.getByRole("button", { name: "Edit Spanish translation" }));
+        await user.click(screen.getByRole("button", { name: message("views.editTranslationLanguage", { language: "Spanish" }) }));
         expect(create).toHaveBeenCalledWith("Spanish");
     });
 
@@ -153,9 +154,9 @@ describe("TranslationsView", () => {
             <TranslationsView article={{ ...article, currentRevision: { ...article.currentRevision, content: "1. First source paragraph.\n2. Second source paragraph." } }} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "1. Primer párrafo traducido.\n2. Segundo párrafo traducido.", baseRevisionId: "revision-2" }]} stale={false} create={vi.fn()} translate={vi.fn()} />
         </IntlProvider>);
 
-        await user.click(screen.getByRole("button", { name: "Aligned paragraphs" }));
+        await user.click(screen.getByRole("button", { name: message("views.translationAligned") }));
 
-        expect(screen.getByRole("button", { name: "Aligned paragraphs" }).getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getByRole("button", { name: message("views.translationAligned") }).getAttribute("aria-pressed")).toBe("true");
         expect(screen.getByText("1. First source paragraph.")).toBeTruthy();
         expect(screen.getByText("1. Primer párrafo traducido.")).toBeTruthy();
         const sourceSecond = screen.getByText("2. Second source paragraph.");
