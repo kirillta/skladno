@@ -44,6 +44,7 @@ export interface StoredNotification extends Required<Pick<NotificationInput, "to
 
 
 export const MAX_VISIBLE_NOTIFICATIONS = 3;
+const NOTIFICATION_FADE_OUT_DURATION = 6_000;
 
 
 export function notificationDuration(tone: NotificationTone, durationMs: number | null | undefined): number | null {
@@ -51,7 +52,7 @@ export function notificationDuration(tone: NotificationTone, durationMs: number 
         return durationMs;
 
     if (tone === "info" || tone === "success")
-        return 6_000;
+        return NOTIFICATION_FADE_OUT_DURATION;
 
     return null;
 }

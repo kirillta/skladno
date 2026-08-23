@@ -5,8 +5,8 @@ import type { EditorialEngine } from "../../application/ports/editorial-engine.j
 import type { SettingsStore } from "../../application/ports/settings-store.js";
 import type { ServerConfig } from "../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
-import { AiSdkProposalSummaryGenerator } from "./ai-sdk-proposal-summary-generator.js";
-import { OpenAiSourceNameGenerator } from "./openai-source-name-generator.js";
+import { ProposalSummaryGeneratorAdapter } from "./proposal-summary-generator.js";
+import { ArticleTitleGeneratorAdapter } from "./article-title-generator.js";
 
 
 export function resolveTextGenerationModel(preferences: Partial<ModelPreferences> | undefined, fallback: string): string {
@@ -41,16 +41,16 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         if (!configuration)
             return undefined;
 
-        return new AiSdkProposalSummaryGenerator(configuration.apiKey, configuration.model);
+        return new ProposalSummaryGeneratorAdapter(configuration.apiKey, configuration.model);
     }
 
 
-    resolveSourceNameGenerator() {
+    resolveArticleTitleGenerator() {
         const configuration = this.resolveTextGenerationConfiguration();
         if (!configuration)
             return undefined;
 
-        return new OpenAiSourceNameGenerator(configuration.apiKey, configuration.model);
+        return new ArticleTitleGeneratorAdapter(configuration.apiKey, configuration.model);
     }
 
 

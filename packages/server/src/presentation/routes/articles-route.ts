@@ -82,7 +82,6 @@ export function deleteArticleRoute(response: ServerResponse, articleId: string, 
     articles.deleteArticle(articleId);
     response.writeHead(HTTP_STATUS.NO_CONTENT);
     response.end();
-
 }
 
 
@@ -96,7 +95,6 @@ export async function saveDraftRoute(request: IncomingMessage, response: ServerR
         baseRevisionId: string(body.baseRevisionId, "baseRevisionId"),
         ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion: draftVersion(expectedDraftVersion) }),
     }));
-
 }
 
 
@@ -107,7 +105,6 @@ export function discardDraftRoute(request: IncomingMessage, response: ServerResp
     articles.discardDraft(articleId, draftVersion(Number(expectedDraftVersion)));
     response.writeHead(HTTP_STATUS.NO_CONTENT);
     response.end();
-
 }
 
 

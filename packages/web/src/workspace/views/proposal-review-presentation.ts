@@ -18,7 +18,9 @@ export function presentProposalReview(review: TextProposal): ProposalReviewPrese
         kind: change.baseLines.length === 0 ? "addition" : change.proposalLines.length === 0 ? "removal" : "replacement" as ProposalChangeKind,
     }));
     const ordered = changes.every((change, index) => index === 0 || changes[index - 1]!.baseEnd <= change.baseStart);
-    const reliable = ordered && new Set(changes.map((change) => change.id)).size === changes.length && applyProposalChanges(review, new Set(changes.map((change) => change.id))) === review.proposedContent;
+    const reliable = ordered
+        && new Set(changes.map((change) => change.id)).size === changes.length
+        && applyProposalChanges(review, new Set(changes.map((change) => change.id))) === review.proposedContent;
     const changed = changes.flatMap((change) => [...change.baseLines, ...change.proposalLines]).join("\n");
     const warnings: ProposalReviewPresentation["warnings"] = [];
 

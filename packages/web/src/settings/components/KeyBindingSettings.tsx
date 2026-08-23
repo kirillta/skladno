@@ -82,7 +82,8 @@ export function KeyBindingSettings({ overrides, save }: { overrides: KeyBindingO
                         <Banner tone="warning" role="alert"><span>{intl.formatMessage({ id: "settings.keyBindingConflictTitle" })} <strong>{error.assignedCommand}</strong>. {intl.formatMessage({ id: "settings.keyBindingConflict" })}</span></Banner>
                     </div>}
                 </div>;
-            })}</div>
+            })}
+            </div>
         </section>)}
     </>;
 }

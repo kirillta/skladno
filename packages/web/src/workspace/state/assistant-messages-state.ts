@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantEditorialResult, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
+import { ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
@@ -92,6 +92,47 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         }));
     }, [article, profileRebuilt]);
 
+
+    const handleAssistantEvent = useCallback((event: AssistantEvent, articleId: string, revisionId: string, streamedId: string) => {
+        if (event.type === ASSISTANT_EVENT.TOOL_STATUS && event.claims) {
+            const claims = event.claims;
+            setFactCheckClaimsByArticle((current) => ({ ...current, [articleId]: claims }));
+        }
+
+        if (event.type === ASSISTANT_EVENT.COMPLETED && event.result) {
+            const result = event.result;
+            onResult(articleId, revisionId, result, event.editorialArtifactId);
+            if (result.factCheck) {
+                const factCheck = result.factCheck;
+                setFactCheckClaimsByArticle((claims) => ({ ...claims, [articleId]: factCheck.findings.map(({ claim }) => ({ claim, checked: true })) }));
+            }
+        }
+
+        if (event.type !== ASSISTANT_EVENT.TEXT_DELTA)
+            return;
+
+        setMessagesByArticle((itemsByArticle) => {
+            const items = itemsByArticle[articleId];
+            const streamed = items?.find((item) => item.id === streamedId);
+            const next = {
+                id: streamedId,
+                articleId,
+                role: "assistant" as const,
+                kind: "response" as const,
+                status: "pending" as const,
+                content: `${streamed?.content ?? ""}${event.delta}`,
+                createdAt: streamed?.createdAt ?? new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+
+            return {
+                ...itemsByArticle,
+                [articleId]: [...(items ?? []).filter((item) => item.id !== streamedId), next],
+            };
+        });
+    }, [onResult]);
+
+
     const request = useCallback(async (authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string | readonly string[], skillOffset?: number) => {
         const current = workspace.selectedArticle;
         if (!current)
@@ -137,47 +178,14 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                 ...(explicitSkillId ? { explicitSkillId } : {}),
                 ...(skillOffset === undefined ? {} : { skillOffset }),
                 ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}),
-            }, (event) => {
-                if (event.type === ASSISTANT_EVENT.TOOL_STATUS && event.claims)
-                    setFactCheckClaimsByArticle((claims) => ({ ...claims, [current.id]: event.claims! }));
-
-                if (event.type === ASSISTANT_EVENT.COMPLETED && event.result) {
-                    const result = event.result;
-                    onResult(current.id, revision.id, result, event.editorialArtifactId);
-                    if (result.factCheck)
-                        setFactCheckClaimsByArticle((claims) => ({ ...claims, [current.id]: result.factCheck!.findings.map(({ claim }) => ({ claim, checked: true })) }));
-                }
-
-                if (event.type !== ASSISTANT_EVENT.TEXT_DELTA)
-                    return;
-
-                setMessagesByArticle((itemsByArticle) => {
-                    const items = itemsByArticle[current.id];
-                    const streamed = items?.find((item) => item.id === streamedId);
-                    const next = {
-                        id: streamedId,
-                        articleId: current.id,
-                        role: "assistant" as const,
-                        kind: "response" as const,
-                        status: "pending" as const,
-                        content: `${streamed?.content ?? ""}${event.delta}`,
-                        createdAt: streamed?.createdAt ?? new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                    };
-
-                    return {
-                        ...itemsByArticle,
-                        [current.id]: [...(items ?? []).filter((item) => item.id !== streamedId), next],
-                    };
-                });
-            }, controller.current.signal);
+            }, (event) => handleAssistantEvent(event, current.id, revision.id, streamedId), controller.current.signal);
             await reload(current.id);
             setStateByArticle((states) => ({
                 ...states,
                 [current.id]: "idle",
             }));
         } catch (error) {
-            if ((error as DOMException).name === "AbortError") {
+            if (error instanceof DOMException && error.name === "AbortError") {
                 await reload(current.id).catch(() => undefined);
                 setStateByArticle((states) => ({
                     ...states,
@@ -204,7 +212,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
 
             await reload(current.id).catch(() => undefined);
         }
-    }, [client, intl, onResult, reload, selection, workspace]);
+    }, [client, handleAssistantEvent, intl, reload, selection, workspace]);
 
     return { messages, state, message, errorDetails, factCheckClaims: article ? factCheckClaimsByArticle[article.id] : undefined, request, cancel: () => controller.current?.abort() };
 }

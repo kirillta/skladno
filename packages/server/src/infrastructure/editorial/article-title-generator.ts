@@ -1,10 +1,10 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 
-import type { SourceNameGenerator } from "../../application/ports/source-name-generator.js";
+import type { ArticleTitleGenerator } from "../../application/ports/article-title-generator.js";
 
 
-export class OpenAiSourceNameGenerator implements SourceNameGenerator {
+export class ArticleTitleGeneratorAdapter implements ArticleTitleGenerator {
     private readonly openai;
 
 

@@ -1,5 +1,6 @@
 import type { FocusEvent, PointerEvent } from "react";
 import { CloseIcon, StatusIcon } from "../ui/icons.js";
+import { notificationClasses } from "../ui/primitives.js";
 import type { StoredNotification } from "./notifications.js";
 
 
@@ -10,18 +11,6 @@ interface NotificationViewportProps {
     dismiss: (id: string) => void;
     pause: (id: string, reason: "pointer" | "focus") => void;
     resume: (id: string, reason: "pointer" | "focus") => void;
-}
-
-
-function notificationClasses(tone: StoredNotification["tone"]): string {
-    const tones = {
-        info: "border-info bg-info-soft text-info",
-        success: "border-success bg-success-soft text-success",
-        warning: "border-warning bg-warning-soft text-warning",
-        error: "border-danger bg-danger-soft text-danger",
-    };
-
-    return tones[tone];
 }
 
 

@@ -70,14 +70,14 @@ export type AssistantMessageTemplate = "greeting" | "request_cancelled" | "reque
 export type AssistantMessageStatus = "completed" | "pending" | "failed" | "cancelled";
 export type AssistantRequestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type AssistantSkillSource = "explicit" | "inferred";
-export type AssistantResponseKind = "editorial_conversation" |
-    "skill_response" |
-    "proposal_prepared" |
-    "findings_prepared" |
-    "proposal_and_findings_prepared" |
-    "translation_proposal_prepared" |
-    "request_cancelled" |
-    "request_failed";
+export type AssistantResponseKind = "editorial_conversation"
+    | "skill_response"
+    | "proposal_prepared"
+    | "findings_prepared"
+    | "proposal_and_findings_prepared"
+    | "translation_proposal_prepared"
+    | "request_cancelled"
+    | "request_failed";
 
 
 export interface AssistantRequest {

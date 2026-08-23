@@ -14,7 +14,7 @@ const summariesSchema = z.object({
 });
 
 
-export class AiSdkProposalSummaryGenerator implements ProposalSummaryGenerator {
+export class ProposalSummaryGeneratorAdapter implements ProposalSummaryGenerator {
     private readonly openai;
 
 

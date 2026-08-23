@@ -18,13 +18,19 @@ function profileFor(items: { id: string; content: string }[], rules: string, ver
         .map((match) => match[1]!)
         .filter((phrase, index, phrases) => phrases.indexOf(phrase) === index && phrases.filter((item) => item === phrase).length >= 2)
         .slice(0, 5);
+    let rhythmLabel = "moderate sentence length";
+    if (averageSentenceWords <= 14)
+        rhythmLabel = "compact sentences";
+    else if (averageSentenceWords >= 24)
+        rhythmLabel = "long, developed sentences";
+
     const traits: StyleTrait[] = [{
         id: "voice",
         label: firstPerson > 0 ? "personal author presence" : "impersonal explanatory voice",
         evidence: `${firstPerson} first-person references in the local corpus.`
     }, {
         id: "rhythm",
-        label: averageSentenceWords <= 14 ? "compact sentences" : averageSentenceWords >= 24 ? "long, developed sentences" : "moderate sentence length",
+        label: rhythmLabel,
         evidence: `Average sentence length: ${Math.round(averageSentenceWords)} words across ${sentences.length} sentences.`
     }, {
         id: "structure",
@@ -41,11 +47,17 @@ function profileFor(items: { id: string; content: string }[], rules: string, ver
     }];
     const characterCount = content.length;
 
+    let confidence: "high" | "medium" | "low" = "low";
+    if (items.length >= 5 && characterCount >= 12_000)
+        confidence = "high";
+    else if (items.length >= 2 && characterCount >= 3_000)
+        confidence = "medium";
+
     return {
         version,
         corpusItemCount: items.length,
         characterCount,
-        confidence: items.length >= 5 && characterCount >= 12_000 ? "high" : items.length >= 2 && characterCount >= 3_000 ? "medium" : "low",
+        confidence,
         traits,
         phrasesToAvoid,
         contributorIds: items.map((item) => item.id),
@@ -71,7 +83,11 @@ export class StyleCorpusRepository {
         const profileRow = this.database.prepare("SELECT profile_json FROM style_profile_versions ORDER BY version DESC LIMIT 1").get() as Row | undefined;
         const profile = profileRow ? JSON.parse(String(profileRow.profile_json)) as StyleProfile : undefined;
         const includedIds = rows.filter((row) => Number(row.included) === 1).map((row) => String(row.id));
-        const status = includedIds.length === 0 ? "empty" : profile && profile.rules === rules && profile.contributorIds.length === includedIds.length && profile.contributorIds.every((id) => includedIds.includes(id)) ? "ready" : "outdated";
+        let status: "empty" | "ready" | "outdated" = "outdated";
+        if (includedIds.length === 0)
+            status = "empty";
+        else if (profile && profile.rules === rules && profile.contributorIds.length === includedIds.length && profile.contributorIds.every((id) => includedIds.includes(id)))
+            status = "ready";
 
         return {
             items: rows.map((row): StyleCorpusItem => ({

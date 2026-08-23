@@ -72,6 +72,35 @@ function applicationClientError(payload: unknown, status: number): ApplicationCl
 }
 
 
+function streamData(message: string): string | undefined {
+    return message.split("\n").find((line) => line.startsWith("data:"))?.slice(5).trim();
+}
+
+
+async function streamEvents<Event>(body: ReadableStream<Uint8Array>, parse: (data: string) => Event, onEvent: (event: Event) => void): Promise<void> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+
+        const messages = buffer.split("\n\n");
+        buffer = messages.pop() ?? "";
+
+        for (const message of messages) {
+            const data = streamData(message);
+            if (data)
+                onEvent(parse(data));
+        }
+
+        if (done)
+            return;
+    }
+}
+
+
 export class HttpApplicationClient implements EditorialWorkspaceClient {
     constructor(private readonly serviceUrl = "http://127.0.0.1:8787") { }
 
@@ -183,28 +212,12 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             throw applicationClientError(payload, response.status);
         }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let pending = "";
-        while (true) {
-            const result = await reader.read();
-            if (result.done)
-                break;
+        await streamEvents(response.body, (data) => JSON.parse(data) as AssistantEvent, (event) => {
+            if (event.type === "error")
+                throw new ApplicationClientError(event.errorCode, undefined, response.status);
 
-            pending += decoder.decode(result.value, { stream: true });
-            const events = pending.split("\n\n");
-            pending = events.pop() ?? "";
-            for (const item of events) {
-                const data = item.split("\n").find((line) => line.startsWith("data: "));
-                if (data) {
-                    const event = JSON.parse(data.slice(6)) as AssistantEvent;
-                    if (event.type === "error")
-                        throw new ApplicationClientError(event.errorCode, undefined, response.status);
-
-                    onEvent(event);
-                }
-            }
-        }
+            onEvent(event);
+        });
     }
 
 
@@ -322,28 +335,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
         if (!response.ok || !response.body)
             throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-            const { done, value } = await reader.read();
-            buffer += decoder.decode(value, { stream: !done });
-
-            const messages = buffer.split("\n\n");
-            buffer = messages.pop() ?? "";
-
-            for (const message of messages) {
-                const data = message.split("\n").find((line) => line.startsWith("data:"))?.slice(5).trim();
-                if (!data)
-                    continue;
-
-                onEvent(JSON.parse(data) as EditorialEvent);
-            }
-
-            if (done)
-                return;
-        }
+        await streamEvents(response.body, (data) => JSON.parse(data) as EditorialEvent, onEvent);
     }
 
 

@@ -1,4 +1,13 @@
-import { APPLICATION_ERROR, EDITORIAL_OPERATION, HTTP_STATUS, type Article, type CreateEditorialArtifactInput, type EditorialArtifact, type EditorialOperation, type StyleProfile } from "@skladno/shared";
+import {
+    APPLICATION_ERROR,
+    EDITORIAL_OPERATION,
+    HTTP_STATUS,
+    type Article,
+    type CreateEditorialArtifactInput,
+    type EditorialArtifact,
+    type EditorialOperation,
+    type StyleProfile
+} from "@skladno/shared";
 import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
@@ -157,6 +166,7 @@ function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifa
 
     const artifact = artifacts.createWithCitations(artifactInput(request, context, enriched), citationsFor(enriched));
     factChecks.save(artifact.id, request.articleId, context.article.currentRevisionId);
+
     return artifact.id;
 }
 
@@ -174,7 +184,7 @@ async function* streamEditorialOperation(request: EditorialServiceRequest, conte
     }
 
     if (!completed && !signal.aborted)
-        throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, "The editorial operation ended before completing. Retry the request.");
+        throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
 }
 
 

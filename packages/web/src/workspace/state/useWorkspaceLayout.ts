@@ -2,50 +2,83 @@ import { useCallback, useEffect, useState } from "react";
 import { isWorkspaceView, type WorkspaceView } from "../workspace-views.js";
 
 
+interface WorkspaceLayoutPreferences {
+    version: 3;
+    libraryWidth: number;
+    assistantWidth: number;
+    libraryCollapsed: boolean;
+    assistantCollapsed: boolean;
+    proposalWarningsDismissed: boolean;
+    selectedArticleId?: string;
+    view: WorkspaceView;
+}
+
+
+function finiteNumber(value: unknown, fallback: number): number {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+
+function storedPreferences(value: unknown): WorkspaceLayoutPreferences | undefined {
+    if (!isRecord(value))
+        return undefined;
+
+    const libraryWidth = Math.min(280, Math.max(192, finiteNumber(value.libraryWidth, 208)));
+    const assistantWidth = Math.max(320, finiteNumber(value.assistantWidth, 384));
+    const libraryCollapsed = value.libraryCollapsed === true;
+    const assistantCollapsed = value.assistantCollapsed === true;
+    if (value.version === 1)
+        return { version: 3, libraryWidth, assistantWidth, libraryCollapsed, assistantCollapsed, proposalWarningsDismissed: false, view: "write" };
+
+    const view = value.view === "publish" ? "write" : value.view;
+    if ((value.version !== 2 && value.version !== 3) || !isWorkspaceView(view))
+        return undefined;
+
+    return {
+        version: 3,
+        libraryWidth,
+        assistantWidth,
+        libraryCollapsed,
+        assistantCollapsed,
+        proposalWarningsDismissed: value.proposalWarningsDismissed === true,
+        view,
+        ...(typeof value.selectedArticleId === "string" && value.selectedArticleId.trim() ? { selectedArticleId: value.selectedArticleId } : {}),
+    };
+}
+
+
+function migratedPreferences(): WorkspaceLayoutPreferences {
+    return {
+        version: 3,
+        libraryWidth: 208,
+        assistantWidth: 384,
+        libraryCollapsed: localStorage.getItem("skladno-navigation-collapsed") === "true",
+        assistantCollapsed: localStorage.getItem("skladno-assistant-collapsed") === "true",
+        proposalWarningsDismissed: false,
+        view: "write",
+    };
+}
+
+
 export function useWorkspaceLayout() {
     const [preferences, setPreferences] = useState(() => {
         const stored = localStorage.getItem("skladno-workspace-layout");
 
         if (stored)
             try {
-                const parsed = JSON.parse(stored) as { version?: number; libraryWidth?: number; assistantWidth?: number; libraryCollapsed?: boolean; assistantCollapsed?: boolean; proposalWarningsDismissed?: boolean; selectedArticleId?: unknown; view?: unknown };
-
-                const view = parsed.view === "publish" ? "write" : parsed.view;
-
-                if ((parsed.version === 2 || parsed.version === 3) && isWorkspaceView(view))
-                    return {
-                        version: 3,
-                        libraryWidth: Math.min(280, Math.max(192, parsed.libraryWidth ?? 208)),
-                        assistantWidth: Math.max(320, parsed.assistantWidth ?? 384),
-                        libraryCollapsed: parsed.libraryCollapsed ?? false,
-                        assistantCollapsed: parsed.assistantCollapsed ?? false,
-                        proposalWarningsDismissed: parsed.proposalWarningsDismissed ?? false,
-                        view,
-                        ...(typeof parsed.selectedArticleId === "string" && parsed.selectedArticleId.trim() ? { selectedArticleId: parsed.selectedArticleId } : {}),
-                    };
-
-                if (parsed.version === 1)
-                    return {
-                        version: 3,
-                        libraryWidth: Math.min(280, Math.max(192, parsed.libraryWidth ?? 208)),
-                        assistantWidth: Math.max(320, parsed.assistantWidth ?? 384),
-                        libraryCollapsed: parsed.libraryCollapsed ?? false,
-                        assistantCollapsed: parsed.assistantCollapsed ?? false,
-                        proposalWarningsDismissed: false,
-                        view: "write" as const,
-                    };
+                const parsed = storedPreferences(JSON.parse(stored));
+                if (parsed)
+                    return parsed;
             } catch {
                 // Replace malformed local preferences with the current version.
             }
 
-        const migrated = { version: 3,
-            libraryWidth: 208,
-            assistantWidth: 384,
-            libraryCollapsed: localStorage.getItem("skladno-navigation-collapsed") === "true",
-            assistantCollapsed: localStorage.getItem("skladno-assistant-collapsed") === "true",
-            proposalWarningsDismissed: false,
-            view: "write" as const
-        };
+        const migrated = migratedPreferences();
 
         localStorage.setItem("skladno-workspace-layout", JSON.stringify(migrated));
         localStorage.removeItem("skladno-navigation-collapsed");

@@ -9,12 +9,12 @@ import type { SystemDateTimeFormatProvider } from "../ports/system-date-time-for
 
 function generalSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
     const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
-    if (rejectInvalidPreferences && (
-        (candidate.theme !== undefined && !isThemePreference(candidate.theme))
-        || (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
-        || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
-        || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
-    ))
+    if (rejectInvalidPreferences
+        && ((candidate.theme !== undefined && !isThemePreference(candidate.theme))
+            || (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
+            || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
+            || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
+        ))
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
     return {
@@ -46,9 +46,17 @@ function backupPolicy(value: unknown): BackupPolicy {
 function aiConnections(value: unknown): { connections: OpenAiConnection[]; activeConnectionId?: string } {
     const candidate = value && typeof value === "object" ? value as { connections?: unknown; activeConnectionId?: unknown } : {};
     const connections = Array.isArray(candidate.connections)
-        ? candidate.connections.filter((item): item is OpenAiConnection => Boolean(item) && typeof item === "object" && (item as OpenAiConnection).provider === "openai" && typeof (item as OpenAiConnection).id === "string" && typeof (item as OpenAiConnection).label === "string" && typeof (item as OpenAiConnection).environmentVariableName === "string")
+        ? candidate.connections.filter((item): item is OpenAiConnection => Boolean(item)
+            && typeof item === "object"
+            && (item as OpenAiConnection).provider === "openai"
+            && typeof (item as OpenAiConnection).id === "string"
+            && typeof (item as OpenAiConnection).label === "string"
+            && typeof (item as OpenAiConnection).environmentVariableName === "string"
+        )
         : [];
-    const activeConnectionId = typeof candidate.activeConnectionId === "string" && connections.some((connection) => connection.id === candidate.activeConnectionId) ? candidate.activeConnectionId : connections[0]?.id;
+    const activeConnectionId = typeof candidate.activeConnectionId === "string"
+        && connections.some((connection) => connection.id === candidate.activeConnectionId) ? candidate.activeConnectionId : connections[0]?.id;
+
     return { connections, ...(activeConnectionId ? { activeConnectionId } : {}) };
 }
 
@@ -79,14 +87,21 @@ function modelPreferences(value: unknown): ModelPreferences {
 }
 
 
-function keyBindingOverrides(value: unknown): KeyBindingOverrides {
+function normalizeKeyBindingOverrides(value: unknown, rejectInvalid: boolean): KeyBindingOverrides {
     if (!value || typeof value !== "object" || Array.isArray(value))
-        return {};
+        if (rejectInvalid)
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+        else
+            return {};
 
     const overrides: KeyBindingOverrides = {};
     for (const [commandId, binding] of Object.entries(value)) {
-        if (!isKeyBindingCommandId(commandId))
+        if (!isKeyBindingCommandId(commandId)) {
+            if (rejectInvalid)
+                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+
             continue;
+        }
 
         if (binding === null) {
             overrides[commandId] = null;
@@ -94,40 +109,33 @@ function keyBindingOverrides(value: unknown): KeyBindingOverrides {
         }
 
         const normalized = normalizeKeyBinding(binding);
-        if (normalized)
-            overrides[commandId] = normalized;
+        if (!normalized) {
+            if (rejectInvalid)
+                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+
+            continue;
+        }
+
+        overrides[commandId] = normalized;
+    }
+
+    if (rejectInvalid) {
+        const conflict = findKeyBindingConflict(resolveKeyBindings(overrides));
+        if (conflict)
+            throw new ApplicationServiceError(APPLICATION_ERROR.KEY_BINDING_CONFLICT, HTTP_STATUS.BAD_REQUEST, { firstCommandId: conflict[0], secondCommandId: conflict[1] });
     }
 
     return overrides;
 }
 
 
+function keyBindingOverrides(value: unknown): KeyBindingOverrides {
+    return normalizeKeyBindingOverrides(value, false);
+}
+
+
 function requestedKeyBindingOverrides(value: unknown): KeyBindingOverrides {
-    if (!value || typeof value !== "object" || Array.isArray(value))
-        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-    const overrides: KeyBindingOverrides = {};
-    for (const [commandId, binding] of Object.entries(value)) {
-        if (!isKeyBindingCommandId(commandId))
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-        if (binding === null) {
-            overrides[commandId] = null;
-            continue;
-        }
-
-        const normalized = normalizeKeyBinding(binding);
-        if (!normalized)
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-        overrides[commandId] = normalized;
-    }
-
-    const conflict = findKeyBindingConflict(resolveKeyBindings(overrides));
-    if (conflict)
-        throw new ApplicationServiceError(APPLICATION_ERROR.KEY_BINDING_CONFLICT, HTTP_STATUS.BAD_REQUEST, { firstCommandId: conflict[0], secondCommandId: conflict[1] });
-
-    return overrides;
+    return normalizeKeyBindingOverrides(value, true);
 }
 
 
@@ -199,7 +207,12 @@ export class ApplicationSettingsService {
         if (saved.connections.some((connection) => connection.environmentVariableName === requestedName))
             throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_AI_CONNECTION, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: requestedName });
 
-        const connection: OpenAiConnection = { id: this.createConnectionId(), provider: "openai", label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : "OpenAI", environmentVariableName: requestedName, status: "unchecked" };
+        const connection: OpenAiConnection = {
+            id: this.createConnectionId(),
+            provider: "openai",
+            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : "OpenAI",
+            environmentVariableName: requestedName, status: "unchecked"
+        };
         saved.connections.push(connection);
         this.settings.set("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
 
@@ -219,7 +232,11 @@ export class ApplicationSettingsService {
             await this.models.list(connection.provider, connection.environmentVariableName);
             saved.connections[index] = { ...connection, status: "connected", lastCheckedAt: new Date().toISOString(), diagnostic: undefined };
         } catch (error) {
-            saved.connections[index] = { ...connection, status: "unavailable", lastCheckedAt: new Date().toISOString(), diagnostic: error instanceof Error ? error.message : "OpenAI could not verify this connection." };
+            saved.connections[index] = {
+                ...connection, status: "unavailable",
+                lastCheckedAt: new Date().toISOString(),
+                diagnostic: error instanceof Error ? error.message : APPLICATION_ERROR.AI_CONNECTION_VERIFICATION_FAILED
+            };
         }
 
         this.settings.set("application-ai-connections", saved);
@@ -230,7 +247,14 @@ export class ApplicationSettingsService {
 
     updateAiConnection(connectionId: string, value: { label?: unknown; environmentVariableName?: unknown }): OpenAiConnection {
         const { saved, index, connection } = this.connectionState(connectionId);
-        const updated = { ...connection, label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : connection.label, environmentVariableName: environmentVariableName(value.environmentVariableName), status: "unchecked" as const, diagnostic: undefined, lastCheckedAt: undefined };
+        const updated = {
+            ...connection,
+            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : connection.label,
+            environmentVariableName: environmentVariableName(value.environmentVariableName),
+            status: "unchecked" as const,
+            diagnostic: undefined,
+            lastCheckedAt: undefined
+        };
         saved.connections[index] = updated;
         this.settings.set("application-ai-connections", saved);
 

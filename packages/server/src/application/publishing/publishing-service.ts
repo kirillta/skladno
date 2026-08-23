@@ -1,5 +1,11 @@
-import { APPLICATION_ERROR, defaultPublishingSettings, HTTP_STATUS, isPublishLimitProfileId, type PublishingSettings } from "@skladno/shared";
-
+import {
+    APPLICATION_ERROR,
+    defaultPublishingSettings,
+    HTTP_STATUS,
+    isPublishLimitProfileId,
+    type CustomPublishLimitProfile,
+    type PublishingSettings
+} from "@skladno/shared";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { SettingsStore } from "../ports/settings-store.js";
 
@@ -7,19 +13,32 @@ import type { SettingsStore } from "../ports/settings-store.js";
 const publishLimitProfileSettingKey = "publish-limit-profile";
 
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+
+function isCustomPublishProfile(value: unknown): value is CustomPublishLimitProfile {
+    return isRecord(value)
+        && typeof value.id === "string"
+        && value.id.startsWith("custom-")
+        && typeof value.name === "string"
+        && Boolean(value.name.trim())
+        && typeof value.characterLimit === "number"
+        && Number.isInteger(value.characterLimit)
+        && value.characterLimit >= 0;
+}
+
+
 function publishingSettings(value: unknown): PublishingSettings | undefined {
-    if (!value || typeof value !== "object" || Array.isArray(value))
+    if (!isRecord(value) || !isPublishLimitProfileId(value.defaultProfileId) || !Array.isArray(value.customProfiles) || !value.customProfiles.every(isCustomPublishProfile))
         return undefined;
 
-    const candidate = value as { defaultProfileId?: unknown; customProfiles?: unknown };
-    if (!isPublishLimitProfileId(candidate.defaultProfileId) || !Array.isArray(candidate.customProfiles))
+    const customProfiles = value.customProfiles;
+    if (new Set(customProfiles.map((profile) => profile.id)).size !== customProfiles.length || (value.defaultProfileId.startsWith("custom-") && !customProfiles.some((profile) => profile.id === value.defaultProfileId)))
         return undefined;
 
-    const customProfiles = candidate.customProfiles;
-    if (!customProfiles.every((profile) => profile && typeof profile === "object" && !Array.isArray(profile) && isPublishLimitProfileId((profile as { id?: unknown }).id) && typeof (profile as { name?: unknown }).name === "string" && Boolean((profile as { name: string }).name.trim()) && typeof (profile as { characterLimit?: unknown }).characterLimit === "number" && Number.isInteger((profile as { characterLimit: number }).characterLimit) && (profile as { characterLimit: number }).characterLimit >= 0) || new Set(customProfiles.map((profile) => (profile as { id: string }).id)).size !== customProfiles.length || (String(candidate.defaultProfileId).startsWith("custom-") && !customProfiles.some((profile) => (profile as { id: string }).id === candidate.defaultProfileId)))
-        return undefined;
-
-    return { defaultProfileId: candidate.defaultProfileId, customProfiles: customProfiles.map((profile) => ({ id: (profile as { id: `custom-${string}` }).id, name: (profile as { name: string }).name.trim(), characterLimit: (profile as { characterLimit: number }).characterLimit })) };
+    return { defaultProfileId: value.defaultProfileId, customProfiles: customProfiles.map((profile) => ({ ...profile, name: profile.name.trim() })) };
 }
 
 
@@ -28,14 +47,7 @@ export class PublishingService {
 
 
     getSettings(): PublishingSettings {
-        const saved = this.store.get(publishLimitProfileSettingKey)?.value;
-        if (saved && typeof saved === "object" && !Array.isArray(saved)) {
-            const candidate = saved as { defaultProfileId?: unknown; customProfiles?: unknown };
-            if (isPublishLimitProfileId(candidate.defaultProfileId) && Array.isArray(candidate.customProfiles) && candidate.customProfiles.every((profile): profile is { id: `custom-${string}`; name: string; characterLimit: number } => Boolean(profile) && typeof profile === "object" && isPublishLimitProfileId((profile as { id?: unknown }).id) && typeof (profile as { name?: unknown }).name === "string" && typeof (profile as { characterLimit?: unknown }).characterLimit === "number" && Number.isInteger((profile as { characterLimit: number }).characterLimit) && (profile as { characterLimit: number }).characterLimit >= 0))
-                return { defaultProfileId: candidate.defaultProfileId, customProfiles: candidate.customProfiles };
-        }
-
-        return { ...defaultPublishingSettings, customProfiles: [] };
+        return publishingSettings(this.store.get(publishLimitProfileSettingKey)?.value) ?? { ...defaultPublishingSettings, customProfiles: [] };
     }
 
 
