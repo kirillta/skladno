@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { HttpApplicationClient, type EditorialWorkspaceClient } from "./application-client.js";
+import type { EditorialWorkspaceClient } from "./application-client.js";
+import { createRendererApplicationClient } from "./desktop-client.js";
 import { EditorialWorkspaceProvider } from "./workspace/EditorialWorkspace.js";
 import { I18nProvider } from "./i18n/I18nProvider.js";
 import { NotificationProvider } from "./notifications/NotificationProvider.js";
@@ -7,7 +8,7 @@ import { useKeyBindingDispatcher } from "./key-bindings/KeyBindingProvider.js";
 import { saveScheduledWebBackup } from "./settings/web-backups.js";
 import { resolveTheme, type KeyBindingOverrides, type ResolvedTheme, type ThemePreference } from "@skladno/shared";
 
-const defaultClient = new HttpApplicationClient();
+const defaultClient = createRendererApplicationClient();
 
 
 function readSystemTheme(): ResolvedTheme {

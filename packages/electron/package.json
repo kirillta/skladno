@@ -3,10 +3,28 @@
     "version": "0.0.0",
     "private": true,
     "type": "module",
+    "main": "dist/main.js",
+    "productName": "Skladno",
+    "description": "Local-first AI editorial workspace",
+    "author": "Kirill Taran",
     "scripts": {
-        "build": "tsc -b"
+        "build": "tsc -b && esbuild src/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload.cjs",
+        "start": "electron .",
+        "package": "npm run build --workspace @skladno/web && npm run build && electron-forge package --arch=x64",
+        "make": "npm run build --workspace @skladno/web && npm run build && electron-forge make --arch=x64 --platform=win32",
+        "test": "tsx --test src/**/*.test.ts"
     },
     "dependencies": {
+        "@skladno/server": "*",
         "@skladno/shared": "*"
+    },
+    "devDependencies": {
+        "@electron-forge/cli": "^7.11.2",
+        "@electron-forge/maker-squirrel": "^7.11.2",
+        "@electron-forge/plugin-fuses": "^7.11.2",
+        "@electron/fuses": "^1.8.0",
+        "electron": "^43.4.1",
+        "esbuild": "^0.28.1",
+        "tsx": "^4.23.1"
     }
 }

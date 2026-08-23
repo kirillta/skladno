@@ -14,6 +14,7 @@
 # next.js
 /.next/
 /out/
+packages/electron/out/
 
 # production
 /build

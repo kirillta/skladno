@@ -19,6 +19,13 @@ export {
     type ElectronStreamEvent,
     type ElectronStreamRequest,
 } from "./application/electron-ipc.js";
+export {
+    ELECTRON_LIFECYCLE_CHANNEL,
+    ELECTRON_LIFECYCLE_EVENT,
+    type ElectronCheckpointResult,
+    type ElectronPrepareCloseRequest,
+} from "./application/electron-lifecycle.js";
+export { electronMessagesFor, type ElectronMessages } from "./application/electron-messages.js";
 export { HTTP_METHOD, HTTP_STATUS } from "./transport/http.js";
 export {
     applicationSettingsPath,

@@ -1,6 +1,6 @@
 # MVP release, recovery, and limitations
 
-Use this guide to prepare and verify the browser-based local-first MVP. It is a maintainer runbook, not an Electron release procedure. Do not put credentials, an author's Article, or a production database in release evidence.
+Use this guide to prepare and verify the browser-based local-first MVP and the unsigned Windows Electron preview. Do not put credentials, an author's Article, or a production database in release evidence.
 
 ## Release checklist
 
@@ -51,4 +51,26 @@ If backup creation fails, leave the active database alone, check the folder perm
 
 Verify local data and recovery against [ADR-005](../architecture/adr-005-article-state-and-consistency.md) and [ADR-006](../architecture/adr-006-sqlite-lifecycle-and-recovery.md). Verify diagnostics, AI completion and storage, and renderer isolation against [ADR-004](../architecture/adr-004-local-diagnostics.md), [ADR-007](../architecture/adr-007-completion-gated-editorial-engine.md), and [ADR-008](../architecture/adr-008-loopback-service-trust-boundary.md).
 
-The supported release is the browser-based local-first MVP. The [cross-cutting inventory](../product/cross-cutting-inventory.md) owns deferred product boundaries. Publishing profiles remain guidance and Copy remains the only publishing action.
+The supported releases are the browser-based local-first MVP and the unsigned Windows preview described below. The [cross-cutting inventory](../product/cross-cutting-inventory.md) owns deferred product boundaries. Publishing profiles remain guidance and Copy remains the only publishing action.
+
+## Windows Electron preview
+
+The preview target is Windows 11 x64. It is unsigned, so Windows may show a SmartScreen warning. Signing and automatic updates remain in issue #35. Native backup folder selection remains in issue #34.
+
+Build the unpacked application with `npm run package:electron`, or build the Squirrel.Windows installer with `npm run make:electron`. Both commands build the existing React application first. The packaged renderer uses local IPC and does not require the loopback HTTP server.
+
+Provider credentials still come from system environment variables. Set the environment variable named by the active AI connection before launching Skladno. The installer does not create or import a `.env` file.
+
+### Desktop acceptance scenario
+
+Run this pass with a disposable `SKLADNO_DATA_DIR` and no private content:
+
+1. Install and launch the x64 preview. Record the expected unsigned-app warning. Confirm the workspace opens, then launch Skladno again and confirm the existing window restores and receives focus.
+2. Complete the clean-profile author journey above through Article creation, Draft checkpointing, Revision save and restore, Proposal acceptance, fact checking, translation, Settings, theme changes, keyboard navigation, and Copy. Confirm the app does not start the HTTP server.
+3. Open HTTP and HTTPS links and confirm they use the system browser. Confirm file and custom-scheme navigation does not open. Test light and dark themes and the Windows 11 keyboard accessibility pass.
+4. Remove the configured provider credential, retry an AI operation, and confirm the UI reports the unavailable configuration without exposing provider details. Repeat while offline, cancel an in-progress request, and confirm incomplete output does not change the Article.
+5. Edit the active Article and close the window before the normal checkpoint delay. Restart and confirm the Draft reopens. Exercise the failed-checkpoint dialog with a disposable unwritable or conflicted fixture and verify both returning to the Article and explicitly quitting without the latest checkpoint.
+6. Restart and confirm Articles, Drafts, Revisions, Settings, Findings, and completed Assistant output persist. Upgrade or reinstall over the same data directory and repeat the check.
+7. Uninstall Skladno. Confirm the installer removed the application but left the disposable `.skladno` directory unchanged, then remove the disposable data manually.
+
+Mark the desktop pass failed if the renderer gains Node, filesystem, database, credential, or unrestricted IPC access; if generated content changes an Article without approval; or if install, upgrade, reinstall, or uninstall changes `.skladno` data.

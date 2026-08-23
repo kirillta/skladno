@@ -5,7 +5,7 @@ import type { AcceptProposalInput, ProposalChangeSummary, SummarizeProposalInput
 import type { ArticleRevision, SaveArticleRevisionInput } from "../articles/revision/revision.js";
 import type { HealthResponse } from "./health.js";
 import type { ApplicationErrorPayload } from "../cross-cutting/errors.js";
-import type { EditorialEvent, StartEditorialRequest } from "../editorial/editorial.js";
+import type { EditorialEvent, FactCheck, FactCheckFinding, StartEditorialRequest } from "../editorial/editorial.js";
 import type { ApplicationSettingsSnapshot, BackupPolicy, GeneralSettings, ModelPreferences, OpenAiConnection } from "../settings/settings.js";
 import type { KeyBindingOverrides } from "../cross-cutting/key-bindings.js";
 import type { CreateStyleCorpusItemInput, StyleCorpus } from "../style/style.js";
@@ -45,6 +45,8 @@ export interface ElectronApplicationOperationMap {
     summarizeProposal: { args: [string, SummarizeProposalInput]; result: ProposalChangeSummary[] };
     restoreRevision: { args: [string, string]; result: ArticleRevision };
     listAssistantMessages: { args: [string]; result: import("../assistant/assistant.js").AssistantMessage[] };
+    listFactChecks: { args: [string]; result: FactCheck[] };
+    resolveFactCheckFinding: { args: [string, string, NonNullable<FactCheckFinding["resolution"]>]; result: void };
     getStyleCorpus: { args: []; result: StyleCorpus };
     addStyleCorpusItem: { args: [CreateStyleCorpusItemInput]; result: StyleCorpus };
     setStyleCorpusItemIncluded: { args: [string, boolean]; result: StyleCorpus };
@@ -86,6 +88,8 @@ export const ELECTRON_APPLICATION_METHOD = {
     summarizeProposal: "summarizeProposal",
     restoreRevision: "restoreRevision",
     listAssistantMessages: "listAssistantMessages",
+    listFactChecks: "listFactChecks",
+    resolveFactCheckFinding: "resolveFactCheckFinding",
     getStyleCorpus: "getStyleCorpus",
     addStyleCorpusItem: "addStyleCorpusItem",
     setStyleCorpusItemIncluded: "setStyleCorpusItemIncluded",

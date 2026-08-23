@@ -12,6 +12,11 @@ import { EditorialEngineError } from "../../application/ports/editorial-engine-e
 import { isEditorialOperation } from "../../application/editorial/workflow-prompt.js";
 
 
+function isFactCheckResolution(value: unknown): value is NonNullable<import("@skladno/shared").FactCheckFinding["resolution"]> {
+    return value === "corrected_or_removed" || value === "accepted_as_written" || value === "evidence_accepted";
+}
+
+
 export interface ElectronIpcMainEvent {
     sender: {
         send(channel: string, payload: ElectronStreamEvent): void;
@@ -133,6 +138,13 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
             return services.articles.restoreRevision(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.listAssistantMessages:
             return services.assistant.listMessages(String(args[0]));
+        case ELECTRON_APPLICATION_METHOD.listFactChecks:
+            return services.factChecks.list(String(args[0]));
+        case ELECTRON_APPLICATION_METHOD.resolveFactCheckFinding:
+            if (!isFactCheckResolution(args[2]))
+                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+            return services.factChecks.resolve(String(args[1]), args[2]);
         case ELECTRON_APPLICATION_METHOD.getStyleCorpus:
             return services.styleCorpus.get();
         case ELECTRON_APPLICATION_METHOD.addStyleCorpusItem:
@@ -267,7 +279,7 @@ async function streamEditorial(event: ElectronIpcMainEvent, request: Extract<Ele
 }
 
 
-export function registerElectronIpcApplicationAdapter(ipcMain: ElectronIpcMain, services: ApplicationServices, editorial: EditorialService, now = () => new Date().toISOString()): void {
+export function registerElectronIpcApplicationAdapter(ipcMain: ElectronIpcMain, services: ApplicationServices, editorial: EditorialService, now = () => new Date().toISOString()): () => void {
     const controllers = new Map<string, AbortController>();
 
     ipcMain.handle(ELECTRON_IPC_CHANNEL.invoke, (_event, request) => invoke(request, services, now));
@@ -286,4 +298,11 @@ export function registerElectronIpcApplicationAdapter(ipcMain: ElectronIpcMain, 
         void (payload.kind === "assistant" ? streamAssistant(event, payload, services, controller) : streamEditorial(event, payload, editorial, controller))
             .finally(() => controllers.delete(payload.streamId));
     });
+
+    return () => {
+        for (const controller of controllers.values())
+            controller.abort();
+
+        controllers.clear();
+    };
 }

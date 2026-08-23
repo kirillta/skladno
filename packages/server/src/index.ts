@@ -1,14 +1,7 @@
-import { randomUUID } from "node:crypto";
-import { createApplicationServices } from "./application/create-application-services.js";
-import { EditorialService } from "./application/editorial/editorial-service.js";
 import { loadServerConfig, loadServerEnvironment } from "./infrastructure/configuration/config.js";
 import { createLocalDiagnostics } from "./infrastructure/diagnostics/local-diagnostics.js";
-import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/configured-editorial-engine-resolver.js";
-import { listAvailableModels } from "./infrastructure/editorial/available-models.js";
 import { closeLocalService, listenForLocalService } from "./infrastructure/lifecycle/service-lifecycle.js";
-import { SqliteBackupManager } from "./infrastructure/persistence/sqlite-backup-manager.js";
-import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, SettingsRepository, StyleCorpusRepository, openDatabase } from "./infrastructure/persistence/index.js";
-import { readSystemDateTimeFormat } from "./infrastructure/configuration/system-date-time-format.js";
+import { createLocalApplication } from "./local-application.js";
 import { createLocalService } from "./presentation/server.js";
 
 const diagnostics = createLocalDiagnostics();
@@ -19,19 +12,7 @@ async function start(): Promise<void> {
         loadServerEnvironment();
 
         const config = loadServerConfig();
-        const database = openDatabase(config.databasePath);
-        const articles = new ArticlesRepository(database);
-        const editorialArtifacts = new EditorialArtifactsRepository(database);
-        const factChecks = new FactChecksRepository(database);
-        const settings = new SettingsRepository(database);
-        const editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.get(articleId)));
-        const styleCorpus = new StyleCorpusRepository(database);
-        const assistant = new AssistantRepository(database);
-        const engines = new ConfiguredEditorialEngineResolver(config, settings);
-
-        assistant.seedGreetings();
-        const services = createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: listAvailableModels }, randomUUID, factChecks, new SqliteBackupManager(database));
-        const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled, factChecks);
+        const { database, services, editorial } = createLocalApplication(config);
         const service = createLocalService(config, editorial, services, diagnostics);
         let shuttingDown = false;
 

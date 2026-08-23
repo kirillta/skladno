@@ -1,5 +1,9 @@
+import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
+
+
 /** Canonical application-owned messages. IDs are stable; English is the source text. */
 export const messages = {
+    ...electronMessagesFor(defaultInterfaceLocale),
     "article.defaultTitle": "Untitled article",
     "workspace.tabs.write": "Write",
     "workspace.tabs.proposal": "Proposals",

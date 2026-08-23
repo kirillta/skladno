@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { BUILT_IN_SKILL, defaultPublishLimitProfileId, isArticleLanguage, isPublishLimitProfileId, KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
+import { BUILT_IN_SKILL, defaultPublishLimitProfileId, ELECTRON_LIFECYCLE_EVENT, isArticleLanguage, isPublishLimitProfileId, KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { Banner } from "../ui/primitives.js";
 import { ApplicationSettings } from "../settings/ApplicationSettings.js";
@@ -48,6 +48,8 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     }, [editorial, layout]);
     const assistant = useAssistantMessages(client, workspace, assistantSelection, applyAssistantResult, profileRebuilt);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
+    const flushSelectedRef = useRef(workspace.flushSelected);
+    flushSelectedRef.current = workspace.flushSelected;
     const restoreAssistantProposal = editorial.restoreAssistantProposal;
     const runFactCheck = () => {
         layout.setAssistantCollapsed(false);
@@ -65,6 +67,23 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     useEffect(() => {
         restoreAssistantProposal(assistant.messages);
     }, [assistant.messages, restoreAssistantProposal]);
+
+    useEffect(() => {
+        const prepareClose = (event: Event) => {
+            if (!(event instanceof CustomEvent) || typeof event.detail !== "string")
+                return;
+
+            const requestId = event.detail;
+            void flushSelectedRef.current().then(
+                () => window.dispatchEvent(new CustomEvent(ELECTRON_LIFECYCLE_EVENT.checkpointResult, { detail: JSON.stringify({ requestId, ok: true }) })),
+                () => window.dispatchEvent(new CustomEvent(ELECTRON_LIFECYCLE_EVENT.checkpointResult, { detail: JSON.stringify({ requestId, ok: false }) })),
+            );
+        };
+
+        window.addEventListener(ELECTRON_LIFECYCLE_EVENT.prepareClose, prepareClose);
+
+        return () => window.removeEventListener(ELECTRON_LIFECYCLE_EVENT.prepareClose, prepareClose);
+    }, []);
 
     const createBlank = useCallback(async () => {
         try {

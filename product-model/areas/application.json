@@ -15,7 +15,7 @@
                 "packages/server/src/application/settings/application-settings-service.ts",
                 "packages/server/src/application/editorial/editorial-service.ts",
                 "packages/shared/src",
-                "packages/electron/src/preload-bridge.ts",
+                "packages/electron/src",
                 "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts"
             ],
             "contract": "The renderer uses typed HTTP and Electron application-client operations, including supporting Proposal summaries, against local application services; credentials and privileged model operations remain server-side.",
@@ -67,6 +67,26 @@
             "persistence": "SQLite is the active data store; private author data is not delegated to a remote application database."
         },
         {
+            "id": "application.electron-windows-preview",
+            "area": "Application shell",
+            "title": "Secured Electron desktop client for Windows",
+            "status": "implemented",
+            "owners": [
+                "packages/electron/src",
+                "packages/electron/forge.config.js",
+                "packages/server/src/electron.ts",
+                "packages/server/src/local-application.ts",
+                "packages/web/src/desktop-client.ts",
+                ".github/workflows/electron-windows.yml"
+            ],
+            "contract": "The unsigned Windows 11 x64 preview runs the existing React application in one context-isolated, sandboxed Electron window. The main process composes the existing local application services and exposes only allowlisted typed IPC operations. External web links open in the system browser, a second launch focuses the first window, and close waits for the active Draft checkpoint or explicit author confirmation.",
+            "persistence": "The desktop client uses the existing user-local .skladno SQLite data. Install, upgrade, reinstall, and uninstall do not delete or rewrite that directory.",
+            "limitations": [
+                "The preview is unsigned and Windows-only; signing and automatic updates remain in #35.",
+                "Native backup pickers and other Electron-specific Settings work remain in #34."
+            ]
+        },
+        {
             "id": "application.desktop-responsive-shell",
             "area": "Application shell",
             "title": "Desktop-ready responsive shell",
@@ -79,7 +99,7 @@
             "contract": "The desktop shell supports collapsed panels, responsive workspace layout, and locally dismissible workspace advisories.",
             "persistence": "Workspace layout and advisory-dismissal preferences are persisted locally in browser storage.",
             "limitations": [
-                "Electron, mobile, and offline modes remain deferred."
+                "Mobile and browser-offline modes remain deferred."
             ]
         }
     ],
@@ -166,6 +186,93 @@
             "evidence": {
                 "kind": "automated",
                 "path": "packages/server/src/infrastructure/persistence/repositories.test.ts"
+            }
+        },
+        {
+            "id": "application.electron-secured-window",
+            "title": "Electron window preserves the renderer trust boundary",
+            "capabilityIds": [
+                "application.electron-windows-preview",
+                "application.local-service-client"
+            ],
+            "preconditions": [
+                "The Windows desktop client starts."
+            ],
+            "event": "The main process creates its application window and receives navigation requests.",
+            "expected": [
+                "Context isolation and sandboxing are enabled, Node integration is disabled, and only HTTP or HTTPS links may open in the system browser.",
+                "A second launch restores and focuses the existing window."
+            ],
+            "forbidden": [
+                "Renderer access to Node, SQLite, credentials, arbitrary IPC, or non-web external schemes."
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/electron/src/window-policy.test.ts"
+            }
+        },
+        {
+            "id": "application.electron-draft-preserving-close",
+            "title": "Electron close coordinates the active Draft checkpoint",
+            "capabilityIds": [
+                "application.electron-windows-preview"
+            ],
+            "preconditions": [
+                "The author closes the desktop window while an Article is active."
+            ],
+            "event": "The main process requests the renderer's latest Draft checkpoint.",
+            "expected": [
+                "The application closes after a successful checkpoint.",
+                "A failed checkpoint offers a return action and an explicit quit-without-latest-checkpoint action."
+            ],
+            "forbidden": [
+                "Claiming that an unsuccessful checkpoint was saved."
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/electron/src/close-coordinator.test.ts"
+            }
+        },
+        {
+            "id": "application.electron-packaged-startup",
+            "title": "Packaged Windows preview opens the existing application",
+            "capabilityIds": [
+                "application.electron-windows-preview"
+            ],
+            "preconditions": [
+                "The unsigned Windows 11 x64 preview is installed with a disposable local data directory."
+            ],
+            "event": "The author launches Skladno and completes the desktop acceptance journey.",
+            "expected": [
+                "The existing React workspace opens and the typed Article, Settings, Assistant, editorial, and fact-check operations use local application services without an HTTP server."
+            ],
+            "forbidden": [
+                "A second React application or renderer access to privileged resources."
+            ],
+            "evidence": {
+                "kind": "human-reviewed",
+                "path": "docs/development/guides/mvp-release-and-recovery.md"
+            }
+        },
+        {
+            "id": "application.electron-install-preserves-data",
+            "title": "Desktop reinstall and uninstall preserve local author data",
+            "capabilityIds": [
+                "application.electron-windows-preview"
+            ],
+            "preconditions": [
+                "The disposable .skladno directory contains an Article, Draft, Revision, and Settings."
+            ],
+            "event": "The preview is upgraded or reinstalled and then uninstalled.",
+            "expected": [
+                "The existing data reopens after upgrade or reinstall and remains on disk after uninstall."
+            ],
+            "forbidden": [
+                "Installer lifecycle actions deleting or rewriting the .skladno directory."
+            ],
+            "evidence": {
+                "kind": "human-reviewed",
+                "path": "docs/development/guides/mvp-release-and-recovery.md"
             }
         },
         {

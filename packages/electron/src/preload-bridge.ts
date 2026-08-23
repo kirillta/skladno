@@ -164,6 +164,8 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         summarizeProposal: (articleId, input) => invoke(ELECTRON_APPLICATION_METHOD.summarizeProposal, articleId, input),
         restoreRevision: (articleId, revisionId) => invoke(ELECTRON_APPLICATION_METHOD.restoreRevision, articleId, revisionId),
         listAssistantMessages: (articleId) => invoke(ELECTRON_APPLICATION_METHOD.listAssistantMessages, articleId),
+        listFactChecks: (articleId) => invoke(ELECTRON_APPLICATION_METHOD.listFactChecks, articleId),
+        resolveFactCheckFinding: (articleId, occurrenceId, resolution) => invoke(ELECTRON_APPLICATION_METHOD.resolveFactCheckFinding, articleId, occurrenceId, resolution),
         streamAssistantRequest: (articleId, input, onEvent, signal) => {
             const streamId = createStreamId();
 
