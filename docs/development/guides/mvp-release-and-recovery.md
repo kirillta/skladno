@@ -55,11 +55,11 @@ The supported releases are the browser-based local-first MVP and the unsigned Wi
 
 ## Windows Electron preview
 
-The preview target is Windows 11 x64. It is unsigned, so Windows may show a SmartScreen warning. Signing and automatic updates remain in issue #35. Native backup folder selection remains in issue #34.
+The preview target is Windows 11 x64. It is unsigned, so Windows may show a SmartScreen warning. Signing and automatic updates remain in issue #35. Native backup folder selection, Explorer reveal, and manual snapshots use the restricted desktop Settings client.
 
 Build the unpacked application with `npm run package:electron`, or build the Squirrel.Windows installer with `npm run make:electron`. Both commands build the existing React application first. The packaged renderer uses local IPC and does not require the loopback HTTP server.
 
-Provider credentials still come from system environment variables. Set the environment variable named by the active AI connection before launching Skladno. The installer does not create or import a `.env` file.
+Environment-variable credentials remain supported. Managed credentials use Windows Credential Manager and never enter SQLite, backup snapshots, or renderer responses. The installer does not create or import a `.env` file.
 
 ### Desktop acceptance scenario
 

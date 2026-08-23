@@ -4,7 +4,8 @@ import { generateText } from "ai";
 import type { ArticleTitleGenerator } from "../../application/ports/article-title-generator.js";
 
 
-export class ArticleTitleGeneratorAdapter implements ArticleTitleGenerator {
+/** OpenAI implementation of the provider-neutral title-generator port. */
+export class OpenAiArticleTitleGeneratorAdapter implements ArticleTitleGenerator {
     private readonly openai;
 
 

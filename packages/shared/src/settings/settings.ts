@@ -81,11 +81,16 @@ export interface SystemDateTimeFormat {
 }
 
 
-export interface OpenAiConnection {
+export type CredentialSource =
+    | { kind: "environment-variable"; environmentVariableName: string }
+    | { kind: "managed" };
+
+
+export interface AiConnection {
     id: string;
-    provider: "openai";
+    provider: string;
     label: string;
-    environmentVariableName: string;
+    credentialSource: CredentialSource;
     status: "unchecked" | "connected" | "unavailable";
     lastCheckedAt?: string;
     diagnostic?: string;
@@ -108,7 +113,7 @@ export interface BackupPolicy {
 export interface ApplicationSettingsSnapshot {
     general: GeneralSettings;
     systemDateTimeFormat?: SystemDateTimeFormat;
-    connections: OpenAiConnection[];
+    connections: AiConnection[];
     activeConnectionId?: string;
     modelPreferences: ModelPreferences;
     backupPolicy: BackupPolicy;
@@ -139,11 +144,31 @@ export interface ApplicationSettingsClient {
     /** Available only in the web client, where the browser writes to the author-selected folder. */
     createBackup?(): Promise<Blob>;
     updateKeyBindingOverrides(input: KeyBindingOverrides): Promise<KeyBindingOverrides>;
-    addOpenAiConnection(input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection>;
-    updateOpenAiConnection(connectionId: string, input: Pick<OpenAiConnection, "label" | "environmentVariableName">): Promise<OpenAiConnection>;
-    removeOpenAiConnection(connectionId: string): Promise<void>;
-    setActiveOpenAiConnection(connectionId: string): Promise<void>;
-    testOpenAiConnection(connectionId: string): Promise<OpenAiConnection>;
-    refreshOpenAiModels(): Promise<string[]>;
+    addAiConnection(input: { label: string; environmentVariableName: string }): Promise<AiConnection>;
+    updateAiConnection(connectionId: string, input: { label: string; environmentVariableName: string }): Promise<AiConnection>;
+    removeAiConnection(connectionId: string): Promise<void>;
+    setActiveAiConnection(connectionId: string): Promise<void>;
+    testAiConnection(connectionId: string): Promise<AiConnection>;
+    refreshAiModels(): Promise<string[]>;
     updateModelPreferences(input: ModelPreferences): Promise<ModelPreferences>;
+}
+
+
+export interface DesktopSettingsLocations {
+    dataDirectory: string;
+    backupDirectory?: string;
+    dataDirectoryExternallyControlled: boolean;
+}
+
+
+/** Context-isolated, finite native Settings operations. Paths are never supplied by the renderer. */
+export interface DesktopSettingsClient {
+    getLocations(): Promise<DesktopSettingsLocations>;
+    chooseBackupDirectory(): Promise<string | undefined>;
+    revealBackupDirectory(): Promise<void>;
+    revealDataDirectory(): Promise<void>;
+    createNativeBackup(): Promise<{ path: string; createdAt: string }>;
+    addManagedAiConnection(input: { label: string; apiKey: string }): Promise<AiConnection>;
+    renameManagedAiConnection(connectionId: string, label: string): Promise<AiConnection>;
+    removeManagedAiConnection(connectionId: string): Promise<void>;
 }

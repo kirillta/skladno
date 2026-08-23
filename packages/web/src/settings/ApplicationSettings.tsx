@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { defaultGeneralSettings, defaultPublishingSettings, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection, type PublishingSettings } from "@skladno/shared";
+import { defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
@@ -27,7 +27,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
     const [connectionName, setConnectionName] = useState("");
     const [environmentName, setEnvironmentName] = useState("");
     const [connectionError, setConnectionError] = useState<string>();
-    const [connectionPendingRemoval, setConnectionPendingRemoval] = useState<OpenAiConnection>();
+    const [connectionPendingRemoval, setConnectionPendingRemoval] = useState<AiConnection>();
     const [status, setStatus] = useState(() => intl.formatMessage({ id: "settings.loading" }));
 
     useEffect(() => {
@@ -49,7 +49,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         if (section !== "ai" || !settings?.activeConnectionId)
             return;
 
-        void client.refreshOpenAiModels().then(setModels).catch((error) => {
+        void client.refreshAiModels().then(setModels).catch((error) => {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         });
     }, [client, intl, notifyError, section, settings?.activeConnectionId]);
@@ -110,7 +110,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
 
 
     async function addConnection() {
-        if (settings?.connections.some((connection) => connection.environmentVariableName === environmentName)) {
+        if (settings?.connections.some((connection) => (connection.credentialSource?.kind === "environment-variable" ? connection.credentialSource.environmentVariableName : (connection as unknown as { environmentVariableName?: string }).environmentVariableName) === environmentName)) {
             setConnectionError(intl.formatMessage({ id: "settings.duplicateEnvironmentName" }));
             return;
         }
@@ -118,7 +118,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         setConnectionError(undefined);
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
-            const connection = await client.addOpenAiConnection({ label: connectionName, environmentVariableName: environmentName });
+            const connection = await client.addAiConnection({ label: connectionName, environmentVariableName: environmentName });
             setSettings((current) => current ? {
                 ...current,
                 connections: [...current.connections, connection],
@@ -137,7 +137,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
     async function setActiveConnection(connectionId: string) {
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
-            await client.setActiveOpenAiConnection(connectionId);
+            await client.setActiveAiConnection(connectionId);
             setSettings((current) => current ? { ...current, activeConnectionId: connectionId } : current);
             setModels([]);
             setStatus(intl.formatMessage({ id: "settings.saved" }));
@@ -154,7 +154,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
 
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
-            await client.removeOpenAiConnection(connectionPendingRemoval.id);
+            await client.removeAiConnection(connectionPendingRemoval.id);
             setSettings((current) => current ? {
                 ...current,
                 connections: current.connections.filter((connection) => connection.id !== connectionPendingRemoval.id),
@@ -172,7 +172,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
 
     async function refreshModels() {
         try {
-            setModels(await client.refreshOpenAiModels());
+            setModels(await client.refreshAiModels());
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }

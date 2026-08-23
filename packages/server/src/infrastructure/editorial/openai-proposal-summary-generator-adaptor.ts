@@ -14,7 +14,8 @@ const summariesSchema = z.object({
 });
 
 
-export class ProposalSummaryGeneratorAdapter implements ProposalSummaryGenerator {
+/** OpenAI implementation of the provider-neutral proposal-summary port. */
+export class OpenAiProposalSummaryGeneratorAdapter implements ProposalSummaryGenerator {
     private readonly openai;
 
 

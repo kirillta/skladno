@@ -100,17 +100,17 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
             return services.settings.updateBackupPolicy(args[0]);
         case ELECTRON_APPLICATION_METHOD.updateKeyBindingOverrides:
             return services.settings.updateKeyBindingOverrides(args[0]);
-        case ELECTRON_APPLICATION_METHOD.addOpenAiConnection:
+        case ELECTRON_APPLICATION_METHOD.addAiConnection:
             return services.settings.createAiConnection(args[0] as { label?: unknown; environmentVariableName?: unknown });
-        case ELECTRON_APPLICATION_METHOD.updateOpenAiConnection:
+        case ELECTRON_APPLICATION_METHOD.updateAiConnection:
             return services.settings.updateAiConnection(String(args[0]), args[1] as { label?: unknown; environmentVariableName?: unknown });
-        case ELECTRON_APPLICATION_METHOD.removeOpenAiConnection:
+        case ELECTRON_APPLICATION_METHOD.removeAiConnection:
             return services.settings.deleteAiConnection(String(args[0]));
-        case ELECTRON_APPLICATION_METHOD.setActiveOpenAiConnection:
+        case ELECTRON_APPLICATION_METHOD.setActiveAiConnection:
             return services.settings.activateAiConnection(String(args[0]));
-        case ELECTRON_APPLICATION_METHOD.testOpenAiConnection:
+        case ELECTRON_APPLICATION_METHOD.testAiConnection:
             return services.settings.testAiConnection(String(args[0]));
-        case ELECTRON_APPLICATION_METHOD.refreshOpenAiModels:
+        case ELECTRON_APPLICATION_METHOD.refreshAiModels:
             return services.settings.listAiModels();
         case ELECTRON_APPLICATION_METHOD.updateModelPreferences:
             return services.settings.updateModelPreferences(args[0]);

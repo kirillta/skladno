@@ -2,6 +2,8 @@
 
 Skladno is a local-first AI editorial workspace. It assists authors; it never edits or publishes their work autonomously.
 
+The Electron app is the primary product. The web app exists mainly for development, so prioritize Electron behavior and compatibility.
+
 ## Before changing code
 
 1. Treat the user-provided issue or task as the active scope. Do not infer another issue from repository history.
@@ -24,6 +26,8 @@ Keep `docs/development/plans` for active work. Move lasting decisions from compl
 ## Boundaries
 
 Keep renderer-safe contracts in `packages/shared`, privileged work in `packages/server`, UI in `packages/web`, and Electron bridges narrow and context-isolated. The renderer uses the application client and receives no credentials or direct database or filesystem access.
+
+OpenAI is one potential provider. Use provider-neutral names for generalized concepts and identifiers; reserve `openai` for OpenAI-specific code (for example, do not name a provider-neutral identifier `io.github.kirillta.skladno.openai`).
 
 Validate transport and process boundaries. Keep credentials, private content, databases, raw provider errors, and full Article bodies out of commits and diagnostics. Expanding network, persistence, permissions, or provider-side storage requires explicit scope.
 

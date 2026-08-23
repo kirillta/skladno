@@ -294,7 +294,7 @@ test("AI connections reject duplicate environment-variable names and persist act
         assert.equal(removed.status, HTTP_STATUS.NO_CONTENT);
 
         const settings = await fetch(`http://127.0.0.1:${address.port}${applicationSettingsPath}`);
-        assert.deepEqual((await settings.json() as { connections: { id: string }[]; activeConnectionId?: string }).connections, [{ id: second.id, provider: "openai", label: "Work OpenAI", environmentVariableName: "WORK_OPENAI_API_KEY", status: "unchecked" }]);
+        assert.deepEqual((await settings.json() as { connections: { id: string }[]; activeConnectionId?: string }).connections, [{ id: second.id, provider: "openai", label: "Work OpenAI", credentialSource: { kind: "environment-variable", environmentVariableName: "WORK_OPENAI_API_KEY" }, status: "unchecked" }]);
         assert.equal((await (await fetch(`http://127.0.0.1:${address.port}${applicationSettingsPath}`)).json() as { activeConnectionId?: string }).activeConnectionId, second.id);
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));

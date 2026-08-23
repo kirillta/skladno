@@ -1,10 +1,11 @@
-import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type AiConnection, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { AvailableModelsProvider } from "../ports/available-models-provider.js";
 import type { BackupManager } from "../ports/backup-manager.js";
 import type { SettingsStore } from "../ports/settings-store.js";
 import type { SystemDateTimeFormatProvider } from "../ports/system-date-time-format-provider.js";
+import type { ManagedCredentials } from "../ports/managed-credentials.js";
 
 
 function generalSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
@@ -43,17 +44,36 @@ function backupPolicy(value: unknown): BackupPolicy {
 }
 
 
-function aiConnections(value: unknown): { connections: OpenAiConnection[]; activeConnectionId?: string } {
+function normalizeAiConnection(value: unknown): AiConnection | undefined {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return undefined;
+
+    const candidate = value as Record<string, unknown>;
+    if (typeof candidate.provider !== "string" || !candidate.provider || typeof candidate.id !== "string" || typeof candidate.label !== "string")
+        return undefined;
+
+    const source = candidate.credentialSource;
+    if (source && typeof source === "object" && !Array.isArray(source)) {
+        const credentialSource = source as Record<string, unknown>;
+        if (credentialSource.kind === "managed")
+            return { id: candidate.id, provider: candidate.provider, label: candidate.label, credentialSource: { kind: "managed" }, status: candidate.status === "connected" || candidate.status === "unavailable" ? candidate.status : "unchecked" };
+
+        if (credentialSource.kind === "environment-variable" && typeof credentialSource.environmentVariableName === "string")
+            return { id: candidate.id, provider: candidate.provider, label: candidate.label, credentialSource: { kind: "environment-variable", environmentVariableName: credentialSource.environmentVariableName }, status: candidate.status === "connected" || candidate.status === "unavailable" ? candidate.status : "unchecked" };
+    }
+
+    return typeof candidate.environmentVariableName === "string"
+        ? { id: candidate.id, provider: candidate.provider, label: candidate.label, credentialSource: { kind: "environment-variable", environmentVariableName: candidate.environmentVariableName }, status: candidate.status === "connected" || candidate.status === "unavailable" ? candidate.status : "unchecked" }
+        : undefined;
+}
+
+
+function aiConnections(value: unknown): { connections: AiConnection[]; activeConnectionId?: string } {
     const candidate = value && typeof value === "object" ? value as { connections?: unknown; activeConnectionId?: unknown } : {};
-    const connections = Array.isArray(candidate.connections)
-        ? candidate.connections.filter((item): item is OpenAiConnection => Boolean(item)
-            && typeof item === "object"
-            && (item as OpenAiConnection).provider === "openai"
-            && typeof (item as OpenAiConnection).id === "string"
-            && typeof (item as OpenAiConnection).label === "string"
-            && typeof (item as OpenAiConnection).environmentVariableName === "string"
-        )
-        : [];
+    const connections = Array.isArray(candidate.connections) ? candidate.connections.flatMap((connection) => {
+        const normalized = normalizeAiConnection(connection);
+        return normalized ? [normalized] : [];
+    }) : [];
     const activeConnectionId = typeof candidate.activeConnectionId === "string"
         && connections.some((connection) => connection.id === candidate.activeConnectionId) ? candidate.activeConnectionId : connections[0]?.id;
 
@@ -146,6 +166,7 @@ export class ApplicationSettingsService {
         private readonly models: AvailableModelsProvider,
         private readonly createConnectionId: () => string,
         private readonly backups?: BackupManager,
+        private readonly credentials?: ManagedCredentials,
     ) { }
 
 
@@ -201,22 +222,47 @@ export class ApplicationSettingsService {
     }
 
 
-    createAiConnection(value: { label?: unknown; environmentVariableName?: unknown }): OpenAiConnection {
+    createAiConnection(value: { label?: unknown; environmentVariableName?: unknown }): AiConnection {
         const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
         const requestedName = environmentVariableName(value.environmentVariableName);
-        if (saved.connections.some((connection) => connection.environmentVariableName === requestedName))
+        if (saved.connections.some((connection) => connection.credentialSource.kind === "environment-variable" && connection.credentialSource.environmentVariableName === requestedName))
             throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_AI_CONNECTION, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: requestedName });
 
-        const connection: OpenAiConnection = {
+        const connection: AiConnection = {
             id: this.createConnectionId(),
             provider: "openai",
             label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : "OpenAI",
-            environmentVariableName: requestedName, status: "unchecked"
+            credentialSource: { kind: "environment-variable", environmentVariableName: requestedName }, status: "unchecked"
         };
         saved.connections.push(connection);
         this.settings.set("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
 
         return connection;
+    }
+
+
+    async createManagedAiConnection(value: { label?: unknown; apiKey?: unknown }): Promise<AiConnection> {
+        if (!this.credentials?.available() || typeof value.apiKey !== "string" || !value.apiKey.trim())
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+        const connection: AiConnection = { id: this.createConnectionId(), provider: "openai", label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : "OpenAI", credentialSource: { kind: "managed" }, status: "unchecked" };
+        try {
+            await this.models.list(connection, value.apiKey);
+        } catch {
+            throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
+        }
+
+        this.credentials.set(connection.id, value.apiKey);
+        try {
+            const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
+            saved.connections.push({ ...connection, status: "connected", lastCheckedAt: new Date().toISOString() });
+            this.settings.set("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
+            
+            return saved.connections.at(-1)!;
+        } catch (error) {
+            this.credentials.delete(connection.id);
+            throw error;
+        }
     }
 
 
@@ -226,10 +272,10 @@ export class ApplicationSettingsService {
     }
 
 
-    async testAiConnection(connectionId: string): Promise<OpenAiConnection> {
+    async testAiConnection(connectionId: string): Promise<AiConnection> {
         const { saved, index, connection } = this.connectionState(connectionId);
         try {
-            await this.models.list(connection.provider, connection.environmentVariableName);
+            await this.models.list(connection);
             saved.connections[index] = { ...connection, status: "connected", lastCheckedAt: new Date().toISOString(), diagnostic: undefined };
         } catch (error) {
             saved.connections[index] = {
@@ -245,12 +291,12 @@ export class ApplicationSettingsService {
     }
 
 
-    updateAiConnection(connectionId: string, value: { label?: unknown; environmentVariableName?: unknown }): OpenAiConnection {
+    updateAiConnection(connectionId: string, value: { label?: unknown; environmentVariableName?: unknown }): AiConnection {
         const { saved, index, connection } = this.connectionState(connectionId);
         const updated = {
             ...connection,
             label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : connection.label,
-            environmentVariableName: environmentVariableName(value.environmentVariableName),
+            credentialSource: { kind: "environment-variable" as const, environmentVariableName: environmentVariableName(value.environmentVariableName) },
             status: "unchecked" as const,
             diagnostic: undefined,
             lastCheckedAt: undefined
@@ -262,10 +308,26 @@ export class ApplicationSettingsService {
     }
 
 
+    renameManagedAiConnection(connectionId: string, label: unknown): AiConnection {
+        const { saved, index, connection } = this.connectionState(connectionId);
+        if (connection.credentialSource.kind !== "managed")
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+        const updated = { ...connection, label: typeof label === "string" && label.trim() ? label.trim() : connection.label };
+        saved.connections[index] = updated;
+        this.settings.set("application-ai-connections", saved);
+
+        return updated;
+    }
+
+
     deleteAiConnection(connectionId: string): void {
-        const { saved, index } = this.connectionState(connectionId);
+        const { saved, index, connection } = this.connectionState(connectionId);
         if (saved.activeConnectionId === connectionId)
             throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REMOVAL_BLOCKED, HTTP_STATUS.BAD_REQUEST);
+
+        if (connection.credentialSource.kind === "managed")
+            this.credentials?.delete(connection.id);
 
         saved.connections.splice(index, 1);
         this.settings.set("application-ai-connections", { connections: saved.connections, ...(saved.connections[0] ? { activeConnectionId: saved.connections[0].id } : {}) });
@@ -278,11 +340,11 @@ export class ApplicationSettingsService {
         if (!active)
             throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
-        return this.models.list(active.provider, active.environmentVariableName);
+        return this.models.list(active);
     }
 
 
-    private connectionState(connectionId: string): { saved: { connections: OpenAiConnection[]; activeConnectionId?: string }; index: number; connection: OpenAiConnection } {
+    private connectionState(connectionId: string): { saved: { connections: AiConnection[]; activeConnectionId?: string }; index: number; connection: AiConnection } {
         const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
         const index = saved.connections.findIndex((connection) => connection.id === connectionId);
         if (index < 0)

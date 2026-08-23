@@ -4,7 +4,7 @@
 - Date: 2026-08-21
 - Updated: 2026-08-23
 - Scope: Browser, HTTP, Electron IPC, credentials, and privileged local access
-- Depends on: [ADR-001](adr-001-three-layer-server-and-electron.md)
+- Depends on: [ADR-001](adr-001-three-layer-server-and-electron.md), [ADR-009](adr-009-native-settings-credentials-and-data-switching.md)
 
 ## Context
 
@@ -19,6 +19,8 @@ The renderer uses the shared `EditorialWorkspaceClient`. The browser implementat
 The Electron window denies renderer-created windows and in-renderer navigation. It opens validated HTTP and HTTPS links in the system browser and rejects other schemes. Desktop close coordinates the active Draft checkpoint before cancelling streams and closing SQLite.
 
 Browser directory handles used for author-selected backup destinations remain browser capabilities and do not grant general local-service filesystem access. Expanding hosts, origins, IPC operations, network destinations, persistence, permissions, or provider-side storage requires an explicit security review.
+
+Windows-native Settings operations are exposed through their own finite, context-isolated desktop client; dialogs, Explorer reveal, credential storage, and native snapshots remain in Electron main as specified by ADR-009.
 
 The loopback boundary limits network exposure but does not defend against another process already running as the same local user. Operating-system account security remains part of the trust model.
 

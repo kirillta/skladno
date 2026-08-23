@@ -1,10 +1,11 @@
-import type { EditorialWorkspaceClient } from "@skladno/shared";
+import type { DesktopSettingsClient, EditorialWorkspaceClient } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client.js";
 
 
 declare global {
     interface Window {
         skladno?: EditorialWorkspaceClient;
+        skladnoDesktop?: DesktopSettingsClient;
     }
 }
 

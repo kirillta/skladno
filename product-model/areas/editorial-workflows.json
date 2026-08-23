@@ -87,10 +87,10 @@
         {
             "id": "editorial-workflows.ai-connections",
             "area": "AI connection",
-            "title": "Named OpenAI connections and environment-variable references",
+            "title": "Named AI connections and environment-variable references",
             "status": "partial",
             "owners": ["packages/server/src/infrastructure/editorial/configured-editorial-engine-resolver.ts"],
-            "contract": "Authors configure named OpenAI connections, active selection, testing, and environment-variable names without exposing secret values.",
+            "contract": "Authors configure named AI connections, active selection, testing, and environment-variable names without exposing secret values.",
             "persistence": "Connection metadata and active selection persist locally; credentials remain environment-provided.",
             "relatedCapabilityIds": ["settings.ai-connections"],
             "limitations": ["Connection management and provider breadth remain incomplete."]
@@ -191,7 +191,7 @@
             "id": "editorial-workflows.ai-connection-management",
             "title": "Connection metadata stays distinct from secrets",
             "capabilityIds": ["editorial-workflows.ai-connections"],
-            "preconditions": ["The author configures OpenAI connection metadata."],
+            "preconditions": ["The author configures AI connection metadata."],
             "event": "The author adds, selects, or removes a connection." ,
             "expected": ["Only environment-variable references and active connection metadata persist."],
             "forbidden": ["Storing or exposing secret values."],

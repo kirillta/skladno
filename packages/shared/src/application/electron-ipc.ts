@@ -6,7 +6,7 @@ import type { ArticleRevision, SaveArticleRevisionInput } from "../articles/revi
 import type { HealthResponse } from "./health.js";
 import type { ApplicationErrorPayload } from "../cross-cutting/errors.js";
 import type { EditorialEvent, FactCheck, FactCheckFinding, StartEditorialRequest } from "../editorial/editorial.js";
-import type { ApplicationSettingsSnapshot, BackupPolicy, GeneralSettings, ModelPreferences, OpenAiConnection } from "../settings/settings.js";
+import type { AiConnection, ApplicationSettingsSnapshot, BackupPolicy, GeneralSettings, ModelPreferences } from "../settings/settings.js";
 import type { KeyBindingOverrides } from "../cross-cutting/key-bindings.js";
 import type { CreateStyleCorpusItemInput, StyleCorpus } from "../style/style.js";
 import type { PublishingSettings } from "../publishing/publishing.js";
@@ -26,12 +26,12 @@ export interface ElectronApplicationOperationMap {
     updateGeneralSettings: { args: [GeneralSettings]; result: GeneralSettings };
     updateBackupPolicy: { args: [BackupPolicy]; result: BackupPolicy };
     updateKeyBindingOverrides: { args: [KeyBindingOverrides]; result: KeyBindingOverrides };
-    addOpenAiConnection: { args: [Pick<OpenAiConnection, "label" | "environmentVariableName">]; result: OpenAiConnection };
-    updateOpenAiConnection: { args: [string, Pick<OpenAiConnection, "label" | "environmentVariableName">]; result: OpenAiConnection };
-    removeOpenAiConnection: { args: [string]; result: void };
-    setActiveOpenAiConnection: { args: [string]; result: void };
-    testOpenAiConnection: { args: [string]; result: OpenAiConnection };
-    refreshOpenAiModels: { args: []; result: string[] };
+    addAiConnection: { args: [{ label: string; environmentVariableName: string }]; result: AiConnection };
+    updateAiConnection: { args: [string, { label: string; environmentVariableName: string }]; result: AiConnection };
+    removeAiConnection: { args: [string]; result: void };
+    setActiveAiConnection: { args: [string]; result: void };
+    testAiConnection: { args: [string]; result: AiConnection };
+    refreshAiModels: { args: []; result: string[] };
     updateModelPreferences: { args: [ModelPreferences]; result: ModelPreferences };
     listArticles: { args: []; result: Article[] };
     createArticle: { args: [CreateArticleInput]; result: Article };
@@ -69,12 +69,12 @@ export const ELECTRON_APPLICATION_METHOD = {
     updateGeneralSettings: "updateGeneralSettings",
     updateBackupPolicy: "updateBackupPolicy",
     updateKeyBindingOverrides: "updateKeyBindingOverrides",
-    addOpenAiConnection: "addOpenAiConnection",
-    updateOpenAiConnection: "updateOpenAiConnection",
-    removeOpenAiConnection: "removeOpenAiConnection",
-    setActiveOpenAiConnection: "setActiveOpenAiConnection",
-    testOpenAiConnection: "testOpenAiConnection",
-    refreshOpenAiModels: "refreshOpenAiModels",
+    addAiConnection: "addAiConnection",
+    updateAiConnection: "updateAiConnection",
+    removeAiConnection: "removeAiConnection",
+    setActiveAiConnection: "setActiveAiConnection",
+    testAiConnection: "testAiConnection",
+    refreshAiModels: "refreshAiModels",
     updateModelPreferences: "updateModelPreferences",
     listArticles: "listArticles",
     createArticle: "createArticle",

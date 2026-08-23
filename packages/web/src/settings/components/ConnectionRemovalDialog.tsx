@@ -1,9 +1,9 @@
-import type { OpenAiConnection } from "@skladno/shared";
+import type { AiConnection } from "@skladno/shared";
 import { useIntl } from "react-intl";
 import { Button, Dialog } from "../../ui/primitives.js";
 
 
-export function ConnectionRemovalDialog({ connection, close, remove }: { connection: OpenAiConnection; close: () => void; remove: () => void }) {
+export function ConnectionRemovalDialog({ connection, close, remove }: { connection: AiConnection; close: () => void; remove: () => void }) {
     const intl = useIntl();
 
     return <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl" open aria-labelledby="remove-connection-title" onCancel={(event) => {

@@ -30,13 +30,18 @@ These terms describe concepts visible to authors and the domain language used th
 - **Publishing profile**: configurable platform guidance, including a character limit. Its default applies only to new Articles.
 - **Publishing copy**: Markdown or plain text explicitly copied from the current Article through the Article Status Bar. Skladno does not provide a Publishing Preview Workspace View.
 - **Application Settings**: workspace-level preferences, AI configuration, Publishing profiles, and local data management. Settings never belong to Article Revision history.
-- **AI connection**: a named server-side provider configuration that references an environment-variable name without exposing its value. The **active AI connection** is used for new Editorial requests.
+- **AI connection**: a named server-side provider configuration with a Credential source. The **active AI connection** is used for new Editorial requests.
+- **Credential source**: the private source used by an AI connection. It is either an environment-variable reference or a Managed credential.
+- **Managed credential**: an API key held by the operating-system credential store. Skladno persists connection metadata but never writes the key to SQLite or a Backup snapshot.
 - **Model preference**: a default model identifier or an Editorial operation-specific override.
 - **Interface locale**: the language of the Skladno interface, separate from Article and translation languages.
 - **Default Article language**: the language assigned to a new Article when none is supplied.
 - **Default translation languages**: ordered languages offered first for translation requests. They never start translations automatically.
 - **Backup destination**: a local directory where Skladno writes Backup snapshots.
 - **Backup snapshot**: a consistent point-in-time copy of local data, separate from the active database and excluding credentials.
+- **Data location**: the active local directory containing Skladno's SQLite data.
+- **Data relocation**: an author-confirmed copy and restart that switches Skladno to a new Data location while retaining the old copy for recovery.
+- **Recovery snapshot**: a Backup snapshot retained before Skladno replaces active data during restore.
 - **Diagnostics event**: a redacted local service record written to the host process logs for startup or recoverable failure support. It never includes private Article content, model bodies, or environment-variable values.
 
 ## Interface

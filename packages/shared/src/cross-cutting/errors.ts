@@ -17,6 +17,7 @@ export const APPLICATION_ERROR = {
     ACTIVE_CONNECTION_REQUIRED: "active_connection_required",
     ACTIVE_CONNECTION_REMOVAL_BLOCKED: "active_connection_removal_blocked",
     AI_CONNECTION_VERIFICATION_FAILED: "ai_connection_verification_failed",
+    MANAGED_CREDENTIALS_UNAVAILABLE: "managed_credentials_unavailable",
     STYLE_CORPUS_REQUIRED: "style_corpus_required",
     TARGET_LANGUAGE_REQUIRED: "target_language_required",
     EDITORIAL_OPERATION_UNSUPPORTED: "editorial_operation_unsupported",
