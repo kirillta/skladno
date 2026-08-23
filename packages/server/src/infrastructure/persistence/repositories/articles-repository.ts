@@ -214,15 +214,31 @@ export class ArticlesRepository {
 
 
     acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision {
-        const current = this.get(articleId);
-        if (!current)
-            throw new Error("Article not found.");
+        const revisionId = createId();
+        const timestamp = now();
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            const current = this.get(articleId);
+            if (!current)
+                throw new Error("Article not found.");
 
-        const baseRevisionId = input.baseRevisionId;
-        if (current.currentRevisionId !== baseRevisionId)
-            throw new ArticleRevisionConflictError(current);
+            if (current.currentRevisionId !== input.baseRevisionId)
+                throw new ArticleRevisionConflictError(current);
 
-        return this.appendRevision(articleId, input.content, input.provenance);
+            this.insertRevision({
+                revisionId,
+                articleId,
+                content: input.content,
+                provenance: input.provenance,
+                timestamp,
+            });
+            this.database.exec("COMMIT;");
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
+
+        return this.getRevision(articleId, revisionId)!;
     }
 
 
@@ -265,11 +281,29 @@ export class ArticlesRepository {
 
 
     restoreRevision(articleId: string, historicalRevisionId: string): ArticleRevision {
-        const historical = this.getRevision(articleId, historicalRevisionId);
-        if (!historical)
-            throw new Error("Revision not found for this article.");
+        const revisionId = createId();
+        const timestamp = now();
+        this.database.exec("BEGIN IMMEDIATE;");
+        try {
+            const historical = this.getRevision(articleId, historicalRevisionId);
+            if (!historical)
+                throw new Error("Revision not found for this article.");
 
-        return this.appendRevision(articleId, historical.content, { kind: REVISION_PROVENANCE_KIND.RESTORE, restoredFromRevisionId: historicalRevisionId }, historicalRevisionId);
+            this.insertRevision({
+                revisionId,
+                articleId,
+                content: historical.content,
+                provenance: { kind: REVISION_PROVENANCE_KIND.RESTORE, restoredFromRevisionId: historicalRevisionId },
+                restoredFromRevisionId: historicalRevisionId,
+                timestamp,
+            });
+            this.database.exec("COMMIT;");
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        }
+
+        return this.getRevision(articleId, revisionId)!;
     }
 
 
@@ -284,11 +318,7 @@ export class ArticlesRepository {
         this.database.exec("BEGIN IMMEDIATE;");
 
         try {
-            this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, restored_from_revision_id, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-                .run(revisionId, articleId, content, JSON.stringify(provenance), restoredFromRevisionId ?? null, timestamp);
-
-            this.database.prepare("UPDATE articles SET current_revision_id = ?, updated_at = ? WHERE id = ?")
-                .run(revisionId, timestamp, articleId);
+            this.insertRevision({ revisionId, articleId, content, provenance, restoredFromRevisionId, timestamp });
 
             this.database.exec("COMMIT;");
         } catch (error) {
@@ -297,5 +327,20 @@ export class ArticlesRepository {
         }
 
         return this.listRevisions(articleId).find((item) => item.id === revisionId)!;
+    }
+
+
+    private insertRevision({ revisionId, articleId, content, provenance, restoredFromRevisionId, timestamp }: {
+        revisionId: string;
+        articleId: string;
+        content: string;
+        provenance: Record<string, unknown>;
+        restoredFromRevisionId?: string;
+        timestamp: string;
+    }): void {
+        this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, restored_from_revision_id, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+            .run(revisionId, articleId, content, JSON.stringify(provenance), restoredFromRevisionId ?? null, timestamp);
+        this.database.prepare("UPDATE articles SET current_revision_id = ?, updated_at = ? WHERE id = ?")
+            .run(revisionId, timestamp, articleId);
     }
 }

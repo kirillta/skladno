@@ -132,7 +132,7 @@ export const messages = {
     "navigation.saveConflict": "Conflict — Draft kept",
     "draftSave.failure": "Couldn’t save. Your full Draft is still editable.",
     "draftSave.retry": "Retry",
-    "draftConflict.banner": "Another save changed this Article. Your local Draft has been kept.",
+    "draftConflict.banner": "Another Skladno session changed this Article. Your local Draft has been kept; compare it before continuing.",
     "draftConflict.compare": "Compare and resolve",
     "draftConflict.heading": "Resolve Draft conflict",
     "draftConflict.description": "Your retained local Draft is shown beside the latest saved content. Nothing is replaced until you choose.",
