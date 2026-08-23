@@ -49,12 +49,12 @@ export function createEditorialMessages(input: EditorialPromptInput): ModelMessa
         const authorMessage = input.authorContext.trim();
         const source = input.articleSelection ? input.article.trim() : authorMessage || input.article.trim();
         let sourceLabel = "Article content";
-        if (authorMessage) 
+        if (authorMessage)
             sourceLabel = "Author's message";
-        
-        if (input.articleSelection) 
+
+        if (input.articleSelection)
             sourceLabel = "Article selection";
-        
+
         const guidance = input.articleSelection && authorMessage ? `\n\nAuthor message (supplementary direction or material that may extend the selection):\n${authorMessage}` : "";
 
         return [

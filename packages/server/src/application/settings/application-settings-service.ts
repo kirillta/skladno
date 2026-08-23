@@ -247,13 +247,13 @@ export class ApplicationSettingsService {
 
     updateAiConnection(connectionId: string, value: { label?: unknown; environmentVariableName?: unknown }): OpenAiConnection {
         const { saved, index, connection } = this.connectionState(connectionId);
-        const updated = { 
-            ...connection, 
-            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : connection.label, 
-            environmentVariableName: environmentVariableName(value.environmentVariableName), 
-            status: "unchecked" as const, 
-            diagnostic: undefined, 
-            lastCheckedAt: undefined 
+        const updated = {
+            ...connection,
+            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : connection.label,
+            environmentVariableName: environmentVariableName(value.environmentVariableName),
+            status: "unchecked" as const,
+            diagnostic: undefined,
+            lastCheckedAt: undefined
         };
         saved.connections[index] = updated;
         this.settings.set("application-ai-connections", saved);

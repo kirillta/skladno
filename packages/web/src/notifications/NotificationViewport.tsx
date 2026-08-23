@@ -13,6 +13,7 @@ interface NotificationViewportProps {
     resume: (id: string, reason: "pointer" | "focus") => void;
 }
 
+
 export function NotificationViewport({ notifications, label, dismissLabel, dismiss, pause, resume }: NotificationViewportProps) {
     function resumeAfterFocus(notification: StoredNotification, event: FocusEvent<HTMLElement>) {
         if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))

@@ -1,12 +1,12 @@
-import { 
-    APPLICATION_ERROR, 
-    EDITORIAL_OPERATION, 
-    HTTP_STATUS, 
-    type Article, 
-    type CreateEditorialArtifactInput, 
-    type EditorialArtifact, 
-    type EditorialOperation, 
-    type StyleProfile 
+import {
+    APPLICATION_ERROR,
+    EDITORIAL_OPERATION,
+    HTTP_STATUS,
+    type Article,
+    type CreateEditorialArtifactInput,
+    type EditorialArtifact,
+    type EditorialOperation,
+    type StyleProfile
 } from "@skladno/shared";
 import { createHash } from "node:crypto";
 

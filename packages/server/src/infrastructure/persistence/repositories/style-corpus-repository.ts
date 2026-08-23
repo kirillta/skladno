@@ -19,11 +19,11 @@ function profileFor(items: { id: string; content: string }[], rules: string, ver
         .filter((phrase, index, phrases) => phrases.indexOf(phrase) === index && phrases.filter((item) => item === phrase).length >= 2)
         .slice(0, 5);
     let rhythmLabel = "moderate sentence length";
-    if (averageSentenceWords <= 14) 
+    if (averageSentenceWords <= 14)
         rhythmLabel = "compact sentences";
-    else if (averageSentenceWords >= 24) 
+    else if (averageSentenceWords >= 24)
         rhythmLabel = "long, developed sentences";
-    
+
     const traits: StyleTrait[] = [{
         id: "voice",
         label: firstPerson > 0 ? "personal author presence" : "impersonal explanatory voice",
@@ -48,8 +48,11 @@ function profileFor(items: { id: string; content: string }[], rules: string, ver
     const characterCount = content.length;
 
     let confidence: "high" | "medium" | "low" = "low";
-    if (items.length >= 5 && characterCount >= 12_000) confidence = "high";
-    else if (items.length >= 2 && characterCount >= 3_000) confidence = "medium";
+    if (items.length >= 5 && characterCount >= 12_000)
+        confidence = "high";
+    else if (items.length >= 2 && characterCount >= 3_000)
+        confidence = "medium";
+
     return {
         version,
         corpusItemCount: items.length,
@@ -81,8 +84,10 @@ export class StyleCorpusRepository {
         const profile = profileRow ? JSON.parse(String(profileRow.profile_json)) as StyleProfile : undefined;
         const includedIds = rows.filter((row) => Number(row.included) === 1).map((row) => String(row.id));
         let status: "empty" | "ready" | "outdated" = "outdated";
-        if (includedIds.length === 0) status = "empty";
-        else if (profile && profile.rules === rules && profile.contributorIds.length === includedIds.length && profile.contributorIds.every((id) => includedIds.includes(id))) status = "ready";
+        if (includedIds.length === 0)
+            status = "empty";
+        else if (profile && profile.rules === rules && profile.contributorIds.length === includedIds.length && profile.contributorIds.every((id) => includedIds.includes(id)))
+            status = "ready";
 
         return {
             items: rows.map((row): StyleCorpusItem => ({

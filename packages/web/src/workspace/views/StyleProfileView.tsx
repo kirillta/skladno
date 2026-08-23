@@ -195,10 +195,10 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, r
                         <dt>{intl.formatMessage({ id: "styleProfile.profileContributors" })}</dt>
                         <dd>{intl.formatMessage({ id: "styleProfile.profileSourceCount" }, { count: contributors.length })}</dd>
                     </div>
-                        <div>
-                            <dt>{intl.formatMessage({ id: "styleProfile.profileLastRebuilt" })}</dt>
-                            <dd>{formatDateTime(corpus.profile.updatedAt, intl.locale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)}</dd>
-                        </div>
+                    <div>
+                        <dt>{intl.formatMessage({ id: "styleProfile.profileLastRebuilt" })}</dt>
+                        <dd>{formatDateTime(corpus.profile.updatedAt, intl.locale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)}</dd>
+                    </div>
                     </dl>
                     <Button className="mt-2 inline-flex min-h-0 items-center px-0 py-1 text-xs" variant="quiet" aria-expanded={sourcesExpanded} aria-controls="style-profile-contributors" onClick={() => setSourcesExpanded((value) => !value)}>
                         <span className="inline-flex items-center gap-1 whitespace-nowrap">

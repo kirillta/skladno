@@ -86,7 +86,7 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
         {(!presentation.reliable || stale)
             && <div className="mt-4">{!presentation.reliable
                 && <Banner className="mb-3" tone="warning">{intl.formatMessage({ id: "views.proposalFallback" })}</Banner>}
-                <Diff layout="columns" removed={review.baseContent} added={review.proposedContent} />
+            <Diff layout="columns" removed={review.baseContent} added={review.proposedContent} />
             </div>}
         {presentation.changes.length === 0
             ? <EmptyState title={intl.formatMessage({ id: "views.proposalNoChanges" })}>

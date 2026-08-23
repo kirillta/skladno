@@ -120,19 +120,19 @@ export function formatKeyBinding(binding: KeyBinding | null, platform = ""): str
 
     const mac = /mac|iphone|ipad/i.test(platform);
     let primary = "";
-    if (binding.primary) 
+    if (binding.primary)
         primary = mac ? "Command" : "Ctrl";
-    
+
     let alt = "";
-    if (binding.alt) 
+    if (binding.alt)
         alt = mac ? "Option" : "Alt";
-    
+
     let key = binding.key.toUpperCase();
-    if (binding.key === "enter") 
+    if (binding.key === "enter")
         key = "Enter";
-    else if (binding.key === "escape") 
+    else if (binding.key === "escape")
         key = "Esc";
-    
+
     const parts = [primary, alt, binding.shift ? "Shift" : "", key].filter(Boolean);
 
     return parts.join("+");
