@@ -296,7 +296,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.click(screen.getByRole("button", { name: message("settings.renameConnection") }));
+        await user.click(screen.getByRole("button", { name: message("settings.renameConnectionShort") }));
         const input = screen.getByRole("textbox", { name: message("settings.connectionName") });
         await user.clear(input);
         await user.type(input, "Work AI");
@@ -320,7 +320,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.click(screen.getByRole("button", { name: message("settings.renameConnection") }));
+        await user.click(screen.getByRole("button", { name: message("settings.renameConnectionShort") }));
         const input = screen.getByRole("textbox", { name: message("settings.connectionName") });
         await user.clear(input);
         await user.type(input, "Work AI");
@@ -489,13 +489,13 @@ describe("ApplicationSettings", () => {
 
         expect(screen.getByRole("alert").textContent).toContain("already saved");
         expect(client.addAiConnection).not.toHaveBeenCalled();
-        expect(screen.getAllByRole("button", { name: message("settings.removeConnection") })).toHaveLength(1);
+        expect(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })).toHaveLength(1);
 
-        await user.click(screen.getByRole("button", { name: message("settings.useConnection") }));
+        await user.click(screen.getByRole("button", { name: message("settings.useConnectionShort") }));
         await waitFor(() => expect(setActiveAiConnection).toHaveBeenCalledWith(secondConnection.id));
         await waitFor(() => expect(client.refreshAiModels).toHaveBeenCalledTimes(2));
 
-        await user.click(screen.getAllByRole("button", { name: message("settings.removeConnection") })[0]!);
+        await user.click(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })[0]!);
         const dialog = screen.getByRole("dialog");
         await user.click(within(dialog).getByRole("button", { name: message("settings.removeConnection") }));
 

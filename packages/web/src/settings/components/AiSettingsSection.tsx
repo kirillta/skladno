@@ -1,6 +1,8 @@
 import { builtInSkills, type AiConnection, type ApplicationSettingsSnapshot, type BuiltInSkillId, type ModelPreferences } from "@skladno/shared";
+import { useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Banner, Button, Field, Select } from "../../ui/primitives.js";
+import { ChevronDownIcon } from "../../ui/icons.js";
 import { Control, SettingRow, SettingsGroup } from "./SettingRow.js";
 
 const skillMessages: Record<BuiltInSkillId, { label: "assistant.skill.talkingPoints.label" | "assistant.skill.narrativeDraft.label" | "assistant.skill.flowAndClarity.label" | "assistant.skill.factChecking.label" | "assistant.skill.styleReview.label" | "assistant.skill.translation.label"; hint: "assistant.skill.talkingPoints.hint" | "assistant.skill.narrativeDraft.hint" | "assistant.skill.flowAndClarity.hint" | "assistant.skill.factChecking.hint" | "assistant.skill.styleReview.hint" | "assistant.skill.translation.hint" }> = {
@@ -59,9 +61,42 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
     savePreferences: (next: ModelPreferences) => Promise<void>;
 }) {
     const intl = useIntl();
+    const [specificModelsOpen, setSpecificModelsOpen] = useState(false);
+    const specificModelsContent = useRef<HTMLDivElement>(null);
+
+
+    function toggleSpecificModels() {
+        const nextOpen = !specificModelsOpen;
+        setSpecificModelsOpen(nextOpen);
+
+        if (nextOpen) {
+            const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            window.setTimeout(() => specificModelsContent.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }), reducedMotion ? 0 : 220);
+        }
+    }
+
 
     return <>
         <SettingsGroup label={intl.formatMessage({ id: "settings.connections" })}>
+            {settings.connections.length > 0 && <div className="mt-6 mb-8">
+                <div>
+                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "settings.configuredConnections" })}</h3>
+                    <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.configuredConnectionsHint" })}</p>
+                </div>
+                <div className="mt-4 grid gap-2">{settings.connections.filter((connection): connection is AiConnection => Boolean(connection)).map((connection) => <div key={connection.id} className="flex flex-col gap-3 rounded-control border border-border bg-surface-raised px-3 py-2 sm:flex-row sm:items-center">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{connection.label}</p>
+                            {connection.id === settings.activeConnectionId && <p className="inline-flex min-h-8 items-center rounded-control border border-brand bg-brand-soft px-2 py-1 text-xs font-semibold text-brand" role="status">{intl.formatMessage({ id: "settings.activeConnectionShort" })}</p>}
+                        </div>
+                        <p className="mt-1 truncate text-xs text-muted">{credentialSourceLabel(connection, intl.formatMessage({ id: "settings.managedCredential" }))}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                        {onRequestConnectionRename && (credentialSource(connection).kind !== "managed" || canRenameManagedConnection) && <Button className="!px-2" variant="quiet" onClick={() => onRequestConnectionRename(connection)}>{intl.formatMessage({ id: "settings.renameConnectionShort" })}</Button>}
+                        {connection.id !== settings.activeConnectionId && <><Button className="!px-2" variant="quiet" onClick={() => onSetActiveConnection(connection.id)}>{intl.formatMessage({ id: "settings.useConnectionShort" })}</Button><Button className="!px-2" variant="danger" onClick={() => onRequestConnectionRemoval(connection)}>{intl.formatMessage({ id: "settings.removeConnectionShort" })}</Button></>}
+                    </div>
+                </div>)}</div>
+            </div>}
             {onAddManagedConnection && <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.addApiKey" })} hint={intl.formatMessage({ id: "settings.addApiKeyHint" })}>
                 <div className="grid gap-4">
                     <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
@@ -100,49 +135,40 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
                     <Button className="w-fit" variant="secondary" onClick={onAddConnection}>{intl.formatMessage({ id: "settings.addConnectionButton" })}</Button>
                 </div>
             </SettingRow>
-            {settings.connections.length > 0 && <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.configuredConnections" })} hint={intl.formatMessage({ id: "settings.configuredConnectionsHint" })}>
-                <div className="grid gap-2">{settings.connections.filter((connection): connection is AiConnection => Boolean(connection)).map((connection) => <div key={connection.id} className="flex flex-col gap-3 rounded-control border border-border bg-surface-raised px-3 py-2 sm:flex-row sm:items-center">
-                    <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">{connection.label}</p><p className="mt-1 truncate text-xs text-muted">{credentialSourceLabel(connection, intl.formatMessage({ id: "settings.managedCredential" }))}</p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                        {onRequestConnectionRename && (credentialSource(connection).kind !== "managed" || canRenameManagedConnection) && <Button variant="quiet" onClick={() => onRequestConnectionRename(connection)}>{intl.formatMessage({ id: "settings.renameConnection" })}</Button>}
-                        {connection.id === settings.activeConnectionId
-                            ? <p className="text-xs text-muted" role="status">{intl.formatMessage({ id: "settings.activeConnection" })}</p>
-                            : <><Button variant="quiet" onClick={() => onSetActiveConnection(connection.id)}>{intl.formatMessage({ id: "settings.useConnection" })}</Button><Button variant="danger" onClick={() => onRequestConnectionRemoval(connection)}>{intl.formatMessage({ id: "settings.removeConnection" })}</Button></>
-                        }
-                    </div>
-                </div>)}
-                </div>
-            </SettingRow>}
         </SettingsGroup>
-        <SettingsGroup label={intl.formatMessage({ id: "settings.models" })}>
-            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}>
-                <Control label={intl.formatMessage({ id: "settings.model" })} hint={intl.formatMessage({ id: "settings.modelHint" })}>
-                    <Select value={preferences.defaultModel} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, defaultModel: event.target.value })}>
+        <div className="pt-8">
+            <SettingsGroup label={intl.formatMessage({ id: "settings.models" })}>
+                <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}>
+                    <Select aria-label={intl.formatMessage({ id: "settings.model" })} value={preferences.defaultModel} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, defaultModel: event.target.value })}>
                         <option value="">{models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" })}</option>
                         {models.map((model) => <option key={model}>{model}</option>)}
                     </Select>
-                </Control>
-                <Button className="mt-3 w-fit" variant="secondary" onClick={onRefreshModels}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button>
-            </SettingRow>
-            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.textGenerationModel" })} hint={intl.formatMessage({ id: "settings.textGenerationModelHint" })}>
-                <Control label={intl.formatMessage({ id: "settings.model" })} hint={intl.formatMessage({ id: "settings.textGenerationModelControlHint" })}>
-                    <Select value={preferences.textGenerationModel ?? ""} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, textGenerationModel: event.target.value || undefined })}>
+                    <Button className="mt-3 w-fit" variant="secondary" onClick={onRefreshModels}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button>
+                </SettingRow>
+                <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.textGenerationModel" })} hint={intl.formatMessage({ id: "settings.textGenerationModelHint" })}>
+                    <Select aria-label={intl.formatMessage({ id: "settings.model" })} value={preferences.textGenerationModel ?? ""} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, textGenerationModel: event.target.value || undefined })}>
                         <option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>
                         {models.map((model) => <option key={model}>{model}</option>)}
                     </Select>
-                </Control>
-            </SettingRow>
-            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.specificModels" })} hint={intl.formatMessage({ id: "settings.specificModelsHint" })}>
-                <div className="grid gap-4">{builtInSkills.map((skill) => <Control key={skill} label={intl.formatMessage({ id: skillMessages[skill].label })} hint={intl.formatMessage({ id: skillMessages[skill].hint })}>
-                    <Select value={preferences.skillOverrides[skill] ?? ""} onChange={(event) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: event.target.value } })}>
-                        <option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>
-                        {models.map((model) => <option key={model}>{model}</option>)}
-                    </Select>
-                </Control>)}
+                </SettingRow>
+                <div className="mt-8">
+                    <button type="button" aria-expanded={specificModelsOpen} aria-controls="specific-model-overrides" className="group flex min-h-9 w-full items-center gap-2 text-left text-sm font-semibold hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={toggleSpecificModels}>
+                        <span>{intl.formatMessage({ id: "settings.specificModels" })}</span>
+                        <ChevronDownIcon className={`ml-auto size-4 shrink-0 text-brand transition-transform duration-200 motion-reduce:transition-none ${specificModelsOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.specificModelsHint" })}</p>
+                    <div ref={specificModelsContent} id="specific-model-overrides" aria-hidden={!specificModelsOpen} className={`grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${specificModelsOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                        <div className="min-h-0 overflow-hidden pt-2">
+                            {builtInSkills.map((skill) => <SettingRow key={skill} headingLevel={3} label={intl.formatMessage({ id: skillMessages[skill].label })} hint={intl.formatMessage({ id: skillMessages[skill].hint })}>
+                                <Select aria-label={intl.formatMessage({ id: skillMessages[skill].label })} value={preferences.skillOverrides[skill] ?? ""} onChange={(event) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: event.target.value } })}>
+                                    <option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>
+                                    {models.map((model) => <option key={model}>{model}</option>)}
+                                </Select>
+                            </SettingRow>)}
+                        </div>
+                    </div>
                 </div>
-            </SettingRow>
-        </SettingsGroup>
+            </SettingsGroup>
+        </div>
     </>;
 }
