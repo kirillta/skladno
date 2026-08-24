@@ -20,6 +20,7 @@ export type ResolvedTheme = Exclude<ThemePreference, "system">;
 export type DateFormatPreference = "system" | "day-first" | "day-first-dots" | "month-first" | "iso";
 export type TimeFormatPreference = "system" | "12-hour" | "24-hour";
 export type TimeZonePreference = "system" | string;
+export type AssistantSendMode = "enter" | "ctrl-enter";
 
 
 export function isDateFormatPreference(value: unknown): value is DateFormatPreference {
@@ -69,6 +70,7 @@ export interface GeneralSettings {
     dateFormat: DateFormatPreference;
     timeFormat: TimeFormatPreference;
     timeZone: TimeZonePreference;
+    assistantSendMode: AssistantSendMode;
     defaultArticleLanguage: string;
     defaultTranslationLanguages: string[];
 }
@@ -127,6 +129,7 @@ export const defaultGeneralSettings: GeneralSettings = {
     dateFormat: "system",
     timeFormat: "system",
     timeZone: "system",
+    assistantSendMode: "enter",
     defaultArticleLanguage: "en",
     defaultTranslationLanguages: [],
 };
@@ -151,6 +154,11 @@ export interface ApplicationSettingsClient {
     testAiConnection(connectionId: string): Promise<AiConnection>;
     refreshAiModels(): Promise<string[]>;
     updateModelPreferences(input: ModelPreferences): Promise<ModelPreferences>;
+}
+
+
+export function isAssistantSendMode(value: unknown): value is AssistantSendMode {
+    return value === "enter" || value === "ctrl-enter";
 }
 
 

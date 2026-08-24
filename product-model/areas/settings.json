@@ -17,8 +17,8 @@
             "title": "Configurable application shortcuts",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/KeyBindingSettings.tsx", "packages/web/src/key-bindings", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/routes/settings-route.ts"],
-            "contract": "Settings can persist command overrides and expose conflict-aware shortcut configuration.",
-            "persistence": "app_settings.application-key-bindings",
+            "contract": "Settings can persist command overrides and expose conflict-aware shortcut configuration. The Editorial Assistant also supports choosing Enter or Ctrl+Enter as the send key independently of command overrides.",
+            "persistence": "app_settings.application-key-bindings and app_settings.application-general",
             "limitations": ["Complete workspace-action wiring remains tracked separately."]
         },
         {

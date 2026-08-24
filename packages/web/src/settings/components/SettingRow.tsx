@@ -19,10 +19,10 @@ export function SettingRow({ label, hint, children, status, action, headingLevel
 }
 
 
-export function SettingsGroup({ label, children, separated = false }: { label: string; children: ReactNode; separated?: boolean }) {
+export function SettingsGroup({ label, children }: { label: string; children: ReactNode }) {
     const headingId = useId();
 
-    return <section className={separated ? "mt-8 border-t border-border pt-8" : "mt-8"} aria-labelledby={headingId}>
+    return <section className="mt-8" aria-labelledby={headingId}>
         <h2 id={headingId} className="text-base font-semibold">{label}</h2>
         {children}
     </section>;

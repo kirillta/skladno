@@ -53,6 +53,27 @@ describe("ApplicationSettings", () => {
     });
 
 
+    it("persists the Editorial Assistant send-key preference", async () => {
+        const user = userEvent.setup();
+        const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            updateGeneralSettings,
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.keyBindings") }));
+        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.assistantSendMode") }), "ctrl-enter");
+
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({
+            ...defaultGeneralSettings,
+            assistantSendMode: "ctrl-enter",
+        }));
+    });
+
+
     it("persists an accessible explicit time-zone selection and previews it", async () => {
         const user = userEvent.setup();
         const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);

@@ -1,10 +1,11 @@
 import { useState, type KeyboardEvent } from "react";
-import { findKeyBindingConflict, formatKeyBinding, keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, type KeyBindingCommandId, type KeyBindingOverrides } from "@skladno/shared";
+import { findKeyBindingConflict, formatKeyBinding, isAssistantSendMode, KEY_BINDING_COMMAND, keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, type GeneralSettings, type KeyBindingCommandId, type KeyBindingOverrides } from "@skladno/shared";
 import { useIntl } from "react-intl";
-import { Banner, Button } from "../../ui/primitives.js";
+import { Banner, Button, Select } from "../../ui/primitives.js";
+import { SettingRow, SettingsGroup } from "./SettingRow.js";
 
 
-export function KeyBindingSettings({ overrides, save }: { overrides: KeyBindingOverrides; save: (next: KeyBindingOverrides) => Promise<void> }) {
+export function KeyBindingSettings({ overrides, save, general, saveGeneral }: { overrides: KeyBindingOverrides; save: (next: KeyBindingOverrides) => Promise<void>; general: GeneralSettings; saveGeneral: (next: GeneralSettings) => Promise<void> }) {
     const intl = useIntl();
     const [recording, setRecording] = useState<KeyBindingCommandId>();
     const [error, setError] = useState<{ commandId: KeyBindingCommandId; assignedCommand: string }>();
@@ -47,47 +48,56 @@ export function KeyBindingSettings({ overrides, save }: { overrides: KeyBindingO
 
     return <>
         <p className="mt-3 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.keyBindingsIntro" })}</p>
-        {(["general", "workspace", "assistant"] as const).map((category) => <section key={category} className="border-b border-border py-6 last:border-b-0">
-            <h2 className="text-sm font-semibold">{intl.formatMessage({ id: `settings.keyBindingCategory.${category}` })}</h2>
-            <div className="mt-3 border-t border-border">{keyBindingCommands.filter((command) => command.category === category).map((command) => {
+        {(["general", "workspace", "assistant"] as const).map((category) => <SettingsGroup key={category} label={intl.formatMessage({ id: `settings.keyBindingCategory.${category}` })}>
+            {category === "assistant" && <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.assistantSendMode" })} hint={intl.formatMessage({ id: "settings.assistantSendModeHint" })}>
+                <Select aria-label={intl.formatMessage({ id: "settings.assistantSendMode" })} value={general.assistantSendMode} onChange={(event) => {
+                    const value = event.target.value;
+                    if (isAssistantSendMode(value))
+                        void saveGeneral({ ...general, assistantSendMode: value });
+                }}>
+                    <option value="enter">{intl.formatMessage({ id: "settings.sendWithEnter" })}</option>
+                    <option value="ctrl-enter">{intl.formatMessage({ id: "settings.sendWithCtrlEnter" })}</option>
+                </Select>
+            </SettingRow>}
+            {keyBindingCommands.filter((command) => command.category === category && command.id !== KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST).map((command) => {
                 const override = overrides[command.id];
                 const isOverridden = Object.prototype.hasOwnProperty.call(overrides, command.id)
                     && (override === null || (override !== undefined && !keyBindingsEqual(override, command.defaultBinding)));
                 const listening = recording === command.id;
-                return <div key={command.id} className="border-b border-border py-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)] md:gap-x-12">
-                    <div>
-                        <p className="text-sm font-medium">{intl.formatMessage({ id: command.labelMessageId })}</p>
-                        <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: command.hintMessageId })}</p>
+                return <SettingRow key={command.id} headingLevel={3} label={intl.formatMessage({ id: command.labelMessageId })} hint={intl.formatMessage({ id: command.hintMessageId })}>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button variant={listening ? "secondary" : "quiet"} aria-label={intl.formatMessage({ id: "settings.recordKeyBinding" }, { command: intl.formatMessage({ id: command.labelMessageId }) })} aria-describedby={error?.commandId === command.id ? `key-binding-error-${command.id}` : undefined} onBlur={() => {
+                            if (recording === command.id) {
+                                setRecording(undefined);
+                                setError((current) => current?.commandId === command.id ? undefined : current);
+                            }
+                        }} onClick={() => {
+                            setError(undefined);
+                            setRecording(command.id);
+                        }} onKeyDown={(event) => void record(command.id, event)}>{listening ? intl.formatMessage({ id: "settings.recordingKeyBinding" }) : formatKeyBinding(effective[command.id], platform)}
+                        </Button>
+                        <Button variant="quiet" onClick={() => {
+                            setError(undefined);
+                            void save({ ...overrides, [command.id]: null });
+                        }}>{intl.formatMessage({ id: "settings.clearKeyBinding" })}
+                        </Button>
+                        {isOverridden && <Button variant="quiet" onClick={() => {
+                            const next = { ...overrides };
+                            delete next[command.id];
+                            setError(undefined);
+                            void save(next);
+                        }}>{intl.formatMessage({ id: "settings.resetKeyBinding" })}
+                        </Button>}
                     </div>
-                    <div className="mt-3 min-w-0 md:mt-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Button variant={listening ? "secondary" : "quiet"} aria-label={intl.formatMessage({ id: "settings.recordKeyBinding" }, { command: intl.formatMessage({ id: command.labelMessageId }) })} aria-describedby={error?.commandId === command.id ? `key-binding-error-${command.id}` : undefined} onBlur={() => {
-                                if (recording === command.id) {
-                                    setRecording(undefined);
-                                    setError((current) => current?.commandId === command.id ? undefined : current);
-                                }
-                            }} onClick={() => {
-                                setError(undefined);
-                                setRecording(command.id);
-                            }} onKeyDown={(event) => void record(command.id, event)}>{listening ? intl.formatMessage({ id: "settings.recordingKeyBinding" }) : formatKeyBinding(effective[command.id], platform)}</Button>
-                            <Button variant="quiet" onClick={() => {
-                                setError(undefined);
-                                void save({ ...overrides, [command.id]: null });
-                            }}>{intl.formatMessage({ id: "settings.clearKeyBinding" })}</Button>
-                            {isOverridden && <Button variant="quiet" onClick={() => {
-                                const next = { ...overrides };
-                                delete next[command.id];
-                                setError(undefined);
-                                void save(next);
-                            }}>{intl.formatMessage({ id: "settings.resetKeyBinding" })}</Button>}
-                        </div>
-                        {error?.commandId === command.id && <div id={`key-binding-error-${command.id}`} className="mt-3" role="alert">
-                            <Banner tone="warning" role="alert"><span>{intl.formatMessage({ id: "settings.keyBindingConflictTitle" })} <strong>{error.assignedCommand}</strong>. {intl.formatMessage({ id: "settings.keyBindingConflict" })}</span></Banner>
-                        </div>}
-                    </div>
-                </div>;
+                    {error?.commandId === command.id && <div id={`key-binding-error-${command.id}`} className="mt-3" role="alert">
+                        <Banner tone="warning" role="alert">
+                            <span>
+                                {intl.formatMessage({ id: "settings.keyBindingConflictTitle" })} <strong>{error.assignedCommand}</strong>. {intl.formatMessage({ id: "settings.keyBindingConflict" })}
+                            </span>
+                        </Banner>
+                    </div>}
+                </SettingRow>;
             })}
-            </div>
-        </section>)}
+        </SettingsGroup>)}
     </>;
 }

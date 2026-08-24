@@ -41,7 +41,7 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
                 }}>{intl.formatMessage({ id: "settings.createBackup" })}</Button>
             </SettingRow>
         </SettingsGroup>
-        <SettingsGroup label={intl.formatMessage({ id: "settings.backupAutomation" })} separated>
+        <SettingsGroup label={intl.formatMessage({ id: "settings.backupAutomation" })}>
             <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.automaticBackups" })} hint={intl.formatMessage({ id: "settings.automaticBackupsHint" })}>
                 <Select value={backupPolicy.schedule} onChange={(event) => {
                     const value = event.target.value;

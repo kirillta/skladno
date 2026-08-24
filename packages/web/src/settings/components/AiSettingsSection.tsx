@@ -116,7 +116,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
                 </div>
             </SettingRow>}
         </SettingsGroup>
-        <SettingsGroup label={intl.formatMessage({ id: "settings.models" })} separated>
+        <SettingsGroup label={intl.formatMessage({ id: "settings.models" })}>
             <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}>
                 <Control label={intl.formatMessage({ id: "settings.model" })} hint={intl.formatMessage({ id: "settings.modelHint" })}>
                     <Select value={preferences.defaultModel} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, defaultModel: event.target.value })}>

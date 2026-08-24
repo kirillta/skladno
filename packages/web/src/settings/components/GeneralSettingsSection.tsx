@@ -52,7 +52,7 @@ export function GeneralSettingsSection({ general, save, applyTheme }: { general:
                 </Select>
             </SettingRow>
         </section>
-        <section className="mt-8 border-t border-border pt-8" aria-labelledby="settings-date-and-time">
+        <section className="mt-8 pt-8" aria-labelledby="settings-date-and-time">
             <h2 id="settings-date-and-time" className="text-base font-semibold">{intl.formatMessage({ id: "settings.dateAndTime" })}</h2>
             <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.example" }, { value: formatExample(general) })}</p>
             <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.dateFormat" })} hint={intl.formatMessage({ id: "settings.dateFormatHint" })} action={<Button variant="quiet" disabled={general.dateFormat === "system"} onClick={() => void save({ ...general, dateFormat: "system" })}>{intl.formatMessage({ id: "settings.resetDateFormat" })}</Button>}>

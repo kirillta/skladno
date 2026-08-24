@@ -62,7 +62,7 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
                             <Button className="ml-auto" variant="quiet" onClick={() => setPendingRemoval(profile)} aria-label={intl.formatMessage({ id: "settings.removeCustomProfile" }, { name: profile.name })}>{intl.formatMessage({ id: "settings.remove" })}</Button>
                         </div>)}
                     </div>
-                    <div className="mt-5 space-y-2 border-t border-border pt-5">
+                    <div className="mt-5 space-y-2">
                         <p className="text-sm font-semibold text-ink">{intl.formatMessage({ id: "settings.addCustomProfile" })}</p>
                         <Field aria-label={intl.formatMessage({ id: "settings.customProfileName" })} value={name} placeholder={intl.formatMessage({ id: "settings.customProfileName" })} onChange={(event) => setName(event.target.value)} />
                         <Field aria-label={intl.formatMessage({ id: "settings.customProfileLimit" })} type="number" min="0" step="1" value={limit} placeholder="3000" onChange={(event) => setLimit(event.target.value)} />
@@ -70,7 +70,7 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
                 </div>
             </SettingRow>
         </SettingsGroup>
-        <SettingsGroup label={intl.formatMessage({ id: "settings.languageDefaults" })} separated>
+        <SettingsGroup label={intl.formatMessage({ id: "settings.languageDefaults" })}>
             <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} hint={intl.formatMessage({ id: "settings.defaultArticleLanguageHint" })}>
                 <Select aria-label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} value={general.defaultArticleLanguage} onChange={(event) => void saveGeneral({ ...general, defaultArticleLanguage: event.target.value, defaultTranslationLanguages: general.defaultTranslationLanguages.filter((language) => language !== event.target.value) })}>
                     {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageIds[language] })}</option>)}
