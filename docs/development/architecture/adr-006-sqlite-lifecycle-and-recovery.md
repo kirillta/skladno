@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-21
 - Scope: Local persistence, schema migration, backups, and recovery
-- Depends on: [ADR-001](adr-001-three-layer-server-and-electron.md), [ADR-005](adr-005-article-state-and-consistency.md)
+- Depends on: [ADR-001](adr-001-three-layer-server-and-electron.md), [ADR-005](adr-005-article-state-and-consistency.md), [ADR-009](adr-009-native-settings-credentials-and-data-switching.md)
 
 ## Context
 
@@ -17,7 +17,7 @@ The pre-Article prototype schema is detected by its known tables and replaced on
 
 Backups are SQLite snapshots. They include application data and exclude environment files and credentials. Automatic retention never deletes manual backups. Recovery occurs while Skladno is stopped by replacing the active database with a selected snapshot, followed by an application-level verification of Articles, Revisions, and Settings.
 
-On POSIX, Skladno restricts its data directory and database files to the current user. Windows and browser-selected folder access use platform permissions.
+On POSIX, Skladno restricts its data directory and database files to the current user. Windows and browser-selected folder access use platform permissions. Native Windows Settings operations follow the restricted desktop boundary in ADR-009.
 
 ## Consequences
 

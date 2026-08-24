@@ -1,3 +1,6 @@
+import type { AiConnection } from "@skladno/shared";
+
+
 export interface AvailableModelsProvider {
-    list(provider: string, environmentVariableName: string): Promise<string[]>;
+    list(connection: AiConnection, apiKey?: string): Promise<string[]>;
 }

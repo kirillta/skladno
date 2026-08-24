@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
+import { APPLICATION_ERROR, HTTP_STATUS, type AiConnection } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
 
@@ -17,10 +17,10 @@ function modelsEndpoint(provider: string): string {
 }
 
 
-export async function listAvailableModels(provider: string, environmentVariable: string): Promise<string[]> {
-    const apiKey = process.env[environmentVariable];
+export async function listAvailableModels(connection: AiConnection, apiKey = connection.credentialSource.kind === "environment-variable" ? process.env[connection.credentialSource.environmentVariableName] : undefined): Promise<string[]> {
+    const provider = connection.provider;
     if (!apiKey)
-        throw new ApplicationServiceError(APPLICATION_ERROR.ENVIRONMENT_VARIABLE_UNAVAILABLE, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: environmentVariable });
+        throw new ApplicationServiceError(APPLICATION_ERROR.ENVIRONMENT_VARIABLE_UNAVAILABLE, HTTP_STATUS.BAD_REQUEST);
 
     const response = await fetch(modelsEndpoint(provider), { headers: { authorization: `Bearer ${apiKey}` } });
     if (!response.ok)

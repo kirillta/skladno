@@ -8,7 +8,7 @@ const rootPackage = JSON.parse(readFileSync(path.join(import.meta.dirname, "..",
 
 export default {
     packagerConfig: {
-        asar: true,
+        asar: { unpack: "**/*.node" },
         appBundleId: "io.github.kirillta.skladno",
         executableName: "Skladno",
         icon: path.join(import.meta.dirname, "assets", "icon.ico"),

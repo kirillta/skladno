@@ -6,6 +6,7 @@ import {
     type ElectronPrepareCloseRequest,
 } from "@skladno/shared";
 import { exposeElectronApplicationClient } from "./preload-bridge.js";
+import { createDesktopSettingsClient } from "./desktop-settings.js";
 
 
 function isPrepareCloseRequest(value: unknown): value is ElectronPrepareCloseRequest {
@@ -38,6 +39,7 @@ function checkpointResult(value: unknown, requestId: string): ElectronCheckpoint
 
 
 exposeElectronApplicationClient(ipcRenderer, contextBridge);
+contextBridge.exposeInMainWorld("skladnoDesktop", createDesktopSettingsClient(ipcRenderer));
 
 ipcRenderer.on(ELECTRON_LIFECYCLE_CHANNEL.prepareClose, (_event, payload: unknown) => {
     if (!isPrepareCloseRequest(payload))

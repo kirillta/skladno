@@ -5,6 +5,7 @@ import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
 import { requestDraftCheckpoint } from "./close-coordinator.js";
 import { createWindowOptions, focusWindow, isExternalWebUrl } from "./window-policy.js";
 import { readWindowBounds, writeWindowBounds } from "./window-state.js";
+import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
 
 
 const rendererUrl = "http://localhost:5173";
@@ -132,6 +133,15 @@ if (!app.requestSingleInstanceLock()) {
         const application = createLocalApplication();
         nativeMessages = electronMessagesFor((await application.services.settings.getSnapshot()).general.interfaceLocale);
         const cancelStreams = registerElectronIpcApplicationAdapter(ipcMain, application.services, application.editorial);
+        registerDesktopSettingsAdapter({
+            ipcMain,
+            shell,
+            userDataPath: app.getPath("userData"),
+            dataDirectory: process.env.SKLADNO_DATA_DIR || join(app.getPath("home"), ".skladno"),
+            database: application.database,
+            services: application.services,
+            chooseDirectory: async () => (await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] })).filePaths[0],
+        });
         closeApplication = () => {
             cancelStreams();
             application.database.close();

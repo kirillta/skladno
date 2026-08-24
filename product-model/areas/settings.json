@@ -24,10 +24,10 @@
         {
             "id": "settings.ai-connections",
             "area": "AI",
-            "title": "OpenAI connections and active connection",
+            "title": "AI connections and active connection",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "Authors can add connections, prevent duplicate environment-variable names, choose an active connection, test it, and confirm deletion without exposing secret values.",
+            "contract": "Authors can add environment-variable connections, and in Electron add a managed API key that is verified then stored in Windows Credential Manager. Connection labels can be renamed. Authors can choose an active connection, test it, and confirm deletion without exposing secret values.",
             "persistence": "app_settings.application-ai-connections"
         },
         {
@@ -45,8 +45,8 @@
             "title": "Available model list refresh",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/available-models-provider.ts", "packages/server/src/presentation/routes/settings-route.ts"],
-            "contract": "Opening AI Settings or changing the active OpenAI connection loads its available model list for model selection; authors can refresh the list again to retry or retrieve provider changes.",
-            "persistence": "Server-side OpenAI refresh only; the resulting list is not persisted."
+            "contract": "Opening AI Settings or changing the active AI connection loads its available model list for model selection; authors can refresh the list again to retry or retrieve provider changes.",
+            "persistence": "Server-side provider refresh only; the resulting list is not persisted."
         },
         {
             "id": "settings.publishing-profiles",
@@ -104,7 +104,7 @@
             "capabilityIds": ["settings.ai-connections"],
             "preconditions": ["The author is in the AI Settings section."],
             "event": "The author adds, selects, or confirms removal of a connection.",
-            "expected": ["Only connection labels and environment-variable names are managed; duplicate names are blocked."],
+            "expected": ["Environment-variable names are managed with duplicate names blocked. In Electron, an API key can be verified and stored as a managed credential without being displayed or persisted in Skladno data."],
             "forbidden": ["Displaying or persisting API key values."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },

@@ -1,12 +1,13 @@
-import { resolveBuiltInSkillId, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type OpenAiConnection } from "@skladno/shared";
+import { resolveBuiltInSkillId, type AiConnection, type BuiltInSkillId, type EditorialOperation, type ModelPreferences } from "@skladno/shared";
 
 import type { EditorialEngineResolver } from "../../application/ports/editorial-engine-resolver.js";
 import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
 import type { SettingsStore } from "../../application/ports/settings-store.js";
 import type { ServerConfig } from "../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
-import { ProposalSummaryGeneratorAdapter } from "./proposal-summary-generator.js";
-import { ArticleTitleGeneratorAdapter } from "./article-title-generator.js";
+import { OpenAiProposalSummaryGeneratorAdapter } from "./openai-proposal-summary-generator-adaptor.js";
+import { OpenAiArticleTitleGeneratorAdapter } from "./article-title-generator.js";
+import type { ManagedCredentials } from "../../application/ports/managed-credentials.js";
 
 
 export function resolveTextGenerationModel(preferences: Partial<ModelPreferences> | undefined, fallback: string): string {
@@ -18,13 +19,14 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
     constructor(
         private readonly config: ServerConfig,
         private readonly settings: SettingsStore,
+        private readonly credentials?: ManagedCredentials,
     ) { }
 
 
     resolve(operation: EditorialOperation, assistantSkillId?: BuiltInSkillId): EditorialEngine | undefined {
-        const savedConnections = this.settings.get("application-ai-connections")?.value as { connections?: OpenAiConnection[]; activeConnectionId?: string } | undefined;
+        const savedConnections = this.settings.get("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
         const active = savedConnections?.connections?.find((connection) => connection.id === savedConnections.activeConnectionId);
-        const apiKey = active ? process.env[active.environmentVariableName] : this.config.aiApiKey;
+        const apiKey = active ? this.connectionApiKey(active) : this.config.aiApiKey;
         if (!apiKey)
             return undefined;
 
@@ -41,7 +43,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         if (!configuration)
             return undefined;
 
-        return new ProposalSummaryGeneratorAdapter(configuration.apiKey, configuration.model);
+        return new OpenAiProposalSummaryGeneratorAdapter(configuration.apiKey, configuration.model);
     }
 
 
@@ -50,18 +52,25 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         if (!configuration)
             return undefined;
 
-        return new ArticleTitleGeneratorAdapter(configuration.apiKey, configuration.model);
+        return new OpenAiArticleTitleGeneratorAdapter(configuration.apiKey, configuration.model);
     }
 
 
     private resolveTextGenerationConfiguration(): { apiKey: string; model: string } | undefined {
-        const savedConnections = this.settings.get("application-ai-connections")?.value as { connections?: OpenAiConnection[]; activeConnectionId?: string } | undefined;
+        const savedConnections = this.settings.get("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
         const active = savedConnections?.connections?.find((connection) => connection.id === savedConnections.activeConnectionId);
-        const apiKey = active ? process.env[active.environmentVariableName] : this.config.aiApiKey;
+        const apiKey = active ? this.connectionApiKey(active) : this.config.aiApiKey;
         if (!apiKey)
             return undefined;
 
         const preferences = this.settings.get("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
         return { apiKey, model: resolveTextGenerationModel(preferences, this.config.aiModel) };
+    }
+
+
+    private connectionApiKey(connection: AiConnection): string | undefined {
+        return connection.credentialSource.kind === "environment-variable"
+            ? process.env[connection.credentialSource.environmentVariableName]
+            : this.credentials?.get(connection.id);
     }
 }

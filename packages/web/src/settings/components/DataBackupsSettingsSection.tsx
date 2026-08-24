@@ -13,20 +13,25 @@ function isBackupSchedule(value: string): value is BackupPolicy["schedule"] {
 
 export function DataBackupsSettingsSection({ client, backupPolicy, save }: { client: EditorialWorkspaceClient; backupPolicy: BackupPolicy; save: (next: BackupPolicy) => Promise<void> }) {
     const intl = useIntl();
+    const desktop = window.skladnoDesktop;
     const [creating, setCreating] = useState(false);
     const [folderName, setFolderName] = useState<string>();
     const [folderStatus, setFolderStatus] = useState<string>();
     const [backupStatus, setBackupStatus] = useState<string>();
 
     useEffect(() => {
-        void selectedBackupFolderName().then(setFolderName, () => undefined);
-    }, []);
+        if (desktop)
+            void desktop.getLocations().then((locations) => setFolderName(locations.backupDirectory), () => undefined);
+        else
+            void selectedBackupFolderName().then(setFolderName, () => undefined);
+    }, [desktop]);
 
     return <>
-        <SettingRow label={intl.formatMessage({ id: "settings.backupFolder" })} hint={intl.formatMessage({ id: "settings.backupFolderHint" })} status={folderStatus ?? (folderName ? intl.formatMessage({ id: "settings.backupFolderSelected" }, { folderName }) : undefined)}><Button variant="secondary" onClick={() => void chooseBackupFolder().then((name) => {
+        <SettingRow label={intl.formatMessage({ id: "settings.backupFolder" })} hint={intl.formatMessage({ id: "settings.backupFolderHint" })} status={folderStatus ?? (folderName ? intl.formatMessage({ id: "settings.backupFolderSelected" }, { folderName }) : undefined)}><div className="flex gap-2"><Button variant="secondary" onClick={() => void (desktop ? desktop.chooseBackupDirectory() : chooseBackupFolder()).then((name) => {
             setFolderName(name);
             setFolderStatus(intl.formatMessage({ id: "settings.backupFolderSelected" }, { folderName: name }));
         }, () => setFolderStatus(intl.formatMessage({ id: "settings.backupFolderFailed" })))}>{intl.formatMessage({ id: "settings.chooseBackupFolder" })}</Button>
+        {desktop && folderName && <Button variant="quiet" onClick={() => void desktop.revealBackupDirectory()}>{intl.formatMessage({ id: "settings.revealBackupFolder" })}</Button>}</div>
         </SettingRow>
         <SettingRow label={intl.formatMessage({ id: "settings.automaticBackups" })} hint={intl.formatMessage({ id: "settings.automaticBackupsHint" })}>
             <Select value={backupPolicy.schedule} onChange={(event) => {
@@ -49,7 +54,7 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
         <SettingRow label={intl.formatMessage({ id: "settings.createBackup" })} hint={intl.formatMessage({ id: "settings.createBackupHint" })} status={backupStatus ?? (creating ? intl.formatMessage({ id: "settings.backupCreating" }) : undefined)}>
             <Button disabled={!folderName} state={creating ? "loading" : "default"} onClick={() => {
                 setCreating(true);
-                void saveWebBackup(client, "manual", backupPolicy).then((name) => setBackupStatus(intl.formatMessage({ id: "settings.backupCreated" }, { name })), () => setBackupStatus(intl.formatMessage({ id: "settings.backupCreateFailed" }))).finally(() => setCreating(false));
+                void (desktop ? desktop.createNativeBackup().then((backup) => backup.path.split(/[\\/]/).at(-1) ?? backup.path) : saveWebBackup(client, "manual", backupPolicy)).then((name) => setBackupStatus(intl.formatMessage({ id: "settings.backupCreated" }, { name })), () => setBackupStatus(intl.formatMessage({ id: "settings.backupCreateFailed" }))).finally(() => setCreating(false));
             }}>{intl.formatMessage({ id: "settings.createBackup" })}</Button>
         </SettingRow>
     </>;
