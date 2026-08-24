@@ -54,6 +54,7 @@ export function GeneralSettingsSection({ general, save, applyTheme }: { general:
         </section>
         <section className="mt-8 border-t border-border pt-8" aria-labelledby="settings-date-and-time">
             <h2 id="settings-date-and-time" className="text-base font-semibold">{intl.formatMessage({ id: "settings.dateAndTime" })}</h2>
+            <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.example" }, { value: formatExample(general) })}</p>
             <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.dateFormat" })} hint={intl.formatMessage({ id: "settings.dateFormatHint" })} action={<Button variant="quiet" disabled={general.dateFormat === "system"} onClick={() => void save({ ...general, dateFormat: "system" })}>{intl.formatMessage({ id: "settings.resetDateFormat" })}</Button>}>
                 <Select value={general.dateFormat} onChange={(event) => {
                     const value = event.target.value;
@@ -67,7 +68,7 @@ export function GeneralSettingsSection({ general, save, applyTheme }: { general:
                     <option value="iso">{intl.formatMessage({ id: "settings.isoDate" })}</option>
                 </Select>
             </SettingRow>
-            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.timeFormat" })} hint={intl.formatMessage({ id: "settings.timeFormatHint" })} action={<Button variant="quiet" disabled={general.timeFormat === "system"} onClick={() => void save({ ...general, timeFormat: "system" })}>{intl.formatMessage({ id: "settings.resetTimeFormat" })}</Button>} status={intl.formatMessage({ id: "settings.example" }, { value: formatExample(general) })}>
+            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.timeFormat" })} hint={intl.formatMessage({ id: "settings.timeFormatHint" })} action={<Button variant="quiet" disabled={general.timeFormat === "system"} onClick={() => void save({ ...general, timeFormat: "system" })}>{intl.formatMessage({ id: "settings.resetTimeFormat" })}</Button>}>
                 <Select value={general.timeFormat} onChange={(event) => {
                     const value = event.target.value;
                     if (isTimeFormatPreference(value))
