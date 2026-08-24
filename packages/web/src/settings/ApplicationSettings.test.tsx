@@ -412,6 +412,26 @@ describe("ApplicationSettings", () => {
         expect(screen.getByRole("button", { name: message("settings.publishing") }).hasAttribute("disabled")).toBe(false);
     });
 
+    it("toggles automatic backups", async () => {
+        const user = userEvent.setup();
+        const updateBackupPolicy = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            updateBackupPolicy,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.dataBackups") }));
+        const toggle = screen.getByRole("switch", { name: message("settings.automaticBackups") });
+        expect(toggle.getAttribute("aria-checked")).toBe("false");
+        await user.click(toggle);
+
+        await waitFor(() => expect(updateBackupPolicy).toHaveBeenCalledWith(expect.objectContaining({ schedule: "daily" })));
+        expect(toggle.getAttribute("aria-checked")).toBe("true");
+    });
+
     it("retains an editable custom profile until the author saves its name and limit", async () => {
         const user = userEvent.setup();
         const settings = { defaultProfileId: "default" as const, customProfiles: [] };
