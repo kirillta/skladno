@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Field, Select } from "../../ui/primitives.js";
 import { CustomProfileRemovalDialog } from "./CustomProfileRemovalDialog.js";
-import { SettingRow, SettingsGroup } from "./SettingRow.js";
+import { Control, SettingRow, SettingsGroup } from "./SettingRow.js";
 
 const languageMessageIds = { en: "languages.english", es: "languages.spanish", pt: "languages.portuguese", ru: "languages.russian", fr: "languages.french", de: "languages.german", it: "languages.italian" } as const;
 
@@ -13,10 +13,6 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
     const [name, setName] = useState("");
     const [limit, setLimit] = useState("");
     const [pendingRemoval, setPendingRemoval] = useState<CustomPublishLimitProfile>();
-    const nameId = "custom-profile-name";
-    const limitId = "custom-profile-limit";
-    const nameHintId = "custom-profile-name-hint";
-    const limitHintId = "custom-profile-limit-hint";
     const parsedLimit = Number(limit);
     const valid = Boolean(name.trim()) && Number.isInteger(parsedLimit) && parsedLimit >= 0;
     const profiles = [...publishLimitProfiles, ...publishing.customProfiles];
@@ -73,15 +69,20 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
             </div>
             <div className="pb-8">
                 <div className="border-l border-border-strong pl-4">
-                    <SettingRow className="border-b-0 py-3 first:pt-0" headingLevel={3} label={intl.formatMessage({ id: "settings.customProfileName" })} hint={intl.formatMessage({ id: "settings.customProfileNameHint" })}>
-                        <Field id={nameId} aria-label={intl.formatMessage({ id: "settings.customProfileName" })} aria-describedby={nameHintId} value={name} onChange={(event) => setName(event.target.value)} />
-                    </SettingRow>
-                    <SettingRow className="border-b-0 py-3 last:pb-0" headingLevel={3} label={intl.formatMessage({ id: "settings.customProfileLimit" })} hint={intl.formatMessage({ id: "settings.customProfileLimitHint" })} status={!valid && (name || limit) ? intl.formatMessage({ id: "settings.customProfileInvalid" }) : undefined}>
-                        <div className="space-y-2">
-                            <Field id={limitId} aria-label={intl.formatMessage({ id: "settings.customProfileLimit" })} aria-describedby={limitHintId} type="number" min="0" step="1" value={limit} onChange={(event) => setLimit(event.target.value)} />
-                            <Button variant="secondary" disabled={!valid} onClick={addCustomProfile}>{intl.formatMessage({ id: "settings.saveCustomProfile" })}</Button>
+                    <div className="grid gap-4">
+                        <Control label={intl.formatMessage({ id: "settings.customProfileName" })} hint={intl.formatMessage({ id: "settings.customProfileNameHint" })}>
+                            <Field aria-label={intl.formatMessage({ id: "settings.customProfileName" })} value={name} onChange={(event) => setName(event.target.value)} />
+                        </Control>
+                        <div>
+                            <Control label={intl.formatMessage({ id: "settings.customProfileLimit" })} hint={intl.formatMessage({ id: "settings.customProfileLimitHint" })}>
+                                <Field aria-label={intl.formatMessage({ id: "settings.customProfileLimit" })} type="number" min="0" step="1" value={limit} onChange={(event) => setLimit(event.target.value)} />
+                            </Control>
+                            {!valid && (name || limit) && <p className="mt-2 text-xs text-muted" role="status">{intl.formatMessage({ id: "settings.customProfileInvalid" })}</p>}
                         </div>
-                    </SettingRow>
+                    </div>
+                    <div className="mt-4">
+                        <Button variant="secondary" disabled={!valid} onClick={addCustomProfile}>{intl.formatMessage({ id: "settings.saveCustomProfile" })}</Button>
+                    </div>
                 </div>
             </div>
         </SettingsGroup>
