@@ -36,20 +36,24 @@ function credentialSourceLabel(connection: AiConnection, managedLabel: string): 
 }
 
 
-export function AiSettingsSection({ settings, preferences, models, connectionName, environmentName, apiKey, connectionError, setConnectionName, setEnvironmentName, setApiKey, onAddConnection, onAddManagedConnection, onSetActiveConnection, onRequestConnectionRemoval, onRefreshModels, savePreferences }: {
+export function AiSettingsSection({ settings, preferences, models, connectionName, environmentName, managedConnectionName, apiKey, connectionError, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, onAddConnection, onAddManagedConnection, onSetActiveConnection, onRequestConnectionRename, canRenameManagedConnection, onRequestConnectionRemoval, onRefreshModels, savePreferences }: {
     settings: ApplicationSettingsSnapshot;
     preferences: ModelPreferences;
     models: string[];
     connectionName: string;
     environmentName: string;
+    managedConnectionName: string;
     apiKey: string;
     connectionError?: string;
     setConnectionName: (value: string) => void;
     setEnvironmentName: (value: string) => void;
+    setManagedConnectionName: (value: string) => void;
     setApiKey: (value: string) => void;
     onAddConnection: () => void;
     onAddManagedConnection?: () => void;
     onSetActiveConnection: (connectionId: string) => void;
+    onRequestConnectionRename?: (connection: AiConnection) => void;
+    canRenameManagedConnection: boolean;
     onRequestConnectionRemoval: (connection: AiConnection) => void;
     onRefreshModels: () => void;
     savePreferences: (next: ModelPreferences) => Promise<void>;
@@ -60,7 +64,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
         {onAddManagedConnection && <SettingRow label={intl.formatMessage({ id: "settings.addApiKey" })} hint={intl.formatMessage({ id: "settings.addApiKeyHint" })}>
             <div className="grid gap-4">
                 <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
-                    <Field type="text" value={connectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setConnectionName(event.target.value)} />
+                    <Field type="text" value={managedConnectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setManagedConnectionName(event.target.value)} />
                 </Control>
                 <Control label={intl.formatMessage({ id: "settings.apiKey" })} hint={intl.formatMessage({ id: "settings.apiKeyHint" })}>
                     <Field type="password" value={apiKey} placeholder={intl.formatMessage({ id: "settings.apiKeyPlaceholder" })} autoComplete="off" onChange={(event) => setApiKey(event.target.value)} />
@@ -101,6 +105,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
                     <p className="text-sm font-medium">{connection.label}</p><p className="mt-1 truncate text-xs text-muted">{credentialSourceLabel(connection, intl.formatMessage({ id: "settings.managedCredential" }))}</p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                    {onRequestConnectionRename && (credentialSource(connection).kind !== "managed" || canRenameManagedConnection) && <Button variant="quiet" onClick={() => onRequestConnectionRename(connection)}>{intl.formatMessage({ id: "settings.renameConnection" })}</Button>}
                     {connection.id === settings.activeConnectionId
                         ? <p className="text-xs text-muted" role="status">{intl.formatMessage({ id: "settings.activeConnection" })}</p>
                         : <><Button variant="quiet" onClick={() => onSetActiveConnection(connection.id)}>{intl.formatMessage({ id: "settings.useConnection" })}</Button><Button variant="danger" onClick={() => onRequestConnectionRemoval(connection)}>{intl.formatMessage({ id: "settings.removeConnection" })}</Button></>

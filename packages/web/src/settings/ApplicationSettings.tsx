@@ -6,6 +6,7 @@ import { useNotifications } from "../notifications/NotificationProvider.js";
 import { AiSettingsSection } from "./components/AiSettingsSection.js";
 import { getDesktopSettingsClient } from "../desktop-client.js";
 import { ConnectionRemovalDialog } from "./components/ConnectionRemovalDialog.js";
+import { ManagedConnectionRenameDialog } from "./components/ManagedConnectionRenameDialog.js";
 import { DataBackupsSettingsSection } from "./components/DataBackupsSettingsSection.js";
 import { GeneralSettingsSection } from "./components/GeneralSettingsSection.js";
 import { KeyBindingSettings } from "./components/KeyBindingSettings.js";
@@ -27,9 +28,12 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
     const [models, setModels] = useState<string[]>([]);
     const [connectionName, setConnectionName] = useState("");
     const [environmentName, setEnvironmentName] = useState("");
+    const [managedConnectionName, setManagedConnectionName] = useState("");
     const [apiKey, setApiKey] = useState("");
     const [connectionError, setConnectionError] = useState<string>();
     const [connectionPendingRemoval, setConnectionPendingRemoval] = useState<AiConnection>();
+    const [connectionPendingRename, setConnectionPendingRename] = useState<AiConnection>();
+    const [renamedConnectionLabel, setRenamedConnectionLabel] = useState("");
     const [status, setStatus] = useState(() => intl.formatMessage({ id: "settings.loading" }));
     const desktopSettings = getDesktopSettingsClient();
 
@@ -144,13 +148,13 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         setConnectionError(undefined);
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
-            const connection = await desktopSettings.addManagedAiConnection({ label: connectionName, apiKey });
+            const connection = await desktopSettings.addManagedAiConnection({ label: managedConnectionName, apiKey });
             setSettings((current) => current ? {
                 ...current,
                 connections: [...current.connections, connection],
                 activeConnectionId: current.activeConnectionId ?? connection.id,
             } : current);
-            setConnectionName("");
+            setManagedConnectionName("");
             setApiKey("");
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
@@ -171,6 +175,39 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
             setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
         }
+    }
+
+
+    async function renameManagedConnection() {
+        if (!connectionPendingRename)
+            return;
+
+        setStatus(intl.formatMessage({ id: "settings.saving" }));
+        try {
+            const source = connectionPendingRename.credentialSource;
+            let connection: AiConnection;
+            if (source.kind === "managed") {
+                if (!desktopSettings)
+                    return;
+
+                connection = await desktopSettings.renameManagedAiConnection(connectionPendingRename.id, renamedConnectionLabel);
+            } else {
+                connection = await client.updateAiConnection(connectionPendingRename.id, { label: renamedConnectionLabel, environmentVariableName: source.environmentVariableName });
+            }
+
+            setSettings((current) => current ? { ...current, connections: current.connections.map((item) => item.id === connection.id ? connection : item) } : current);
+            setConnectionPendingRename(undefined);
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
+        } catch (error) {
+            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+        }
+    }
+
+
+    function requestManagedConnectionRename(connection: AiConnection) {
+        setConnectionPendingRename(connection);
+        setRenamedConnectionLabel(connection.label);
     }
 
 
@@ -221,12 +258,13 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         <section className="min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             <div className="mx-auto w-full max-w-3xl px-5 py-8">
                 <h1 className="text-2xl font-semibold">{intl.formatMessage({ id: settingsSections.find((item) => item.id === section)?.label ?? "settings.general" })}</h1>
-                {!settings ? null : section === "general" ? <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} /> : section === "keyBindings" ? <KeyBindingSettings overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} apiKey={apiKey} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
+                {!settings ? null : section === "general" ? <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} /> : section === "keyBindings" ? <KeyBindingSettings overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
                     setEnvironmentName(value);
                     setConnectionError(undefined);
-                }} setApiKey={setApiKey} onAddConnection={() => void addConnection()} onAddManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} onSetActiveConnection={(connectionId) => void setActiveConnection(connectionId)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} /> : section === "publishing" ? <PublishingSettingsSection publishing={publishingSettings} save={(next) => void savePublishingSettings(next)} general={general} saveGeneral={saveGeneral} /> : <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />}
+                }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} onAddConnection={() => void addConnection()} onAddManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} onSetActiveConnection={(connectionId) => void setActiveConnection(connectionId)} onRequestConnectionRename={requestManagedConnectionRename} canRenameManagedConnection={Boolean(desktopSettings)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} /> : section === "publishing" ? <PublishingSettingsSection publishing={publishingSettings} save={(next) => void savePublishingSettings(next)} general={general} saveGeneral={saveGeneral} /> : <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />}
             </div>
             {connectionPendingRemoval && <ConnectionRemovalDialog connection={connectionPendingRemoval} close={() => setConnectionPendingRemoval(undefined)} remove={() => void removeConnection()} />}
+            {connectionPendingRename && <ManagedConnectionRenameDialog label={renamedConnectionLabel} setLabel={setRenamedConnectionLabel} close={() => setConnectionPendingRename(undefined)} save={() => void renameManagedConnection()} />}
         </section>
     </main>;
 }

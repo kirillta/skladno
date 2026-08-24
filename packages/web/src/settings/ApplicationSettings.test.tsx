@@ -217,11 +217,64 @@ describe("ApplicationSettings", () => {
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
         await user.type(screen.getAllByPlaceholderText("For example, Personal AI")[0]!, "Personal AI");
+        expect((screen.getAllByPlaceholderText("For example, Personal AI")[1] as HTMLInputElement).value).toBe("");
         await user.type(screen.getByPlaceholderText("Paste your API key"), "<REDACTED>");
         await user.click(screen.getByRole("button", { name: message("settings.addApiKeyButton") }));
 
         await waitFor(() => expect(addManagedAiConnection).toHaveBeenCalledWith({ label: "Personal AI", apiKey: "<REDACTED>" }));
         expect(screen.queryByDisplayValue("<REDACTED>")).toBeNull();
+    });
+
+    it("renames a managed connection through the desktop credential client", async () => {
+        const user = userEvent.setup();
+        const connection = { id: "connection-1", provider: "openai", label: "Personal AI", credentialSource: { kind: "managed" as const }, status: "connected" as const };
+        const renameManagedAiConnection = vi.fn().mockResolvedValue({ ...connection, label: "Work AI" });
+        const desktop: DesktopSettingsClient = {
+            getLocations: vi.fn().mockResolvedValue({ dataDirectory: "", dataDirectoryExternallyControlled: false }),
+            chooseBackupDirectory: vi.fn(), revealBackupDirectory: vi.fn(), revealDataDirectory: vi.fn(), createNativeBackup: vi.fn(), addManagedAiConnection: vi.fn(), renameManagedAiConnection, removeManagedAiConnection: vi.fn(),
+        };
+        window.skladnoDesktop = desktop;
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue([]),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: message("settings.renameConnection") }));
+        const input = screen.getByRole("textbox", { name: message("settings.connectionName") });
+        await user.clear(input);
+        await user.type(input, "Work AI");
+        await user.click(screen.getByRole("button", { name: message("settings.saveConnectionName") }));
+
+        await waitFor(() => expect(renameManagedAiConnection).toHaveBeenCalledWith(connection.id, "Work AI"));
+        expect(screen.getByText("Work AI")).toBeTruthy();
+    });
+
+    it("renames an environment-variable connection without changing its variable name", async () => {
+        const user = userEvent.setup();
+        const connection = { id: "connection-1", provider: "openai", label: "Personal AI", credentialSource: { kind: "environment-variable" as const, environmentVariableName: "AI_API_KEY" }, status: "connected" as const };
+        const updateAiConnection = vi.fn().mockResolvedValue({ ...connection, label: "Work AI" });
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue([]),
+            updateAiConnection,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: message("settings.renameConnection") }));
+        const input = screen.getByRole("textbox", { name: message("settings.connectionName") });
+        await user.clear(input);
+        await user.type(input, "Work AI");
+        await user.click(screen.getByRole("button", { name: message("settings.saveConnectionName") }));
+
+        await waitFor(() => expect(updateAiConnection).toHaveBeenCalledWith(connection.id, { label: "Work AI", environmentVariableName: "AI_API_KEY" }));
+        expect(screen.getByText("Work AI")).toBeTruthy();
     });
 
     it("loads available models when AI Settings opens", async () => {
