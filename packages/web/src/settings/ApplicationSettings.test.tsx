@@ -139,6 +139,22 @@ describe("ApplicationSettings", () => {
     });
 
 
+    it("marks the single supported interface language as unavailable", async () => {
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        const heading = await screen.findByText("Interface language");
+        const select = heading.closest("section")?.querySelector("select") as HTMLSelectElement;
+
+        expect(select.disabled).toBe(true);
+        expect(select.getAttribute("aria-describedby")).toBeTruthy();
+    });
+
+
     it("resets an explicit time format without changing date or time-zone preferences", async () => {
         const user = userEvent.setup();
         const general = {
