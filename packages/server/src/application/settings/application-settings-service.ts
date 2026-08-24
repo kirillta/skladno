@@ -100,10 +100,14 @@ function modelPreferences(value: unknown): ModelPreferences {
     })) as ModelPreferences["skillOverrides"];
 
     const textGenerationModel = typeof candidate.textGenerationModel === "string" ? candidate.textGenerationModel.trim() : "";
+    const reasoningEffort = candidate.reasoningEffort === "low" || candidate.reasoningEffort === "medium" || candidate.reasoningEffort === "high"
+        ? candidate.reasoningEffort
+        : undefined;
 
     return {
         defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "",
         ...(textGenerationModel ? { textGenerationModel } : {}),
+        ...(reasoningEffort ? { reasoningEffort } : {}),
         skillOverrides,
     };
 }

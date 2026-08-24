@@ -104,6 +104,11 @@ export function AssistantIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 
+export function OpenAiIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M12 3.25a3.3 3.3 0 0 1 5.7 2.25 3.3 3.3 0 0 1 2.8 4.3 3.3 3.3 0 0 1-2.85 4.9A3.3 3.3 0 0 1 12 18.5a3.3 3.3 0 0 1-5.7-2.25 3.3 3.3 0 0 1-2.8-4.3 3.3 3.3 0 0 1 2.85-4.9A3.3 3.3 0 0 1 12 3.25Z" /><path d="M9.15 7.2 12 8.85l2.85-1.65M12 8.85v3.3m0 0 2.85 1.65M12 12.15 9.15 13.8" /></Icon>;
+}
+
+
 export function SendIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="1.8" {...props}><path d="m21 3-7.5 18-3.75-7.5L3 9l18-6Z" /><path d="M9.75 13.5 14.5 9" /></Icon>;
 }

@@ -347,7 +347,8 @@ describe("ApplicationSettings", () => {
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
 
         await waitFor(() => expect(refreshAiModels).toHaveBeenCalledOnce());
-        expect(screen.getAllByRole("option", { name: "gpt-5" })).not.toHaveLength(0);
+        await user.click(screen.getByRole("button", { name: message("settings.model") }));
+        expect(screen.getAllByRole("option", { name: "GPT-5" })).not.toHaveLength(0);
     });
 
     it("keeps Article and translation language defaults together in Publishing Settings", async () => {

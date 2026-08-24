@@ -102,6 +102,7 @@ export interface AiConnection {
 export interface ModelPreferences {
     defaultModel: string;
     textGenerationModel?: string;
+    reasoningEffort?: "low" | "medium" | "high";
     skillOverrides: Partial<Record<BuiltInSkillId, string>>;
 }
 

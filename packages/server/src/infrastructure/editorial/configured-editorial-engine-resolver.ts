@@ -34,7 +34,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
         const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || this.config.aiModel;
 
-        return createEditorialEngine({ apiKey, model, storeResponses: this.config.aiSessionContinuationEnabled });
+        return createEditorialEngine({ apiKey, model, storeResponses: this.config.aiSessionContinuationEnabled, ...(model === preferences?.defaultModel && preferences.reasoningEffort ? { reasoningEffort: preferences.reasoningEffort } : {}) });
     }
 
 

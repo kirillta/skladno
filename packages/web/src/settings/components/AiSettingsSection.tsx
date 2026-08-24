@@ -2,7 +2,7 @@ import { builtInSkills, type AiConnection, type ApplicationSettingsSnapshot, typ
 import { useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Banner, Button, Field, Select } from "../../ui/primitives.js";
-import { ChevronDownIcon } from "../../ui/icons.js";
+import { ChevronDownIcon, OpenAiIcon } from "../../ui/icons.js";
 import { Control, SettingRow, SettingsGroup } from "./SettingRow.js";
 
 const skillMessages: Record<BuiltInSkillId, { label: "assistant.skill.talkingPoints.label" | "assistant.skill.narrativeDraft.label" | "assistant.skill.flowAndClarity.label" | "assistant.skill.factChecking.label" | "assistant.skill.styleReview.label" | "assistant.skill.translation.label"; hint: "assistant.skill.talkingPoints.hint" | "assistant.skill.narrativeDraft.hint" | "assistant.skill.flowAndClarity.hint" | "assistant.skill.factChecking.hint" | "assistant.skill.styleReview.hint" | "assistant.skill.translation.hint" }> = {
@@ -37,6 +37,47 @@ function credentialSource(connection: AiConnection): AiConnection["credentialSou
 function credentialSourceLabel(connection: AiConnection, managedLabel: string): string {
     const source = credentialSource(connection);
     return source.kind === "environment-variable" ? source.environmentVariableName : managedLabel;
+}
+
+
+function modelLabel(model: string): string {
+    return model.replace(/^(gpt|o)-?([\d.]+)(?:-(mini|nano))?$/i, (_match, family: string, version: string, size?: string) => `${family.toUpperCase() === "GPT" ? "GPT" : family.toLowerCase()}-${version}${size ? ` ${size}` : ""}`);
+}
+
+
+function supportsReasoning(model: string): boolean {
+    return /^(gpt-5|o[134])(?:-|$)/i.test(model);
+}
+
+
+function isReasoningEffort(value: string): value is "low" | "medium" | "high" {
+    return value === "low" || value === "medium" || value === "high";
+}
+
+
+function ModelSelect({ value, models, placeholder, disabled, label, "aria-describedby": describedBy, onChange }: { value: string; models: string[]; placeholder: string; disabled?: boolean; label: string; "aria-describedby"?: string; onChange: (value: string) => void }) {
+    const selectedLabel = value ? modelLabel(value) : placeholder;
+
+    if (disabled)
+        return <div aria-label={label} aria-describedby={describedBy} aria-disabled="true" className="flex min-h-10 w-full items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink opacity-55"><OpenAiIcon className="size-4 shrink-0 text-muted" /><span className="truncate">{selectedLabel}</span><ChevronDownIcon className="absolute right-3 size-4 text-muted" /></div>;
+
+    return <details className="group relative">
+        <summary role="button" aria-label={label} aria-describedby={describedBy} className="flex min-h-10 w-full cursor-pointer list-none items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink transition-colors hover:border-brand/45 hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+            <OpenAiIcon className="size-4 shrink-0 text-muted" />
+            <span className="truncate">{selectedLabel}</span>
+            <ChevronDownIcon className="absolute right-3 size-4 text-muted transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="absolute z-10 mt-1 max-h-72 w-full overflow-y-auto rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="listbox" aria-label={label}>
+            <button type="button" role="option" aria-selected={!value} className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-sm text-muted hover:bg-brand-soft hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={(event) => {
+                onChange("");
+                event.currentTarget.closest("details")?.removeAttribute("open");
+            }}>{placeholder}</button>
+            {models.map((model) => <button key={model} type="button" role="option" aria-selected={model === value} className="flex min-h-9 w-full items-center gap-2 rounded-control px-2 text-left text-sm hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={(event) => {
+                onChange(model);
+                event.currentTarget.closest("details")?.removeAttribute("open");
+            }}><OpenAiIcon className="size-4 shrink-0 text-muted" /><span className="truncate">{modelLabel(model)}</span></button>)}
+        </div>
+    </details>;
 }
 
 
@@ -165,17 +206,21 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
         <div className="pt-8">
             <SettingsGroup label={intl.formatMessage({ id: "settings.models" })}>
                 <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}>
-                    <Select aria-label={intl.formatMessage({ id: "settings.model" })} value={preferences.defaultModel} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, defaultModel: event.target.value })}>
-                        <option value="">{models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" })}</option>
-                        {models.map((model) => <option key={model}>{model}</option>)}
-                    </Select>
+                    <ModelSelect value={preferences.defaultModel} models={models} disabled={models.length === 0} label={intl.formatMessage({ id: "settings.model" })} placeholder={models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" })} onChange={(defaultModel) => void savePreferences({ ...preferences, defaultModel })} />
                     <Button className="mt-3 w-fit" variant="secondary" onClick={onRefreshModels}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button>
                 </SettingRow>
-                <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.textGenerationModel" })} hint={intl.formatMessage({ id: "settings.textGenerationModelHint" })}>
-                    <Select aria-label={intl.formatMessage({ id: "settings.model" })} value={preferences.textGenerationModel ?? ""} disabled={models.length === 0} onChange={(event) => void savePreferences({ ...preferences, textGenerationModel: event.target.value || undefined })}>
-                        <option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>
-                        {models.map((model) => <option key={model}>{model}</option>)}
+                {supportsReasoning(preferences.defaultModel) && <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.reasoningEffort" })} hint={intl.formatMessage({ id: "settings.reasoningEffortHint" })}>
+                    <Select aria-label={intl.formatMessage({ id: "settings.reasoningEffort" })} value={preferences.reasoningEffort ?? "medium"} onChange={(event) => {
+                        if (isReasoningEffort(event.target.value))
+                            void savePreferences({ ...preferences, reasoningEffort: event.target.value });
+                    }}>
+                        <option value="low">{intl.formatMessage({ id: "settings.reasoningLow" })}</option>
+                        <option value="medium">{intl.formatMessage({ id: "settings.reasoningMedium" })}</option>
+                        <option value="high">{intl.formatMessage({ id: "settings.reasoningHigh" })}</option>
                     </Select>
+                </SettingRow>}
+                <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.textGenerationModel" })} hint={intl.formatMessage({ id: "settings.textGenerationModelHint" })}>
+                    <ModelSelect value={preferences.textGenerationModel ?? ""} models={models} disabled={models.length === 0} label={intl.formatMessage({ id: "settings.textGenerationModel" })} placeholder={intl.formatMessage({ id: "settings.useDefaultModel" })} onChange={(textGenerationModel) => void savePreferences({ ...preferences, textGenerationModel: textGenerationModel || undefined })} />
                 </SettingRow>
                 <div className="mt-8">
                     <button type="button" aria-expanded={specificModelsOpen} aria-controls="specific-model-overrides" className="group flex min-h-9 w-full items-center gap-2 text-left text-sm font-semibold hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={toggleSpecificModels}>
@@ -186,10 +231,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
                     <div ref={specificModelsContent} id="specific-model-overrides" aria-hidden={!specificModelsOpen} className={`grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${specificModelsOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                         <div className="min-h-0 overflow-hidden pt-2">
                             {builtInSkills.map((skill) => <SettingRow key={skill} headingLevel={3} label={intl.formatMessage({ id: skillMessages[skill].label })} hint={intl.formatMessage({ id: skillMessages[skill].hint })}>
-                                <Select aria-label={intl.formatMessage({ id: skillMessages[skill].label })} value={preferences.skillOverrides[skill] ?? ""} onChange={(event) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: event.target.value } })}>
-                                    <option value="">{intl.formatMessage({ id: "settings.useDefaultModel" })}</option>
-                                    {models.map((model) => <option key={model}>{model}</option>)}
-                                </Select>
+                                <ModelSelect value={preferences.skillOverrides[skill] ?? ""} models={models} label={intl.formatMessage({ id: skillMessages[skill].label })} placeholder={intl.formatMessage({ id: "settings.useDefaultModel" })} onChange={(model) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: model } })} />
                             </SettingRow>)}
                         </div>
                     </div>
