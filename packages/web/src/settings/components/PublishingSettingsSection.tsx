@@ -13,6 +13,10 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
     const [name, setName] = useState("");
     const [limit, setLimit] = useState("");
     const [pendingRemoval, setPendingRemoval] = useState<CustomPublishLimitProfile>();
+    const nameId = "custom-profile-name";
+    const limitId = "custom-profile-limit";
+    const nameHintId = "custom-profile-name-hint";
+    const limitHintId = "custom-profile-limit-hint";
     const parsedLimit = Number(limit);
     const valid = Boolean(name.trim()) && Number.isInteger(parsedLimit) && parsedLimit >= 0;
     const profiles = [...publishLimitProfiles, ...publishing.customProfiles];
@@ -54,21 +58,32 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
                     {profiles.map((profile) => <option key={profile.id} value={profile.id}>{label(profile.id)}{profile.characterLimit === undefined ? "" : ` (${intl.formatNumber(profile.characterLimit)})`}</option>)}
                 </Select>
             </SettingRow>
-            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.customProfiles" })} hint={intl.formatMessage({ id: "settings.customProfilesHint" })} status={!valid && (name || limit) ? intl.formatMessage({ id: "settings.customProfileInvalid" }) : undefined} action={<Button variant="secondary" disabled={!valid} onClick={addCustomProfile}>{intl.formatMessage({ id: "settings.saveCustomProfile" })}</Button>}>
-                <div className="space-y-2">
-                    <div className="space-y-2">
-                        {publishing.customProfiles.map((profile) => <div key={profile.id} className="flex items-center gap-3 text-sm text-muted">
-                            <span>{profile.name} · {intl.formatNumber(profile.characterLimit)}</span>
-                            <Button className="ml-auto" variant="quiet" onClick={() => setPendingRemoval(profile)} aria-label={intl.formatMessage({ id: "settings.removeCustomProfile" }, { name: profile.name })}>{intl.formatMessage({ id: "settings.remove" })}</Button>
-                        </div>)}
-                    </div>
-                    <div className="mt-5 space-y-2">
-                        <p className="text-sm font-semibold text-ink">{intl.formatMessage({ id: "settings.addCustomProfile" })}</p>
-                        <Field aria-label={intl.formatMessage({ id: "settings.customProfileName" })} value={name} placeholder={intl.formatMessage({ id: "settings.customProfileName" })} onChange={(event) => setName(event.target.value)} />
-                        <Field aria-label={intl.formatMessage({ id: "settings.customProfileLimit" })} type="number" min="0" step="1" value={limit} placeholder="3000" onChange={(event) => setLimit(event.target.value)} />
-                    </div>
+            <div className="mt-6 mb-8">
+                <div>
+                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "settings.customProfiles" })}</h3>
+                    <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.customProfilesHint" })}</p>
                 </div>
-            </SettingRow>
+                {publishing.customProfiles.length > 0 && <ul className="mt-4 divide-y divide-border rounded-control border border-border">
+                    {publishing.customProfiles.map((profile) => <li key={profile.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
+                        <span className="min-w-0 flex-1 truncate text-ink">{profile.name}</span>
+                        <span className="shrink-0 rounded-control bg-surface-raised px-2 py-1 text-xs text-muted">{intl.formatNumber(profile.characterLimit)}</span>
+                        <Button variant="quiet" onClick={() => setPendingRemoval(profile)} aria-label={intl.formatMessage({ id: "settings.removeCustomProfile" }, { name: profile.name })}>{intl.formatMessage({ id: "settings.remove" })}</Button>
+                    </li>)}
+                </ul>}
+            </div>
+            <div className="pb-8">
+                <div className="border-l border-border-strong pl-4">
+                    <SettingRow className="border-b-0 py-3 first:pt-0" headingLevel={3} label={intl.formatMessage({ id: "settings.customProfileName" })} hint={intl.formatMessage({ id: "settings.customProfileNameHint" })}>
+                        <Field id={nameId} aria-label={intl.formatMessage({ id: "settings.customProfileName" })} aria-describedby={nameHintId} value={name} onChange={(event) => setName(event.target.value)} />
+                    </SettingRow>
+                    <SettingRow className="border-b-0 py-3 last:pb-0" headingLevel={3} label={intl.formatMessage({ id: "settings.customProfileLimit" })} hint={intl.formatMessage({ id: "settings.customProfileLimitHint" })} status={!valid && (name || limit) ? intl.formatMessage({ id: "settings.customProfileInvalid" }) : undefined}>
+                        <div className="space-y-2">
+                            <Field id={limitId} aria-label={intl.formatMessage({ id: "settings.customProfileLimit" })} aria-describedby={limitHintId} type="number" min="0" step="1" value={limit} onChange={(event) => setLimit(event.target.value)} />
+                            <Button variant="secondary" disabled={!valid} onClick={addCustomProfile}>{intl.formatMessage({ id: "settings.saveCustomProfile" })}</Button>
+                        </div>
+                    </SettingRow>
+                </div>
+            </div>
         </SettingsGroup>
         <SettingsGroup label={intl.formatMessage({ id: "settings.languageDefaults" })}>
             <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} hint={intl.formatMessage({ id: "settings.defaultArticleLanguageHint" })}>

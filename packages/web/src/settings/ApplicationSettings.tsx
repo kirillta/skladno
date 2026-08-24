@@ -247,6 +247,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
 
         try {
             await client.setPublishingSettings(next);
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.saveFailed" }) });
         }

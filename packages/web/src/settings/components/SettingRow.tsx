@@ -1,11 +1,11 @@
 import { cloneElement, isValidElement, useId, type ReactNode } from "react";
 
 
-export function SettingRow({ label, hint, children, status, action, headingLevel = 2 }: { label: string; hint: string; children: ReactNode; status?: ReactNode; action?: ReactNode; headingLevel?: 2 | 3 }) {
+export function SettingRow({ label, hint, children, status, action, headingLevel = 2, className }: { label: string; hint: string; children: ReactNode; status?: ReactNode; action?: ReactNode; headingLevel?: 2 | 3; className?: string }) {
     const hintId = useId();
     const Heading = headingLevel === 3 ? "h3" : "h2";
 
-    return <section className="border-b border-border py-6 last:border-b-0 md:grid md:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)] md:gap-x-12">
+    return <section className={`border-b border-border py-6 last:border-b-0 md:grid md:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)] md:gap-x-12 ${className ?? ""}`}>
         <div>
             <Heading className="text-sm font-semibold">{label}</Heading>
             <p id={hintId} className="mt-1 text-sm leading-5 text-muted">{hint}</p>
