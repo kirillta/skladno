@@ -14,6 +14,8 @@ const skillMessages: Record<BuiltInSkillId, { label: "assistant.skill.talkingPoi
     translation: { label: "assistant.skill.translation.label", hint: "assistant.skill.translation.hint" },
 };
 
+type ConnectionMethod = "managed" | "environment-variable";
+
 
 function pasteIntoField(current: string, pasted: string, selectionStart: number | null, selectionEnd: number | null): string {
     const start = selectionStart ?? current.length;
@@ -62,6 +64,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
 }) {
     const intl = useIntl();
     const [specificModelsOpen, setSpecificModelsOpen] = useState(false);
+    const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod | undefined>(onAddManagedConnection ? undefined : "environment-variable");
     const specificModelsContent = useRef<HTMLDivElement>(null);
 
 
@@ -97,44 +100,67 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
                     </div>
                 </div>)}</div>
             </div>}
-            {onAddManagedConnection && <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.addApiKey" })} hint={intl.formatMessage({ id: "settings.addApiKeyHint" })}>
-                <div className="grid gap-4">
-                    <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
-                        <Field type="text" value={managedConnectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setManagedConnectionName(event.target.value)} />
-                    </Control>
-                    <Control label={intl.formatMessage({ id: "settings.apiKey" })} hint={intl.formatMessage({ id: "settings.apiKeyHint" })}>
-                        <Field type="password" value={apiKey} placeholder={intl.formatMessage({ id: "settings.apiKeyPlaceholder" })} autoComplete="off" onChange={(event) => setApiKey(event.target.value)} />
-                    </Control>
-                    <Button className="w-fit" variant="secondary" onClick={onAddManagedConnection}>{intl.formatMessage({ id: "settings.addApiKeyButton" })}</Button>
+            {onAddManagedConnection && <div className="mt-6">
+                <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "settings.chooseConnectionMethod" })}</h3>
+                <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.chooseConnectionMethodHint" })}</p>
+                <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={intl.formatMessage({ id: "settings.chooseConnectionMethod" })}>
+                    <Button variant={connectionMethod === "managed" ? "secondary" : "quiet"} aria-pressed={connectionMethod === "managed"} onClick={() => setConnectionMethod("managed")}>{intl.formatMessage({ id: "settings.apiKey" })}</Button>
+                    <Button variant={connectionMethod === "environment-variable" ? "secondary" : "quiet"} aria-pressed={connectionMethod === "environment-variable"} onClick={() => setConnectionMethod("environment-variable")}>{intl.formatMessage({ id: "settings.environmentVariable" })}</Button>
                 </div>
-            </SettingRow>}
-            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.addConnection" })} hint={intl.formatMessage({ id: "settings.connectionHint" })}>
-                <div className="grid gap-4">
-                    <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
-                        <Field type="text" readOnly={false} value={connectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setConnectionName(event.target.value)} onPaste={(event) => {
-                            const pasted = event.clipboardData.getData("text");
-                            if (!pasted)
-                                return;
-
-                            event.preventDefault();
-                            setConnectionName(pasteIntoField(connectionName, pasted, event.currentTarget.selectionStart, event.currentTarget.selectionEnd));
-                        }} /></Control>
-                    <Control label={intl.formatMessage({ id: "settings.environmentName" })} hint={intl.formatMessage({ id: "settings.environmentNameHint" })}>
-                        <Field type="text" readOnly={false} value={environmentName} placeholder={intl.formatMessage({ id: "settings.environmentNamePlaceholder" })} onChange={(event) => setEnvironmentName(event.target.value)} onPaste={(event) => {
-                            const pasted = event.clipboardData.getData("text");
-                            if (!pasted)
-                                return;
-
-                            event.preventDefault();
-                            setEnvironmentName(pasteIntoField(environmentName, pasted, event.currentTarget.selectionStart, event.currentTarget.selectionEnd));
-                        }} />
-                    </Control>
-                    {connectionError && <Banner tone="warning" role="alert">
-                        <span>{connectionError}</span>
-                    </Banner>}
-                    <Button className="w-fit" variant="secondary" onClick={onAddConnection}>{intl.formatMessage({ id: "settings.addConnectionButton" })}</Button>
+            </div>}
+            {connectionMethod === "managed" && <div className="mt-6 mb-8">
+                <div>
+                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "settings.addApiKey" })}</h3>
+                    <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.addApiKeyHint" })}</p>
                 </div>
-            </SettingRow>
+                <div className="mt-4 border-l border-border-strong pl-4">
+                    <div className="grid gap-4">
+                        <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
+                            <Field type="text" value={managedConnectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setManagedConnectionName(event.target.value)} />
+                        </Control>
+                        <Control label={intl.formatMessage({ id: "settings.apiKey" })} hint={intl.formatMessage({ id: "settings.apiKeyHint" })}>
+                            <Field type="password" value={apiKey} placeholder={intl.formatMessage({ id: "settings.apiKeyPlaceholder" })} autoComplete="off" onChange={(event) => setApiKey(event.target.value)} />
+                        </Control>
+                    </div>
+                    <div className="mt-4">
+                        <Button className="w-fit" variant="secondary" onClick={onAddManagedConnection}>{intl.formatMessage({ id: "settings.addApiKeyButton" })}</Button>
+                    </div>
+                </div>
+            </div>}
+            {connectionMethod === "environment-variable" && <div className="mt-6 mb-8">
+                <div>
+                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "settings.addConnection" })}</h3>
+                    <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.connectionHint" })}</p>
+                </div>
+                <div className="mt-4 border-l border-border-strong pl-4">
+                    <div className="grid gap-4">
+                        <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
+                            <Field type="text" readOnly={false} value={connectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setConnectionName(event.target.value)} onPaste={(event) => {
+                                const pasted = event.clipboardData.getData("text");
+                                if (!pasted)
+                                    return;
+
+                                event.preventDefault();
+                                setConnectionName(pasteIntoField(connectionName, pasted, event.currentTarget.selectionStart, event.currentTarget.selectionEnd));
+                            }} />
+                        </Control>
+                        <Control label={intl.formatMessage({ id: "settings.environmentName" })} hint={intl.formatMessage({ id: "settings.environmentNameHint" })}>
+                            <Field type="text" readOnly={false} value={environmentName} placeholder={intl.formatMessage({ id: "settings.environmentNamePlaceholder" })} onChange={(event) => setEnvironmentName(event.target.value)} onPaste={(event) => {
+                                const pasted = event.clipboardData.getData("text");
+                                if (!pasted)
+                                    return;
+
+                                event.preventDefault();
+                                setEnvironmentName(pasteIntoField(environmentName, pasted, event.currentTarget.selectionStart, event.currentTarget.selectionEnd));
+                            }} />
+                        </Control>
+                    </div>
+                    {connectionError && <Banner className="mt-4" tone="warning" role="alert"><span>{connectionError}</span></Banner>}
+                    <div className="mt-4">
+                        <Button className="w-fit" variant="secondary" onClick={onAddConnection}>{intl.formatMessage({ id: "settings.addConnectionButton" })}</Button>
+                    </div>
+                </div>
+            </div>}
         </SettingsGroup>
         <div className="pt-8">
             <SettingsGroup label={intl.formatMessage({ id: "settings.models" })}>

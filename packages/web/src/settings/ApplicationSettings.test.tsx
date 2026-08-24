@@ -269,8 +269,10 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.type(screen.getAllByPlaceholderText("For example, Personal AI")[0]!, "Personal AI");
-        expect((screen.getAllByPlaceholderText("For example, Personal AI")[1] as HTMLInputElement).value).toBe("");
+        expect(screen.queryByPlaceholderText("Paste your API key")).toBeNull();
+        expect(screen.queryByPlaceholderText("For example, AI_API_KEY")).toBeNull();
+        await user.click(screen.getByRole("button", { name: message("settings.apiKey") }));
+        await user.type(screen.getByPlaceholderText("For example, Personal AI"), "Personal AI");
         await user.type(screen.getByPlaceholderText("Paste your API key"), "<REDACTED>");
         await user.click(screen.getByRole("button", { name: message("settings.addApiKeyButton") }));
 

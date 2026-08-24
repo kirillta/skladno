@@ -27,7 +27,7 @@
             "title": "AI connections and active connection",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "Authors can add environment-variable connections, and in Electron add a managed API key that is verified then stored in Windows Credential Manager. Connection labels can be renamed. Authors can choose an active connection, test it, and confirm deletion without exposing secret values.",
+            "contract": "Authors can add environment-variable connections. In Electron, they first choose an environment variable or managed API key, which Skladno verifies then stores in Windows Credential Manager. Connection labels can be renamed. Authors can choose an active connection, test it, and confirm deletion without exposing secret values.",
             "persistence": "app_settings.application-ai-connections"
         },
         {
@@ -104,7 +104,7 @@
             "capabilityIds": ["settings.ai-connections"],
             "preconditions": ["The author is in the AI Settings section."],
             "event": "The author adds, selects, or confirms removal of a connection.",
-            "expected": ["Environment-variable names are managed with duplicate names blocked. In Electron, an API key can be verified and stored as a managed credential without being displayed or persisted in Skladno data."],
+            "expected": ["Environment-variable names are managed with duplicate names blocked. In Electron, authors choose one credential method before its form appears, and an API key can be verified and stored as a managed credential without being displayed or persisted in Skladno data."],
             "forbidden": ["Displaying or persisting API key values."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
