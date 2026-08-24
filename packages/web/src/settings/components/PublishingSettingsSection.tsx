@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Field, Select } from "../../ui/primitives.js";
 import { CustomProfileRemovalDialog } from "./CustomProfileRemovalDialog.js";
-import { SettingRow } from "./SettingRow.js";
+import { SettingRow, SettingsGroup } from "./SettingRow.js";
 
 const languageMessageIds = { en: "languages.english", es: "languages.spanish", pt: "languages.portuguese", ru: "languages.russian", fr: "languages.french", de: "languages.german", it: "languages.italian" } as const;
 
@@ -44,43 +44,47 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
 
 
     return <>
-        <SettingRow label={intl.formatMessage({ id: "settings.publishingProfile" })} hint={intl.formatMessage({ id: "settings.publishingProfileHint" })}>
-            <Select aria-label={intl.formatMessage({ id: "settings.publishingProfile" })} value={publishing.defaultProfileId} onChange={(event) => {
-                const value = event.target.value;
-                if (isPublishLimitProfileId(value) && profiles.some((profile) => profile.id === value))
-                    save({ ...publishing, defaultProfileId: value });
-            }}>
-                {profiles.map((profile) => <option key={profile.id} value={profile.id}>{label(profile.id)}{profile.characterLimit === undefined ? "" : ` (${intl.formatNumber(profile.characterLimit)})`}</option>)}
-            </Select>
-        </SettingRow>
-        <SettingRow label={intl.formatMessage({ id: "settings.customProfiles" })} hint={intl.formatMessage({ id: "settings.customProfilesHint" })} status={!valid && (name || limit) ? intl.formatMessage({ id: "settings.customProfileInvalid" }) : undefined} action={<Button variant="secondary" disabled={!valid} onClick={addCustomProfile}>{intl.formatMessage({ id: "settings.saveCustomProfile" })}</Button>}>
-            <div className="space-y-2">
+        <SettingsGroup label={intl.formatMessage({ id: "settings.publishingProfiles" })}>
+            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.publishingProfile" })} hint={intl.formatMessage({ id: "settings.publishingProfileHint" })}>
+                <Select aria-label={intl.formatMessage({ id: "settings.publishingProfile" })} value={publishing.defaultProfileId} onChange={(event) => {
+                    const value = event.target.value;
+                    if (isPublishLimitProfileId(value) && profiles.some((profile) => profile.id === value))
+                        save({ ...publishing, defaultProfileId: value });
+                }}>
+                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{label(profile.id)}{profile.characterLimit === undefined ? "" : ` (${intl.formatNumber(profile.characterLimit)})`}</option>)}
+                </Select>
+            </SettingRow>
+            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.customProfiles" })} hint={intl.formatMessage({ id: "settings.customProfilesHint" })} status={!valid && (name || limit) ? intl.formatMessage({ id: "settings.customProfileInvalid" }) : undefined} action={<Button variant="secondary" disabled={!valid} onClick={addCustomProfile}>{intl.formatMessage({ id: "settings.saveCustomProfile" })}</Button>}>
                 <div className="space-y-2">
-                    {publishing.customProfiles.map((profile) => <div key={profile.id} className="flex items-center gap-3 text-sm text-muted">
-                        <span>{profile.name} · {intl.formatNumber(profile.characterLimit)}</span>
-                        <Button className="ml-auto" variant="quiet" onClick={() => setPendingRemoval(profile)} aria-label={intl.formatMessage({ id: "settings.removeCustomProfile" }, { name: profile.name })}>{intl.formatMessage({ id: "settings.remove" })}</Button>
-                    </div>)}
+                    <div className="space-y-2">
+                        {publishing.customProfiles.map((profile) => <div key={profile.id} className="flex items-center gap-3 text-sm text-muted">
+                            <span>{profile.name} · {intl.formatNumber(profile.characterLimit)}</span>
+                            <Button className="ml-auto" variant="quiet" onClick={() => setPendingRemoval(profile)} aria-label={intl.formatMessage({ id: "settings.removeCustomProfile" }, { name: profile.name })}>{intl.formatMessage({ id: "settings.remove" })}</Button>
+                        </div>)}
+                    </div>
+                    <div className="mt-5 space-y-2 border-t border-border pt-5">
+                        <p className="text-sm font-semibold text-ink">{intl.formatMessage({ id: "settings.addCustomProfile" })}</p>
+                        <Field aria-label={intl.formatMessage({ id: "settings.customProfileName" })} value={name} placeholder={intl.formatMessage({ id: "settings.customProfileName" })} onChange={(event) => setName(event.target.value)} />
+                        <Field aria-label={intl.formatMessage({ id: "settings.customProfileLimit" })} type="number" min="0" step="1" value={limit} placeholder="3000" onChange={(event) => setLimit(event.target.value)} />
+                    </div>
                 </div>
-                <div className="mt-5 space-y-2 border-t border-border pt-5">
-                    <p className="text-sm font-semibold text-ink">{intl.formatMessage({ id: "settings.addCustomProfile" })}</p>
-                    <Field aria-label={intl.formatMessage({ id: "settings.customProfileName" })} value={name} placeholder={intl.formatMessage({ id: "settings.customProfileName" })} onChange={(event) => setName(event.target.value)} />
-                    <Field aria-label={intl.formatMessage({ id: "settings.customProfileLimit" })} type="number" min="0" step="1" value={limit} placeholder="3000" onChange={(event) => setLimit(event.target.value)} />
+            </SettingRow>
+        </SettingsGroup>
+        <SettingsGroup label={intl.formatMessage({ id: "settings.languageDefaults" })} separated>
+            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} hint={intl.formatMessage({ id: "settings.defaultArticleLanguageHint" })}>
+                <Select aria-label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} value={general.defaultArticleLanguage} onChange={(event) => void saveGeneral({ ...general, defaultArticleLanguage: event.target.value, defaultTranslationLanguages: general.defaultTranslationLanguages.filter((language) => language !== event.target.value) })}>
+                    {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageIds[language] })}</option>)}
+                </Select>
+            </SettingRow>
+            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultTranslationLanguages" })} hint={intl.formatMessage({ id: "settings.defaultTranslationLanguagesHint" })}>
+                <div role="group" aria-label={intl.formatMessage({ id: "settings.defaultTranslationLanguages" })} className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                    {articleLanguages.filter((language) => language !== general.defaultArticleLanguage).map((language) => <label key={language} className="flex min-h-8 items-center gap-2 text-sm text-ink">
+                        <input className="size-4 accent-brand" type="checkbox" checked={general.defaultTranslationLanguages.includes(language)} onChange={(event) => void saveGeneral({ ...general, defaultTranslationLanguages: event.target.checked ? [...general.defaultTranslationLanguages, language] : general.defaultTranslationLanguages.filter((item) => item !== language) })} />
+                        {intl.formatMessage({ id: languageMessageIds[language] })}
+                    </label>)}
                 </div>
-            </div>
-        </SettingRow>
+            </SettingRow>
+        </SettingsGroup>
         {pendingRemoval && <CustomProfileRemovalDialog profile={pendingRemoval} isDefault={publishing.defaultProfileId === pendingRemoval.id} close={() => setPendingRemoval(undefined)} remove={confirmRemoval} />}
-        <SettingRow label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} hint={intl.formatMessage({ id: "settings.defaultArticleLanguageHint" })}>
-            <Select aria-label={intl.formatMessage({ id: "settings.defaultArticleLanguage" })} value={general.defaultArticleLanguage} onChange={(event) => void saveGeneral({ ...general, defaultArticleLanguage: event.target.value, defaultTranslationLanguages: general.defaultTranslationLanguages.filter((language) => language !== event.target.value) })}>
-                {articleLanguages.map((language) => <option key={language} value={language}>{intl.formatMessage({ id: languageMessageIds[language] })}</option>)}
-            </Select>
-        </SettingRow>
-        <SettingRow label={intl.formatMessage({ id: "settings.defaultTranslationLanguages" })} hint={intl.formatMessage({ id: "settings.defaultTranslationLanguagesHint" })}>
-            <div role="group" aria-label={intl.formatMessage({ id: "settings.defaultTranslationLanguages" })} className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
-                {articleLanguages.filter((language) => language !== general.defaultArticleLanguage).map((language) => <label key={language} className="flex min-h-8 items-center gap-2 text-sm text-ink">
-                    <input className="size-4 accent-brand" type="checkbox" checked={general.defaultTranslationLanguages.includes(language)} onChange={(event) => void saveGeneral({ ...general, defaultTranslationLanguages: event.target.checked ? [...general.defaultTranslationLanguages, language] : general.defaultTranslationLanguages.filter((item) => item !== language) })} />
-                    {intl.formatMessage({ id: languageMessageIds[language] })}
-                </label>)}
-            </div>
-        </SettingRow>
     </>;
 }

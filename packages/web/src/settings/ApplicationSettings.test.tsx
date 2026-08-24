@@ -38,6 +38,21 @@ describe("ApplicationSettings", () => {
     });
 
 
+    it("provides a compact section selector", async () => {
+        const user = userEvent.setup();
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.selectOptions(await screen.findByRole("combobox", { name: message("settings.navigation") }), "ai");
+
+        expect(screen.getByRole("heading", { name: message("settings.ai") })).toBeTruthy();
+    });
+
+
     it("persists an accessible explicit time-zone selection and previews it", async () => {
         const user = userEvent.setup();
         const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);
@@ -50,8 +65,9 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         const heading = await screen.findByText("Time zone");
-        const select = heading.parentElement?.querySelector("select") as HTMLSelectElement;
+        const select = heading.closest("section")?.querySelector("select") as HTMLSelectElement;
 
+        expect(screen.getByRole("heading", { name: "Date & time" })).toBeTruthy();
         expect(select).toBeTruthy();
         expect(select.getAttribute("aria-describedby")).toBeTruthy();
         expect([...select.options].map((option) => option.value)).toContain("UTC");
@@ -83,7 +99,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         const heading = await screen.findByText("Date format");
-        const select = heading.parentElement?.querySelector("select") as HTMLSelectElement;
+        const select = heading.closest("section")?.querySelector("select") as HTMLSelectElement;
 
         expect(select.getAttribute("aria-describedby")).toBeTruthy();
         expect([...select.options].map((option) => option.value)).toEqual(["system", "day-first", "day-first-dots", "month-first", "iso"]);
