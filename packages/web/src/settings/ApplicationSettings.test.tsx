@@ -351,6 +351,48 @@ describe("ApplicationSettings", () => {
         expect(screen.getAllByRole("option", { name: "GPT-5" })).not.toHaveLength(0);
     });
 
+    it("filters models by vendor and saves favorites", async () => {
+        const user = userEvent.setup();
+        const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
+        const updateModelPreferences = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue(["gpt-5", "gpt-5-mini"]),
+            updateModelPreferences,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: message("settings.model") }));
+        const listbox = screen.getAllByRole("listbox", { name: message("settings.model") })[0]!;
+        const modelPicker = listbox.closest("details")!;
+        expect(within(listbox).queryByRole("option", { name: message("settings.chooseModel") })).toBeNull();
+        expect(screen.queryByRole("tab", { name: "All models" })).toBeNull();
+        const otherTab = within(modelPicker).getByRole("tab", { name: "Other" });
+        await user.click(otherTab);
+        expect(otherTab.getAttribute("aria-selected")).toBe("true");
+        expect(within(listbox).queryByRole("option", { name: "GPT-5" })).toBeNull();
+        await user.click(within(modelPicker).getByRole("tab", { name: "OpenAI" }));
+        expect(within(listbox).getByRole("option", { name: "GPT-5 mini" })).toBeTruthy();
+        const search = screen.getAllByRole("textbox", { name: message("settings.searchModels") })[0]!;
+        await user.type(search, "gpt");
+        expect(within(listbox).getByRole("option", { name: "GPT-5" })).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: message("settings.clearModelSearch") }));
+        expect(search.getAttribute("value")).toBe("");
+        await user.type(search, "mini");
+        await user.click(within(listbox).getByRole("button", { name: message("settings.addFavoriteModel", { model: "GPT-5 mini" }) }));
+
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ favoriteModels: ["gpt-5-mini"] })));
+        const favoritesTab = within(modelPicker).getByRole("tab", { name: message("settings.favoriteModels") });
+        await user.click(favoritesTab);
+        expect(favoritesTab.getAttribute("aria-selected")).toBe("true");
+        expect(within(listbox).getByRole("option", { name: "GPT-5 mini" })).toBeTruthy();
+        fireEvent.mouseDown(document.body);
+        await waitFor(() => expect(listbox.closest("details")?.open).toBe(false));
+    });
+
     it("keeps Article and translation language defaults together in Publishing Settings", async () => {
         const user = userEvent.setup();
         const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);

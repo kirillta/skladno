@@ -33,10 +33,10 @@
         {
             "id": "settings.model-preferences",
             "area": "AI",
-            "title": "Default, supporting-text, per-skill, and reasoning preferences",
+            "title": "Default, supporting-text, per-skill, reasoning, and favorite-model preferences",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts"],
-            "contract": "A default model and per-skill overrides apply to six built-in skills. An optional text-generation model handles supporting text such as Proposal summaries and falls back to the default. For supported default OpenAI reasoning models, authors can choose low, medium, or high reasoning effort; overrides continue to use their model defaults. Presentation receives Settings through the application service, persistence uses focused repositories, and legacy preferences normalize on read without exposing unknown keys.",
+            "contract": "A default model and per-skill overrides apply to six built-in skills. An optional text-generation model handles supporting text such as Proposal summaries and falls back to the default. Authors can save favorite available models, search the available list, and filter it by recognized vendor. For supported default OpenAI reasoning models, authors can choose low, medium, or high reasoning effort; overrides continue to use their model defaults. Presentation receives Settings through the application service, persistence uses focused repositories, and legacy preferences normalize on read without exposing unknown keys.",
             "persistence": "app_settings.application-model-preferences"
         },
         {

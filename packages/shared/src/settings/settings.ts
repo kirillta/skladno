@@ -104,6 +104,7 @@ export interface ModelPreferences {
     textGenerationModel?: string;
     reasoningEffort?: "low" | "medium" | "high";
     skillOverrides: Partial<Record<BuiltInSkillId, string>>;
+    favoriteModels?: string[];
 }
 
 

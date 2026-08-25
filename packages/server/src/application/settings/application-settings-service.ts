@@ -103,12 +103,16 @@ function modelPreferences(value: unknown): ModelPreferences {
     const reasoningEffort = candidate.reasoningEffort === "low" || candidate.reasoningEffort === "medium" || candidate.reasoningEffort === "high"
         ? candidate.reasoningEffort
         : undefined;
+    const favoriteModels = Array.isArray(candidate.favoriteModels)
+        ? [...new Set(candidate.favoriteModels.filter((model): model is string => typeof model === "string").map((model) => model.trim()).filter(Boolean))]
+        : [];
 
     return {
         defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "",
         ...(textGenerationModel ? { textGenerationModel } : {}),
         ...(reasoningEffort ? { reasoningEffort } : {}),
         skillOverrides,
+        ...(favoriteModels.length > 0 ? { favoriteModels } : {}),
     };
 }
 
