@@ -106,7 +106,7 @@ test("an unavailable automatic backup does not prevent editing", async ({ page }
     await page.goto("/");
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("button", { name: "Data & backups" }).click();
-    await page.getByRole("combobox").first().selectOption("daily");
+    await page.getByRole("switch", { name: "Automatic backups" }).click();
     await page.getByRole("button", { name: "Back to workspace" }).click();
     await page.reload();
 
