@@ -20,4 +20,5 @@ test("Responses storage is opt-in and continuation stays scoped to it", () => {
     assert.deepEqual(responsesProviderOptions(false, "resp-earlier"), { openai: { store: false } });
     assert.deepEqual(responsesProviderOptions(true), { openai: { store: true } });
     assert.deepEqual(responsesProviderOptions(true, "resp-earlier"), { openai: { store: true, previousResponseId: "resp-earlier" } });
+    assert.deepEqual(responsesProviderOptions(false, undefined, "high"), { openai: { store: false, reasoningEffort: "high" } });
 });

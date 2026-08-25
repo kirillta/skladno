@@ -39,6 +39,7 @@ interface AiSdkEditorialEngineOptions {
     apiKey: string;
     model: string;
     storeResponses: boolean;
+    reasoningEffort?: "low" | "medium" | "high";
 }
 
 
@@ -139,7 +140,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
 
     private providerOptions(previousResponseId?: string) {
-        return responsesProviderOptions(this.options.storeResponses, previousResponseId);
+        return responsesProviderOptions(this.options.storeResponses, previousResponseId, this.options.reasoningEffort);
     }
 
 

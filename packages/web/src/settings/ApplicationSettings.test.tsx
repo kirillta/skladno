@@ -38,6 +38,42 @@ describe("ApplicationSettings", () => {
     });
 
 
+    it("provides a compact section selector", async () => {
+        const user = userEvent.setup();
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.selectOptions(await screen.findByRole("combobox", { name: message("settings.navigation") }), "ai");
+
+        expect(screen.getByRole("heading", { name: message("settings.ai") })).toBeTruthy();
+    });
+
+
+    it("persists the Editorial Assistant send-key preference", async () => {
+        const user = userEvent.setup();
+        const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            updateGeneralSettings,
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.keyBindings") }));
+        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.assistantSendMode") }), "ctrl-enter");
+
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({
+            ...defaultGeneralSettings,
+            assistantSendMode: "ctrl-enter",
+        }));
+    });
+
+
     it("persists an accessible explicit time-zone selection and previews it", async () => {
         const user = userEvent.setup();
         const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);
@@ -50,8 +86,9 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         const heading = await screen.findByText("Time zone");
-        const select = heading.parentElement?.querySelector("select") as HTMLSelectElement;
+        const select = heading.closest("section")?.querySelector("select") as HTMLSelectElement;
 
+        expect(screen.getByRole("heading", { name: "Date & time" })).toBeTruthy();
         expect(select).toBeTruthy();
         expect(select.getAttribute("aria-describedby")).toBeTruthy();
         expect([...select.options].map((option) => option.value)).toContain("UTC");
@@ -83,7 +120,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         const heading = await screen.findByText("Date format");
-        const select = heading.parentElement?.querySelector("select") as HTMLSelectElement;
+        const select = heading.closest("section")?.querySelector("select") as HTMLSelectElement;
 
         expect(select.getAttribute("aria-describedby")).toBeTruthy();
         expect([...select.options].map((option) => option.value)).toEqual(["system", "day-first", "day-first-dots", "month-first", "iso"]);
@@ -120,6 +157,22 @@ describe("ApplicationSettings", () => {
         await user.click(screen.getByRole("button", { name: message("settings.applyAppearance") }));
 
         expect(onThemeApplied).toHaveBeenCalledWith("dark");
+    });
+
+
+    it("marks the single supported interface language as unavailable", async () => {
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        const heading = await screen.findByText("Interface language");
+        const select = heading.closest("section")?.querySelector("select") as HTMLSelectElement;
+
+        expect(select.disabled).toBe(true);
+        expect(select.getAttribute("aria-describedby")).toBeTruthy();
     });
 
 
@@ -216,8 +269,10 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.type(screen.getAllByPlaceholderText("For example, Personal AI")[0]!, "Personal AI");
-        expect((screen.getAllByPlaceholderText("For example, Personal AI")[1] as HTMLInputElement).value).toBe("");
+        expect(screen.queryByPlaceholderText("Paste your API key")).toBeNull();
+        expect(screen.queryByPlaceholderText("For example, AI_API_KEY")).toBeNull();
+        await user.click(screen.getByRole("button", { name: message("settings.apiKey") }));
+        await user.type(screen.getByPlaceholderText("For example, Personal AI"), "Personal AI");
         await user.type(screen.getByPlaceholderText("Paste your API key"), "<REDACTED>");
         await user.click(screen.getByRole("button", { name: message("settings.addApiKeyButton") }));
 
@@ -243,7 +298,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.click(screen.getByRole("button", { name: message("settings.renameConnection") }));
+        await user.click(screen.getByRole("button", { name: message("settings.renameConnectionShort") }));
         const input = screen.getByRole("textbox", { name: message("settings.connectionName") });
         await user.clear(input);
         await user.type(input, "Work AI");
@@ -267,7 +322,7 @@ describe("ApplicationSettings", () => {
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.click(screen.getByRole("button", { name: message("settings.renameConnection") }));
+        await user.click(screen.getByRole("button", { name: message("settings.renameConnectionShort") }));
         const input = screen.getByRole("textbox", { name: message("settings.connectionName") });
         await user.clear(input);
         await user.type(input, "Work AI");
@@ -292,7 +347,95 @@ describe("ApplicationSettings", () => {
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
 
         await waitFor(() => expect(refreshAiModels).toHaveBeenCalledOnce());
-        expect(screen.getAllByRole("option", { name: "gpt-5" })).not.toHaveLength(0);
+        await user.click(screen.getByRole("button", { name: message("settings.model") }));
+        expect(screen.getAllByRole("option", { name: "GPT-5" })).not.toHaveLength(0);
+    });
+
+    it("saves reasoning effort for an OpenAI default model", async () => {
+        const user = userEvent.setup();
+        const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
+        const updateModelPreferences = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id, modelPreferences: { defaultModel: "gpt-4.1", skillOverrides: {} } }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue(["gpt-5.5"]),
+            updateModelPreferences,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.reasoningEffort") }), "high");
+
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith({ defaultModel: "gpt-4.1", skillOverrides: {}, reasoningEffort: "high" }));
+    });
+
+    it("saves reasoning effort for supporting text and task overrides", async () => {
+        const user = userEvent.setup();
+        vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+        HTMLElement.prototype.scrollIntoView = vi.fn();
+        const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
+        const updateModelPreferences = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id, modelPreferences: { defaultModel: "gpt-5.5", textGenerationModel: "gpt-5.5-mini", skillOverrides: { talking_points: "gpt-5.5-mini" } } }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue(["gpt-5.5", "gpt-5.5-mini"]),
+            updateModelPreferences,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.selectOptions(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })[1]!, "low");
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ textGenerationReasoningEffort: "low" })));
+
+        await user.click(screen.getByRole("button", { name: message("settings.specificModels") }));
+        expect(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })).toHaveLength(3);
+        expect(document.getElementById("specific-model-overrides")?.firstElementChild?.classList.contains("overflow-visible")).toBe(true);
+        await user.selectOptions(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })[2]!, "high");
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ skillReasoningEfforts: { talking_points: "high" } })));
+    });
+
+    it("filters models by vendor and saves favorites", async () => {
+        const user = userEvent.setup();
+        const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
+        const updateModelPreferences = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue(["gpt-5", "gpt-5-mini"]),
+            updateModelPreferences,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: message("settings.model") }));
+        const listbox = screen.getAllByRole("listbox", { name: message("settings.model") })[0]!;
+        const modelPicker = listbox.closest("details")!;
+        expect(within(listbox).queryByRole("option", { name: message("settings.chooseModel") })).toBeNull();
+        expect(screen.queryByRole("tab", { name: "All models" })).toBeNull();
+        const otherTab = within(modelPicker).getByRole("tab", { name: "Other" });
+        await user.click(otherTab);
+        expect(otherTab.getAttribute("aria-selected")).toBe("true");
+        expect(within(listbox).queryByRole("option", { name: "GPT-5" })).toBeNull();
+        await user.click(within(modelPicker).getByRole("tab", { name: "OpenAI" }));
+        expect(within(listbox).getByRole("option", { name: "GPT-5 mini" })).toBeTruthy();
+        const search = screen.getAllByRole("textbox", { name: message("settings.searchModels") })[0]!;
+        await user.type(search, "gpt");
+        expect(within(listbox).getByRole("option", { name: "GPT-5" })).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: message("settings.clearModelSearch") }));
+        expect(search.getAttribute("value")).toBe("");
+        await user.type(search, "mini");
+        await user.click(within(listbox).getByRole("button", { name: message("settings.addFavoriteModel", { model: "GPT-5 mini" }) }));
+
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ favoriteModels: ["gpt-5-mini"] })));
+        const favoritesTab = within(modelPicker).getByRole("tab", { name: message("settings.favoriteModels") });
+        await user.click(favoritesTab);
+        expect(favoritesTab.getAttribute("aria-selected")).toBe("true");
+        expect(within(listbox).getByRole("option", { name: "GPT-5 mini" })).toBeTruthy();
+        fireEvent.mouseDown(document.body);
+        await waitFor(() => expect(listbox.closest("details")?.open).toBe(false));
     });
 
     it("keeps Article and translation language defaults together in Publishing Settings", async () => {
@@ -359,6 +502,26 @@ describe("ApplicationSettings", () => {
         expect(screen.getByRole("button", { name: message("settings.publishing") }).hasAttribute("disabled")).toBe(false);
     });
 
+    it("toggles automatic backups", async () => {
+        const user = userEvent.setup();
+        const updateBackupPolicy = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            updateBackupPolicy,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.dataBackups") }));
+        const toggle = screen.getByRole("switch", { name: message("settings.automaticBackups") });
+        expect(toggle.getAttribute("aria-checked")).toBe("false");
+        await user.click(toggle);
+
+        await waitFor(() => expect(updateBackupPolicy).toHaveBeenCalledWith(expect.objectContaining({ schedule: "daily" })));
+        expect(toggle.getAttribute("aria-checked")).toBe("true");
+    });
+
     it("retains an editable custom profile until the author saves its name and limit", async () => {
         const user = userEvent.setup();
         const settings = { defaultProfileId: "default" as const, customProfiles: [] };
@@ -416,13 +579,13 @@ describe("ApplicationSettings", () => {
 
         expect(screen.getByRole("alert").textContent).toContain("already saved");
         expect(client.addAiConnection).not.toHaveBeenCalled();
-        expect(screen.getAllByRole("button", { name: message("settings.removeConnection") })).toHaveLength(1);
+        expect(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })).toHaveLength(1);
 
-        await user.click(screen.getByRole("button", { name: message("settings.useConnection") }));
+        await user.click(screen.getByRole("button", { name: message("settings.useConnectionShort") }));
         await waitFor(() => expect(setActiveAiConnection).toHaveBeenCalledWith(secondConnection.id));
         await waitFor(() => expect(client.refreshAiModels).toHaveBeenCalledTimes(2));
 
-        await user.click(screen.getAllByRole("button", { name: message("settings.removeConnection") })[0]!);
+        await user.click(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })[0]!);
         const dialog = screen.getByRole("dialog");
         await user.click(within(dialog).getByRole("button", { name: message("settings.removeConnection") }));
 

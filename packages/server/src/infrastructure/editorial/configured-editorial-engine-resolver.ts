@@ -1,4 +1,4 @@
-import { resolveBuiltInSkillId, type AiConnection, type BuiltInSkillId, type EditorialOperation, type ModelPreferences } from "@skladno/shared";
+import { resolveBuiltInSkillId, type AiConnection, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
 
 import type { EditorialEngineResolver } from "../../application/ports/editorial-engine-resolver.js";
 import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
@@ -12,6 +12,14 @@ import type { ManagedCredentials } from "../../application/ports/managed-credent
 
 export function resolveTextGenerationModel(preferences: Partial<ModelPreferences> | undefined, fallback: string): string {
     return preferences?.textGenerationModel || preferences?.defaultModel || fallback;
+}
+
+
+export function resolveTextGenerationConfiguration(preferences: Partial<ModelPreferences> | undefined, fallback: string): { model: string; reasoningEffort?: ReasoningEffort } {
+    return {
+        model: resolveTextGenerationModel(preferences, fallback),
+        ...(preferences?.textGenerationReasoningEffort ? { reasoningEffort: preferences.textGenerationReasoningEffort } : {}),
+    };
 }
 
 
@@ -33,8 +41,9 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         const preferences = this.settings.get("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
         const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
         const model = (skillId ? preferences?.skillOverrides?.[skillId] : undefined) || preferences?.defaultModel || this.config.aiModel;
+        const reasoningEffort = skillId ? preferences?.skillReasoningEfforts?.[skillId] : preferences?.reasoningEffort;
 
-        return createEditorialEngine({ apiKey, model, storeResponses: this.config.aiSessionContinuationEnabled });
+        return createEditorialEngine({ apiKey, model, storeResponses: this.config.aiSessionContinuationEnabled, ...(reasoningEffort ? { reasoningEffort } : {}) });
     }
 
 
@@ -43,7 +52,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         if (!configuration)
             return undefined;
 
-        return new OpenAiProposalSummaryGeneratorAdapter(configuration.apiKey, configuration.model);
+        return new OpenAiProposalSummaryGeneratorAdapter(configuration.apiKey, configuration.model, configuration.reasoningEffort);
     }
 
 
@@ -52,11 +61,11 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         if (!configuration)
             return undefined;
 
-        return new OpenAiArticleTitleGeneratorAdapter(configuration.apiKey, configuration.model);
+        return new OpenAiArticleTitleGeneratorAdapter(configuration.apiKey, configuration.model, configuration.reasoningEffort);
     }
 
 
-    private resolveTextGenerationConfiguration(): { apiKey: string; model: string } | undefined {
+    private resolveTextGenerationConfiguration(): { apiKey: string; model: string; reasoningEffort?: ReasoningEffort } | undefined {
         const savedConnections = this.settings.get("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
         const active = savedConnections?.connections?.find((connection) => connection.id === savedConnections.activeConnectionId);
         const apiKey = active ? this.connectionApiKey(active) : this.config.aiApiKey;
@@ -64,7 +73,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
             return undefined;
 
         const preferences = this.settings.get("application-model-preferences")?.value as Partial<ModelPreferences> | undefined;
-        return { apiKey, model: resolveTextGenerationModel(preferences, this.config.aiModel) };
+        return { apiKey, ...resolveTextGenerationConfiguration(preferences, this.config.aiModel) };
     }
 
 

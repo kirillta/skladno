@@ -17,8 +17,8 @@
             "title": "Configurable application shortcuts",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/KeyBindingSettings.tsx", "packages/web/src/key-bindings", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/routes/settings-route.ts"],
-            "contract": "Settings can persist command overrides and expose conflict-aware shortcut configuration.",
-            "persistence": "app_settings.application-key-bindings",
+            "contract": "Settings can persist command overrides and expose conflict-aware shortcut configuration. The Editorial Assistant also supports choosing Enter or Ctrl+Enter as the send key independently of command overrides.",
+            "persistence": "app_settings.application-key-bindings and app_settings.application-general",
             "limitations": ["Complete workspace-action wiring remains tracked separately."]
         },
         {
@@ -27,16 +27,16 @@
             "title": "AI connections and active connection",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "Authors can add environment-variable connections, and in Electron add a managed API key that is verified then stored in Windows Credential Manager. Connection labels can be renamed. Authors can choose an active connection, test it, and confirm deletion without exposing secret values.",
+            "contract": "Authors can add environment-variable connections. In Electron, they first choose an environment variable or managed API key, which Skladno verifies then stores in Windows Credential Manager. Connection labels can be renamed. Authors can choose an active connection, test it, and confirm deletion without exposing secret values.",
             "persistence": "app_settings.application-ai-connections"
         },
         {
             "id": "settings.model-preferences",
             "area": "AI",
-            "title": "Default, supporting-text, and per-skill models",
+            "title": "Default, supporting-text, per-skill, reasoning, and favorite-model preferences",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts"],
-            "contract": "A default model and per-skill overrides apply to six built-in skills. An optional text-generation model handles supporting text such as Proposal summaries and falls back to the default. Presentation receives Settings through the application service, persistence uses focused repositories, and legacy preferences normalize on read without exposing unknown keys.",
+            "contract": "A default model and per-skill overrides apply to six built-in skills. An optional text-generation model handles supporting text such as Proposal summaries and falls back to the default. Authors can save favorite available models, search the available list, and filter it by recognized vendor. Each selected OpenAI default, text-generation, and task-specific model has an adjacent low, medium, or high reasoning-level preference. Presentation receives Settings through the application service, persistence uses focused repositories, and legacy preferences normalize on read without exposing unknown keys.",
             "persistence": "app_settings.application-model-preferences"
         },
         {
@@ -44,8 +44,8 @@
             "area": "AI",
             "title": "Available model list refresh",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/available-models-provider.ts", "packages/server/src/presentation/routes/settings-route.ts"],
-            "contract": "Opening AI Settings or changing the active AI connection loads its available model list for model selection; authors can refresh the list again to retry or retrieve provider changes.",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/available-models-provider.ts", "packages/server/src/infrastructure/editorial/available-models.ts", "packages/server/src/presentation/routes/settings-route.ts"],
+            "contract": "Opening AI Settings or changing the active AI connection loads the supported current editorial model list for model selection; authors can refresh the list again to retry or retrieve provider changes. The OpenAI catalog admits only the gpt-5.5 and gpt-5.6 model families.",
             "persistence": "Server-side provider refresh only; the resulting list is not persisted."
         },
         {
@@ -104,7 +104,7 @@
             "capabilityIds": ["settings.ai-connections"],
             "preconditions": ["The author is in the AI Settings section."],
             "event": "The author adds, selects, or confirms removal of a connection.",
-            "expected": ["Environment-variable names are managed with duplicate names blocked. In Electron, an API key can be verified and stored as a managed credential without being displayed or persisted in Skladno data."],
+            "expected": ["Environment-variable names are managed with duplicate names blocked. In Electron, authors choose one credential method before its form appears, and an API key can be verified and stored as a managed credential without being displayed or persisted in Skladno data."],
             "forbidden": ["Displaying or persisting API key values."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
@@ -112,9 +112,9 @@
             "id": "settings.model-preferences-human-reviewed",
             "title": "Model preferences resolve for editorial and supporting work",
             "capabilityIds": ["settings.model-preferences"],
-            "preconditions": ["A default model, text generation model, or skill override is saved."],
+            "preconditions": ["A default model, text generation model, skill override, or reasoning effort is saved."],
             "event": "A new editorial request is prepared.",
-            "expected": ["Editorial work resolves its built-in-skill override or default model, while supporting text resolves its text generation model or default-model fallback."],
+            "expected": ["Editorial work resolves its built-in-skill override or default model, while supporting text resolves its text generation model or default-model fallback. Each selected OpenAI model receives its saved reasoning effort."],
             "forbidden": ["Exposing unknown legacy override keys."],
             "evidence": { "kind": "human-reviewed", "path": "packages/server/src/presentation/server.ts" }
         },
@@ -124,7 +124,7 @@
             "capabilityIds": ["settings.available-model-list"],
             "preconditions": ["An active AI connection is configured."],
             "event": "The author opens AI Settings, changes the active connection, or manually refreshes the list.",
-            "expected": ["The current provider list is offered for selection."],
+            "expected": ["The supported current editorial model list is offered for selection."],
             "forbidden": ["Persisting the refreshed list as a model preference."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },

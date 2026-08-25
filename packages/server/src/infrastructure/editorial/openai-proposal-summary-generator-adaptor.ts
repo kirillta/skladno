@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { ProposalChange, ProposalChangeSummary } from "@skladno/shared";
 
 import type { ProposalSummaryGenerator } from "../../application/ports/proposal-summary-generator.js";
+import { responsesProviderOptions } from "./ai-sdk-editorial-helpers.js";
 
 
 const summariesSchema = z.object({
@@ -19,7 +20,7 @@ export class OpenAiProposalSummaryGeneratorAdapter implements ProposalSummaryGen
     private readonly openai;
 
 
-    constructor(apiKey: string, private readonly model: string) {
+    constructor(apiKey: string, private readonly model: string, private readonly reasoningEffort?: "low" | "medium" | "high") {
         this.openai = createOpenAI({ apiKey });
     }
 
@@ -34,7 +35,7 @@ export class OpenAiProposalSummaryGeneratorAdapter implements ProposalSummaryGen
             output: Output.object({ schema: summariesSchema }),
             abortSignal: signal,
             telemetry: { isEnabled: false },
-            providerOptions: { openai: { store: false } },
+            providerOptions: responsesProviderOptions(false, undefined, this.reasoningEffort),
         });
         const requestedIds = new Set(changes.map((change) => change.id));
 

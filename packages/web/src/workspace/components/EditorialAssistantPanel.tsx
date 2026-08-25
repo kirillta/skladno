@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type FormEventHandler, type KeyboardEventHandler } from "react";
 import { useIntl, type IntlShape } from "react-intl";
-import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, type Article, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
+import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, keyBindingsEqual, resolveKeyBindings, type Article, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
-import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
+import { eventKeyBinding, type KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { AssistantComposer } from "./assistant/AssistantComposer.js";
 import { AssistantTimeline } from "./assistant/AssistantTimeline.js";
@@ -108,7 +108,7 @@ function renderAssistantComposerContent({ element, value, skill, offset = 0, sel
 }
 
 
-function useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection }: {
+function useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode, shortcutOverrides }: {
     intl: IntlShape;
     state: AssistantState;
     onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
@@ -117,6 +117,8 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
     dispatcher?: KeyBindingDispatcher;
     selection?: string;
     clearSelection?: () => void;
+    assistantSendMode: GeneralSettings["assistantSendMode"];
+    shortcutOverrides: KeyBindingOverrides;
 }) {
     const [guidance, setGuidance] = useState("");
     const [quickActionsOpen, setQuickActionsOpen] = useState(false);
@@ -231,6 +233,26 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
     };
 
     const onKeyDown: KeyboardEventHandler<HTMLDivElement> = (event) => {
+        if (event.key === "Enter" && !event.shiftKey && !event.altKey) {
+            const primary = event.ctrlKey || event.metaKey;
+            const shouldSend = assistantSendMode === "enter" ? !primary : primary;
+            const configuredSendBinding = Object.prototype.hasOwnProperty.call(shortcutOverrides, KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST)
+                ? resolveKeyBindings(shortcutOverrides)[KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST]
+                : undefined;
+            const currentBinding = eventKeyBinding(event);
+            const isConfiguredShortcut = configuredSendBinding !== undefined && configuredSendBinding !== null && currentBinding !== undefined && keyBindingsEqual(configuredSendBinding, currentBinding);
+            if (isConfiguredShortcut)
+                return;
+
+            event.stopPropagation();
+            if (shouldSend) {
+                event.preventDefault();
+                send();
+            }
+
+            return;
+        }
+
         if (!quickActionsOpen)
             return;
 
@@ -300,7 +322,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
     generalSettings?: GeneralSettings;
 }) {
     const intl = useIntl();
-    const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection });
+    const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {} });
     const elapsedDuration = useElapsedDuration(state, intl);
 
     if (collapsed)

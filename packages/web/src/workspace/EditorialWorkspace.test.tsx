@@ -363,7 +363,8 @@ describe("Editorial Workspace", () => {
 
         render(<App client={client} />);
         await user.click((await screen.findAllByRole("button", { name: message("navigation.settings") })).at(-1)!);
-        await user.selectOptions(screen.getAllByRole("combobox")[0]!, "dark");
+        const appearance = screen.getByText("Preferred appearance").closest("section")?.querySelector("select");
+        await user.selectOptions(appearance!, "dark");
 
         expect((await screen.findByRole("alert")).textContent).toContain("Couldn’t save your changes.");
         expect(screen.queryByText("private settings detail")).toBeNull();
@@ -422,6 +423,21 @@ describe("Editorial Workspace", () => {
         await user.click(panelScope.getByRole("button", { name: message("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("Keep this focused.", "talking_points", undefined, "Keep this".length);
+    });
+
+
+    it("sends the assistant request with Ctrl+Enter when configured", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} generalSettings={{ ...defaultGeneralSettings, assistantSendMode: "ctrl-enter" }} assistantMessages={[]} />);
+        const composer = within(panel.container).getByRole("textbox", { name: message("assistant.guidance") });
+
+        await user.type(composer, "Keep this focused.");
+        fireEvent.keyDown(composer, { key: "Enter" });
+        expect(onRequest).not.toHaveBeenCalled();
+
+        fireEvent.keyDown(composer, { key: "Enter", ctrlKey: true });
+        await waitFor(() => expect(onRequest).toHaveBeenCalledWith("Keep this focused.", undefined, undefined, undefined));
     });
 
 

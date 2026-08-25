@@ -247,18 +247,19 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
 
         try {
             await client.setPublishingSettings(next);
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.saveFailed" }) });
         }
     }
 
 
-    return <main className="flex h-dvh overflow-hidden bg-surface text-ink">
+    return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
         <section className="min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
-            <div className="mx-auto w-full max-w-3xl px-5 py-8">
+            <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8">
                 <h1 className="text-2xl font-semibold">{intl.formatMessage({ id: settingsSections.find((item) => item.id === section)?.label ?? "settings.general" })}</h1>
-                {!settings ? null : section === "general" ? <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} /> : section === "keyBindings" ? <KeyBindingSettings overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
+                {!settings ? null : section === "general" ? <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} /> : section === "keyBindings" ? <KeyBindingSettings general={general} saveGeneral={saveGeneral} overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
                     setEnvironmentName(value);
                     setConnectionError(undefined);
                 }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} onAddConnection={() => void addConnection()} onAddManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} onSetActiveConnection={(connectionId) => void setActiveConnection(connectionId)} onRequestConnectionRename={requestManagedConnectionRename} canRenameManagedConnection={Boolean(desktopSettings)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} /> : section === "publishing" ? <PublishingSettingsSection publishing={publishingSettings} save={(next) => void savePublishingSettings(next)} general={general} saveGeneral={saveGeneral} /> : <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />}

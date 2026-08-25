@@ -77,10 +77,10 @@ export function TextareaField({ className, state = "default", ...props }: Textar
 }
 
 
-export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ className, disabled, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
     return <span className={joinClassNames("relative block w-full", className)}>
-        <select {...props} className={joinClassNames("min-h-10 w-full appearance-none rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink", className)} />
-        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+        <select {...props} disabled={disabled} className={joinClassNames("min-h-10 w-full appearance-none rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink transition-colors hover:border-brand/45 hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-55 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong", className)} />
+        <ChevronDownIcon className={joinClassNames("pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted", disabled ? "opacity-55" : undefined)} />
     </span>;
 }
 

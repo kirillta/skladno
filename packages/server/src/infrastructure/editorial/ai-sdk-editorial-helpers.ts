@@ -55,11 +55,12 @@ export function responsesPrompt(messages: ModelMessage[]) {
 }
 
 
-export function responsesProviderOptions(storeResponses: boolean, previousResponseId?: string) {
+export function responsesProviderOptions(storeResponses: boolean, previousResponseId?: string, reasoningEffort?: "low" | "medium" | "high") {
     return {
         openai: {
             store: storeResponses,
             ...(storeResponses && previousResponseId ? { previousResponseId } : {}),
+            ...(reasoningEffort ? { reasoningEffort } : {}),
         },
     };
 }

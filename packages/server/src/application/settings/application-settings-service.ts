@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type AiConnection, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
+import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isAssistantSendMode, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, KEY_BINDING_COMMAND, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type AiConnection, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { AvailableModelsProvider } from "../ports/available-models-provider.js";
@@ -15,6 +15,7 @@ function generalSettings(value: unknown, rejectInvalidPreferences = false): Gene
             || (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
             || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
             || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
+            || (candidate.assistantSendMode !== undefined && !isAssistantSendMode(candidate.assistantSendMode))
         ))
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -26,6 +27,7 @@ function generalSettings(value: unknown, rejectInvalidPreferences = false): Gene
         dateFormat: isDateFormatPreference(candidate.dateFormat) ? candidate.dateFormat : defaultGeneralSettings.dateFormat,
         timeFormat: isTimeFormatPreference(candidate.timeFormat) ? candidate.timeFormat : defaultGeneralSettings.timeFormat,
         timeZone: isTimeZonePreference(candidate.timeZone) ? candidate.timeZone : defaultGeneralSettings.timeZone,
+        assistantSendMode: isAssistantSendMode(candidate.assistantSendMode) ? candidate.assistantSendMode : defaultGeneralSettings.assistantSendMode,
         defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages)
             ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))]
             : [],
@@ -98,11 +100,28 @@ function modelPreferences(value: unknown): ModelPreferences {
     })) as ModelPreferences["skillOverrides"];
 
     const textGenerationModel = typeof candidate.textGenerationModel === "string" ? candidate.textGenerationModel.trim() : "";
+    const reasoningEffort = candidate.reasoningEffort === "low" || candidate.reasoningEffort === "medium" || candidate.reasoningEffort === "high"
+        ? candidate.reasoningEffort
+        : undefined;
+    const textGenerationReasoningEffort = candidate.textGenerationReasoningEffort === "low" || candidate.textGenerationReasoningEffort === "medium" || candidate.textGenerationReasoningEffort === "high"
+        ? candidate.textGenerationReasoningEffort
+        : undefined;
+    const skillReasoningEfforts = Object.fromEntries(Object.entries(candidate.skillReasoningEfforts ?? {}).flatMap(([skill, effort]) => {
+        const normalized = resolveBuiltInSkillId(skill);
+        return normalized && (effort === "low" || effort === "medium" || effort === "high") ? [[normalized, effort]] : [];
+    })) as NonNullable<ModelPreferences["skillReasoningEfforts"]>;
+    const favoriteModels = Array.isArray(candidate.favoriteModels)
+        ? [...new Set(candidate.favoriteModels.filter((model): model is string => typeof model === "string").map((model) => model.trim()).filter(Boolean))]
+        : [];
 
     return {
         defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "",
         ...(textGenerationModel ? { textGenerationModel } : {}),
+        ...(reasoningEffort ? { reasoningEffort } : {}),
+        ...(textGenerationReasoningEffort ? { textGenerationReasoningEffort } : {}),
         skillOverrides,
+        ...(Object.keys(skillReasoningEfforts).length > 0 ? { skillReasoningEfforts } : {}),
+        ...(favoriteModels.length > 0 ? { favoriteModels } : {}),
     };
 }
 
@@ -116,6 +135,9 @@ function normalizeKeyBindingOverrides(value: unknown, rejectInvalid: boolean): K
 
     const overrides: KeyBindingOverrides = {};
     for (const [commandId, binding] of Object.entries(value)) {
+        if (commandId === KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST)
+            continue;
+
         if (!isKeyBindingCommandId(commandId)) {
             if (rejectInvalid)
                 throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);

@@ -69,6 +69,7 @@ Proposal diffs use `diff-added`, `diff-added-stripe`, `diff-removed`, and `diff-
 | Supporting Workspace Views | Workspace surface | Panel title and body | Metadata or status |
 | Editorial Assistant Panel | `surface` | Panel title and introductory copy | Body, controls, and status |
 | Article Status Bar | Inherited | Metadata | Semantic status |
+| Application Settings | `canvas` with `surface-supporting` navigation and `surface-raised` controls | Panel title and supporting copy | Controls and status |
 | Dialogs and menus | `surface-raised` | Panel title and body | Controls |
 
 ## Adding or changing a role

@@ -7,6 +7,13 @@ const modelsEndpoints: Record<string, string> = {
     openai: "https://api.openai.com/v1/models",
 };
 
+const editorialModelFamilies = ["gpt-5.5", "gpt-5.6"];
+
+
+export function editorialModels(models: string[]): string[] {
+    return models.filter((model) => editorialModelFamilies.some((family) => model === family || model.startsWith(`${family}-`))).sort();
+}
+
 
 function modelsEndpoint(provider: string): string {
     const endpoint = modelsEndpoints[provider];
@@ -27,7 +34,5 @@ export async function listAvailableModels(connection: AiConnection, apiKey = con
         throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
 
     const body = await response.json() as { data?: { id?: unknown }[] };
-    return (body.data ?? []).map((model) => model.id)
-        .filter((id): id is string => typeof id === "string" && !/(embedding|moderation|image|audio|transcri|speech|realtime)/i.test(id))
-        .sort();
+    return editorialModels((body.data ?? []).map((model) => model.id).filter((id): id is string => typeof id === "string"));
 }

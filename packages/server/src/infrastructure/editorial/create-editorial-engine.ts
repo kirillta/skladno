@@ -2,6 +2,6 @@ import type { EditorialEngine } from "../../application/ports/editorial-engine.j
 import { AiSdkEditorialEngine } from "./ai-sdk-editorial-engine.js";
 
 
-export function createEditorialEngine(options: { apiKey: string; model: string; storeResponses: boolean }): EditorialEngine {
+export function createEditorialEngine(options: { apiKey: string; model: string; storeResponses: boolean; reasoningEffort?: "low" | "medium" | "high" }): EditorialEngine {
     return new AiSdkEditorialEngine(options);
 }
