@@ -44,8 +44,8 @@
             "area": "AI",
             "title": "Available model list refresh",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/available-models-provider.ts", "packages/server/src/presentation/routes/settings-route.ts"],
-            "contract": "Opening AI Settings or changing the active AI connection loads its available model list for model selection; authors can refresh the list again to retry or retrieve provider changes.",
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/available-models-provider.ts", "packages/server/src/infrastructure/editorial/available-models.ts", "packages/server/src/presentation/routes/settings-route.ts"],
+            "contract": "Opening AI Settings or changing the active AI connection loads the supported current editorial model list for model selection; authors can refresh the list again to retry or retrieve provider changes. The OpenAI catalog admits only the gpt-5.5 and gpt-5.6 model families.",
             "persistence": "Server-side provider refresh only; the resulting list is not persisted."
         },
         {
@@ -124,7 +124,7 @@
             "capabilityIds": ["settings.available-model-list"],
             "preconditions": ["An active AI connection is configured."],
             "event": "The author opens AI Settings, changes the active connection, or manually refreshes the list.",
-            "expected": ["The current provider list is offered for selection."],
+            "expected": ["The supported current editorial model list is offered for selection."],
             "forbidden": ["Persisting the refreshed list as a model preference."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
