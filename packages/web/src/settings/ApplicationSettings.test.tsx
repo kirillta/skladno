@@ -391,6 +391,7 @@ describe("ApplicationSettings", () => {
 
         await user.click(screen.getByRole("button", { name: message("settings.specificModels") }));
         expect(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })).toHaveLength(3);
+        expect(document.getElementById("specific-model-overrides")?.firstElementChild?.classList.contains("overflow-visible")).toBe(true);
         await user.selectOptions(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })[2]!, "high");
         await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ skillReasoningEfforts: { talking_points: "high" } })));
     });
