@@ -351,6 +351,50 @@ describe("ApplicationSettings", () => {
         expect(screen.getAllByRole("option", { name: "GPT-5" })).not.toHaveLength(0);
     });
 
+    it("saves reasoning effort for an OpenAI default model", async () => {
+        const user = userEvent.setup();
+        const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
+        const updateModelPreferences = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id, modelPreferences: { defaultModel: "gpt-4.1", skillOverrides: {} } }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue(["gpt-5.5"]),
+            updateModelPreferences,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.reasoningEffort") }), "high");
+
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith({ defaultModel: "gpt-4.1", skillOverrides: {}, reasoningEffort: "high" }));
+    });
+
+    it("saves reasoning effort for supporting text and task overrides", async () => {
+        const user = userEvent.setup();
+        vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+        HTMLElement.prototype.scrollIntoView = vi.fn();
+        const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
+        const updateModelPreferences = vi.fn().mockResolvedValue(undefined);
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id, modelPreferences: { defaultModel: "gpt-5.5", textGenerationModel: "gpt-5.5-mini", skillOverrides: { talking_points: "gpt-5.5-mini" } } }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue(["gpt-5.5", "gpt-5.5-mini"]),
+            updateModelPreferences,
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.selectOptions(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })[1]!, "low");
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ textGenerationReasoningEffort: "low" })));
+
+        await user.click(screen.getByRole("button", { name: message("settings.specificModels") }));
+        expect(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })).toHaveLength(3);
+        await user.selectOptions(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })[2]!, "high");
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ skillReasoningEfforts: { talking_points: "high" } })));
+    });
+
     it("filters models by vendor and saves favorites", async () => {
         const user = userEvent.setup();
         const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };

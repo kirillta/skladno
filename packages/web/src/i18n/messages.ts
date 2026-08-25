@@ -495,7 +495,7 @@ export const messages = {
     "settings.model": "Model",
     "settings.modelHint": "Check a connection, then refresh its available models before choosing one.",
     "settings.reasoningEffort": "Reasoning level",
-    "settings.reasoningEffortHint": "Controls how much work the default reasoning model does before responding. Higher levels can take longer.",
+    "settings.reasoningEffortHint": "Controls how much work this model does before responding. Higher levels can take longer.",
     "settings.reasoningLow": "Low",
     "settings.reasoningMedium": "Medium",
     "settings.reasoningHigh": "High",

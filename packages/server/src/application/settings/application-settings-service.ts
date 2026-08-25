@@ -103,6 +103,13 @@ function modelPreferences(value: unknown): ModelPreferences {
     const reasoningEffort = candidate.reasoningEffort === "low" || candidate.reasoningEffort === "medium" || candidate.reasoningEffort === "high"
         ? candidate.reasoningEffort
         : undefined;
+    const textGenerationReasoningEffort = candidate.textGenerationReasoningEffort === "low" || candidate.textGenerationReasoningEffort === "medium" || candidate.textGenerationReasoningEffort === "high"
+        ? candidate.textGenerationReasoningEffort
+        : undefined;
+    const skillReasoningEfforts = Object.fromEntries(Object.entries(candidate.skillReasoningEfforts ?? {}).flatMap(([skill, effort]) => {
+        const normalized = resolveBuiltInSkillId(skill);
+        return normalized && (effort === "low" || effort === "medium" || effort === "high") ? [[normalized, effort]] : [];
+    })) as NonNullable<ModelPreferences["skillReasoningEfforts"]>;
     const favoriteModels = Array.isArray(candidate.favoriteModels)
         ? [...new Set(candidate.favoriteModels.filter((model): model is string => typeof model === "string").map((model) => model.trim()).filter(Boolean))]
         : [];
@@ -111,7 +118,9 @@ function modelPreferences(value: unknown): ModelPreferences {
         defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "",
         ...(textGenerationModel ? { textGenerationModel } : {}),
         ...(reasoningEffort ? { reasoningEffort } : {}),
+        ...(textGenerationReasoningEffort ? { textGenerationReasoningEffort } : {}),
         skillOverrides,
+        ...(Object.keys(skillReasoningEfforts).length > 0 ? { skillReasoningEfforts } : {}),
         ...(favoriteModels.length > 0 ? { favoriteModels } : {}),
     };
 }

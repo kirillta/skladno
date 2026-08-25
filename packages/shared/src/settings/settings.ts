@@ -102,10 +102,15 @@ export interface AiConnection {
 export interface ModelPreferences {
     defaultModel: string;
     textGenerationModel?: string;
-    reasoningEffort?: "low" | "medium" | "high";
+    reasoningEffort?: ReasoningEffort;
+    textGenerationReasoningEffort?: ReasoningEffort;
     skillOverrides: Partial<Record<BuiltInSkillId, string>>;
+    skillReasoningEfforts?: Partial<Record<BuiltInSkillId, ReasoningEffort>>;
     favoriteModels?: string[];
 }
+
+
+export type ReasoningEffort = "low" | "medium" | "high";
 
 
 export interface BackupPolicy {

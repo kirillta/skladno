@@ -53,6 +53,7 @@ export {
     type GeneralSettings,
     type InterfaceLocale,
     type ModelPreferences,
+    type ReasoningEffort,
     type AiConnection,
     type CredentialSource,
     type DesktopSettingsClient,

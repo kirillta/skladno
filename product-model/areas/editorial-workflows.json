@@ -101,7 +101,7 @@
             "title": "Refreshed model list and purpose-specific model preferences",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/editorial/configured-editorial-engine-resolver.ts", "packages/server/src/application/editorial/proposal-summary-service.ts"],
-            "contract": "The default model and built-in-skill overrides determine editorial requests. An optional text-generation model handles supporting text such as Proposal summaries, falls back to the default model, and disables provider-side storage.",
+            "contract": "The default model and built-in-skill overrides determine editorial requests, each with its own reasoning effort. An optional text-generation model handles supporting text such as Proposal summaries, has its own reasoning effort, falls back to the default model, and disables provider-side storage.",
             "persistence": "Model preferences persist locally; refreshed provider model lists are not persisted.",
             "relatedCapabilityIds": ["settings.model-preferences", "settings.available-model-list"]
         }
