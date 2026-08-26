@@ -4,13 +4,14 @@ Use the smallest check that can fail for the changed behavior, then run the repo
 
 ## Commands
 
+- `npm run verify` runs the product check, lint, typecheck, and full test suite.
 - `npm test --workspace <workspace>` runs the selected workspace tests.
 - `npm test --workspace <workspace> -- <test-file>` runs a focused test file when the workspace runner accepts a path.
 - `npm run lint` checks import boundaries and ESLint rules.
 - `npm run typecheck` checks the TypeScript project references.
 - `npm run test:e2e` runs deterministic Chromium author journeys.
 - `npm run product:impact -- <affected paths>` returns capabilities and scenarios that the change must preserve.
-- `npm run product:check` validates canonical product records and generated inventories.
+- `npm run product:check` validates canonical records, generated inventories, and product-scenario markers in workspace tests.
 
 Source changes require lint and typecheck. Run focused tests for changed behavior. Run E2E when a renderer-to-service journey, browser interaction, responsive release state, or transport integration changes.
 
@@ -22,7 +23,7 @@ Cancellation, malformed streams, provider failures, response-storage settings, a
 
 ## Product evidence
 
-A test used as product evidence names the protected scenario with a `product:` comment or an equally direct test name. Update `product-model/areas` only when capability, status, contract, persistence, or visible behavior changes.
+A test used as automated product evidence marks every protected scenario with `// Product scenarios: <scenario-id>, ...`. The checker rejects missing and unknown markers. Update `product-model/areas` only when capability, status, contract, persistence, or visible behavior changes.
 
 ## Manual verification
 

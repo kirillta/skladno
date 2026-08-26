@@ -65,6 +65,15 @@
             "owners": ["packages/web/src/App.tsx", "packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/web/src/settings/web-backups.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/backup-manager.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/sqlite-backup-manager.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "In supported web browsers, authors explicitly choose a local backup folder. The browser writes consistent SQLite snapshots there; daily startup writes at most one automatic snapshot when the previously selected folder remains permitted, and retention removes only automatic snapshots.",
             "persistence": "app_settings.application-backup-policy plus the browser's local folder permission handle; snapshots exclude environment variables and API keys."
+        },
+        {
+            "id": "settings.delete-local-data",
+            "area": "Data & backups",
+            "title": "Explicit Electron local-data deletion",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/shared/src/settings/settings.ts", "packages/electron/src/desktop-settings.ts", "packages/electron/src/main.ts"],
+            "contract": "In Electron, an author can request deletion of the active resolved Skladno data directory through a no-argument native operation. The native confirmation explains the irreversible scope and always shows a Create a backup before deletion checkbox, checked only when a separate backup directory is configured. A requested backup must succeed before deletion continues. It cancels without changes, closes SQLite and background work before deletion, then exits only after successful removal. The renderer cannot supply a filesystem path.",
+            "persistence": "The confirmed active local data directory is removed. Installer and uninstaller behavior remains data-preserving."
         }
     ],
     "scenarios": [
@@ -147,6 +156,16 @@
             "expected": ["A consistent local SQLite snapshot is written through the browser permission handle and automatic retention leaves manual snapshots untouched."],
             "forbidden": ["A backup failure interrupts Article editing or exposes environment-variable secrets."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+        },
+        {
+            "id": "settings.delete-local-data",
+            "title": "Explicit local-data deletion is contained and backup-gated",
+            "capabilityIds": ["settings.delete-local-data"],
+            "preconditions": ["The author uses the Electron Data & backups Settings section with a resolved local data directory."],
+            "event": "The author cancels deletion, deletes after a native confirmation, or selects backup and deletion.",
+            "expected": ["Cancellation leaves the data unchanged.", "A requested backup must complete and be non-empty before deletion proceeds.", "Only the active resolved Skladno data directory is deleted after background work and SQLite close, and Skladno exits after success."],
+            "forbidden": ["Deleting an unresolved or broad path.", "Continuing to deletion after backup failure.", "Deleting local author data during ordinary uninstall."],
+            "evidence": { "kind": "automated", "path": "packages/electron/src/desktop-settings.test.ts" }
         }
     ]
 }

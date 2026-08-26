@@ -183,6 +183,7 @@ export interface DesktopSettingsClient {
     revealBackupDirectory(): Promise<void>;
     revealDataDirectory(): Promise<void>;
     createNativeBackup(): Promise<{ path: string; createdAt: string }>;
+    deleteLocalData(): Promise<void>;
     addManagedAiConnection(input: { label: string; apiKey: string }): Promise<AiConnection>;
     renameManagedAiConnection(connectionId: string, label: string): Promise<AiConnection>;
     removeManagedAiConnection(connectionId: string): Promise<void>;

@@ -1,6 +1,6 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
-import { createLocalApplication, loadServerEnvironment, registerElectronIpcApplicationAdapter } from "@skladno/server/electron";
+import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter } from "@skladno/server/electron";
 import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
 import { requestDraftCheckpoint } from "./close-coordinator.js";
 import { createWindowOptions, focusWindow, isExternalWebUrl } from "./window-policy.js";
@@ -130,17 +130,26 @@ if (!app.requestSingleInstanceLock()) {
     app.whenReady().then(async () => {
         app.setAppUserModelId("io.github.kirillta.skladno");
         loadServerEnvironment();
-        const application = createLocalApplication();
+        const config = loadServerConfig();
+        const application = createLocalApplication(config);
         nativeMessages = electronMessagesFor((await application.services.settings.getSnapshot()).general.interfaceLocale);
         const cancelStreams = registerElectronIpcApplicationAdapter(ipcMain, application.services, application.editorial);
         registerDesktopSettingsAdapter({
             ipcMain,
             shell,
+            dialog,
             userDataPath: app.getPath("userData"),
-            dataDirectory: process.env.SKLADNO_DATA_DIR || join(app.getPath("home"), ".skladno"),
+            dataDirectory: dirname(config.databasePath),
             database: application.database,
             services: application.services,
+            messages: nativeMessages,
             chooseDirectory: async () => (await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] })).filePaths[0],
+            closeApplication: () => {
+                cancelStreams();
+                application.database.close();
+                closeApplication = undefined;
+            },
+            quit: () => app.exit(0),
         });
         closeApplication = () => {
             cancelStreams();

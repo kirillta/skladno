@@ -5,7 +5,7 @@ import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
 import { ProposalReviewView } from "./ProposalReviewView.js";
 
-// product: editorial-workflows.stale-proposal-blocked
+// Product scenarios: workspace.proposal.stale-blocked, editorial-workflows.stale-proposal-blocked
 
 describe("ProposalReviewView", () => {
     afterEach(cleanup);

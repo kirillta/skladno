@@ -11,6 +11,12 @@ const englishElectronMessages = {
     "electron.closeFailed.message": "The Draft checkpoint completed, but the local database did not close cleanly.",
     "electron.startFailed.title": "Skladno could not start",
     "electron.startFailed.message": "Check that the local data directory is available, then try again.",
+    "electron.deleteData.title": "Delete all local Skladno data?",
+    "electron.deleteData.message": "This permanently removes Articles, Draft checkpoints, Revisions, Assistant history, style data, settings, and local backups in Skladno’s data directory.",
+    "electron.deleteData.detail": "Skladno will close after deletion. A backup can be created first when a backup folder is configured.",
+    "electron.deleteData.backup": "Create a backup before deletion",
+    "electron.deleteData.delete": "Delete all local data",
+    "electron.deleteData.cancel": "Cancel",
 } as const;
 
 

@@ -7,7 +7,7 @@ The Electron app is the primary product. The web app exists mainly for developme
 ## Before changing code
 
 1. Treat the user-provided issue or task as the active scope. Do not infer another issue from repository history.
-2. Read the affected code, contracts, and tests. Run `npm run product:impact -- <affected paths>` and preserve every matched implemented capability unless the task changes it.
+2. When changing existing product behavior or its owner paths, run `npm run product:impact -- <affected paths>` and preserve every matched implemented capability unless the task changes it. Update `product-model/areas` only when capability, status, contract, persistence, or visible behavior changes.
 3. Follow nearby architecture. For package boundaries read [ADR-001](docs/development/architecture/adr-001-three-layer-server-and-electron.md), [ADR-002](docs/development/architecture/adr-002-shared-contract-organization.md), or [ADR-003](docs/development/architecture/adr-003-web-feature-oriented-react-architecture.md).
 4. For diagnostics, Article state, persistence, AI, or trust-boundary changes read [ADR-004](docs/development/architecture/adr-004-local-diagnostics.md), [ADR-005](docs/development/architecture/adr-005-article-state-and-consistency.md), [ADR-006](docs/development/architecture/adr-006-sqlite-lifecycle-and-recovery.md), [ADR-007](docs/development/architecture/adr-007-completion-gated-editorial-engine.md), or [ADR-008](docs/development/architecture/adr-008-loopback-service-trust-boundary.md).
 
@@ -36,5 +36,5 @@ For UI changes, follow the [web design system](docs/development/ui/design-system
 ## Handoff
 
 - Follow the [testing guide](docs/development/guides/testing.md). Source changes require focused tests, lint, and typecheck.
-- Update the canonical product model only when capability, status, contract, persistence, or visible behavior changes; regenerate the affected inventory and run `npm run product:check`.
+- After changing the product model, regenerate the affected inventory and run `npm run product:check`.
 - Report checks run and remaining manual verification.
