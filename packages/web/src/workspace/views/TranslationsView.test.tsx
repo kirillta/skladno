@@ -7,7 +7,7 @@ import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
 import { TranslationsView } from "./TranslationsView.js";
 
-// product: history-and-publishing.translation-stale-source
+// Product scenarios: workspace.translations.stale-source, history-and-publishing.translation-stale-source
 
 const article: Article = {
     id: "article-1",

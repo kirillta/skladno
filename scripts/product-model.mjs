@@ -29,6 +29,41 @@ async function areaFiles() {
 }
 
 
+async function filesUnder(directory) {
+    const entries = await readdir(directory, { withFileTypes: true });
+    const files = await Promise.all(entries.map((entry) => {
+        const path = resolve(directory, entry.name);
+
+        return entry.isDirectory() ? filesUnder(path) : [path];
+    }));
+
+    return files.flat();
+}
+
+
+async function testFiles() {
+    const packagesDirectory = resolve(root, "packages");
+    const workspaces = await readdir(packagesDirectory, { withFileTypes: true });
+    const files = await Promise.all(workspaces.filter((entry) => entry.isDirectory()).map(async (entry) => {
+        const workspace = resolve(packagesDirectory, entry.name);
+        const packagePath = resolve(workspace, "package.json");
+        const sourcePath = resolve(workspace, "src");
+        if (!await exists(packagePath) || !await exists(sourcePath) || !(await readJson(packagePath)).scripts?.test)
+            return [];
+
+        return filesUnder(sourcePath);
+    }));
+
+    return files.flat().filter((path) => /\.test\.[cm]?[jt]sx?$/.test(path));
+}
+
+
+function productScenarioIds(source) {
+    return [...source.matchAll(/\bproduct(?: scenarios?)?:\s*([^\r\n]*)/gi)]
+        .flatMap((match) => match[1].match(/[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+/g) ?? []);
+}
+
+
 function errorsFor(validator) {
     return (validator.errors ?? [])
         .map((error) => `${error.instancePath || "/"} ${error.message ?? "is invalid"}`)
@@ -47,7 +82,7 @@ async function exists(path) {
 }
 
 
-async function validateArea(area, path, validator, allCapabilityIds) {
+async function validateArea(area, path, validator, allCapabilityIds, evidenceMarkers) {
     const failures = [];
     if (!validator(area))
         failures.push(`${relativePath(path)}: ${errorsFor(validator)}`);
@@ -96,8 +131,9 @@ async function validateArea(area, path, validator, allCapabilityIds) {
         }
 
         if (scenario.evidence?.kind === "automated") {
-            const evidence = await readFile(evidencePath, "utf8");
-            if (!evidence.includes(scenario.id))
+            if (!evidenceMarkers.has(evidencePath))
+                failures.push(`${relativePath(path)}: automated scenario ${scenario.id} references evidence outside a tested workspace source ${scenario.evidence.path}`);
+            else if (!evidenceMarkers.get(evidencePath).has(scenario.id))
                 failures.push(`${relativePath(path)}: automated scenario ${scenario.id} is not marked in ${scenario.evidence.path}`);
         }
     }
@@ -164,7 +200,17 @@ async function check() {
     const files = await areaFiles();
     const areas = await Promise.all(files.map(readJson));
     const capabilityIds = new Set(areas.flatMap((area) => area.capabilities.map((capability) => capability.id)));
-    const failures = (await Promise.all(areas.map((area, index) => validateArea(area, files[index], validator, capabilityIds)))).flat();
+    const scenarioIds = new Set(areas.flatMap((area) => area.scenarios.map((scenario) => scenario.id)));
+    const evidenceFiles = await testFiles();
+    const evidenceMarkers = new Map(await Promise.all(evidenceFiles.map(async (path) => [path, new Set(productScenarioIds(await readFile(path, "utf8")))])));
+    const failures = (await Promise.all(areas.map((area, index) => validateArea(area, files[index], validator, capabilityIds, evidenceMarkers)))).flat();
+    for (const [path, markers] of evidenceMarkers) {
+        for (const scenarioId of markers) {
+            if (!scenarioIds.has(scenarioId))
+                failures.push(`${relativePath(path)}: references unknown product scenario ${scenarioId}`);
+        }
+    }
+
     for (const area of areas) {
         const generated = renderInventory(area);
         const inventoryPath = generatedInventoryPath(area);

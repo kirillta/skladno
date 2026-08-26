@@ -19,7 +19,7 @@
         "product:impact": "node scripts/product-model.mjs impact",
         "build": "npm run build --workspaces --if-present",
         "postbuild": "npm run lint",
-        "test": "npm run test --workspaces --if-present",
+        "test": "node --test scripts/product-model.test.mjs && npm run test --workspaces --if-present",
         "test:e2e": "playwright test"
     },
     "devDependencies": {

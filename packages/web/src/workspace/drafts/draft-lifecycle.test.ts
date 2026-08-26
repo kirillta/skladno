@@ -1,3 +1,5 @@
+// Product scenarios: workspace.draft.checkpoint-after-idle, workspace.draft.flush-before-context-change, workspace.draft.stale-completion, workspace.draft.promote-exact-checkpoint, workspace.draft.conflict-recovery
+
 import { describe, expect, it } from "vitest";
 import type { Article } from "@skladno/shared";
 import {
