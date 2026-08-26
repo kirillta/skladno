@@ -17,6 +17,7 @@
         "product:check": "node scripts/product-model.mjs check",
         "product:docs": "node scripts/product-model.mjs generate",
         "product:impact": "node scripts/product-model.mjs impact",
+        "verify": "npm run product:check && npm run lint && npm run typecheck && npm test",
         "build": "npm run build --workspaces --if-present",
         "postbuild": "npm run lint",
         "test": "node --test scripts/product-model.test.mjs && npm run test --workspaces --if-present",

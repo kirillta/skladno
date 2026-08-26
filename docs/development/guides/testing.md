@@ -4,6 +4,7 @@ Use the smallest check that can fail for the changed behavior, then run the repo
 
 ## Commands
 
+- `npm run verify` runs the product check, lint, typecheck, and full test suite.
 - `npm test --workspace <workspace>` runs the selected workspace tests.
 - `npm test --workspace <workspace> -- <test-file>` runs a focused test file when the workspace runner accepts a path.
 - `npm run lint` checks import boundaries and ESLint rules.
