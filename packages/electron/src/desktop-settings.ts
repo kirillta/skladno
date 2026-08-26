@@ -141,7 +141,7 @@ export function registerDesktopSettingsAdapter({ ipcMain, shell, dialog, userDat
                     closeApplication();
                     rmSync(resolve(dataDirectory), { recursive: true, maxRetries: 3, retryDelay: 100 });
                     quit();
-                    
+
                     return { ok: true, value: undefined };
                 }
                 case "addManagedAiConnection": {
