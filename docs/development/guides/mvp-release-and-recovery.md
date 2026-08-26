@@ -71,6 +71,7 @@ Run this pass with a disposable `SKLADNO_DATA_DIR` and no private content:
 4. Remove the configured provider credential, retry an AI operation, and confirm the UI reports the unavailable configuration without exposing provider details. Repeat while offline, cancel an in-progress request, and confirm incomplete output does not change the Article.
 5. Edit the active Article and close the window before the normal checkpoint delay. Restart and confirm the Draft reopens. Exercise the failed-checkpoint dialog with a disposable unwritable or conflicted fixture and verify both returning to the Article and explicitly quitting without the latest checkpoint.
 6. Restart and confirm Articles, Drafts, Revisions, Settings, Findings, and completed Assistant output persist. Upgrade or reinstall over the same data directory and repeat the check.
-7. Uninstall Skladno. Confirm the installer removed the application but left the disposable `.skladno` directory unchanged, then remove the disposable data manually.
+7. In Data & backups, request Delete all local data and cancel the native confirmation; verify the disposable data is unchanged. Repeat with Create backup and delete, confirm the app exits, and verify only the disposable data directory was removed. Restart to confirm a new empty local profile opens.
+8. With a separate disposable profile, uninstall Skladno. Confirm the installer removed the application but left that profile’s `.skladno` directory unchanged, then remove the disposable data manually.
 
 Mark the desktop pass failed if the renderer gains Node, filesystem, database, credential, or unrestricted IPC access; if generated content changes an Article without approval; or if install, upgrade, reinstall, or uninstall changes `.skladno` data.

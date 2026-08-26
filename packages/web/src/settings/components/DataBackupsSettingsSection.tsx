@@ -13,6 +13,7 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
     const [folderName, setFolderName] = useState<string>();
     const [folderStatus, setFolderStatus] = useState<string>();
     const [backupStatus, setBackupStatus] = useState<string>();
+    const [deleteStatus, setDeleteStatus] = useState<string>();
 
     useEffect(() => {
         if (desktop)
@@ -54,5 +55,10 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
                 </Select>
             </SettingRow>
         </SettingsGroup>
+        {desktop && <SettingsGroup label={intl.formatMessage({ id: "settings.deleteData" })}>
+            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.deleteLocalData" })} hint={intl.formatMessage({ id: "settings.deleteLocalDataHint" })} status={deleteStatus}>
+                <Button variant="danger" onClick={() => void desktop.deleteLocalData().catch(() => setDeleteStatus(intl.formatMessage({ id: "settings.deleteLocalDataFailed" })))}>{intl.formatMessage({ id: "settings.deleteLocalData" })}</Button>
+            </SettingRow>
+        </SettingsGroup>}
     </>;
 }
