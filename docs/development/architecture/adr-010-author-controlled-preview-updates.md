@@ -27,7 +27,7 @@ Restart and update is explicit. It first obtains the latest Draft checkpoint and
 
 The runtime records the prior version and recovery snapshot outside SQLite. Startup marks the update successful only after SQLite opens, migrations complete, application services start, and the renderer reports ready. Retain one snapshot from the previous installed version until the next update succeeds. A failed installation may use Squirrel recovery. After a migrated startup, rollback means reinstalling the prior preview together with restoring its matching pre-update snapshot. Opening a migrated database with an older binary alone is unsupported.
 
-CI creates a draft GitHub release, uploads the installer, `RELEASES`, and full package, and validates the complete asset set. Publication is the rollout switch and requires the documented disposable-profile upgrade drill. Windows signing remains required before stable distribution and is tracked in issue #168.
+CI creates a public GitHub prerelease, uploads the installer, `RELEASES`, and full package, and validates the complete asset set. The documented disposable-profile upgrade drill runs against that prerelease. Windows signing remains required before stable distribution and is tracked in issue #168.
 
 ## Consequences
 

@@ -9,8 +9,8 @@ The lasting decisions are in [ADR-010](../architecture/adr-010-author-controlled
 ## Phase 1: Release artifacts and version contract
 
 - Extend `scripts/check-electron-release-tag.mjs` and its test to accept `v<version>-preview.<n>` plus the exact optional `.security` suffix while keeping root and Electron package versions equal.
-- Change `.github/workflows/electron-windows.yml` to create a draft GitHub release, upload the setup executable, `RELEASES`, and full `.nupkg`, and fail if any required asset is missing.
-- Keep GitHub's prerelease flag. Require manual publication after the upgrade drill.
+- Change `.github/workflows/electron-windows.yml` to create a public GitHub prerelease, upload the setup executable, `RELEASES`, and full `.nupkg`, and fail if any required asset is missing.
+- Keep GitHub's prerelease flag. Run the upgrade drill against the published prerelease.
 - Update release copy so it states that the build and updater are unsigned and links signing to #168.
 
 ## Phase 2: Narrow desktop update boundary
@@ -44,7 +44,7 @@ The lasting decisions are in [ADR-010](../architecture/adr-010-author-controlled
 - Update `application.electron-windows-preview` only when implementation lands. Remove the automatic-update limitation, retain unsigned and Windows-only limitations, and add automated scenarios for discovery, explicit download, guarded restart, accessible status, and recovery.
 - Keep signed Windows distribution deferred to #168 in `cross-cutting.deferred-mvp-boundary`.
 - Regenerate the application and cross-cutting inventories after canonical product-model changes.
-- Extend `docs/development/guides/mvp-release-and-recovery.md` with draft publication, old-to-new updater installation, failure recovery, snapshot rollback, and the exact evidence fields to record.
+- Extend `docs/development/guides/mvp-release-and-recovery.md` with prerelease publication, old-to-new updater installation, failure recovery, snapshot rollback, and the exact evidence fields to record.
 - Add the public versioned update-recovery guide linked from General Settings.
 
 ## Checks
@@ -52,7 +52,7 @@ The lasting decisions are in [ADR-010](../architecture/adr-010-author-controlled
 - Run `npm run product:impact --` for the changed Electron, shared, Settings, Status Bar, workflow, release guide, and product-model paths before implementation and preserve every matched scenario.
 - Run focused shared validation, Electron coordinator and shutdown, Settings, Status Bar, release-tag, backup, and migration tests.
 - Run `npm run product:check`, `npm run lint`, `npm run typecheck`, and the relevant workspace tests.
-- Run the packaged Windows manual upgrade drill before publishing. Record versions, Windows architecture, pass or failure, recovery result, and remaining checks without private paths or Article content.
+- Run the packaged Windows manual upgrade drill against the published prerelease. Record versions, Windows architecture, pass or failure, recovery result, and remaining checks without private paths or Article content.
 
 ## Explicitly deferred
 

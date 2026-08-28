@@ -60,7 +60,7 @@ jobs:
             - name: Build installer
               run: npm run make:electron
 
-            - name: Create draft unsigned prerelease
+            - name: Create unsigned prerelease
               env:
                   GH_TOKEN: ${{ github.token }}
               run: |
@@ -69,4 +69,4 @@ jobs:
                   $releases = $assets | Where-Object Name -eq 'RELEASES'
                   $package = $assets | Where-Object Name -match '-full\.nupkg$'
                   if ($setup.Count -ne 1 -or $releases.Count -ne 1 -or $package.Count -ne 1) { throw 'Expected exactly one setup executable, RELEASES manifest, and full nupkg.' }
-                  gh release create $env:GITHUB_REF_NAME $setup.FullName $releases.FullName $package.FullName --draft --prerelease --title "Skladno $env:GITHUB_REF_NAME" --notes "Unsigned Windows 11 x64 preview with unsigned updater. Windows may show a SmartScreen warning. Signing remains tracked in issue #168. Publish manually after the upgrade drill."
+                  gh release create $env:GITHUB_REF_NAME $setup.FullName $releases.FullName $package.FullName --prerelease --title "Skladno $env:GITHUB_REF_NAME" --notes "Unsigned Windows 11 x64 preview with unsigned updater. Windows may show a SmartScreen warning. Signing remains tracked in issue #168."

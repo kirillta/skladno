@@ -76,7 +76,7 @@ Run this pass with a disposable `SKLADNO_DATA_DIR` and no private content:
 
 ### Preview update drill
 
-Create a draft GitHub prerelease with the setup executable, `RELEASES`, and full `.nupkg`, then publish it only after this drill passes. Install an older preview into a disposable profile, create an Article, Draft, Revision, and Settings change, then use General Settings to check, explicitly download, and Restart and update. Confirm all data reopens and the update status becomes current.
+Create a public GitHub prerelease with the setup executable, `RELEASES`, and full `.nupkg`. Install an older preview into a disposable profile, create an Article, Draft, Revision, and Settings change, then use General Settings to check, explicitly download, and Restart and update. Confirm all data reopens and the update status becomes current.
 
 Exercise failed discovery, failed download, and failed snapshot paths. A failed checkpoint or snapshot must leave the existing preview open. For a failed upgraded startup, follow the public [update recovery guide](../../user/update-recovery.md): reinstall the previous preview and restore its matching pre-update snapshot. Record old and new versions, Windows architecture, pass/fail, recovery result, and remaining checks without private paths or Article content.
 
