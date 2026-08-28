@@ -6,6 +6,7 @@ import { ArticleIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.
 import { useIntl } from "react-intl";
 import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
+import { UpdateController } from "./UpdateController.js";
 
 
 function formatUpdatedAt(updatedAt: string, formatMessage: ReturnType<typeof useIntl>["formatMessage"]): string {
@@ -87,6 +88,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                 <IconButton label={intl.formatMessage({ id: "navigation.settings" })} title={shortcutHint(intl.formatMessage({ id: "navigation.settings" }), KEY_BINDING_COMMAND.OPEN_SETTINGS, shortcutOverrides)} onClick={openSettings}>
                     <SettingsIcon className="size-4" />
                 </IconButton>
+                <UpdateController />
                 <span aria-label={saveLabel} className={`mt-1 inline-flex h-4 items-center text-xs ${saveTone}`} role="status" title={saveLabel}>
                     <span aria-hidden="true">&#9679;</span>
                 </span>
@@ -143,6 +145,7 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     <SettingsIcon className="size-4 shrink-0" />
                     <span className="ml-2">{intl.formatMessage({ id: "navigation.settings" })}</span>
                 </Button>
+                <UpdateController expanded />
                 <div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted">
                     <span>{languageCode(language)} &middot; {intl.formatMessage({ id: "navigation.local" })}</span>
                     <span className={`inline-flex items-center gap-1 ${saveTone}`} role="status">

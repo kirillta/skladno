@@ -21,7 +21,7 @@ Only the newest compatible prerelease is offered. The author may ignore it indef
 
 After discovery, Electron's native Squirrel updater downloads only when the author requests it. Skladno points it at the selected GitHub release assets. It validates external metadata before it becomes renderer-safe update state. Raw GitHub and Squirrel errors remain in the privileged process and are mapped to stable, localized failures.
 
-The Article Status Bar shows one icon-only update controller after Revision and language. It stays hidden when no action is relevant. The controller presents available, downloading, ready, security warning, and failed states with accessible names and non-color cues. Downloading uses a quiet pulse; reduced-motion mode uses a static busy mark. Clicking it opens General Settings and focuses Updates. Detailed actions and failures remain in Settings.
+The Article Status Bar and Article Library utility area show one update controller when an action is relevant. The controller presents available, downloading, ready, security warning, and failed states with accessible names and non-color cues. Downloading uses a quiet pulse; reduced-motion mode uses a static busy mark. Clicking it opens General Settings and focuses Updates. Detailed actions and failures remain in Settings.
 
 Restart and update is explicit. It first obtains the latest Draft checkpoint and creates a pre-update SQLite snapshot. Either failure cancels the update. It then closes streams, application services, and SQLite through the existing shutdown path before applying the staged update. Ordinary close and operating-system shutdown do not apply it.
 
