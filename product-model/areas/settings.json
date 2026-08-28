@@ -81,7 +81,7 @@
             "title": "Author-controlled unsigned Windows preview updates",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/electron/src/desktop-updates.ts"],
-            "contract": "General Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes a daily GitHub prerelease check, sanitized release summary, explicit download, guarded restart, privacy disclosure, release notes, and recovery guide. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
+            "contract": "General Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes a daily GitHub prerelease check, explicit download, guarded restart, privacy disclosure, release notes, and recovery guide. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
             "persistence": "The desktop runtime file stores the network-permission and automatic-check preferences plus non-content update recovery metadata."
         }
     ],

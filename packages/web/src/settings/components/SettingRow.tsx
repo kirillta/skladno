@@ -1,7 +1,7 @@
 import { cloneElement, isValidElement, useId, type ReactNode } from "react";
 
 
-export function SettingRow({ label, hint, children, status, action, headingLevel = 2, className }: { label: string; hint: string; children: ReactNode; status?: ReactNode; action?: ReactNode; headingLevel?: 2 | 3; className?: string }) {
+export function SettingRow({ label, hint, children, status, action, fullWidthAction = false, headingLevel = 2, className }: { label: string; hint: string; children: ReactNode; status?: ReactNode; action?: ReactNode; fullWidthAction?: boolean; headingLevel?: 2 | 3; className?: string }) {
     const hintId = useId();
     const Heading = headingLevel === 3 ? "h3" : "h2";
 
@@ -12,9 +12,10 @@ export function SettingRow({ label, hint, children, status, action, headingLevel
         </div>
         <div className="mt-4 min-w-0 md:mt-0">
             <div className="max-w-md">{isValidElement(children) ? cloneElement(children, { "aria-describedby": hintId }) : children}</div>
-            {action && <div className="mt-3">{action}</div>}
+            {!fullWidthAction && action && <div className="mt-3">{action}</div>}
             {status && <p className="mt-2 text-xs text-muted" role="status">{status}</p>}
         </div>
+        {fullWidthAction && action && <div className="mt-3 md:col-span-2">{action}</div>}
     </section>;
 }
 

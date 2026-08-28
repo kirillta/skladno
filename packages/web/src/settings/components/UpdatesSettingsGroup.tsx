@@ -56,15 +56,15 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
                 <span>{intl.formatMessage({ id: state.automaticChecks ? "settings.on" : "settings.off" })}</span>
             </button>
         </SettingRow>}
-        <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.updateStatus" })} hint={intl.formatMessage({ id: "settings.updateStatusHint" }, { version: state.currentVersion })} status={status} action={<div className="flex flex-wrap gap-2">
-            {state.kind !== "unsupported" && state.networkAccess && <Button variant="secondary" state={state.kind === "checking" ? "loading" : "default"} onClick={() => void client.checkNow().then(setState)}>{intl.formatMessage({ id: "settings.checkNow" })}</Button>}
-            {details && <Button variant="secondary" onClick={() => void client.openReleaseNotes()}>{intl.formatMessage({ id: "settings.viewReleaseNotes" })}</Button>}
+        <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.updateStatus" })} hint={intl.formatMessage({ id: "settings.updateStatusHint" }, { version: state.currentVersion })} status={status} fullWidthAction action={<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {state.kind !== "unsupported" && state.networkAccess && state.kind !== "failed" && <Button variant="secondary" state={state.kind === "checking" ? "loading" : "default"} onClick={() => void client.checkNow().then(setState)}>{intl.formatMessage({ id: "settings.checkNow" })}</Button>}
+            {details && <Button variant="quiet" onClick={() => void client.openReleaseNotes()}>{intl.formatMessage({ id: "settings.viewReleaseNotes" })}</Button>}
             {state.kind === "available" && <Button onClick={() => void client.download().then(setState)}>{intl.formatMessage({ id: "settings.downloadUpdate" })}</Button>}
             {state.kind === "ready" && <Button onClick={() => void client.restartAndUpdate()}>{intl.formatMessage({ id: "settings.restartAndUpdate" })}</Button>}
             {state.kind === "failed" && <Button variant="secondary" onClick={() => void client.checkNow().then(setState)}>{intl.formatMessage({ id: "settings.retry" })}</Button>}
             {state.kind !== "unsupported" && <Button variant="quiet" onClick={() => void client.openRecoveryGuide()}>{intl.formatMessage({ id: "settings.updateRecovery" })}</Button>}
         </div>}>
-            {details?.summary ? <span>{details.summary}</span> : <span />}
+            <span />
         </SettingRow>
         {state.kind !== "unsupported" && <p className="mt-3 text-xs leading-5 text-muted">{intl.formatMessage({ id: "settings.updatesPrivacy" })}</p>}
         {networkPermissionOpen && <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-xl" open aria-labelledby="update-network-permission-title" onCancel={(event) => {
