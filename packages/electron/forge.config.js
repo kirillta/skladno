@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync } from "node:fs";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
 
@@ -7,6 +7,14 @@ const rootPackage = JSON.parse(readFileSync(path.join(import.meta.dirname, "..",
 
 
 export default {
+    hooks: {
+        packageAfterCopy: async (_config, buildPath) => {
+            const destination = path.join(buildPath, "dist", "node_modules", "@napi-rs");
+            mkdirSync(destination, { recursive: true });
+            for (const packageName of ["keyring", "keyring-win32-x64-msvc"])
+                cpSync(path.join(import.meta.dirname, "..", "..", "node_modules", "@napi-rs", packageName), path.join(destination, packageName), { recursive: true });
+        },
+    },
     packagerConfig: {
         asar: { unpack: "**/*.node" },
         appBundleId: "io.github.kirillta.skladno",
