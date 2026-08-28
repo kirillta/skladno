@@ -21,6 +21,7 @@ Keep `docs/development/plans` for active work. Move lasting decisions from compl
 - A Draft checkpoint is mutable recovery state tied to a base Revision. Revision-bound Proposals and Findings become stale when the current Revision changes.
 - Articles and translations remain independently recoverable. Fact-check Findings remain advisory, sourced, and uncertain where appropriate.
 - Send only the minimum private context required for an explicit operation. Persist generated output only after valid completion.
+- Every Author-facing error names what failed and gives a useful next step without exposing implementation details, raw errors, or private data.
 - Preserve claims, numbers, URLs, code, technical terms, and author voice. Publishing limits remain guidance; Skladno does not publish directly.
 
 ## Boundaries
