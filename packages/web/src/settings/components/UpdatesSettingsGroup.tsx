@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 import type { DesktopUpdateClient, DesktopUpdateState } from "@skladno/shared";
-import { Button } from "../../ui/primitives.js";
+import { Button, Dialog } from "../../ui/primitives.js";
 import { SettingRow, SettingsGroup } from "./SettingRow.js";
 
 
 export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdateClient | undefined; desktop: boolean }) {
     const intl = useIntl();
     const [state, setState] = useState<DesktopUpdateState>();
+    const [networkPermissionOpen, setNetworkPermissionOpen] = useState(false);
 
     useEffect(() => {
         if (!client)
@@ -39,7 +40,7 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
     return <SettingsGroup label={intl.formatMessage({ id: "settings.updates" })}>
         <div id="settings-updates" tabIndex={-1} />
         <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.updateNetworkAccess" })} hint={intl.formatMessage({ id: "settings.updateNetworkAccessHint" })}>
-            <button type="button" role="switch" aria-checked={state.networkAccess} aria-label={intl.formatMessage({ id: "settings.updateNetworkAccess" })} className="group inline-flex min-h-9 appearance-none items-center gap-2 border-0 bg-transparent px-0 py-1 text-xs font-semibold text-ink hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={() => void client.setNetworkAccess(!state.networkAccess).then(setState)}>
+            <button type="button" role="switch" aria-checked={state.networkAccess} aria-label={intl.formatMessage({ id: "settings.updateNetworkAccess" })} className="group inline-flex min-h-9 appearance-none items-center gap-2 border-0 bg-transparent px-0 py-1 text-xs font-semibold text-ink hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={() => state.networkAccess ? void client.setNetworkAccess(false).then(setState) : setNetworkPermissionOpen(true)}>
                 <span aria-hidden="true" className={`relative inline-flex h-5 w-9 items-center rounded-full border p-0.5 transition-colors group-hover:border-brand ${state.networkAccess ? "border-brand bg-brand" : "border-border-strong bg-surface-raised"}`}>
                     <span className={`size-4 rounded-full border border-border-strong bg-surface transition-transform ${state.networkAccess ? "translate-x-4" : "translate-x-0"}`} />
                 </span>
@@ -66,5 +67,19 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
             {details?.summary ? <span>{details.summary}</span> : <span />}
         </SettingRow>
         {state.kind !== "unsupported" && <p className="mt-3 text-xs leading-5 text-muted">{intl.formatMessage({ id: "settings.updatesPrivacy" })}</p>}
+        {networkPermissionOpen && <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-xl" open aria-labelledby="update-network-permission-title" onCancel={(event) => {
+            event.preventDefault();
+            setNetworkPermissionOpen(false);
+        }}>
+            <h2 id="update-network-permission-title" className="text-lg font-semibold">{intl.formatMessage({ id: "settings.updateNetworkPermissionTitle" })}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">{intl.formatMessage({ id: "settings.updateNetworkPermissionDescription" })}</p>
+            <div className="mt-5 flex justify-end gap-2">
+                <Button variant="secondary" autoFocus onClick={() => setNetworkPermissionOpen(false)}>{intl.formatMessage({ id: "editor.cancel" })}</Button>
+                <Button onClick={() => void client.setNetworkAccess(true).then((next) => {
+                    setState(next);
+                    setNetworkPermissionOpen(false);
+                })}>{intl.formatMessage({ id: "settings.allowNetworkAccess" })}</Button>
+            </div>
+        </Dialog>}
     </SettingsGroup>;
 }

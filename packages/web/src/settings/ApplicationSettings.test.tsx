@@ -72,6 +72,8 @@ describe("ApplicationSettings", () => {
         expect(await screen.findByRole("heading", { name: message("settings.updates") })).toBeTruthy();
         expect(screen.getAllByText(message("settings.updatesUnavailable"))).toHaveLength(1);
         await userEvent.setup().click(screen.getByRole("switch", { name: message("settings.updateNetworkAccess") }));
+        expect(setNetworkAccess).not.toHaveBeenCalled();
+        await userEvent.setup().click(screen.getByRole("button", { name: message("settings.allowNetworkAccess") }));
         expect(setNetworkAccess).toHaveBeenCalledWith(true);
         await userEvent.setup().click(screen.getByRole("switch", { name: message("settings.automaticUpdates") }));
         expect(setAutomaticChecks).toHaveBeenCalledWith(false);
@@ -91,6 +93,9 @@ describe("ApplicationSettings", () => {
         expect((await screen.findByRole("switch", { name: message("settings.updateNetworkAccess") })).getAttribute("aria-checked")).toBe("false");
         expect(screen.queryByRole("button", { name: message("settings.downloadUpdate") })).toBeNull();
         await user.click(screen.getByRole("switch", { name: message("settings.updateNetworkAccess") }));
+        expect(setNetworkAccess).not.toHaveBeenCalled();
+        expect(screen.getByRole("dialog", { name: message("settings.updateNetworkPermissionTitle") })).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: message("settings.allowNetworkAccess") }));
         expect(setNetworkAccess).toHaveBeenCalledWith(true);
         await user.click(screen.getByRole("button", { name: message("settings.checkNow") }));
         await screen.findByRole("button", { name: message("settings.downloadUpdate") });
