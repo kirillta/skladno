@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path";
 import { app, autoUpdater, BrowserWindow, dialog, ipcMain, net, screen, shell } from "electron";
+import squirrelStartup from "electron-squirrel-startup";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter } from "@skladno/server/electron";
 import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
 import { requestDraftCheckpoint } from "./close-coordinator.js";
@@ -125,7 +126,9 @@ async function createMainWindow(): Promise<void> {
 }
 
 
-if (!app.requestSingleInstanceLock()) {
+if (squirrelStartup) {
+    app.quit();
+} else if (!app.requestSingleInstanceLock()) {
     app.quit();
 } else {
     app.on("second-instance", focusMainWindow);

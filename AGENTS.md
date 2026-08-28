@@ -36,6 +36,7 @@ For UI changes, follow the [web design system](docs/development/ui/design-system
 
 ## Handoff
 
+- Before creating a GitHub issue, check whether an existing issue should be updated instead. Assign every new issue to an existing or newly created milestone.
 - Follow the [testing guide](docs/development/guides/testing.md). Source changes require focused tests, lint, and typecheck.
 - After changing the product model, regenerate the affected inventory and run `npm run product:check`.
 - Report checks run and remaining manual verification.
