@@ -79,8 +79,8 @@
                 "packages/web/src/desktop-client.ts",
                 ".github/workflows/electron-windows.yml"
             ],
-            "contract": "The unsigned Windows 11 x64 preview runs the existing React application in one context-isolated, sandboxed Electron window. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub prerelease discovery is optional and at most daily; download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
-            "persistence": "The desktop client uses the existing user-local .skladno SQLite data. Runtime settings retain the automatic-check preference, staged version, prior version, and one recovery snapshot reference without Article content. Install, upgrade, reinstall, and uninstall do not delete or rewrite that directory.",
+            "contract": "The unsigned Windows 11 x64 preview runs the existing React application in one context-isolated, sandboxed Electron window. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub prerelease discovery is optional, requires the author's stored network permission, and runs at most daily; download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
+            "persistence": "The desktop client uses the existing user-local .skladno SQLite data. Runtime settings retain the network-permission and automatic-check preferences, staged version, prior version, and one recovery snapshot reference without Article content. Install, upgrade, reinstall, and uninstall do not delete or rewrite that directory.",
             "limitations": [
                 "The preview is unsigned and Windows-only; signing before stable distribution remains in #168.",
                 "Native backup pickers and other Electron-specific Settings work remain in #34."
@@ -279,10 +279,10 @@
             "id": "application.electron-preview-update-discovery",
             "title": "Preview update discovery is author-controlled",
             "capabilityIds": ["application.electron-windows-preview"],
-            "preconditions": ["A packaged Windows x64 preview has an available GitHub prerelease."],
+            "preconditions": ["A packaged Windows x64 preview has an available GitHub prerelease and the author has allowed update network access."],
             "event": "The desktop coordinator checks release metadata.",
             "expected": ["Only the newest complete compatible preview is offered and no download starts before the author requests it."],
-            "forbidden": ["Sending Article content or raw GitHub errors to the renderer."],
+            "forbidden": ["Making an update-discovery request without author permission or sending Article content or raw GitHub errors to the renderer."],
             "evidence": { "kind": "automated", "path": "packages/electron/src/desktop-updates.test.ts" }
         },
         {

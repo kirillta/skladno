@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { app, autoUpdater, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
+import { app, autoUpdater, BrowserWindow, dialog, ipcMain, net, screen, shell } from "electron";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter } from "@skladno/server/electron";
 import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
 import { requestDraftCheckpoint } from "./close-coordinator.js";
@@ -164,6 +164,7 @@ if (!app.requestSingleInstanceLock()) {
             database: application.database,
             dataDirectory: dirname(config.databasePath),
             updater: autoUpdater,
+            fetchReleases: () => net.fetch("https://api.github.com/repos/kirillta/skladno/releases"),
             notify: (state) => mainWindow?.webContents.send(desktopUpdatesEvent, state),
             requestCheckpoint: () => mainWindow ? requestDraftCheckpoint(ipcMain, mainWindow.webContents) : Promise.resolve(false),
             closeApplication: () => closeApplication?.(),

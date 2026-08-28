@@ -80,6 +80,7 @@ function releaseState(release: Release, currentVersion: string, settings: Runtim
         security: match[5] === ".security",
         ...(settings.lastUpdateCheckAt ? { lastCheckedAt: settings.lastUpdateCheckAt } : {}),
         automaticChecks: settings.automaticUpdateChecks !== false,
+        networkAccess: settings.updateNetworkAccess === true,
     };
 }
 
@@ -123,13 +124,14 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
     function initialState(): DesktopUpdateState {
         const runtime = readRuntimeSettings(runtimePath);
         if (!supported)
-            return { kind: "unsupported", currentVersion, automaticChecks: runtime.automaticUpdateChecks !== false };
+            return { kind: "unsupported", currentVersion, automaticChecks: runtime.automaticUpdateChecks !== false, networkAccess: runtime.updateNetworkAccess === true };
 
         return {
             kind: "current",
             currentVersion,
             ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
-            automaticChecks: runtime.automaticUpdateChecks !== false
+            automaticChecks: runtime.automaticUpdateChecks !== false,
+            networkAccess: runtime.updateNetworkAccess === true,
         };
     }
 
@@ -146,11 +148,15 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
             return state;
 
         const runtime = settings();
+        if (runtime.updateNetworkAccess !== true)
+            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), automaticChecks: runtime.automaticUpdateChecks !== false, networkAccess: false });
+
         setState({
             kind: "checking",
             currentVersion,
             ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
-            automaticChecks: runtime.automaticUpdateChecks !== false
+            automaticChecks: runtime.automaticUpdateChecks !== false,
+            networkAccess: true,
         });
 
         try {
@@ -171,7 +177,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
             const nextRuntime = { ...runtime, lastUpdateCheckAt: new Date().toISOString() };
             writeRuntimeSettings(runtimePath, nextRuntime);
             if (!release)
-                return setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, automaticChecks: nextRuntime.automaticUpdateChecks !== false });
+                return setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, automaticChecks: nextRuntime.automaticUpdateChecks !== false, networkAccess: true });
 
             return setState(releaseState(release, currentVersion, nextRuntime));
         } catch {
@@ -180,7 +186,8 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
                 currentVersion,
                 error: "discovery_failed",
                 ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
-                automaticChecks: runtime.automaticUpdateChecks !== false
+                automaticChecks: runtime.automaticUpdateChecks !== false,
+                networkAccess: true,
             });
         }
     }
@@ -200,12 +207,21 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
             currentVersion,
             error: state.kind === "downloading" ? "download_failed" : "apply_failed",
             ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
-            automaticChecks: runtime.automaticUpdateChecks !== false
+            automaticChecks: runtime.automaticUpdateChecks !== false,
+            networkAccess: runtime.updateNetworkAccess === true,
         });
     });
 
     return {
         getState: () => state,
+        setNetworkAccess(enabled: boolean) {
+            const runtime = { ...settings(), updateNetworkAccess: enabled };
+            writeRuntimeSettings(runtimePath, runtime);
+            if (state.kind === "unsupported")
+                return setState({ ...state, networkAccess: enabled });
+
+            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), automaticChecks: runtime.automaticUpdateChecks !== false, networkAccess: enabled });
+        },
         setAutomaticChecks(enabled: boolean) {
             const runtime = { ...settings(), automaticUpdateChecks: enabled };
             writeRuntimeSettings(runtimePath, runtime);
@@ -241,7 +257,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
 
                 return true;
             } catch {
-                setState({ kind: "failed", currentVersion, error: "apply_failed", automaticChecks: settings().automaticUpdateChecks !== false });
+                setState({ kind: "failed", currentVersion, error: "apply_failed", automaticChecks: settings().automaticUpdateChecks !== false, networkAccess: settings().updateNetworkAccess === true });
                 return false;
             }
         },
@@ -249,7 +265,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
         openRecoveryGuide: () => openExternal(recoveryGuideUrl),
         schedule() {
             const runtime = settings();
-            if (state.kind === "unsupported" || runtime.automaticUpdateChecks === false || (runtime.lastUpdateCheckAt && Date.now() - Date.parse(runtime.lastUpdateCheckAt) < 86_400_000))
+            if (state.kind === "unsupported" || runtime.updateNetworkAccess !== true || runtime.automaticUpdateChecks === false || (runtime.lastUpdateCheckAt && Date.now() - Date.parse(runtime.lastUpdateCheckAt) < 86_400_000))
                 return;
 
             setTimeout(() => void checkNow(), 5_000);
@@ -269,6 +285,10 @@ export function registerDesktopUpdatesAdapter({ ipcMain, coordinator }: { ipcMai
         try {
             switch (method) {
                 case "getState": return { ok: true, value: coordinator.getState() };
+                case "setNetworkAccess":
+                    return typeof (request as Record<string, unknown>).enabled === "boolean"
+                        ? { ok: true, value: coordinator.setNetworkAccess((request as Record<string, boolean>).enabled) }
+                        : { ok: false, error: "invalid_request" };
                 case "setAutomaticChecks":
                     return typeof (request as Record<string, unknown>).enabled === "boolean"
                         ? { ok: true, value: coordinator.setAutomaticChecks((request as Record<string, boolean>).enabled) }
@@ -310,7 +330,7 @@ export function createDesktopUpdateClient(ipcRenderer: Pick<IpcRenderer, "invoke
 
 
     return {
-        getState: () => invoke("getState"), setAutomaticChecks: (enabled) => invoke("setAutomaticChecks", enabled), checkNow: () => invoke("checkNow"), download: () => invoke("download"), restartAndUpdate: () => invoke("restartAndUpdate"), openReleaseNotes: () => invoke("openReleaseNotes"), openRecoveryGuide: () => invoke("openRecoveryGuide"), rendererReady: () => invoke("rendererReady"),
+        getState: () => invoke("getState"), setNetworkAccess: (enabled) => invoke("setNetworkAccess", enabled), setAutomaticChecks: (enabled) => invoke("setAutomaticChecks", enabled), checkNow: () => invoke("checkNow"), download: () => invoke("download"), restartAndUpdate: () => invoke("restartAndUpdate"), openReleaseNotes: () => invoke("openReleaseNotes"), openRecoveryGuide: () => invoke("openRecoveryGuide"), rendererReady: () => invoke("rendererReady"),
         subscribe(listener) {
             const receive = (_event: unknown, state: unknown) => {
                 if (isDesktopUpdateState(state))
