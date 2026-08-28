@@ -82,7 +82,7 @@
             "contract": "The unsigned Windows 11 x64 preview runs the existing React application in one context-isolated, sandboxed Electron window. The main process composes the existing local application services and exposes only allowlisted typed IPC operations. External web links open in the system browser, a second launch focuses the first window, and close waits for the active Draft checkpoint or explicit author confirmation.",
             "persistence": "The desktop client uses the existing user-local .skladno SQLite data. Install, upgrade, reinstall, and uninstall do not delete or rewrite that directory.",
             "limitations": [
-                "The preview is unsigned and Windows-only; signing and automatic updates remain in #35.",
+                "The preview is unsigned and Windows-only; automatic updates remain in #35 and signing before stable distribution remains in #168.",
                 "Native backup pickers and other Electron-specific Settings work remain in #34."
             ]
         },
