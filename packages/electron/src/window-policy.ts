@@ -9,7 +9,7 @@ interface FocusableWindow {
 }
 
 
-export function createWindowOptions(preload: string, bounds: Electron.Rectangle): BrowserWindowConstructorOptions {
+export function createWindowOptions(preload: string, bounds: Electron.Rectangle, updatesEnabled = false): BrowserWindowConstructorOptions {
     return {
         ...bounds,
         minWidth: 900,
@@ -23,6 +23,7 @@ export function createWindowOptions(preload: string, bounds: Electron.Rectangle)
             nodeIntegration: false,
             webSecurity: true,
             allowRunningInsecureContent: false,
+            ...(updatesEnabled ? { additionalArguments: ["--skladno-updates"] } : {}),
         },
     };
 }

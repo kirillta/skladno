@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import type { EditorialWorkspaceClient } from "./application-client.js";
-import { createRendererApplicationClient } from "./desktop-client.js";
+import { createRendererApplicationClient, getDesktopUpdateClient } from "./desktop-client.js";
 import { EditorialWorkspaceProvider } from "./workspace/EditorialWorkspace.js";
 import { I18nProvider } from "./i18n/I18nProvider.js";
 import { NotificationProvider } from "./notifications/NotificationProvider.js";
@@ -42,6 +42,7 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
     const [screen, setScreen] = useState<"editorial-workspace" | "application-settings">("editorial-workspace");
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>();
     const [theme, setTheme] = useState<ThemePreference>("system");
+    const [focusUpdates, setFocusUpdates] = useState(false);
     const dispatcher = useKeyBindingDispatcher(keyBindingOverrides);
 
     useThemeAppearance(theme);
@@ -54,6 +55,19 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
         });
     }, [client]);
 
+    useEffect(() => {
+        void getDesktopUpdateClient()?.rendererReady();
+    }, []);
+
+    useEffect(() => {
+        const openUpdates = () => {
+            setFocusUpdates(true);
+            setScreen("application-settings");
+        };
+        window.addEventListener("skladno:open-updates", openUpdates);
+        return () => window.removeEventListener("skladno:open-updates", openUpdates);
+    }, []);
+
     return <I18nProvider client={client}>
         <NotificationProvider>
             <EditorialWorkspaceProvider client={client}
@@ -64,6 +78,8 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
                 keyBindingOverrides={keyBindingOverrides ?? {}}
                 onKeyBindingsUpdated={setKeyBindingOverrides}
                 onThemeApplied={setTheme}
+                focusUpdates={focusUpdates}
+                onUpdatesFocused={() => setFocusUpdates(false)}
             />
         </NotificationProvider>
     </I18nProvider>;

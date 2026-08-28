@@ -1,6 +1,7 @@
 export const ELECTRON_LIFECYCLE_CHANNEL = {
     prepareClose: "skladno:lifecycle:prepare-close",
     checkpointResult: "skladno:lifecycle:checkpoint-result",
+    rendererReady: "skladno:lifecycle:renderer-ready",
 } as const;
 
 export const ELECTRON_LIFECYCLE_EVENT = {

@@ -42,6 +42,10 @@ These terms describe concepts visible to authors and the domain language used th
 - **Data location**: the active local directory containing Skladno's SQLite data.
 - **Data relocation**: an author-confirmed copy and restart that switches Skladno to a new Data location while retaining the old copy for recovery.
 - **Recovery snapshot**: a Backup snapshot retained before Skladno replaces active data during restore.
+- **Application update**: a newer packaged Skladno version that the desktop client can check for, download, and apply only through author-controlled steps. An update never changes Article content by itself.
+- **Security update**: an Application update whose release tag carries the `.security` suffix. Skladno warns about it but never forces a check, download, or restart.
+- **Staged update**: a downloaded Application update waiting for the author to choose Restart and update. Ordinary close does not apply it.
+- **Pre-update snapshot**: a Backup snapshot of local data created before Skladno applies a staged update. Restoring it requires the matching earlier application version.
 - **Diagnostics event**: a redacted local service record written to the host process logs for startup or recoverable failure support. It never includes private Article content, model bodies, or environment-variable values.
 
 ## Interface

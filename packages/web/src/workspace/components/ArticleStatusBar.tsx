@@ -3,6 +3,7 @@ import { useIntl } from "react-intl";
 import { articleLanguages, PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type CustomPublishLimitProfile, type PublishLimitProfile, type PublishLimitProfileId, type PublishingLength } from "@skladno/shared";
 import { ChevronDownIcon, CopyIcon, StatusIcon, SuccessIcon } from "../../ui/icons.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
+import { UpdateController } from "./UpdateController.js";
 
 
 export function ArticleStatusBar(props: { revisionNumber: number; language: string; setLanguage: (language: string) => Promise<void>; length: PublishingLength; profile: PublishLimitProfile; customProfiles: readonly CustomPublishLimitProfile[]; setProfile: (id: PublishLimitProfileId) => Promise<void>; copyMarkdown: () => Promise<boolean>; copyPlainText: () => Promise<boolean> }) {
@@ -86,6 +87,7 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, leng
 
     return <footer className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
         <span className="font-normal text-muted">{intl.formatMessage({ id: "status.revision" }, { revisionNumber })}</span>
+        <UpdateController />
         <div className="relative ml-2">
             <button ref={languageTrigger} className="inline-flex h-6 items-center gap-1 border-x border-border px-1.5 text-xs text-muted hover:bg-brand-soft hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} aria-controls={languageMenuOpen ? languageMenuId : undefined} aria-expanded={languageMenuOpen} aria-haspopup="menu" onClick={() => {
                 setLanguageMenuOpen((open) => !open);

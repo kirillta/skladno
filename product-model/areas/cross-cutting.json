@@ -91,7 +91,7 @@
             "title": "Accounts, sync, teams, analytics, direct publishing, imports, exports, additional providers, and remaining alternate clients",
             "status": "deferred",
             "owners": ["AGENTS.md"],
-            "contract": "These capabilities remain outside the validated MVP editorial loop. The Windows Electron preview is tracked as an implemented Application capability; signed releases, macOS, Linux, mobile, and browser-offline clients remain separate work.",
+            "contract": "These capabilities remain outside the validated MVP editorial loop. The Windows Electron preview updater is tracked as an implemented Application capability; signed releases remain deferred to #168, and macOS, Linux, mobile, and browser-offline clients remain separate work.",
             "persistence": "No persistence or network surface is introduced for deferred MVP work.",
             "tracking": "Future enhancements (post-MVP) milestone in AGENTS.md."
         }

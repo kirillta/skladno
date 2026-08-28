@@ -2,13 +2,14 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defaultGeneralSettings, type ApplicationSettingsSnapshot, type DesktopSettingsClient } from "@skladno/shared";
+import { defaultGeneralSettings, type ApplicationSettingsSnapshot, type DesktopSettingsClient, type DesktopUpdateClient } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { messages } from "../i18n/messages.js";
 import { message } from "../i18n/test-message.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
 import { saveWebBackup } from "./web-backups.js";
+import { UpdatesSettingsGroup } from "./components/UpdatesSettingsGroup.js";
 
 vi.mock("./web-backups.js", () => ({
     chooseBackupFolder: vi.fn().mockResolvedValue("Skladno backups"),
@@ -35,6 +36,7 @@ describe("ApplicationSettings", () => {
     afterEach(() => {
         cleanup();
         window.skladnoDesktop = undefined;
+        window.skladnoUpdates = undefined;
     });
 
 
@@ -50,6 +52,43 @@ describe("ApplicationSettings", () => {
         await user.selectOptions(await screen.findByRole("combobox", { name: message("settings.navigation") }), "ai");
 
         expect(screen.getByRole("heading", { name: message("settings.ai") })).toBeTruthy();
+    });
+
+
+    it("shows update availability guidance in an Electron development build", async () => {
+        window.skladnoDesktop = {} as DesktopSettingsClient;
+        const setAutomaticChecks = vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: false });
+        window.skladnoUpdates = {
+            getState: vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: true }), setAutomaticChecks, checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
+        };
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        expect(await screen.findByRole("heading", { name: message("settings.updates") })).toBeTruthy();
+        expect(screen.getAllByText(message("settings.updatesUnavailable"))).toHaveLength(1);
+        await userEvent.setup().click(screen.getByRole("switch", { name: message("settings.automaticUpdates") }));
+        expect(setAutomaticChecks).toHaveBeenCalledWith(false);
+    });
+
+
+    // Product scenarios: settings.preview-update-controls
+    it("keeps preview update download explicit in General Settings", async () => {
+        const user = userEvent.setup();
+        const checkNow = vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1.security", title: "Security preview", summary: "Security fixes", releaseNotesUrl: "https://example.test/release", security: true, automaticChecks: true });
+        const updates: DesktopUpdateClient = {
+            getState: vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true }), setAutomaticChecks: vi.fn(), checkNow, download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
+        };
+        render(<IntlProvider locale="en" messages={messages}><UpdatesSettingsGroup client={updates} desktop /></IntlProvider>);
+
+        expect((await screen.findByRole("switch", { name: message("settings.automaticUpdates") })).getAttribute("aria-checked")).toBe("true");
+        expect(screen.queryByRole("button", { name: message("settings.downloadUpdate") })).toBeNull();
+        await user.click(screen.getByRole("button", { name: message("settings.checkNow") }));
+        await screen.findByRole("button", { name: message("settings.downloadUpdate") });
+        expect(checkNow).toHaveBeenCalledOnce();
     });
 
 

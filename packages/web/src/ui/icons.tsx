@@ -63,6 +63,11 @@ export function InfoIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 
+export function UpdateIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M20 11a8 8 0 1 0-2.3 5.7" /><path d="M20 4v7h-7" /><path d="M20 11 17.7 8.7" /></Icon>;
+}
+
+
 export function WarningIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="2" {...props}><path d="M12 3 2.8 20h18.4L12 3Z" /><path d="M12 9v5M12 17h.01" /></Icon>;
 }
