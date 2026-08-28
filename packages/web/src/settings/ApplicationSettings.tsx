@@ -15,7 +15,7 @@ import { SettingsNavigation } from "./components/SettingsNavigation.js";
 import { settingsSections, type SettingsSection } from "./settings-sections.js";
 
 
-export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThemeApplied }: { client: EditorialWorkspaceClient; back: () => void; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void }) {
+export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused }: { client: EditorialWorkspaceClient; back: () => void; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
     const intl = useIntl();
     const { notify, notifyError } = useNotifications();
     const [section, setSection] = useState<SettingsSection>("general");
@@ -51,6 +51,17 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         });
         void client.getPublishingSettings().then(setPublishingSettings).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.loadingFailed" }) }));
     }, [client, intl, notifyError]);
+
+    useEffect(() => {
+        if (!focusUpdates)
+            return;
+
+        setSection("general");
+        requestAnimationFrame(() => {
+            document.getElementById("settings-updates")?.focus();
+            onUpdatesFocused?.();
+        });
+    }, [focusUpdates, onUpdatesFocused]);
 
     useEffect(() => {
         if (section !== "ai" || !settings?.activeConnectionId)

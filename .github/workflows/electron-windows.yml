@@ -60,10 +60,13 @@ jobs:
             - name: Build installer
               run: npm run make:electron
 
-            - name: Publish unsigned prerelease
+            - name: Create draft unsigned prerelease
               env:
                   GH_TOKEN: ${{ github.token }}
               run: |
-                  $artifact = Get-ChildItem packages/electron/out/make -Filter '*setup.exe' -Recurse | Select-Object -First 1
-                  if (-not $artifact) { throw 'Skladno setup executable was not produced.' }
-                  gh release create $env:GITHUB_REF_NAME $artifact.FullName --prerelease --title "Skladno $env:GITHUB_REF_NAME" --notes "Unsigned Windows 11 x64 preview. Windows may show a SmartScreen warning. Signing and automatic updates remain tracked in issue #35."
+                  $assets = Get-ChildItem packages/electron/out/make -Recurse -File | Where-Object { $_.Name -match 'setup\.exe$|^RELEASES$|-full\.nupkg$' }
+                  $setup = $assets | Where-Object Name -match 'setup\.exe$'
+                  $releases = $assets | Where-Object Name -eq 'RELEASES'
+                  $package = $assets | Where-Object Name -match '-full\.nupkg$'
+                  if ($setup.Count -ne 1 -or $releases.Count -ne 1 -or $package.Count -ne 1) { throw 'Expected exactly one setup executable, RELEASES manifest, and full nupkg.' }
+                  gh release create $env:GITHUB_REF_NAME $setup.FullName $releases.FullName $package.FullName --draft --prerelease --title "Skladno $env:GITHUB_REF_NAME" --notes "Unsigned Windows 11 x64 preview with unsigned updater. Windows may show a SmartScreen warning. Signing remains tracked in issue #168. Publish manually after the upgrade drill."

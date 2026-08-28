@@ -74,6 +74,15 @@
             "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/shared/src/settings/settings.ts", "packages/electron/src/desktop-settings.ts", "packages/electron/src/main.ts"],
             "contract": "In Electron, an author can request deletion of the active resolved Skladno data directory through a no-argument native operation. The native confirmation explains the irreversible scope and always shows a Create a backup before deletion checkbox, checked only when a separate backup directory is configured. A requested backup must succeed before deletion continues. It cancels without changes, closes SQLite and background work before deletion, then exits only after successful removal. The renderer cannot supply a filesystem path.",
             "persistence": "The confirmed active local data directory is removed. Installer and uninstaller behavior remains data-preserving."
+        },
+        {
+            "id": "settings.preview-updates",
+            "area": "General",
+            "title": "Author-controlled unsigned Windows preview updates",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/electron/src/desktop-updates.ts"],
+            "contract": "General Settings exposes an enabled-by-default daily GitHub prerelease check, sanitized release summary, explicit download, guarded restart, privacy disclosure, release notes, and recovery guide. Browser builds omit the group; Electron development builds expose the persisted automatic-check preference but no discovery or download actions.",
+            "persistence": "The desktop runtime file stores the preference and non-content update recovery metadata."
         }
     ],
     "scenarios": [
@@ -155,6 +164,16 @@
             "event": "The author chooses a backup folder, creates a manual backup, or the daily schedule runs at application startup.",
             "expected": ["A consistent local SQLite snapshot is written through the browser permission handle and automatic retention leaves manual snapshots untouched."],
             "forbidden": ["A backup failure interrupts Article editing or exposes environment-variable secrets."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+        },
+        {
+            "id": "settings.preview-update-controls",
+            "title": "Preview update controls require author action",
+            "capabilityIds": ["settings.preview-updates"],
+            "preconditions": ["A packaged Windows preview exposes an available update."],
+            "event": "The author opens General Settings and checks for updates.",
+            "expected": ["The enabled-by-default switch is accessible and Download appears only after explicit discovery."],
+            "forbidden": ["A browser or development build exposes update controls or starts a download automatically."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
         {

@@ -1,36 +1,12 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { join, parse, relative, resolve } from "node:path";
 import type { Dialog, IpcMain, IpcRenderer, Shell } from "electron";
 import type { ApplicationServices } from "@skladno/server/electron";
 import { ApplicationClientError, type ApplicationErrorCode, type DesktopSettingsClient, type DesktopSettingsLocations, type ElectronMessages } from "@skladno/shared";
+import { readRuntimeSettings, writeRuntimeSettings } from "./runtime-settings.js";
 
 
 export const desktopSettingsChannel = "skladno:desktop-settings";
-
-
-interface RuntimeSettings { backupDirectory?: string }
-
-
-function readRuntimeSettings(path: string): RuntimeSettings {
-    try {
-        const value: unknown = JSON.parse(readFileSync(path, "utf8"));
-        if (!value || typeof value !== "object" || Array.isArray(value))
-            return {};
-
-        const backupDirectory = (value as Record<string, unknown>).backupDirectory;
-        return typeof backupDirectory === "string" && backupDirectory ? { backupDirectory } : {};
-    } catch {
-        return {};
-    }
-}
-
-
-function writeRuntimeSettings(path: string, settings: RuntimeSettings): void {
-    mkdirSync(join(path, ".."), { recursive: true });
-    const temporary = `${path}.tmp`;
-    writeFileSync(temporary, JSON.stringify(settings), { mode: 0o600 });
-    renameSync(temporary, path);
-}
 
 
 function overlaps(first: string, second: string): boolean {
@@ -91,7 +67,7 @@ export function registerDesktopSettingsAdapter({ ipcMain, shell, dialog, userDat
                     if (overlaps(selected, dataDirectory) || overlaps(dataDirectory, selected))
                         return { ok: false, error: "invalid_request" };
 
-                    writeRuntimeSettings(runtimePath, { backupDirectory: selected });
+                    writeRuntimeSettings(runtimePath, { ...runtime, backupDirectory: selected });
                     return { ok: true, value: selected };
                 }
                 case "revealBackupDirectory": {
