@@ -83,7 +83,7 @@ describe("ApplicationSettings", () => {
     // Product scenarios: settings.preview-update-controls
     it("keeps preview update download explicit in General Settings", async () => {
         const user = userEvent.setup();
-        const checkNow = vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1.security", title: "Security preview", summary: "Security fixes", releaseNotesUrl: "https://example.test/release", security: true, automaticChecks: true, networkAccess: true });
+        const checkNow = vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1.security", title: "Security preview", summary: "Unsigned Windows preview", releaseNotesUrl: "https://example.test/release", security: true, automaticChecks: true, networkAccess: true });
         const setNetworkAccess = vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, networkAccess: true });
         const updates: DesktopUpdateClient = {
             getState: vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, networkAccess: false }), setNetworkAccess, setAutomaticChecks: vi.fn(), checkNow, download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
@@ -100,6 +100,9 @@ describe("ApplicationSettings", () => {
         await user.click(screen.getByRole("button", { name: message("settings.checkNow") }));
         await screen.findByRole("button", { name: message("settings.downloadUpdate") });
         expect(checkNow).toHaveBeenCalledOnce();
+        expect(screen.queryByText("Unsigned Windows preview")).toBeNull();
+        expect(screen.queryByText("Skladno checks public release metadata.")).toBeNull();
+        expect(screen.getByRole("button", { name: message("settings.viewReleaseNotes") }).classList.contains("bg-transparent")).toBe(true);
     });
 
 

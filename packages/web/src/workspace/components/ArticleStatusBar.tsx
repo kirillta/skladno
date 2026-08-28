@@ -87,7 +87,6 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, leng
 
     return <footer className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
         <span className="font-normal text-muted">{intl.formatMessage({ id: "status.revision" }, { revisionNumber })}</span>
-        <UpdateController />
         <div className="relative ml-2">
             <button ref={languageTrigger} className="inline-flex h-6 items-center gap-1 border-x border-border px-1.5 text-xs text-muted hover:bg-brand-soft hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} aria-controls={languageMenuOpen ? languageMenuId : undefined} aria-expanded={languageMenuOpen} aria-haspopup="menu" onClick={() => {
                 setLanguageMenuOpen((open) => !open);
@@ -112,6 +111,7 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, leng
                 {articleLanguages.map((option) => <button key={option} className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitemradio" aria-checked={option === language} onClick={() => void selectLanguage(option)}>{intl.formatMessage({ id: languageMessageId(option) })}</button>)}
             </div>}
         </div>
+        <UpdateController />
         <div className="relative ml-auto">
             <button ref={profileTrigger} className={`inline-flex h-6 items-center gap-1 rounded-control px-1.5 hover:bg-brand-soft hover:text-brand focus:outline-none ${tone === "error" ? "font-semibold text-danger" : tone === "warning" ? "font-semibold text-warning" : "text-muted"}`} type="button" aria-controls={profileMenuOpen ? profileMenuId : undefined} aria-expanded={profileMenuOpen} aria-haspopup="menu" aria-label={intl.formatMessage({ id: "status.characterCount.ariaLabel" }, { characterCount: intl.formatNumber(length.count), characterLimit: intl.formatNumber(profile.characterLimit ?? 0) })} title={length.remaining === undefined ? undefined : length.state === "over-limit" ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(length.remaining)) }) : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(length.remaining) })} onClick={() => {
                 setProfileMenuOpen((open) => !open);
