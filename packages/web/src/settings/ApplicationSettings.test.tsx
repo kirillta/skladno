@@ -101,6 +101,7 @@ describe("ApplicationSettings", () => {
         await screen.findByRole("button", { name: message("settings.downloadUpdate") });
         expect(checkNow).toHaveBeenCalledOnce();
         expect(screen.queryByText("Unsigned Windows preview")).toBeNull();
+        expect(screen.queryByText("Skladno checks public release metadata.")).toBeNull();
         expect(screen.getByRole("button", { name: message("settings.viewReleaseNotes") }).classList.contains("bg-transparent")).toBe(true);
     });
 

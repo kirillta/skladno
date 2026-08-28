@@ -575,7 +575,6 @@ export const messages = {
     "settings.restartAndUpdate": "Restart and update",
     "settings.retry": "Retry",
     "settings.updateRecovery": "Update recovery",
-    "settings.updatesPrivacy": "Skladno checks public release metadata. It sends no Article content, account, device identifier, or analytics.",
     "settings.on": "On",
     "status.updateAvailable": "Update {version} is available",
     "status.updateDownloading": "Update is downloading",

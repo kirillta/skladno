@@ -66,7 +66,6 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
         </div>}>
             <span />
         </SettingRow>
-        {state.kind !== "unsupported" && <p className="mt-3 text-xs leading-5 text-muted">{intl.formatMessage({ id: "settings.updatesPrivacy" })}</p>}
         {networkPermissionOpen && <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-xl" open aria-labelledby="update-network-permission-title" onCancel={(event) => {
             event.preventDefault();
             setNetworkPermissionOpen(false);
