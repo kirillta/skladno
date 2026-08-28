@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 
 export interface RuntimeSettings {
     backupDirectory?: string;
+    updateNetworkAccess?: boolean;
     automaticUpdateChecks?: boolean;
     lastUpdateCheckAt?: string;
     stagedUpdateVersion?: string;
@@ -22,6 +23,7 @@ export function readRuntimeSettings(path: string): RuntimeSettings {
         const record = value as Record<string, unknown>;
         return {
             ...(typeof record.backupDirectory === "string" && record.backupDirectory ? { backupDirectory: record.backupDirectory } : {}),
+            ...(typeof record.updateNetworkAccess === "boolean" ? { updateNetworkAccess: record.updateNetworkAccess } : {}),
             ...(typeof record.automaticUpdateChecks === "boolean" ? { automaticUpdateChecks: record.automaticUpdateChecks } : {}),
             ...(typeof record.lastUpdateCheckAt === "string" ? { lastUpdateCheckAt: record.lastUpdateCheckAt } : {}),
             ...(typeof record.stagedUpdateVersion === "string" ? { stagedUpdateVersion: record.stagedUpdateVersion } : {}),

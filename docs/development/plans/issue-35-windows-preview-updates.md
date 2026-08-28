@@ -18,8 +18,8 @@ The lasting decisions are in [ADR-010](../architecture/adr-010-author-controlled
 - Add renderer-safe update types and validation in `packages/shared`. Model lifecycle states as a discriminated union so invalid combinations such as ready-without-a-version cannot reach React.
 - Add a separate context-isolated desktop update client beside the existing desktop Settings client. Browser and development builds receive no update client.
 - In Electron main, discover GitHub prereleases, select only the newest compatible Windows x64 version, recognize only the `.security` tag suffix, and map network or Squirrel failures to stable error codes.
-- Persist the automatic-check preference, last successful check, staged version, prior version, snapshot reference, and startup-success marker in the existing atomic runtime settings file. Store no Article content or raw remote response.
-- Check shortly after packaged startup and no more than once per 24 hours. Disabling checks stops future scheduling but does not attempt to cancel a native download.
+- Persist the network-permission and automatic-check preferences, last successful check, staged version, prior version, snapshot reference, and startup-success marker in the existing atomic runtime settings file. Store no Article content or raw remote response.
+- Check shortly after packaged startup and no more than once per 24 hours only after the author allows update network access. Disabling checks stops future scheduling but does not attempt to cancel a native download.
 
 ## Phase 3: Download, restart, and recovery
 
@@ -31,7 +31,7 @@ The lasting decisions are in [ADR-010](../architecture/adr-010-author-controlled
 
 ## Phase 4: General Settings and Article Status Bar
 
-- Add an Updates group at the end of General Settings using `SettingRow`, shared controls, localized copy, and an enabled-by-default native switch.
+- Add an Updates group at the end of General Settings using `SettingRow`, shared controls, localized copy, and an explicit network-permission switch before the automatic-check switch.
 - Show current version, last check, privacy disclosure, release title and plain-text summary, View release notes, Check now, Download, Restart and update, Retry, and Update recovery as state permits.
 - Open GitHub release notes and the recovery guide in the system browser. Never render remote Markdown or HTML.
 - Add one code-native `UpdateIcon` to `packages/web/src/ui/icons.tsx` and an `UpdateController` beside Revision and language in `ArticleStatusBar`.

@@ -81,8 +81,8 @@
             "title": "Author-controlled unsigned Windows preview updates",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/electron/src/desktop-updates.ts"],
-            "contract": "General Settings exposes an enabled-by-default daily GitHub prerelease check, sanitized release summary, explicit download, guarded restart, privacy disclosure, release notes, and recovery guide. Browser builds omit the group; Electron development builds expose the persisted automatic-check preference but no discovery or download actions.",
-            "persistence": "The desktop runtime file stores the preference and non-content update recovery metadata."
+            "contract": "General Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes a daily GitHub prerelease check, sanitized release summary, explicit download, guarded restart, privacy disclosure, release notes, and recovery guide. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
+            "persistence": "The desktop runtime file stores the network-permission and automatic-check preferences plus non-content update recovery metadata."
         }
     ],
     "scenarios": [
@@ -171,9 +171,9 @@
             "title": "Preview update controls require author action",
             "capabilityIds": ["settings.preview-updates"],
             "preconditions": ["A packaged Windows preview exposes an available update."],
-            "event": "The author opens General Settings and checks for updates.",
-            "expected": ["The enabled-by-default switch is accessible and Download appears only after explicit discovery."],
-            "forbidden": ["A browser or development build exposes update controls or starts a download automatically."],
+            "event": "The author opens General Settings, allows update network access, and checks for updates.",
+            "expected": ["The network-permission and automatic-check switches are accessible, a confirmation dialog precedes the persisted network permission, no discovery request occurs before consent, and Download appears only after explicit discovery."],
+            "forbidden": ["A browser or development build exposes update controls, an update-discovery request occurs without consent, or a download starts automatically."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },
         {
