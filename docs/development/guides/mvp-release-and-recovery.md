@@ -61,11 +61,13 @@ Build the unpacked application with `npm run package:electron`, or build the Squ
 
 Environment-variable credentials remain supported. Managed credentials use Windows Credential Manager and never enter SQLite, backup snapshots, or renderer responses. The installer does not create or import a `.env` file.
 
+Run `npm run release` to release the next stable patch or `npm run release -- 1.2.3` to release an explicit stable version. Run `npm run release:preview` to advance the current version's preview number or `npm run release:preview -- 1.2.3` to release the next available preview of `1.2.3`. Both commands require a clean worktree, update both package versions and the lockfile, run verification, commit, tag, and atomically push the commit and tag.
+
 ### Desktop acceptance scenario
 
 Run this pass with a disposable `SKLADNO_DATA_DIR` and no private content:
 
-1. Install and launch the x64 preview. Record the expected unsigned-app warning. Confirm the workspace opens, then launch Skladno again and confirm the existing window restores and receives focus.
+1. Install and launch the x64 preview. Record the expected unsigned-app warning. Confirm the Desktop and Start menu shortcuts are created, the workspace opens, then launch Skladno again and confirm the existing window restores and receives focus.
 2. Complete the clean-profile author journey above through Article creation, Draft checkpointing, Revision save and restore, Proposal acceptance, fact checking, translation, Settings, theme changes, keyboard navigation, and Copy. In Settings, add a managed API key, verify its connection, restart the app, verify it again, then remove the inactive connection. Confirm the key is held only in Windows Credential Manager and the app does not start the HTTP server.
 3. Open HTTP and HTTPS links and confirm they use the system browser. Confirm file and custom-scheme navigation does not open. Test light and dark themes and the Windows 11 keyboard accessibility pass.
 4. Remove the configured provider credential, retry an AI operation, and confirm the UI reports the unavailable configuration without exposing provider details. Repeat while offline, cancel an in-progress request, and confirm incomplete output does not change the Article.

@@ -1,7 +1,7 @@
 {
     "name": "skladno",
     "private": true,
-    "version": "0.0.1-preview.4",
+    "version": "0.0.2",
     "workspaces": [
         "packages/*"
     ],
@@ -17,10 +17,12 @@
         "product:check": "node scripts/product-model.mjs check",
         "product:docs": "node scripts/product-model.mjs generate",
         "product:impact": "node scripts/product-model.mjs impact",
+        "release": "node scripts/release.mjs stable",
+        "release:preview": "node scripts/release.mjs preview",
         "verify": "npm run product:check && npm run lint && npm run typecheck && npm test",
         "build": "npm run build --workspaces --if-present",
         "postbuild": "npm run lint",
-        "test": "node --test scripts/product-model.test.mjs && npm run test --workspaces --if-present",
+        "test": "node --test scripts/*.test.mjs && npm run test --workspaces --if-present",
         "test:e2e": "playwright test"
     },
     "devDependencies": {
