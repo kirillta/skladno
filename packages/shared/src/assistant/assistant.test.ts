@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, builtInSkills, legacyEditorialOperationSkillMap, resolveBuiltInSkillId, type AssistantEvent, type AssistantExecutionMetadata, type AssistantRequest, type AssistantSkillSummary, type ElectronStreamRequest, type StartAssistantRequest } from "../index.js";
+import { ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, builtInSkills, isAssistantEvent, legacyEditorialOperationSkillMap, resolveBuiltInSkillId, type AssistantEvent, type AssistantExecutionMetadata, type AssistantRequest, type AssistantSkillSummary, type ElectronStreamRequest, type StartAssistantRequest } from "../index.js";
 
 test("resolves current skill IDs and legacy editorial operations through one compatibility seam", () => {
     for (const skillId of builtInSkills)
@@ -58,4 +58,10 @@ test("describes source-neutral Skills and capability-run transport fixtures", ()
     assert.equal(summary.reference.id, BUILT_IN_SKILL.FACT_CHECKING);
     assert.equal(events[1]?.type, ASSISTANT_EVENT.STAGED_COMPLETION);
     assert.equal(electronRequest.input.requestId, request.id);
+});
+
+
+test("validates renderer-safe capability activity stream events", () => {
+    assert.equal(isAssistantEvent({ type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: "request-1", activity: { summary: "Checking facts.", status: "started" } }), true);
+    assert.equal(isAssistantEvent({ type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: "request-1", activity: { summary: "Checking facts.", status: "running" } }), false);
 });

@@ -1,15 +1,16 @@
 import { useLayoutEffect, useRef } from "react";
 import { useIntl } from "react-intl";
-import type { AssistantMessage, FactCheckClaimPreview, GeneralSettings } from "@skladno/shared";
+import type { AssistantCapabilityActivity, AssistantMessage, FactCheckClaimPreview, GeneralSettings } from "@skladno/shared";
 import { Banner } from "../../../ui/primitives.js";
 import { FactCheckClaims } from "./FactCheckClaims.js";
 import { AssistantTimelineMessage } from "./AssistantTimelineMessage.js";
 
 
-export function AssistantTimeline({ state, message, errorDetails, factCheckClaims, collapsed, assistantMessages, openView, generalSettings, elapsedDuration }: {
+export function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, openView, generalSettings, elapsedDuration }: {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
+    activity?: AssistantCapabilityActivity;
     factCheckClaims?: FactCheckClaimPreview[];
     collapsed: boolean;
     assistantMessages?: AssistantMessage[];
@@ -45,7 +46,7 @@ export function AssistantTimeline({ state, message, errorDetails, factCheckClaim
                 <span className="size-1 rounded-full bg-muted animate-pulse motion-reduce:animate-none [animation-delay:150ms]" />
                 <span className="size-1 rounded-full bg-muted animate-pulse motion-reduce:animate-none [animation-delay:300ms]" />
             </span>
-            <span>{intl.formatMessage({ id: "assistant.workingFor" }, { duration: elapsedDuration })}</span>
+            <span>{activity?.summary ?? intl.formatMessage({ id: "assistant.workingFor" }, { duration: elapsedDuration })}</span>
         </div>}
         {message && <Banner tone="error" className="border-danger/35 bg-surface-raised text-ink" role="alert">
             <div>

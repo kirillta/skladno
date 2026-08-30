@@ -68,6 +68,24 @@ export function isValidatedEditorialCapabilityCall(capability: string, input: Re
 }
 
 
+export function activityForEditorialOperation(operation: EditorialOperation): string {
+    const capability = operation === EDITORIAL_OPERATION.FACT_CHECK
+        ? EDITORIAL_CAPABILITY.FACT_CHECK
+        : operation === EDITORIAL_OPERATION.STYLE_REVIEW
+            ? EDITORIAL_CAPABILITY.STYLE_REVIEW
+            : operation === EDITORIAL_OPERATION.TRANSLATION
+                ? EDITORIAL_CAPABILITY.TRANSLATE
+                : EDITORIAL_CAPABILITY.GENERATE_PROPOSAL;
+
+    for (const definition of editorialCapabilityDefinitions) {
+        if (definition.id === capability)
+            return definition.activity;
+    }
+
+    return "Preparing editorial work.";
+}
+
+
 export interface EditorialArtifactSummary {
     id: string;
     revisionId: string;

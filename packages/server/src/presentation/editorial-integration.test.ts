@@ -452,6 +452,8 @@ test("assistant requests persist a revision-bound proposal and splice only the s
 
         assert.match(body, /"type":"accepted"/);
         assert.match(body, /"type":"skill_resolved".*"skillId":"flow_and_clarity"/);
+        assert.match(body, /"type":"capability_activity".*"summary":"Preparing a Proposal\.".*"status":"started"/);
+        assert.match(body, /"type":"capability_activity".*"summary":"Preparing a Proposal\.".*"status":"completed"/);
         assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
         assert.equal(engine.requests[0]?.article, "selected");
         assert.equal(engine.requests[0]?.articleSelection, true);

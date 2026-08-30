@@ -4,6 +4,7 @@ import {
     ApplicationClientError,
     ELECTRON_APPLICATION_METHOD,
     ELECTRON_IPC_CHANNEL,
+    isAssistantEvent,
     type ElectronApplicationMethod,
     type ElectronApplicationOperationMap,
     type ElectronCancelRequest,
@@ -75,6 +76,9 @@ function createStream(
             switch (subscription.kind) {
                 case "assistant":
                     if (payload.kind !== "assistant")
+                        return;
+
+                    if (!isAssistantEvent(payload.event))
                         return;
 
                     subscription.onEvent(payload.event);

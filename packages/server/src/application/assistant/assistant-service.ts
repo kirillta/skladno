@@ -2,6 +2,7 @@ import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCo
 import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
+import { activityForEditorialOperation } from "./editorial-capability-catalog.js";
 import type { ArticleStore } from "../ports/article-store.js";
 import type { AssistantArtifactStore } from "../ports/assistant-artifact-store.js";
 import type { AssistantStore } from "../ports/assistant-store.js";
@@ -199,6 +200,11 @@ export class AssistantService {
             requestId: request.requestId,
             ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {})
         };
+        yield {
+            type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY,
+            requestId: request.requestId,
+            activity: { summary: activityForEditorialOperation(request.operation), status: "started" },
+        };
 
         let completed = false;
         try {
@@ -209,7 +215,13 @@ export class AssistantService {
                     yield { type: ASSISTANT_EVENT.TOOL_STATUS, requestId: request.requestId, tool: event.tool, status: event.status, ...(event.claims ? { claims: event.claims } : {}) };
                 } else {
                     completed = true;
-                    yield { type: ASSISTANT_EVENT.COMPLETED, requestId: request.requestId, ...this.persistCompletion(request, event) };
+                    const completion = this.persistCompletion(request, event);
+                    yield {
+                        type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY,
+                        requestId: request.requestId,
+                        activity: { summary: activityForEditorialOperation(request.operation), status: "completed" },
+                    };
+                    yield { type: ASSISTANT_EVENT.COMPLETED, requestId: request.requestId, ...completion };
                 }
             }
 

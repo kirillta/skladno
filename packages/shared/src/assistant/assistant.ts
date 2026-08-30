@@ -219,6 +219,59 @@ export type AssistantEvent =
     | { type: typeof ASSISTANT_EVENT.ERROR; requestId: string; errorCode: import("../cross-cutting/errors.js").ApplicationErrorCode; retryable: boolean };
 
 
+const assistantResponseKinds: readonly AssistantResponseKind[] = [
+    "editorial_conversation", 
+    "skill_response", 
+    "proposal_prepared", 
+    "findings_prepared", 
+    "proposal_and_findings_prepared", 
+    "translation_proposal_prepared", 
+    "request_cancelled", 
+    "request_failed",
+];
+
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+
+function isAssistantResponseKind(value: unknown): value is AssistantResponseKind {
+    return typeof value === "string" && assistantResponseKinds.some((kind) => kind === value);
+}
+
+
+export function isAssistantEvent(value: unknown): value is AssistantEvent {
+    if (!isRecord(value) || typeof value.type !== "string" || typeof value.requestId !== "string")
+        return false;
+
+    if (value.type === ASSISTANT_EVENT.ACCEPTED)
+        return true;
+
+    if (value.type === ASSISTANT_EVENT.SKILL_RESOLVED)
+        return (value.skillId === undefined || isBuiltInSkillId(value.skillId))
+            && (value.source === undefined || value.source === "explicit" || value.source === "inferred");
+
+    if (value.type === ASSISTANT_EVENT.TEXT_DELTA)
+        return typeof value.delta === "string";
+
+    if (value.type === ASSISTANT_EVENT.TOOL_STATUS)
+        return typeof value.tool === "string" && (value.status === "started" || value.status === "completed");
+
+    if (value.type === ASSISTANT_EVENT.CAPABILITY_ACTIVITY)
+        return isRecord(value.activity) && typeof value.activity.summary === "string"
+            && (value.activity.status === "started" || value.activity.status === "completed");
+
+    if (value.type === ASSISTANT_EVENT.STAGED_COMPLETION)
+        return isRecord(value.completion) && isAssistantResponseKind(value.completion.responseKind);
+
+    if (value.type === ASSISTANT_EVENT.COMPLETED)
+        return typeof value.messageId === "string" && isAssistantResponseKind(value.responseKind);
+
+    return value.type === ASSISTANT_EVENT.ERROR && typeof value.errorCode === "string" && typeof value.retryable === "boolean";
+}
+
+
 export interface AssistantClient {
     streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void>;
 }

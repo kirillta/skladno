@@ -170,6 +170,7 @@ export {
     assistantRequestsPath,
     builtInSkills,
     builtInSkillScopeCompatibility,
+    isAssistantEvent,
     isBuiltInSkillId,
     legacyEditorialOperationSkillMap,
     resolveBuiltInSkillId,

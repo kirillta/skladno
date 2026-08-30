@@ -43,9 +43,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const [assistantSelection, setAssistantSelection] = useState<string>();
     const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
         editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
-        if (result.proposal)
-            layout.setView("proposal");
-    }, [editorial, layout]);
+    }, [editorial]);
     const assistant = useAssistantMessages(client, workspace, assistantSelection, applyAssistantResult, profileRebuilt);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
     const flushSelectedRef = useRef(workspace.flushSelected);
@@ -206,6 +204,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             state={assistant.state}
             message={assistant.message}
             errorDetails={assistant.errorDetails}
+            activity={assistant.activity}
             factCheckClaims={assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true }))}
             onRequest={assistant.request}
             onCancel={assistant.cancel}
