@@ -56,6 +56,15 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
                 <span>{intl.formatMessage({ id: state.automaticChecks ? "settings.on" : "settings.off" })}</span>
             </button>
         </SettingRow>}
+        {state.networkAccess &&
+        <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.includePrereleaseUpdates" })} hint={intl.formatMessage({ id: "settings.includePrereleaseUpdatesHint" })}>
+            <button type="button" role="switch" aria-checked={state.includePrereleases} aria-label={intl.formatMessage({ id: "settings.includePrereleaseUpdates" })} className="group inline-flex min-h-9 appearance-none items-center gap-2 border-0 bg-transparent px-0 py-1 text-xs font-semibold text-ink hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={() => void client.setIncludePrereleases(!state.includePrereleases).then(setState)}>
+                <span aria-hidden="true" className={`relative inline-flex h-5 w-9 items-center rounded-full border p-0.5 transition-colors group-hover:border-brand ${state.includePrereleases ? "border-brand bg-brand" : "border-border-strong bg-surface-raised"}`}>
+                    <span className={`size-4 rounded-full border border-border-strong bg-surface transition-transform ${state.includePrereleases ? "translate-x-4" : "translate-x-0"}`} />
+                </span>
+                <span>{intl.formatMessage({ id: state.includePrereleases ? "settings.on" : "settings.off" })}</span>
+            </button>
+        </SettingRow>}
         <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.updateStatus" })} hint={intl.formatMessage({ id: "settings.updateStatusHint" }, { version: state.currentVersion })} status={status} fullWidthAction action={<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {state.kind === "available" && <Button onClick={() => void client.download().then(setState)}>{intl.formatMessage({ id: "settings.downloadUpdate" })}</Button>}
             {state.kind === "ready" && <Button onClick={() => void client.restartAndUpdate()}>{intl.formatMessage({ id: "settings.restartAndUpdate" })}</Button>}

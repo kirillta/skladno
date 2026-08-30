@@ -57,10 +57,10 @@ describe("ApplicationSettings", () => {
 
     it("shows update availability guidance in an Electron development build", async () => {
         window.skladnoDesktop = {} as DesktopSettingsClient;
-        const setAutomaticChecks = vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: false, networkAccess: true });
-        const setNetworkAccess = vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: true, networkAccess: true });
+        const setAutomaticChecks = vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: false, includePrereleases: false, networkAccess: true });
+        const setNetworkAccess = vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: true, includePrereleases: false, networkAccess: true });
         window.skladnoUpdates = {
-            getState: vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: true, networkAccess: false }), setNetworkAccess, setAutomaticChecks, checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
+            getState: vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: true, includePrereleases: false, networkAccess: false }), setNetworkAccess, setAutomaticChecks, setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
         };
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
@@ -83,10 +83,11 @@ describe("ApplicationSettings", () => {
     // Product scenarios: settings.preview-update-controls
     it("keeps preview update download explicit in General Settings", async () => {
         const user = userEvent.setup();
-        const checkNow = vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1.security", title: "Security preview", summary: "Unsigned Windows preview", releaseNotesUrl: "https://example.test/release", security: true, automaticChecks: true, networkAccess: true });
-        const setNetworkAccess = vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, networkAccess: true });
+        const checkNow = vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1.security", title: "Security preview", summary: "Unsigned Windows preview", releaseNotesUrl: "https://example.test/release", security: true, automaticChecks: true, includePrereleases: true, networkAccess: true });
+        const setNetworkAccess = vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, includePrereleases: true, networkAccess: true });
+        const setIncludePrereleases = vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, includePrereleases: false, networkAccess: true });
         const updates: DesktopUpdateClient = {
-            getState: vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, networkAccess: false }), setNetworkAccess, setAutomaticChecks: vi.fn(), checkNow, download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
+            getState: vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, includePrereleases: true, networkAccess: false }), setNetworkAccess, setAutomaticChecks: vi.fn(), setIncludePrereleases, checkNow, download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
         };
         render(<IntlProvider locale="en" messages={messages}><UpdatesSettingsGroup client={updates} desktop /></IntlProvider>);
 
@@ -97,6 +98,8 @@ describe("ApplicationSettings", () => {
         expect(screen.getByRole("dialog", { name: message("settings.updateNetworkPermissionTitle") })).toBeTruthy();
         await user.click(screen.getByRole("button", { name: message("settings.allowNetworkAccess") }));
         expect(setNetworkAccess).toHaveBeenCalledWith(true);
+        await user.click(screen.getByRole("switch", { name: message("settings.includePrereleaseUpdates") }));
+        expect(setIncludePrereleases).toHaveBeenCalledWith(false);
         await user.click(screen.getByRole("button", { name: message("settings.checkNow") }));
         await screen.findByRole("button", { name: message("settings.downloadUpdate") });
         expect(checkNow).toHaveBeenCalledOnce();

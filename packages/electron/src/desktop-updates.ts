@@ -9,8 +9,7 @@ export const desktopUpdatesEvent = "skladno:desktop-updates:state";
 const releasesUrl = "https://api.github.com/repos/kirillta/skladno/releases";
 const releasesDownloadUrl = "https://github.com/kirillta/skladno/releases/download";
 const recoveryGuideUrl = "https://github.com/kirillta/skladno/blob/main/docs/user/update-recovery.md";
-const previewTag = /^v(\d+)\.(\d+)\.(\d+)-preview\.(\d+)(\.security)?$/;
-const previewVersion = /^v?(\d+)\.(\d+)\.(\d+)-preview\.(\d+)(\.security)?$/;
+const releaseVersion = /^v?(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+)(\.security)?)?$/;
 
 
 interface Release {
@@ -33,8 +32,8 @@ interface NativeUpdater {
 
 
 function versionParts(value: string): number[] | undefined {
-    const match = previewVersion.exec(value);
-    return match ? match.slice(1, 5).map(Number) : undefined;
+    const match = releaseVersion.exec(value);
+    return match ? [Number(match[1]), Number(match[2]), Number(match[3]), match[4] ? Number(match[4]) : Number.POSITIVE_INFINITY] : undefined;
 }
 
 
@@ -68,8 +67,23 @@ function supportedRelease(value: unknown): value is Release {
 }
 
 
+function hasSupportedVersion(release: Release): boolean {
+    const match = releaseVersion.exec(release.tag_name);
+    return match !== null && release.prerelease === Boolean(match[4]);
+}
+
+
+function updatePreferences(settings: RuntimeSettings, currentVersion: string) {
+    return {
+        automaticChecks: settings.automaticUpdateChecks !== false,
+        includePrereleases: settings.includePrereleaseUpdates ?? currentVersion.includes("-preview."),
+        networkAccess: settings.updateNetworkAccess === true,
+    };
+}
+
+
 function releaseState(release: Release, currentVersion: string, settings: RuntimeSettings): Extract<DesktopUpdateState, { kind: "available" | "downloading" | "ready" }> {
-    const match = previewTag.exec(release.tag_name)!;
+    const match = releaseVersion.exec(release.tag_name)!;
     return {
         kind: "available",
         currentVersion,
@@ -79,8 +93,7 @@ function releaseState(release: Release, currentVersion: string, settings: Runtim
         releaseNotesUrl: release.html_url,
         security: match[5] === ".security",
         ...(settings.lastUpdateCheckAt ? { lastCheckedAt: settings.lastUpdateCheckAt } : {}),
-        automaticChecks: settings.automaticUpdateChecks !== false,
-        networkAccess: settings.updateNetworkAccess === true,
+        ...updatePreferences(settings, currentVersion),
     };
 }
 
@@ -124,14 +137,13 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
     function initialState(): DesktopUpdateState {
         const runtime = readRuntimeSettings(runtimePath);
         if (!supported)
-            return { kind: "unsupported", currentVersion, automaticChecks: runtime.automaticUpdateChecks !== false, networkAccess: runtime.updateNetworkAccess === true };
+            return { kind: "unsupported", currentVersion, ...updatePreferences(runtime, currentVersion) };
 
         return {
             kind: "current",
             currentVersion,
             ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
-            automaticChecks: runtime.automaticUpdateChecks !== false,
-            networkAccess: runtime.updateNetworkAccess === true,
+            ...updatePreferences(runtime, currentVersion),
         };
     }
 
@@ -149,14 +161,13 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
 
         const runtime = settings();
         if (runtime.updateNetworkAccess !== true)
-            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), automaticChecks: runtime.automaticUpdateChecks !== false, networkAccess: false });
+            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
 
         setState({
             kind: "checking",
             currentVersion,
             ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
-            automaticChecks: runtime.automaticUpdateChecks !== false,
-            networkAccess: true,
+            ...updatePreferences(runtime, currentVersion),
         });
 
         try {
@@ -166,9 +177,9 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
                 throw new Error("Release discovery failed.");
 
             const candidates = payload.filter(supportedRelease)
-                .filter((item) => item.prerelease
-                    && !item.draft
-                    && previewTag.test(item.tag_name)
+                .filter((item) => !item.draft
+                    && hasSupportedVersion(item)
+                    && (!item.prerelease || updatePreferences(runtime, currentVersion).includePrereleases)
                     && item.assets.some((asset) => asset.name === "RELEASES")
                     && item.assets.some((asset) => /-full\.nupkg$/i.test(asset.name))
                 );
@@ -177,7 +188,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
             const nextRuntime = { ...runtime, lastUpdateCheckAt: new Date().toISOString() };
             writeRuntimeSettings(runtimePath, nextRuntime);
             if (!release)
-                return setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, automaticChecks: nextRuntime.automaticUpdateChecks !== false, networkAccess: true });
+                return setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, ...updatePreferences(nextRuntime, currentVersion) });
 
             return setState(releaseState(release, currentVersion, nextRuntime));
         } catch {
@@ -186,8 +197,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
                 currentVersion,
                 error: "discovery_failed",
                 ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
-                automaticChecks: runtime.automaticUpdateChecks !== false,
-                networkAccess: true,
+                ...updatePreferences(runtime, currentVersion),
             });
         }
     }
@@ -207,8 +217,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
             currentVersion,
             error: state.kind === "downloading" ? "download_failed" : "apply_failed",
             ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
-            automaticChecks: runtime.automaticUpdateChecks !== false,
-            networkAccess: runtime.updateNetworkAccess === true,
+            ...updatePreferences(runtime, currentVersion),
         });
     });
 
@@ -220,7 +229,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
             if (state.kind === "unsupported")
                 return setState({ ...state, networkAccess: enabled });
 
-            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), automaticChecks: runtime.automaticUpdateChecks !== false, networkAccess: enabled });
+            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
         },
         setAutomaticChecks(enabled: boolean) {
             const runtime = { ...settings(), automaticUpdateChecks: enabled };
@@ -229,6 +238,15 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
                 return setState({ ...state, automaticChecks: enabled });
 
             return setState({ ...state, automaticChecks: enabled });
+        },
+        setIncludePrereleases(enabled: boolean) {
+            const runtime = { ...settings(), includePrereleaseUpdates: enabled };
+            writeRuntimeSettings(runtimePath, runtime);
+            if (enabled || !release?.prerelease || state.kind !== "available")
+                return setState({ ...state, includePrereleases: enabled });
+
+            release = undefined;
+            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
         },
         checkNow,
         download(): DesktopUpdateState {
@@ -257,7 +275,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
 
                 return true;
             } catch {
-                setState({ kind: "failed", currentVersion, error: "apply_failed", automaticChecks: settings().automaticUpdateChecks !== false, networkAccess: settings().updateNetworkAccess === true });
+                setState({ kind: "failed", currentVersion, error: "apply_failed", ...updatePreferences(settings(), currentVersion) });
                 return false;
             }
         },
@@ -292,6 +310,10 @@ export function registerDesktopUpdatesAdapter({ ipcMain, coordinator }: { ipcMai
                 case "setAutomaticChecks":
                     return typeof (request as Record<string, unknown>).enabled === "boolean"
                         ? { ok: true, value: coordinator.setAutomaticChecks((request as Record<string, boolean>).enabled) }
+                        : { ok: false, error: "invalid_request" };
+                case "setIncludePrereleases":
+                    return typeof (request as Record<string, unknown>).enabled === "boolean"
+                        ? { ok: true, value: coordinator.setIncludePrereleases((request as Record<string, boolean>).enabled) }
                         : { ok: false, error: "invalid_request" };
                 case "checkNow": return { ok: true, value: await coordinator.checkNow() };
                 case "download": return { ok: true, value: coordinator.download() };
@@ -330,7 +352,7 @@ export function createDesktopUpdateClient(ipcRenderer: Pick<IpcRenderer, "invoke
 
 
     return {
-        getState: () => invoke("getState"), setNetworkAccess: (enabled) => invoke("setNetworkAccess", enabled), setAutomaticChecks: (enabled) => invoke("setAutomaticChecks", enabled), checkNow: () => invoke("checkNow"), download: () => invoke("download"), restartAndUpdate: () => invoke("restartAndUpdate"), openReleaseNotes: () => invoke("openReleaseNotes"), openRecoveryGuide: () => invoke("openRecoveryGuide"), rendererReady: () => invoke("rendererReady"),
+        getState: () => invoke("getState"), setNetworkAccess: (enabled) => invoke("setNetworkAccess", enabled), setAutomaticChecks: (enabled) => invoke("setAutomaticChecks", enabled), setIncludePrereleases: (enabled) => invoke("setIncludePrereleases", enabled), checkNow: () => invoke("checkNow"), download: () => invoke("download"), restartAndUpdate: () => invoke("restartAndUpdate"), openReleaseNotes: () => invoke("openReleaseNotes"), openRecoveryGuide: () => invoke("openRecoveryGuide"), rendererReady: () => invoke("rendererReady"),
         subscribe(listener) {
             const receive = (_event: unknown, state: unknown) => {
                 if (isDesktopUpdateState(state))

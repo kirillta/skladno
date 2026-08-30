@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createDesktopUpdateCoordinator } from "./desktop-updates.js";
 
 // Product scenarios: application.electron-preview-update-discovery, application.electron-preview-update-recovery
-test("update discovery selects the newest complete Windows preview without downloading", async () => {
+test("update discovery selects the newest complete Windows release without downloading", async () => {
     const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
     const runtimePath = join(root, "runtime-settings.json");
-    writeFileSync(runtimePath, JSON.stringify({ updateNetworkAccess: true }));
+    writeFileSync(runtimePath, JSON.stringify({ updateNetworkAccess: true, includePrereleaseUpdates: false }));
     let checked = false;
     const coordinator = createDesktopUpdateCoordinator({
         runtimePath, currentVersion: "0.1.0-preview.1", database: { exec: () => undefined }, dataDirectory: root,
@@ -17,6 +17,9 @@ test("update discovery selects the newest complete Windows preview without downl
             checked = true;
         }, quitAndInstall: () => undefined, on: () => undefined },
         fetchReleases: async () => new Response(JSON.stringify([
+            { tag_name: "v0.3.0-preview.1", html_url: "https://example.test/future-preview", prerelease: true, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] },
+            { tag_name: "v0.2.0", name: "Stable release", html_url: "https://example.test/stable", prerelease: false, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] },
+            { tag_name: "v0.2.0-preview.9", html_url: "https://example.test/preview", prerelease: true, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] },
             { tag_name: "v0.1.1-preview.1", html_url: "https://example.test/older", prerelease: true, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] },
             { tag_name: "v0.1.2-preview.1.security", name: "Security preview", body: "<b>Safe</b>", html_url: "https://example.test/newer", prerelease: true, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] },
         ])),
@@ -25,7 +28,7 @@ test("update discovery selects the newest complete Windows preview without downl
     try {
         const state = await coordinator.checkNow();
         assert.deepEqual(state.kind, "available");
-        assert.equal(state.kind === "available" && state.version, "0.1.2-preview.1.security");
+        assert.equal(state.kind === "available" && state.version, "0.2.0");
         assert.equal(checked, false);
     } finally {
         rmSync(root, { recursive: true, force: true });
@@ -51,6 +54,8 @@ test("update discovery requires persisted network access", async () => {
         coordinator.setNetworkAccess(true);
         assert.equal((await coordinator.checkNow()).kind, "available");
         assert.equal(requests, 1);
+        assert.equal(coordinator.setIncludePrereleases(false).kind, "current");
+        assert.match(readFileSync(join(root, "runtime-settings.json"), "utf8"), /"includePrereleaseUpdates":false/);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

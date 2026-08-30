@@ -6,6 +6,7 @@ export interface RuntimeSettings {
     backupDirectory?: string;
     updateNetworkAccess?: boolean;
     automaticUpdateChecks?: boolean;
+    includePrereleaseUpdates?: boolean;
     lastUpdateCheckAt?: string;
     stagedUpdateVersion?: string;
     priorVersion?: string;
@@ -25,6 +26,7 @@ export function readRuntimeSettings(path: string): RuntimeSettings {
             ...(typeof record.backupDirectory === "string" && record.backupDirectory ? { backupDirectory: record.backupDirectory } : {}),
             ...(typeof record.updateNetworkAccess === "boolean" ? { updateNetworkAccess: record.updateNetworkAccess } : {}),
             ...(typeof record.automaticUpdateChecks === "boolean" ? { automaticUpdateChecks: record.automaticUpdateChecks } : {}),
+            ...(typeof record.includePrereleaseUpdates === "boolean" ? { includePrereleaseUpdates: record.includePrereleaseUpdates } : {}),
             ...(typeof record.lastUpdateCheckAt === "string" ? { lastUpdateCheckAt: record.lastUpdateCheckAt } : {}),
             ...(typeof record.stagedUpdateVersion === "string" ? { stagedUpdateVersion: record.stagedUpdateVersion } : {}),
             ...(typeof record.priorVersion === "string" ? { priorVersion: record.priorVersion } : {}),

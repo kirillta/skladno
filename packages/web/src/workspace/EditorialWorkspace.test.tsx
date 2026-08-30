@@ -729,8 +729,8 @@ describe("Editorial Workspace", () => {
 
     it("shows the available update control after the Article language", async () => {
         window.skladnoUpdates = {
-            getState: vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, networkAccess: true }),
-            setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
+            getState: vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true }),
+            setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
         };
         const statusBar = renderLocalized(<ArticleStatusBar revisionNumber={1} language="en" setLanguage={vi.fn()} length={{ count: 0, remaining: 3000, state: "within-limit" }} profile={publishLimitProfiles[1]!} customProfiles={[]} setProfile={vi.fn()} copyMarkdown={vi.fn()} copyPlainText={vi.fn()} />);
         const update = await within(statusBar.container).findByRole("button", { name: "Update 0.1.1-preview.1 is available" });
