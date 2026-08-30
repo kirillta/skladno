@@ -68,14 +68,19 @@ export function isValidatedEditorialCapabilityCall(capability: string, input: Re
 }
 
 
-export function activityForEditorialOperation(operation: EditorialOperation): string {
-    const capability = operation === EDITORIAL_OPERATION.FACT_CHECK
+export function capabilityForEditorialOperation(operation: EditorialOperation): Extract<EditorialCapabilityId, "generate_proposal" | "fact_check" | "style_review" | "translate"> {
+    return operation === EDITORIAL_OPERATION.FACT_CHECK
         ? EDITORIAL_CAPABILITY.FACT_CHECK
         : operation === EDITORIAL_OPERATION.STYLE_REVIEW
             ? EDITORIAL_CAPABILITY.STYLE_REVIEW
             : operation === EDITORIAL_OPERATION.TRANSLATION
                 ? EDITORIAL_CAPABILITY.TRANSLATE
                 : EDITORIAL_CAPABILITY.GENERATE_PROPOSAL;
+}
+
+
+export function activityForEditorialOperation(operation: EditorialOperation): string {
+    const capability = capabilityForEditorialOperation(operation);
 
     for (const definition of editorialCapabilityDefinitions) {
         if (definition.id === capability)
@@ -108,7 +113,7 @@ interface ReadContext {
 }
 
 
-interface StreamContext {
+export interface StreamContext {
     capability: typeof EDITORIAL_CAPABILITY.GENERATE_PROPOSAL
         | typeof EDITORIAL_CAPABILITY.FACT_CHECK
         | typeof EDITORIAL_CAPABILITY.STYLE_REVIEW
@@ -194,18 +199,22 @@ export class EditorialCapabilityCatalog {
     }
 
 
-    stream(input: StreamContext, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+    stream(input: StreamContext, signal: AbortSignal, staged = false): AsyncIterable<EditorialEngineEvent> {
         if (!isStreamCapability(input.capability))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
         currentArticle(this.articles, input.context);
         const operation = operationFor(input);
-        return this.editorial.stream({
+        const request = {
             articleId: input.context.articleId,
             requestId: input.requestId,
             operation,
             authorContext: input.authorContext,
             ...(input.targetLanguage?.trim() ? { targetLanguage: input.targetLanguage.trim() } : {}),
-        }, signal);
+        };
+
+        return staged
+            ? this.editorial.streamStaged(request, signal)
+            : this.editorial.stream(request, signal);
     }
 }

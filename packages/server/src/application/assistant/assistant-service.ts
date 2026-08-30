@@ -1,8 +1,9 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type FactCheck, type FactCheckFinding, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type FactCheck, type FactCheckFinding, type StartAssistantRequest } from "@skladno/shared";
 import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
-import { activityForEditorialOperation } from "./editorial-capability-catalog.js";
+import { activityForEditorialOperation, capabilityForEditorialOperation, EDITORIAL_CAPABILITY, type EditorialCapabilityCatalog, type StreamContext } from "./editorial-capability-catalog.js";
+import { builtInSkillPackages } from "./built-in-skill-packages.js";
 import type { ArticleStore } from "../ports/article-store.js";
 import type { AssistantArtifactStore } from "../ports/assistant-artifact-store.js";
 import type { AssistantStore } from "../ports/assistant-store.js";
@@ -27,6 +28,8 @@ export interface PreparedAssistantRequest extends AssistantServiceRequest {
     operation: EditorialOperation;
     engine: EditorialEngine;
     reusableFactFindings?: FactCheckFinding[];
+    usesCapabilityLoop: boolean;
+    completedCapability?: string;
 }
 
 
@@ -65,25 +68,25 @@ function operationFor(skill: BuiltInSkillId): EditorialOperation {
 }
 
 
-function responseKind(skill: BuiltInSkillId | undefined): AssistantResponseKind {
-    if (!skill)
-        return "editorial_conversation";
-
-    if (skill === BUILT_IN_SKILL.FACT_CHECKING)
+function responseKind(capability?: string): AssistantResponseKind {
+    if (capability === EDITORIAL_CAPABILITY.FACT_CHECK)
         return "findings_prepared";
 
-    if (skill === BUILT_IN_SKILL.STYLE_REVIEW)
+    if (capability === EDITORIAL_CAPABILITY.STYLE_REVIEW)
         return "proposal_and_findings_prepared";
 
-    if (skill === BUILT_IN_SKILL.TRANSLATION)
+    if (capability === EDITORIAL_CAPABILITY.TRANSLATE)
         return "translation_proposal_prepared";
 
-    return "proposal_prepared";
+    if (capability === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL)
+        return "proposal_prepared";
+
+    return "editorial_conversation";
 }
 
 
 function completedContent(request: PreparedAssistantRequest, text: string): string {
-    if (request.scope.kind !== "selection" || !request.resolvedSkillId || request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING)
+    if (request.scope.kind !== "selection" || !request.completedCapability || request.completedCapability === EDITORIAL_CAPABILITY.FACT_CHECK)
         return text;
 
     return `${request.articleContent.slice(0, request.scope.startOffset)}${text}${request.articleContent.slice(request.scope.endOffset)}`;
@@ -119,6 +122,7 @@ export class AssistantService {
         private readonly artifacts: AssistantArtifactStore,
         private readonly engines: EditorialEngineResolver,
         private readonly factChecks: FactChecksStore = { list: () => [], save: () => undefined },
+        private readonly capabilities?: EditorialCapabilityCatalog,
     ) { }
 
 
@@ -148,17 +152,27 @@ export class AssistantService {
         if (request.scope.kind === "selection" && request.scope.endOffset > articleContent.length)
             throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SELECTION_INVALID, HTTP_STATUS.BAD_REQUEST);
 
-        const resolvedSkillId = request.explicitSkillId ?? inferSkill(request.authorMessage, request.scope);
+        let fallbackSkillId = request.explicitSkillId;
+        let operation: EditorialOperation = EDITORIAL_OPERATION.FLOW_REVISION;
+        let engine = this.engines.resolve(operation, fallbackSkillId);
+        if (!engine)
+            throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
+
+        const usesCapabilityLoop = Boolean(engine.streamAssistant && this.capabilities);
+        if (!usesCapabilityLoop) {
+            fallbackSkillId = request.explicitSkillId ?? inferSkill(request.authorMessage, request.scope);
+            operation = operationFor(fallbackSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
+            engine = this.engines.resolve(operation, fallbackSkillId);
+            if (!engine)
+                throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
+        }
+
+        const resolvedSkillId = usesCapabilityLoop ? request.explicitSkillId : fallbackSkillId;
         if (resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !request.targetLanguage?.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
         if (resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && this.styleCorpus.get().status !== "ready")
             throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
-
-        const operation = operationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
-        const engine = this.engines.resolve(operation, resolvedSkillId);
-        if (!engine)
-            throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 
         const publishingCharacterLimit = isPublishLimitProfileId(article.publishingProfileId)
             ? getPublishLimitProfile(article.publishingProfileId).characterLimit
@@ -177,6 +191,8 @@ export class AssistantService {
             resolvedSkillId,
             operation,
             engine,
+            usesCapabilityLoop,
+            ...(!usesCapabilityLoop && fallbackSkillId ? { completedCapability: capabilityForEditorialOperation(operation) } : {}),
             ...(reusableFactFindings.length ? { reusableFactFindings } : {})
         };
     }
@@ -208,7 +224,7 @@ export class AssistantService {
 
         let completed = false;
         try {
-            for await (const event of this.engineStream(request, signal)) {
+            for await (const event of (request.usesCapabilityLoop ? this.capabilityLoopStream(request, signal) : this.engineStream(request, signal))) {
                 if (event.type === EDITORIAL_ENGINE_EVENT.TEXT_DELTA) {
                     yield { type: ASSISTANT_EVENT.TEXT_DELTA, requestId: request.requestId, delta: event.delta };
                 } else if (event.type === EDITORIAL_ENGINE_EVENT.TOOL_STATUS) {
@@ -271,24 +287,88 @@ export class AssistantService {
     }
 
 
+    private async *capabilityLoopStream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        if (!request.engine.streamAssistant || !this.capabilities)
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
+        const excerpt = request.scope.kind === "selection"
+            ? request.articleContent.slice(request.scope.startOffset, request.scope.endOffset)
+            : request.articleContent;
+        if (request.scope.kind === "selection")
+            yield* request.engine.streamConversation({ message: request.authorMessage, article: excerpt, scope: "selection", history: [] }, signal);
+
+        if (request.scope.kind === "selection")
+            return;
+
+        let primary: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }> | undefined;
+        const tools = this.capabilities.definitions().map((definition) => ({
+            capability: definition.id,
+            execute: async (input: Readonly<Record<string, string>>, toolSignal: AbortSignal) => {
+                if (definition.input === "none") {
+                    this.capabilities!.read({
+                        capability: definition.id as Extract<typeof definition.id, "inspect_article" | "inspect_revisions" | "inspect_artifacts" | "inspect_publishing_guidance">,
+                        context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
+                    });
+                    return { status: "reviewed" };
+                }
+
+                const stream = this.capabilities!.stream({
+                    capability: definition.id as StreamContext["capability"],
+                    context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
+                    requestId: request.requestId,
+                    authorContext: request.authorMessage,
+                    ...(input.operation ? { operation: input.operation as StreamContext["operation"] } : {}),
+                    ...(input.targetLanguage ? { targetLanguage: input.targetLanguage } : {}),
+                }, toolSignal, true);
+
+                for await (const event of stream) {
+                    if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
+                        request.completedCapability = definition.id;
+                        primary = event;
+                    }
+                }
+
+                return { status: "prepared" };
+            },
+        }));
+        
+        for await (const event of request.engine.streamAssistant({
+            message: request.authorMessage,
+            article: excerpt,
+            scope: request.scope.kind,
+            instructions: request.explicitSkillId
+                ? builtInSkillPackages.filter((skillPackage) => skillPackage.reference.id === request.explicitSkillId).map((skillPackage) => skillPackage.instructions)
+                : [],
+            tools,
+        }, signal)) {
+            if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED && primary)
+                yield primary;
+            else
+                yield event;
+        }
+    }
+
+
     private persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
         const content = completedContent(request, event.text);
-        const kind = responseKind(request.resolvedSkillId);
+        const kind = responseKind(request.completedCapability);
         const factCheck = event.factCheck && enrichedFactCheck(event.factCheck, request.scope.baseRevisionId);
-        const artifactId = request.resolvedSkillId
+        const hasArtifact = Boolean(request.completedCapability);
+        const artifactId = hasArtifact
             ? this.artifacts.create({
                 articleId: request.articleId,
                 revisionId: request.scope.baseRevisionId,
-                kind: request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING ? "fact-check" : "assistant-proposal",
+                kind: request.completedCapability === EDITORIAL_CAPABILITY.FACT_CHECK ? "fact-check" : "assistant-proposal",
                 content: JSON.stringify({
                     requestId: request.requestId,
-                    resolvedSkillId: request.resolvedSkillId,
-                    skillSource: request.explicitSkillId ? "explicit" : "inferred",
+                    ...(request.resolvedSkillId ? { resolvedSkillId: request.resolvedSkillId } : {}),
+                    ...(request.completedCapability ? { capability: request.completedCapability } : {}),
+                    ...(request.explicitSkillId ? { skillSource: "explicit" } : {}),
                     authorGuidance: request.authorMessage,
                     scope: request.scope,
                     responseId: event.responseId,
                     proposal: content,
-                    ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile, articleStyleRules: this.styleCorpus.getArticleRules(request.articleId) } : {}),
+                    ...(request.completedCapability === EDITORIAL_CAPABILITY.STYLE_REVIEW ? { styleProfile: this.styleCorpus.get().profile, articleStyleRules: this.styleCorpus.getArticleRules(request.articleId) } : {}),
                     ...(factCheck ? { factCheck } : { findings: event.styleReview }),
                     translation: event.translation
                 })
@@ -297,24 +377,21 @@ export class AssistantService {
         if (artifactId && factCheck)
             this.factChecks.save(artifactId, request.articleId, request.scope.baseRevisionId);
 
-        const result: AssistantEditorialResult | undefined = request.resolvedSkillId
+        const result: AssistantEditorialResult | undefined = hasArtifact
             ? {
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.FACT_CHECKING && factCheck ? { factCheck } : {}),
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW ? { proposal: content, ...(event.styleReview ? { styleReview: event.styleReview } : {}) } : {}),
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && event.translation ? { translation: { metadata: event.translation, content } } : {}),
-                ...(request.resolvedSkillId === BUILT_IN_SKILL.TALKING_POINTS
-                    || request.resolvedSkillId === BUILT_IN_SKILL.NARRATIVE_DRAFT
-                    || request.resolvedSkillId === BUILT_IN_SKILL.FLOW_AND_CLARITY ? { proposal: content } : {}
-                ),
+                ...(request.completedCapability === EDITORIAL_CAPABILITY.FACT_CHECK && factCheck ? { factCheck } : {}),
+                ...(request.completedCapability === EDITORIAL_CAPABILITY.STYLE_REVIEW ? { proposal: content, ...(event.styleReview ? { styleReview: event.styleReview } : {}) } : {}),
+                ...(request.completedCapability === EDITORIAL_CAPABILITY.TRANSLATE && event.translation ? { translation: { metadata: event.translation, content } } : {}),
+                ...(request.completedCapability === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL ? { proposal: content } : {}),
             }
             : undefined;
 
         const message = this.assistant.completeRequest({
             requestId: request.requestId,
             articleId: request.articleId,
-            skillId: request.resolvedSkillId,
+            ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId } : {}),
             responseKind: kind,
-            content: request.resolvedSkillId ? "" : content,
+            content: request.completedCapability ? "" : content,
             proposalContent: result?.proposal,
             editorialArtifactId: artifactId
         });

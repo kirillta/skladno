@@ -14,6 +14,7 @@ import type { EditorialEngineResolver } from "../application/ports/editorial-eng
 import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../application/ports/editorial-engine-error.js";
 import type { EditorialEngineRequest } from "../application/ports/editorial-engine-request.js";
+import type { EditorialAssistantRequest } from "../application/ports/editorial-assistant-request.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
@@ -45,6 +46,16 @@ class FixtureEngine implements EditorialEngine {
 }
 
 
+class CapabilityFixtureEngine extends FixtureEngine {
+    async *streamAssistant(request: EditorialAssistantRequest): AsyncIterable<EditorialEngineEvent> {
+        const proposal = request.tools.find((tool) => tool.capability === "generate_proposal");
+        assert.ok(proposal);
+        await proposal.execute({ operation: EDITORIAL_OPERATION.FLOW_REVISION }, new AbortController().signal);
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-tool-loop", text: "Proposal prepared." };
+    }
+}
+
+
 async function withService(engine: EditorialEngine, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
@@ -59,8 +70,8 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, persi
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: storeResponses
     };
-    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection", persistence.factChecks);
     const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses, persistence.factChecks);
+    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection", persistence.factChecks, undefined, undefined, editorial);
     const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -466,6 +477,33 @@ test("assistant requests persist a revision-bound proposal and splice only the s
         assert.equal(proposalMessage?.proposalContent, "before improved after");
         assert.equal(proposalMessage?.baseRevisionId, article.currentRevisionId);
         assert.equal(proposalMessage?.baseRevisionContent, "before selected after");
+    });
+});
+
+
+test("the live Assistant tool loop stages one catalog Proposal before completion", async () => {
+    const engine = new CapabilityFixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "catalog-proposal", text: "Improved Article" },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "assistant-tool-loop-request",
+                authorMessage: "Improve the flow.",
+                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+            }),
+        });
+        const body = await response.text();
+        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
+
+        assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
+        assert.equal(JSON.parse(artifact.content).capability, "generate_proposal");
+        assert.equal(JSON.parse(artifact.content).proposal, "Improved Article");
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original Article");
     });
 });
 
