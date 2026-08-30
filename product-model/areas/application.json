@@ -79,8 +79,8 @@
                 "packages/web/src/desktop-client.ts",
                 ".github/workflows/electron-windows.yml"
             ],
-            "contract": "The unsigned Windows 11 x64 application runs the existing React application in one context-isolated, sandboxed Electron window. CI publishes stable tags as GitHub releases and preview tags as prereleases, each with the installer, RELEASES manifest, and full package. Its Squirrel installer creates Desktop and Start menu shortcuts. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub prerelease discovery is optional, requires the author's stored network permission, and runs at most daily; download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
-            "persistence": "The desktop client uses the existing user-local .skladno SQLite data. Runtime settings retain the network-permission and automatic-check preferences, staged version, prior version, and one recovery snapshot reference without Article content. Install, upgrade, reinstall, and uninstall do not delete or rewrite that directory.",
+            "contract": "The unsigned Windows 11 x64 application runs the existing React application in one context-isolated, sandboxed Electron window. CI publishes stable tags as GitHub releases and preview tags as prereleases, each with the installer, RELEASES manifest, and full package. Its Squirrel installer creates Desktop and Start menu shortcuts. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub release discovery is optional, requires the author's stored network permission, and runs at most daily; the author chooses stable-only or prerelease-inclusive discovery, while download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
+            "persistence": "The desktop client uses the existing user-local .skladno SQLite data. Runtime settings retain the network-permission, automatic-check, and prerelease-channel preferences, staged version, prior version, and one recovery snapshot reference without Article content. Install, upgrade, reinstall, and uninstall do not delete or rewrite that directory.",
             "limitations": [
                 "Stable and preview releases are unsigned and Windows-only; signing remains in #168.",
                 "Native backup pickers and other Electron-specific Settings work remain in #34."
@@ -278,19 +278,19 @@
         },
         {
             "id": "application.electron-preview-update-discovery",
-            "title": "Preview update discovery is author-controlled",
+            "title": "Update discovery is author-controlled",
             "capabilityIds": ["application.electron-windows-preview"],
-            "preconditions": ["A packaged Windows x64 preview has an available GitHub prerelease and the author has allowed update network access."],
+            "preconditions": ["A packaged Windows x64 release has a newer stable release or prerelease on GitHub and the author has allowed update network access."],
             "event": "The desktop coordinator checks release metadata.",
-            "expected": ["Only the newest complete compatible preview is offered and no download starts before the author requests it."],
+            "expected": ["Only the newest complete compatible release allowed by the stable-only or prerelease-inclusive preference is offered and no download starts before the author requests it."],
             "forbidden": ["Making an update-discovery request without author permission or sending Article content or raw GitHub errors to the renderer."],
             "evidence": { "kind": "automated", "path": "packages/electron/src/desktop-updates.test.ts" }
         },
         {
             "id": "application.electron-preview-update-recovery",
-            "title": "Preview restart and update retains recovery state",
+            "title": "Restart and update retains recovery state",
             "capabilityIds": ["application.electron-windows-preview"],
-            "preconditions": ["A preview update is staged."],
+            "preconditions": ["A stable or preview update is staged."],
             "event": "The author requests Restart and update.",
             "expected": ["A Draft checkpoint and SQLite snapshot succeed before native apply."],
             "forbidden": ["Applying an update after a failed checkpoint or snapshot."],

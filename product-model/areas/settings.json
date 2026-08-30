@@ -78,11 +78,11 @@
         {
             "id": "settings.preview-updates",
             "area": "General",
-            "title": "Author-controlled unsigned Windows preview updates",
+            "title": "Author-controlled unsigned Windows updates",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/web/src/workspace/components/ArticleLibraryPanel.tsx", "packages/electron/src/desktop-updates.ts"],
-            "contract": "General Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes a daily GitHub prerelease check, explicit download, guarded restart, release notes, and recovery guide. An available update appears in the Article Library utility area and opens Updates. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
-            "persistence": "The desktop runtime file stores the network-permission and automatic-check preferences plus non-content update recovery metadata."
+            "contract": "General Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes automatic checks, a stable-only or prerelease-inclusive channel preference, explicit download, guarded restart, release notes, and recovery guidance. An available update appears in the Article Library utility area and opens Updates. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
+            "persistence": "The desktop runtime file stores the network-permission, automatic-check, and prerelease-channel preferences plus non-content update recovery metadata."
         }
     ],
     "scenarios": [
@@ -168,11 +168,11 @@
         },
         {
             "id": "settings.preview-update-controls",
-            "title": "Preview update controls require author action",
+            "title": "Update controls require author action",
             "capabilityIds": ["settings.preview-updates"],
-            "preconditions": ["A packaged Windows preview exposes an available update."],
+            "preconditions": ["A packaged Windows release exposes an available update."],
             "event": "The author opens General Settings, allows update network access, and checks for updates.",
-            "expected": ["The network-permission and automatic-check switches are accessible, a confirmation dialog precedes the persisted network permission, no discovery request occurs before consent, and Download appears only after explicit discovery."],
+            "expected": ["The network-permission, automatic-check, and prerelease-channel switches are accessible, a confirmation dialog precedes the persisted network permission, no discovery request occurs before consent, and Download appears only after explicit discovery."],
             "forbidden": ["A browser or development build exposes update controls, an update-discovery request occurs without consent, or a download starts automatically."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
         },

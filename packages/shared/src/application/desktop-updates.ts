@@ -1,17 +1,24 @@
-export type DesktopUpdateState =
-    | { kind: "unsupported"; currentVersion: string; automaticChecks: boolean; networkAccess: boolean }
-    | { kind: "current"; currentVersion: string; lastCheckedAt?: string; automaticChecks: boolean; networkAccess: boolean }
-    | { kind: "checking"; currentVersion: string; lastCheckedAt?: string; automaticChecks: boolean; networkAccess: boolean }
-    | { kind: "available"; currentVersion: string; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string; automaticChecks: boolean; networkAccess: boolean }
-    | { kind: "downloading"; currentVersion: string; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string; automaticChecks: boolean; networkAccess: boolean }
-    | { kind: "ready"; currentVersion: string; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string; automaticChecks: boolean; networkAccess: boolean }
-    | { kind: "failed"; currentVersion: string; error: "discovery_failed" | "download_failed" | "apply_failed"; lastCheckedAt?: string; automaticChecks: boolean; networkAccess: boolean };
+export type DesktopUpdateState = {
+    currentVersion: string;
+    automaticChecks: boolean;
+    includePrereleases: boolean;
+    networkAccess: boolean;
+} & (
+    | { kind: "unsupported" }
+    | { kind: "current"; lastCheckedAt?: string }
+    | { kind: "checking"; lastCheckedAt?: string }
+    | { kind: "available"; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string }
+    | { kind: "downloading"; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string }
+    | { kind: "ready"; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string }
+    | { kind: "failed"; error: "discovery_failed" | "download_failed" | "apply_failed"; lastCheckedAt?: string }
+);
 
 
 export interface DesktopUpdateClient {
     getState(): Promise<DesktopUpdateState>;
     setNetworkAccess(enabled: boolean): Promise<DesktopUpdateState>;
     setAutomaticChecks(enabled: boolean): Promise<DesktopUpdateState>;
+    setIncludePrereleases(enabled: boolean): Promise<DesktopUpdateState>;
     checkNow(): Promise<DesktopUpdateState>;
     download(): Promise<DesktopUpdateState>;
     restartAndUpdate(): Promise<void>;
@@ -31,7 +38,7 @@ export function isDesktopUpdateState(value: unknown): value is DesktopUpdateStat
     if (!isRecord(value) || typeof value.kind !== "string")
         return false;
 
-    if (typeof value.currentVersion !== "string" || typeof value.automaticChecks !== "boolean" || typeof value.networkAccess !== "boolean")
+    if (typeof value.currentVersion !== "string" || typeof value.automaticChecks !== "boolean" || typeof value.includePrereleases !== "boolean" || typeof value.networkAccess !== "boolean")
         return false;
 
     if (value.kind === "unsupported")

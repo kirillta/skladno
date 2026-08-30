@@ -1,23 +1,23 @@
-# ADR-010: Windows preview updates remain author-controlled
+# ADR-010: Windows updates remain author-controlled
 
 - Status: Accepted
 - Date: 2026-08-27
-- Scope: Windows preview distribution, update discovery, apply and restart, and recovery
+- Scope: Windows distribution, update discovery, apply and restart, and recovery
 - Depends on: [ADR-006](adr-006-sqlite-lifecycle-and-recovery.md), [ADR-008](adr-008-loopback-service-trust-boundary.md), [ADR-009](adr-009-native-settings-credentials-and-data-switching.md)
 
 ## Context
 
-Skladno distributes an unsigned Windows 11 x64 preview through GitHub Releases and Squirrel.Windows. Preview users need updates before paid Windows code signing is justified. An update can replace application binaries and start forward-only SQLite migrations, so it must not bypass Draft recovery, database shutdown, or author choice.
+Skladno distributes unsigned Windows 11 x64 releases through GitHub Releases and Squirrel.Windows. Users need updates before paid Windows code signing is justified. An update can replace application binaries and start forward-only SQLite migrations, so it must not bypass Draft recovery, database shutdown, or author choice.
 
 GitHub Releases can host the installer, full package, and `RELEASES` manifest required by Squirrel.Windows. Electron's public update service ignores releases marked as prereleases and would add another network recipient. Skladno already needs separate discovery and download actions, so that service adds no useful capability here.
 
 ## Decision
 
-Keep Windows 11 x64 as the only update target. Publish stable builds as GitHub releases and preview builds as GitHub prereleases with SemVer tags such as `v0.1.0-preview.2`. A security-related preview uses the exact optional suffix `.security`, for example `v0.1.1-preview.1.security`. The release workflow validates the tag and package versions. In-app update discovery remains preview-only.
+Keep Windows 11 x64 as the only update target. Publish stable builds as GitHub releases and preview builds as GitHub prereleases with SemVer tags such as `v0.1.0-preview.2`. A security-related preview uses the exact optional suffix `.security`, for example `v0.1.1-preview.1.security`. The release workflow validates the tag and package versions. In-app update discovery considers both stable releases and prereleases.
 
 Use GitHub directly. General Settings requires the author's persisted network permission, confirmed in an in-app dialog naming GitHub and the data boundary, before a packaged Electron main process checks public release metadata; after consent, it checks at startup and at most once every 24 hours unless the author disables automatic checks. It uses Electron's Chromium network stack so normal system networking policy applies. Settings contains the permission and automatic-check switches, current version, check status, release summary, explicit Check, Download, and Restart actions, plus privacy and recovery guidance. Discovery sends the repository identity, installed version, platform, architecture, and normal connection metadata to GitHub. It sends no device identifier, account, Article content, or analytics.
 
-Only the newest compatible prerelease is offered. The author may ignore it indefinitely. Skladno never forces a check, download, deadline, restart, or install because an update is security-related. The `.security` suffix changes the visible warning only.
+Only the newest compatible release allowed by the author's channel preference is offered. Stable builds default to stable-only discovery, while preview builds default to including prereleases; the author can change that preference in Settings. A stable release ranks above previews of the same version. The author may ignore it indefinitely. Skladno never forces a check, download, deadline, restart, or install because an update is security-related. The `.security` suffix changes the visible warning only.
 
 After discovery, Electron's native Squirrel updater downloads only when the author requests it. Skladno points it at the selected GitHub release assets. It validates external metadata before it becomes renderer-safe update state. Raw GitHub and Squirrel errors remain in the privileged process and are mapped to stable, localized failures.
 
