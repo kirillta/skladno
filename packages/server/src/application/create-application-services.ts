@@ -16,6 +16,8 @@ import type { SettingsStore } from "./ports/settings-store.js";
 import type { StyleCorpusStore } from "./ports/style-corpus-store.js";
 import type { SystemDateTimeFormatProvider } from "./ports/system-date-time-format-provider.js";
 import type { ManagedCredentials } from "./ports/managed-credentials.js";
+import { EditorialCapabilityCatalog } from "./assistant/editorial-capability-catalog.js";
+import type { EditorialService } from "./editorial/editorial-service.js";
 
 
 export function createApplicationServices(
@@ -31,14 +33,19 @@ export function createApplicationServices(
     factChecks: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void } = { list: () => [], resolve: () => undefined, save: () => undefined },
     backups?: BackupManager,
     credentials?: ManagedCredentials,
+    editorial?: EditorialService,
 ): ApplicationServices {
+    const articleService = new ArticleService(articles, assistant);
+    const publishing = new PublishingService(settings);
+    const factCheckService = new FactCheckService(factChecks);
     return {
-        articles: new ArticleService(articles, assistant),
+        articles: articleService,
         assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks),
         settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId, backups, credentials),
-        publishing: new PublishingService(settings),
+        publishing,
         styleCorpus: new StyleCorpusService(styleCorpus, engines, articles),
         proposalSummaries: new ProposalSummaryService(engines, artifacts),
-        factChecks: new FactCheckService(factChecks),
+        factChecks: factCheckService,
+        ...(editorial ? { capabilities: new EditorialCapabilityCatalog(articleService, artifacts, publishing, editorial) } : {}),
     };
 }

@@ -33,9 +33,10 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
 
     assistant.seedGreetings();
 
+    const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled, factChecks);
     return {
-        services: createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: (connection, apiKey) => listAvailableModels(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable" ? process.env[connection.credentialSource.environmentVariableName] : credentials.get(connection.id))) }, randomUUID, factChecks, new SqliteBackupManager(database), credentials),
-        editorial: new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled, factChecks),
+        services: createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: (connection, apiKey) => listAvailableModels(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable" ? process.env[connection.credentialSource.environmentVariableName] : credentials.get(connection.id))) }, randomUUID, factChecks, new SqliteBackupManager(database), credentials, editorial),
+        editorial,
         database,
     };
 }
