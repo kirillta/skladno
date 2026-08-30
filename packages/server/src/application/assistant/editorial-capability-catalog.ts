@@ -26,6 +26,7 @@ export type EditorialCapabilityResultKind = "article" | "revisions" | "artifacts
 export interface EditorialCapabilityDefinition {
     id: EditorialCapabilityId;
     allowedContext: "article";
+    input: "none" | "proposal-operation" | "target-language";
     prerequisite?: "style-corpus" | "target-language";
     result: EditorialCapabilityResultKind;
     retry: "never" | "transient-read";
@@ -34,20 +35,36 @@ export interface EditorialCapabilityDefinition {
 
 
 export const editorialCapabilityDefinitions: readonly EditorialCapabilityDefinition[] = [
-    { id: EDITORIAL_CAPABILITY.INSPECT_ARTICLE, allowedContext: "article", result: "article", retry: "transient-read", activity: "Reviewing the current Article." },
-    { id: EDITORIAL_CAPABILITY.INSPECT_REVISIONS, allowedContext: "article", result: "revisions", retry: "transient-read", activity: "Reviewing Revision history." },
-    { id: EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS, allowedContext: "article", result: "artifacts", retry: "transient-read", activity: "Reviewing saved editorial work." },
-    { id: EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE, allowedContext: "article", result: "publishing-guidance", retry: "transient-read", activity: "Reviewing publishing guidance." },
-    { id: EDITORIAL_CAPABILITY.GENERATE_PROPOSAL, allowedContext: "article", result: "proposal", retry: "never", activity: "Preparing a Proposal." },
-    { id: EDITORIAL_CAPABILITY.FACT_CHECK, allowedContext: "article", result: "fact-check", retry: "never", activity: "Checking facts." },
-    { id: EDITORIAL_CAPABILITY.STYLE_REVIEW, allowedContext: "article", prerequisite: "style-corpus", result: "style-review", retry: "never", activity: "Reviewing style." },
-    { id: EDITORIAL_CAPABILITY.TRANSLATE, allowedContext: "article", prerequisite: "target-language", result: "translation", retry: "never", activity: "Preparing a translation." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_ARTICLE, allowedContext: "article", input: "none", result: "article", retry: "transient-read", activity: "Reviewing the current Article." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_REVISIONS, allowedContext: "article", input: "none", result: "revisions", retry: "transient-read", activity: "Reviewing Revision history." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS, allowedContext: "article", input: "none", result: "artifacts", retry: "transient-read", activity: "Reviewing saved editorial work." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE, allowedContext: "article", input: "none", result: "publishing-guidance", retry: "transient-read", activity: "Reviewing publishing guidance." },
+    { id: EDITORIAL_CAPABILITY.GENERATE_PROPOSAL, allowedContext: "article", input: "proposal-operation", result: "proposal", retry: "never", activity: "Preparing a Proposal." },
+    { id: EDITORIAL_CAPABILITY.FACT_CHECK, allowedContext: "article", input: "none", result: "fact-check", retry: "never", activity: "Checking facts." },
+    { id: EDITORIAL_CAPABILITY.STYLE_REVIEW, allowedContext: "article", input: "none", prerequisite: "style-corpus", result: "style-review", retry: "never", activity: "Reviewing style." },
+    { id: EDITORIAL_CAPABILITY.TRANSLATE, allowedContext: "article", input: "target-language", prerequisite: "target-language", result: "translation", retry: "never", activity: "Preparing a translation." },
 ];
 
 
 export interface EditorialCapabilityContext {
     articleId: string;
     baseRevisionId: string;
+}
+
+
+export function isValidatedEditorialCapabilityCall(capability: string, input: Readonly<Record<string, string>>): capability is EditorialCapabilityId {
+    const definition = editorialCapabilityDefinitions.find((candidate) => candidate.id === capability);
+    const keys = Object.keys(input);
+    if (!definition)
+        return false;
+
+    if (definition.input === "none")
+        return keys.length === 0;
+
+    if (definition.input === "proposal-operation")
+        return keys.length === 1 && (input.operation === EDITORIAL_OPERATION.THESIS_TO_NARRATIVE || input.operation === EDITORIAL_OPERATION.FLOW_REVISION);
+
+    return keys.length === 1 && Boolean(input.targetLanguage?.trim());
 }
 
 

@@ -7,7 +7,7 @@ import { EditorialService } from "../editorial/editorial-service.js";
 import { PublishingService } from "../publishing/publishing-service.js";
 import { openDatabase } from "../../infrastructure/persistence/database.js";
 import { createTestPersistence } from "../../test-support/test-persistence.js";
-import { EDITORIAL_CAPABILITY, EditorialCapabilityCatalog, editorialCapabilityDefinitions } from "./editorial-capability-catalog.js";
+import { EDITORIAL_CAPABILITY, EditorialCapabilityCatalog, editorialCapabilityDefinitions, isValidatedEditorialCapabilityCall } from "./editorial-capability-catalog.js";
 
 
 function withCatalog(run: (catalog: EditorialCapabilityCatalog, article: import("@skladno/shared").Article) => void): void {
@@ -49,3 +49,12 @@ test("the catalog rejects a proposal without an approved operation before provid
         authorContext: "",
     }, new AbortController().signal), { name: "ApplicationServiceError" });
 }));
+
+
+test("the catalog owns capability-specific tool input validation", () => {
+    assert.ok(isValidatedEditorialCapabilityCall(EDITORIAL_CAPABILITY.INSPECT_ARTICLE, {}));
+    assert.ok(isValidatedEditorialCapabilityCall(EDITORIAL_CAPABILITY.GENERATE_PROPOSAL, { operation: "flow_revision" }));
+    assert.ok(isValidatedEditorialCapabilityCall(EDITORIAL_CAPABILITY.TRANSLATE, { targetLanguage: "Spanish" }));
+    assert.equal(isValidatedEditorialCapabilityCall(EDITORIAL_CAPABILITY.FACT_CHECK, { url: "https://example.com" }), false);
+    assert.equal(isValidatedEditorialCapabilityCall(EDITORIAL_CAPABILITY.GENERATE_PROPOSAL, { operation: "anything" }), false);
+});
