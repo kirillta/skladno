@@ -23,8 +23,9 @@ The first catalog covers safe existing work:
 - inspect relevant Revisions and editorial artifacts;
 - inspect the selected Publishing profile guidance;
 - run existing Proposal generation, fact-checking, style review, and translation operations.
+- inspect Style Corpus readiness, add the current immutable Revision as a local style sample, and explicitly rebuild the Style Profile.
 
-The catalog excludes Draft mutation, Proposal acceptance or rejection, Revision restoration, Finding resolution, translation Article creation, style-corpus mutation, Publishing profile mutation, copying for publication, direct publishing, arbitrary filesystem or network access, credentials, persistence stores, and unrestricted internal routes. These remain Author actions behind their existing application and Workspace boundaries.
+The catalog excludes Draft mutation, Proposal acceptance or rejection, Revision restoration, Finding resolution, translation Article creation, arbitrary Style Corpus editing or deletion, Publishing profile mutation, copying for publication, direct publishing, arbitrary filesystem or network access, credentials, persistence stores, and unrestricted internal routes. Adding the current immutable Revision and rebuilding its local Style Profile are allowed only after an explicit Author request. The excluded operations remain Author actions behind their existing application and Workspace boundaries.
 
 Selection is an authority boundary. A selection-scoped request receives the selected text and required metadata. A capability that needs the whole Article must explain the need and obtain a new whole-Article request. If the current Revision changes during execution, the run stops instead of rebasing its work.
 

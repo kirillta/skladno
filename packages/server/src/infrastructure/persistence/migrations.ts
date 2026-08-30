@@ -189,4 +189,11 @@ export const migrations = [
         );
         `,
     },
+    {
+        version: 14,
+        name: "assistant_capability_execution",
+        sql: `
+        ALTER TABLE assistant_requests ADD COLUMN capability_name TEXT;
+        `,
+    },
 ] as const;

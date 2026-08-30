@@ -1,10 +1,11 @@
-import { APPLICATION_ERROR, EDITORIAL_OPERATION, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type Article, type EditorialArtifact, type EditorialOperation, type PublishingSettings } from "@skladno/shared";
+import { APPLICATION_ERROR, EDITORIAL_OPERATION, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type Article, type EditorialArtifact, type EditorialOperation } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleService } from "../articles/article-service.js";
 import type { EditorialService } from "../editorial/editorial-service.js";
 import type { PublishingService } from "../publishing/publishing-service.js";
 import type { EditorialEngineEvent } from "../ports/editorial-engine-event.js";
+import type { StyleCorpusService } from "../editorial/style-corpus-service.js";
 
 
 export const EDITORIAL_CAPABILITY = {
@@ -16,17 +17,21 @@ export const EDITORIAL_CAPABILITY = {
     FACT_CHECK: "fact_check",
     STYLE_REVIEW: "style_review",
     TRANSLATE: "translate",
+    INSPECT_STYLE_CORPUS: "inspect_style_corpus",
+    ADD_REVISION_TO_STYLE_CORPUS: "add_revision_to_style_corpus",
+    REBUILD_STYLE_PROFILE: "rebuild_style_profile",
 } as const;
 
 
 export type EditorialCapabilityId = typeof EDITORIAL_CAPABILITY[keyof typeof EDITORIAL_CAPABILITY];
-export type EditorialCapabilityResultKind = "article" | "revisions" | "artifacts" | "publishing-guidance" | "proposal" | "fact-check" | "style-review" | "translation";
+export type EditorialCapabilityResultKind = "article" | "revisions" | "artifacts" | "publishing-guidance" | "style-corpus" | "proposal" | "fact-check" | "style-review" | "translation";
 
 
 export interface EditorialCapabilityDefinition {
     id: EditorialCapabilityId;
     allowedContext: "article";
     input: "none" | "proposal-operation" | "target-language";
+    execution: "read" | "artifact" | "action";
     prerequisite?: "style-corpus" | "target-language";
     result: EditorialCapabilityResultKind;
     retry: "never" | "transient-read";
@@ -35,14 +40,17 @@ export interface EditorialCapabilityDefinition {
 
 
 export const editorialCapabilityDefinitions: readonly EditorialCapabilityDefinition[] = [
-    { id: EDITORIAL_CAPABILITY.INSPECT_ARTICLE, allowedContext: "article", input: "none", result: "article", retry: "transient-read", activity: "Reviewing the current Article." },
-    { id: EDITORIAL_CAPABILITY.INSPECT_REVISIONS, allowedContext: "article", input: "none", result: "revisions", retry: "transient-read", activity: "Reviewing Revision history." },
-    { id: EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS, allowedContext: "article", input: "none", result: "artifacts", retry: "transient-read", activity: "Reviewing saved editorial work." },
-    { id: EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE, allowedContext: "article", input: "none", result: "publishing-guidance", retry: "transient-read", activity: "Reviewing publishing guidance." },
-    { id: EDITORIAL_CAPABILITY.GENERATE_PROPOSAL, allowedContext: "article", input: "proposal-operation", result: "proposal", retry: "never", activity: "Preparing a Proposal." },
-    { id: EDITORIAL_CAPABILITY.FACT_CHECK, allowedContext: "article", input: "none", result: "fact-check", retry: "never", activity: "Checking facts." },
-    { id: EDITORIAL_CAPABILITY.STYLE_REVIEW, allowedContext: "article", input: "none", prerequisite: "style-corpus", result: "style-review", retry: "never", activity: "Reviewing style." },
-    { id: EDITORIAL_CAPABILITY.TRANSLATE, allowedContext: "article", input: "target-language", prerequisite: "target-language", result: "translation", retry: "never", activity: "Preparing a translation." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_ARTICLE, execution: "read", allowedContext: "article", input: "none", result: "article", retry: "transient-read", activity: "Reviewing the current Article." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_REVISIONS, execution: "read", allowedContext: "article", input: "none", result: "revisions", retry: "transient-read", activity: "Reviewing Revision history." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS, execution: "read", allowedContext: "article", input: "none", result: "artifacts", retry: "transient-read", activity: "Reviewing saved editorial work." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE, execution: "read", allowedContext: "article", input: "none", result: "publishing-guidance", retry: "transient-read", activity: "Reviewing publishing guidance." },
+    { id: EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS, execution: "read", allowedContext: "article", input: "none", result: "style-corpus", retry: "transient-read", activity: "Reviewing the Style Corpus." },
+    { id: EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, execution: "action", allowedContext: "article", input: "none", result: "style-corpus", retry: "never", activity: "Adding the current Revision to the Style Corpus." },
+    { id: EDITORIAL_CAPABILITY.REBUILD_STYLE_PROFILE, execution: "action", allowedContext: "article", input: "none", prerequisite: "style-corpus", result: "style-corpus", retry: "never", activity: "Rebuilding the Style Profile." },
+    { id: EDITORIAL_CAPABILITY.GENERATE_PROPOSAL, execution: "artifact", allowedContext: "article", input: "proposal-operation", result: "proposal", retry: "never", activity: "Preparing a Proposal." },
+    { id: EDITORIAL_CAPABILITY.FACT_CHECK, execution: "artifact", allowedContext: "article", input: "none", result: "fact-check", retry: "never", activity: "Checking facts." },
+    { id: EDITORIAL_CAPABILITY.STYLE_REVIEW, execution: "artifact", allowedContext: "article", input: "none", prerequisite: "style-corpus", result: "style-review", retry: "never", activity: "Reviewing style." },
+    { id: EDITORIAL_CAPABILITY.TRANSLATE, execution: "artifact", allowedContext: "article", input: "target-language", prerequisite: "target-language", result: "translation", retry: "never", activity: "Preparing a translation." },
 ];
 
 
@@ -108,7 +116,8 @@ interface ReadContext {
     capability: typeof EDITORIAL_CAPABILITY.INSPECT_ARTICLE
         | typeof EDITORIAL_CAPABILITY.INSPECT_REVISIONS
         | typeof EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS
-        | typeof EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE;
+        | typeof EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE
+        | typeof EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS;
     context: EditorialCapabilityContext;
 }
 
@@ -123,6 +132,9 @@ export interface StreamContext {
     authorContext: string;
     operation?: Extract<EditorialOperation, "thesis_to_narrative" | "flow_revision">;
     targetLanguage?: string;
+    articleContent?: string;
+    articleSelection?: boolean;
+    surroundingArticleCharacterCount?: number;
 }
 
 
@@ -173,6 +185,7 @@ export class EditorialCapabilityCatalog {
         private readonly artifacts: ArtifactStore,
         private readonly publishing: PublishingService,
         private readonly editorial: EditorialService,
+        private readonly styleCorpus: StyleCorpusService,
     ) { }
 
 
@@ -181,7 +194,7 @@ export class EditorialCapabilityCatalog {
     }
 
 
-    read(input: ReadContext): Article | ReturnType<ArticleService["listRevisions"]> | EditorialArtifactSummary[] | { settings: PublishingSettings; profile: ReturnType<typeof getPublishLimitProfile> } {
+    read(input: ReadContext): unknown {
         const article = currentArticle(this.articles, input.context);
         switch (input.capability) {
             case EDITORIAL_CAPABILITY.INSPECT_ARTICLE:
@@ -195,7 +208,19 @@ export class EditorialCapabilityCatalog {
                 const profileId = isPublishLimitProfileId(article.publishingProfileId) ? article.publishingProfileId : settings.defaultProfileId;
                 return { settings, profile: getPublishLimitProfile(profileId, settings) };
             }
+            case EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS: {
+                const corpus = this.styleCorpus.get();
+                return { status: corpus.status, itemCount: corpus.items.length, rules: corpus.rules, articleRules: this.styleCorpus.getArticleRules(article.id), currentRevisionIncluded: corpus.items.some((item) => item.revisionId === article.currentRevisionId) };
+            }
         }
+    }
+
+
+    action(capability: typeof EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS | typeof EDITORIAL_CAPABILITY.REBUILD_STYLE_PROFILE, context: EditorialCapabilityContext) {
+        const article = currentArticle(this.articles, context);
+        return capability === EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS
+            ? this.styleCorpus.addArticleRevision(article.id, article.currentRevisionId)
+            : this.styleCorpus.rebuild();
     }
 
 
@@ -211,6 +236,9 @@ export class EditorialCapabilityCatalog {
             operation,
             authorContext: input.authorContext,
             ...(input.targetLanguage?.trim() ? { targetLanguage: input.targetLanguage.trim() } : {}),
+            ...(input.articleContent !== undefined ? { articleContent: input.articleContent } : {}),
+            ...(input.articleSelection ? { articleSelection: true } : {}),
+            ...(input.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: input.surroundingArticleCharacterCount } : {}),
         };
 
         return staged

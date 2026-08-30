@@ -95,7 +95,9 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
 function engineRequest(request: EditorialServiceRequest, context: EditorialStreamContext) {
     return {
         operation: request.operation,
-        article: context.article.currentRevision.content,
+        article: request.articleContent ?? context.article.currentRevision.content,
+        ...(request.articleSelection ? { articleSelection: true } : {}),
+        ...(request.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: request.surroundingArticleCharacterCount } : {}),
         authorContext: request.authorContext,
         ...(context.styleProfile ? { styleProfile: context.styleProfile } : {}),
         ...(context.styleProfile ? { articleStyleRules: context.articleStyleRules } : {}),

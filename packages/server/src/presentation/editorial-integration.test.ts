@@ -47,10 +47,15 @@ class FixtureEngine implements EditorialEngine {
 
 
 class CapabilityFixtureEngine extends FixtureEngine {
+    constructor(events: EditorialEngineEvent[], private readonly capability = "generate_proposal") {
+        super(events);
+    }
+
+
     async *streamAssistant(request: EditorialAssistantRequest): AsyncIterable<EditorialEngineEvent> {
-        const proposal = request.tools.find((tool) => tool.capability === "generate_proposal");
-        assert.ok(proposal);
-        await proposal.execute({ operation: EDITORIAL_OPERATION.FLOW_REVISION }, new AbortController().signal);
+        const selected = request.tools.find((tool) => tool.capability === this.capability);
+        assert.ok(selected);
+        await selected.execute(this.capability === "generate_proposal" ? { operation: EDITORIAL_OPERATION.FLOW_REVISION } : {}, new AbortController().signal);
         yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-tool-loop", text: "Proposal prepared." };
     }
 }
@@ -504,6 +509,32 @@ test("the live Assistant tool loop stages one catalog Proposal before completion
         assert.equal(JSON.parse(artifact.content).capability, "generate_proposal");
         assert.equal(JSON.parse(artifact.content).proposal, "Improved Article");
         assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original Article");
+    });
+});
+
+
+test("the live Assistant tool loop runs no-input artifact capabilities", async () => {
+    const engine = new CapabilityFixtureEngine([{
+        type: EDITORIAL_ENGINE_EVENT.COMPLETED,
+        responseId: "catalog-fact-check",
+        text: "",
+        factCheck: { findings: [{ claim: "A claim", status: "unverifiable", rationale: "No source.", uncertainty: "Unknown.", sources: [] }] },
+    }], "fact_check");
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "A claim" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "assistant-tool-fact", authorMessage: "Check this fact.", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+        const body = await response.text();
+
+        assert.match(body, /"summary":"Checking facts\."/);
+        assert.match(body, /"type":"staged_completion"/);
+        assert.match(body, /"responseKind":"findings_prepared"/);
+        assert.equal(repositories.editorialArtifacts.list(article.id)[0]?.kind, "fact-check");
+        assert.equal(repositories.assistant.getRequest("assistant-tool-fact")?.execution?.capability, "fact_check");
     });
 });
 

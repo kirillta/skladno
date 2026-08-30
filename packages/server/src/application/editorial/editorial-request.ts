@@ -7,4 +7,7 @@ export interface EditorialServiceRequest {
     operation: EditorialOperation;
     authorContext: string;
     targetLanguage?: string;
+    articleContent?: string;
+    articleSelection?: boolean;
+    surroundingArticleCharacterCount?: number;
 }

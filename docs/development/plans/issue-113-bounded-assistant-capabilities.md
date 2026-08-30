@@ -19,6 +19,7 @@ Complete when the fixtures describe both transports, all six legacy Skill IDs lo
 
 - Add a server-owned catalog with declared input validation, allowed context, prerequisites, result type, retry policy, and human-readable activity for each capability.
 - Adapt existing application services for Article and Revision context, artifact listing, Publishing guidance, Proposal generation, fact-checking, style review, and translation. Reuse the same services called by Workspace flows.
+- Include explicit, bounded local actions that need no generated-content approval: inspect Style Corpus readiness, add the current immutable Revision to it, and rebuild the Style Profile.
 - Keep Author-only mutations outside the catalog. Reject unregistered calls and excess context before provider execution.
 - Move purpose-specific model selection from Skill identity to the invoked Editorial capability while preserving current configured behavior.
 

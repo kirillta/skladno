@@ -82,6 +82,11 @@ export class AssistantRepository {
     }
 
 
+    setExecution(requestId: string, capability: string): void {
+        this.database.prepare("UPDATE assistant_requests SET capability_name = ?, updated_at = ? WHERE id = ?").run(capability, now(), requestId);
+    }
+
+
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
         const timestamp = now();
         const messageId = createId();
@@ -139,10 +144,12 @@ export class AssistantRepository {
         if ((explicitSkillValue && !explicitSkillId) || (resolvedSkillValue && !resolvedSkillId) || (skillSource && !skillSources.includes(skillSource)))
             throw new Error("Invalid persisted assistant request.");
 
+        const capability = row.capability_name === null || row.capability_name === undefined ? undefined : String(row.capability_name);
         return {
             id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
             ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}), status,
             ...(row.retry_of_request_id === null ? {} : { retryOfRequestId: String(row.retry_of_request_id) }), ...(row.error_code === null ? {} : { errorCode: String(row.error_code) }),
+            ...(capability ? { execution: { capability, status, requestId: String(row.id), baseRevisionId: String(row.base_revision_id) } } : {}),
             createdAt: String(row.created_at), updatedAt: String(row.updated_at)
         };
     }

@@ -8,6 +8,7 @@ export interface AssistantStore {
     createRequest(input: { id: string; articleId: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; skillOffset?: number; retryOfRequestId?: string }): AssistantRequest;
     setAuthorMessage(requestId: string, content: string): void;
     resolveRequest(requestId: string, skillId: BuiltInSkillId | undefined, source: AssistantSkillSource | undefined): void;
+    setExecution(requestId: string, capability: string): void;
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage;
     failRequest(requestId: string, status: "failed" | "cancelled", errorCode: string): void;
 }

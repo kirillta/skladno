@@ -2,7 +2,7 @@ import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCo
 import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
-import { activityForEditorialOperation, capabilityForEditorialOperation, EDITORIAL_CAPABILITY, type EditorialCapabilityCatalog, type StreamContext } from "./editorial-capability-catalog.js";
+import { activityForEditorialOperation, capabilityForEditorialOperation, EDITORIAL_CAPABILITY, isValidatedEditorialCapabilityCall, type EditorialCapabilityCatalog, type StreamContext } from "./editorial-capability-catalog.js";
 import { builtInSkillPackages } from "./built-in-skill-packages.js";
 import type { ArticleStore } from "../ports/article-store.js";
 import type { AssistantArtifactStore } from "../ports/assistant-artifact-store.js";
@@ -30,6 +30,8 @@ export interface PreparedAssistantRequest extends AssistantServiceRequest {
     reusableFactFindings?: FactCheckFinding[];
     usesCapabilityLoop: boolean;
     completedCapability?: string;
+    capabilityActivities: { summary: string; status: "started" | "completed" }[];
+    pendingActions: ("add_revision_to_style_corpus" | "rebuild_style_profile")[];
 }
 
 
@@ -192,6 +194,8 @@ export class AssistantService {
             operation,
             engine,
             usesCapabilityLoop,
+            capabilityActivities: [],
+            pendingActions: [],
             ...(!usesCapabilityLoop && fallbackSkillId ? { completedCapability: capabilityForEditorialOperation(operation) } : {}),
             ...(reusableFactFindings.length ? { reusableFactFindings } : {})
         };
@@ -216,14 +220,14 @@ export class AssistantService {
             requestId: request.requestId,
             ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {})
         };
-        yield {
-            type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY,
-            requestId: request.requestId,
-            activity: { summary: activityForEditorialOperation(request.operation), status: "started" },
-        };
+        if (!request.usesCapabilityLoop)
+            yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: activityForEditorialOperation(request.operation), status: "started" } };
 
         let completed = false;
         try {
+            if (request.usesCapabilityLoop)
+                yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: "Working on your request.", status: "started" } };
+
             for await (const event of (request.usesCapabilityLoop ? this.capabilityLoopStream(request, signal) : this.engineStream(request, signal))) {
                 if (event.type === EDITORIAL_ENGINE_EVENT.TEXT_DELTA) {
                     yield { type: ASSISTANT_EVENT.TEXT_DELTA, requestId: request.requestId, delta: event.delta };
@@ -231,12 +235,15 @@ export class AssistantService {
                     yield { type: ASSISTANT_EVENT.TOOL_STATUS, requestId: request.requestId, tool: event.tool, status: event.status, ...(event.claims ? { claims: event.claims } : {}) };
                 } else {
                     completed = true;
+                    for (const activity of request.capabilityActivities)
+                        yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity };
+
+                    const kind = responseKind(request.completedCapability);
+                    yield { type: ASSISTANT_EVENT.STAGED_COMPLETION, requestId: request.requestId, completion: { responseKind: kind } };
                     const completion = this.persistCompletion(request, event);
-                    yield {
-                        type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY,
-                        requestId: request.requestId,
-                        activity: { summary: activityForEditorialOperation(request.operation), status: "completed" },
-                    };
+                    if (!request.usesCapabilityLoop)
+                        yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: activityForEditorialOperation(request.operation), status: "completed" } };
+
                     yield { type: ASSISTANT_EVENT.COMPLETED, requestId: request.requestId, ...completion };
                 }
             }
@@ -294,22 +301,51 @@ export class AssistantService {
         const excerpt = request.scope.kind === "selection"
             ? request.articleContent.slice(request.scope.startOffset, request.scope.endOffset)
             : request.articleContent;
-        if (request.scope.kind === "selection")
-            yield* request.engine.streamConversation({ message: request.authorMessage, article: excerpt, scope: "selection", history: [] }, signal);
-
-        if (request.scope.kind === "selection")
-            return;
-
         let primary: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }> | undefined;
-        const tools = this.capabilities.definitions().map((definition) => ({
+        const history = this.assistant.listMessages(request.articleId).flatMap((message) => message.content && (message.role === "author" || (message.role === "assistant" && message.kind === "response"))
+            ? [{ role: message.role === "author" ? "author" as const : "assistant" as const, content: message.content }]
+            : []).slice(-12);
+        const definitions = request.scope.kind === "selection"
+            ? this.capabilities.definitions().filter((definition) => definition.execution === "artifact" && definition.id !== EDITORIAL_CAPABILITY.TRANSLATE)
+            : this.capabilities.definitions();
+        const tools = definitions.map((definition) => ({
             capability: definition.id,
+            description: definition.activity,
+            input: definition.input,
             execute: async (input: Readonly<Record<string, string>>, toolSignal: AbortSignal) => {
-                if (definition.input === "none") {
-                    this.capabilities!.read({
-                        capability: definition.id as Extract<typeof definition.id, "inspect_article" | "inspect_revisions" | "inspect_artifacts" | "inspect_publishing_guidance">,
-                        context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
+                if (!isValidatedEditorialCapabilityCall(definition.id, input))
+                    throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
+                request.capabilityActivities.push({ summary: definition.activity, status: "started" });
+                this.assistant.setExecution(request.requestId, definition.id);
+
+                if (definition.execution === "read") {
+                    const read = () => this.capabilities!.read({ 
+                        capability: definition.id as Extract<typeof definition.id, 
+                        "inspect_article" | "inspect_revisions" | "inspect_artifacts" | "inspect_publishing_guidance" | "inspect_style_corpus">, 
+                        context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId } 
                     });
-                    return { status: "reviewed" };
+                    
+                    let result: unknown;
+                    try {
+                        result = read();
+                    } catch (error) {
+                        if (definition.retry !== "transient-read")
+                            throw error;
+
+                        result = read();
+                    }
+
+                    request.capabilityActivities.push({ summary: definition.activity, status: "completed" });
+                    return result;
+                }
+
+                if (definition.execution === "action") {
+                    const action = definition.id as "add_revision_to_style_corpus" | "rebuild_style_profile";
+                    request.pendingActions.push(action);
+                    request.capabilityActivities.push({ summary: definition.activity, status: "completed" });
+                    
+                    return { status: "staged" };
                 }
 
                 const stream = this.capabilities!.stream({
@@ -319,19 +355,24 @@ export class AssistantService {
                     authorContext: request.authorMessage,
                     ...(input.operation ? { operation: input.operation as StreamContext["operation"] } : {}),
                     ...(input.targetLanguage ? { targetLanguage: input.targetLanguage } : {}),
+                    ...(request.scope.kind === "selection" ? { articleContent: excerpt, articleSelection: true, surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
                 }, toolSignal, true);
 
                 for await (const event of stream) {
                     if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
+                        if (primary)
+                            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
                         request.completedCapability = definition.id;
                         primary = event;
                     }
                 }
 
+                request.capabilityActivities.push({ summary: definition.activity, status: "completed" });
                 return { status: "prepared" };
             },
         }));
-        
+
         for await (const event of request.engine.streamAssistant({
             message: request.authorMessage,
             article: excerpt,
@@ -339,6 +380,8 @@ export class AssistantService {
             instructions: request.explicitSkillId
                 ? builtInSkillPackages.filter((skillPackage) => skillPackage.reference.id === request.explicitSkillId).map((skillPackage) => skillPackage.instructions)
                 : [],
+            history,
+            skills: builtInSkillPackages.map((skillPackage) => ({ id: skillPackage.reference.id, name: skillPackage.name, description: skillPackage.description, instructions: skillPackage.instructions })),
             tools,
         }, signal)) {
             if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED && primary)
@@ -350,6 +393,13 @@ export class AssistantService {
 
 
     private persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
+        const article = this.articles.get(request.articleId);
+        if (!article || article.currentRevisionId !== request.scope.baseRevisionId)
+            throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
+
+        for (const action of request.pendingActions)
+            this.capabilities!.action(action, { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId });
+
         const content = completedContent(request, event.text);
         const kind = responseKind(request.completedCapability);
         const factCheck = event.factCheck && enrichedFactCheck(event.factCheck, request.scope.baseRevisionId);
