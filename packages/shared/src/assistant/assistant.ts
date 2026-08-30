@@ -220,13 +220,13 @@ export type AssistantEvent =
 
 
 const assistantResponseKinds: readonly AssistantResponseKind[] = [
-    "editorial_conversation", 
-    "skill_response", 
-    "proposal_prepared", 
-    "findings_prepared", 
-    "proposal_and_findings_prepared", 
-    "translation_proposal_prepared", 
-    "request_cancelled", 
+    "editorial_conversation",
+    "skill_response",
+    "proposal_prepared",
+    "findings_prepared",
+    "proposal_and_findings_prepared",
+    "translation_proposal_prepared",
+    "request_cancelled",
     "request_failed",
 ];
 

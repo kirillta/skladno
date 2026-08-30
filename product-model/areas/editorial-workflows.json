@@ -8,7 +8,7 @@
             "title": "Durable local conversation and built-in skill registry",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/components/assistant", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/ports/assistant-store.ts", "packages/server/src/application/ports/assistant-artifact-store.ts", "packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/shared/src/assistant/assistant.ts"],
-            "contract": "Each Article has one persisted greeting and a durable local conversation for six skills. Revision-bound requests resolve one eligible explicit or inferred skill and retain completed messages and review artifacts. Fact Check opens the Assistant and shows extracted claims as pending or checked, excluding unchanged supported claims; completion shows the Findings-prepared message. Skill chips persist without an Author message and use skill-specific labels. Talking Points produces 3–5 theses from the active selection, then Author message, then Article, and may ask focused questions. Narrative Draft follows Author direction, conservatively develops only the selected source when present, and treats character limits as guidance.",
+            "contract": "Each Article has one persisted greeting and a durable local conversation for six built-in Skills. Quick Actions insert a Skill starter and Send remains the sole request trigger. Revision-bound requests retain their selected or resolved Skill, completed messages, and review artifacts. Fact Check shows extracted claims as pending or checked, excluding unchanged supported claims. Talking Points prioritizes the active selection, then Author message, then Article. Narrative Draft follows Author direction, develops only the selected source when present, and treats character limits as guidance.",
             "persistence": "Assistant messages, requests, and completed artifacts persist locally. Workflow Stage persistence is retired; legacy values remain untouched."
         },
         {
@@ -17,7 +17,7 @@
             "title": "Streamed responses, progress, cancellation, and error recovery",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/components/EditorialAssistantPanel.tsx", "packages/web/src/application-client.ts", "packages/electron/src/preload-bridge.ts", "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/presentation/routes/assistant-route.ts"],
-            "contract": "Assistant requests stream typed status and response events; incomplete streams do not modify an Article.",
+            "contract": "Assistant requests stream typed status, renderer-safe capability activity, and response events. Activity stays secondary to the conversation, completion adds a short result card with an explicit action to its owning Workspace View, and the current View stays unchanged until the Author follows that action. Incomplete streams do not modify an Article.",
             "persistence": "Only valid completed request output becomes local message or review-artifact state."
         },
         {

@@ -9,7 +9,7 @@ The author stays in control. AI output is always a Proposal: Skladno shows the c
 ## What you can do
 
 - Write and autosave Articles locally.
-- Ask the Editorial Assistant to compose, revise, fact-check, review style, or translate.
+- Ask the Editorial Assistant to compose, revise, fact-check, review style, or translate, then open the matching Workspace View to review the result.
 - Review all proposed changes before accepting them.
 - Restore earlier Revisions without rewriting history.
 - Keep translations as separate linked Articles.
