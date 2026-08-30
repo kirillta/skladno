@@ -18,6 +18,7 @@ import type { SystemDateTimeFormatProvider } from "./ports/system-date-time-form
 import type { ManagedCredentials } from "./ports/managed-credentials.js";
 import { EditorialCapabilityCatalog } from "./assistant/editorial-capability-catalog.js";
 import type { EditorialService } from "./editorial/editorial-service.js";
+import { AssistantSkillCatalog, builtInSkillSource } from "./assistant/assistant-skill-catalog.js";
 
 
 export function createApplicationServices(
@@ -46,6 +47,7 @@ export function createApplicationServices(
         styleCorpus: new StyleCorpusService(styleCorpus, engines, articles),
         proposalSummaries: new ProposalSummaryService(engines, artifacts),
         factChecks: factCheckService,
+        skills: new AssistantSkillCatalog([builtInSkillSource]),
         ...(editorial ? { capabilities: new EditorialCapabilityCatalog(articleService, artifacts, publishing, editorial) } : {}),
     };
 }

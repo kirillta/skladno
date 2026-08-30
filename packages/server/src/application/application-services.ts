@@ -6,6 +6,7 @@ import type { StyleCorpusService } from "./editorial/style-corpus-service.js";
 import type { ProposalSummaryService } from "./editorial/proposal-summary-service.js";
 import type { FactCheckService } from "./editorial/fact-check-service.js";
 import type { EditorialCapabilityCatalog } from "./assistant/editorial-capability-catalog.js";
+import type { AssistantSkillCatalog } from "./assistant/assistant-skill-catalog.js";
 
 
 export interface ApplicationServices {
@@ -17,4 +18,5 @@ export interface ApplicationServices {
     proposalSummaries: ProposalSummaryService;
     factChecks: FactCheckService;
     capabilities?: EditorialCapabilityCatalog;
+    skills: AssistantSkillCatalog;
 }
