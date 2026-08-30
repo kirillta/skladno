@@ -5,7 +5,6 @@ import { readFileSync } from "node:fs";
 
 const STABLE_VERSION = /^(\d+)\.(\d+)\.(\d+)$/;
 const PREVIEW_VERSION = /^(\d+)\.(\d+)\.(\d+)-preview\.(\d+)$/;
-const NPM = process.platform === "win32" ? "npm.cmd" : "npm";
 
 
 export function nextReleaseVersion(currentVersion, preview, requestedVersion, existingVersions = []) {
@@ -40,6 +39,11 @@ function run(command, args, options = {}) {
 }
 
 
+export function runNpm(args, options = {}) {
+    return run("npm", args, { shell: process.platform === "win32", ...options });
+}
+
+
 function release() {
     assert.equal(run("git", ["status", "--porcelain"], { stdio: "pipe" }).trim(), "", "Commit or stash existing changes before releasing.");
     run("git", ["fetch", "origin", "--tags", "--quiet"]);
@@ -55,11 +59,11 @@ function release() {
     const version = nextReleaseVersion(currentVersion, mode === "preview", process.argv[3], tags);
     const tag = `v${version}`;
 
-    run(NPM, ["pkg", "set", `version=${version}`]);
-    run(NPM, ["pkg", "set", `version=${version}`, "--workspace", "@skladno/electron"]);
-    run(NPM, ["install", "--package-lock-only", "--ignore-scripts"]);
+    runNpm(["pkg", "set", `version=${version}`]);
+    runNpm(["pkg", "set", `version=${version}`, "--workspace", "@skladno/electron"]);
+    runNpm(["install", "--package-lock-only", "--ignore-scripts"]);
     run("node", ["scripts/check-electron-release-tag.mjs", tag]);
-    run(NPM, ["run", "verify"]);
+    runNpm(["run", "verify"]);
     run("git", ["add", "package.json", "package-lock.json", "packages/electron/package.json"]);
     run("git", ["commit", "-m", `Release ${tag}`]);
     run("git", ["tag", tag]);
