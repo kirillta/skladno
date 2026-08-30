@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, ELECTRON_APPLICATION_METHOD, ELECTRON_IPC_CHANNEL, HTTP_STATUS, isBuiltInSkillId, isElectronApplicationMethod, type ApplicationErrorCode, type ElectronApplicationMethod, type ElectronIpcError, type ElectronInvokeRequest, type ElectronInvokeResult, type ElectronStreamEvent, type ElectronStreamRequest, type EditorialEvent } from "@skladno/shared";
+import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, ELECTRON_APPLICATION_METHOD, ELECTRON_IPC_CHANNEL, HTTP_STATUS, isElectronApplicationMethod, resolveBuiltInSkillId, type ApplicationErrorCode, type ElectronApplicationMethod, type ElectronIpcError, type ElectronInvokeRequest, type ElectronInvokeResult, type ElectronStreamEvent, type ElectronStreamRequest, type EditorialEvent } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import { ArticleDraftConflictError } from "../../application/errors/article-draft-conflict-error.js";
@@ -71,7 +71,7 @@ function validAssistantRequest(value: unknown): value is Extract<ElectronStreamR
     if (value.scope.kind !== "article" && value.scope.kind !== "selection")
         return false;
 
-    return (value.explicitSkillId === undefined || isBuiltInSkillId(value.explicitSkillId))
+    return (value.explicitSkillId === undefined || Boolean(resolveBuiltInSkillId(value.explicitSkillId)))
         && (value.skillOffset === undefined || typeof value.skillOffset === "number")
         && (value.targetLanguage === undefined || typeof value.targetLanguage === "string")
         && (value.retryOfRequestId === undefined || typeof value.retryOfRequestId === "string");
@@ -233,7 +233,8 @@ function editorialFailure(error: unknown): { category: Extract<EditorialEvent, {
 async function streamAssistant(event: ElectronIpcMainEvent, request: Extract<ElectronStreamRequest, { kind: "assistant" }>, services: ApplicationServices, controller: AbortController): Promise<void> {
     const input = request.input;
     try {
-        const prepared = services.assistant.prepare({ ...input, articleId: request.articleId });
+        const explicitSkillId = input.explicitSkillId && resolveBuiltInSkillId(input.explicitSkillId);
+        const prepared = services.assistant.prepare({ ...input, articleId: request.articleId, ...(explicitSkillId ? { explicitSkillId } : {}) });
         for await (const item of services.assistant.stream(prepared, controller.signal))
             send(event, { streamId: request.streamId, kind: "assistant", event: item });
     } catch (error) {

@@ -468,6 +468,30 @@ test("assistant requests persist a revision-bound proposal and splice only the s
 });
 
 
+test("Assistant HTTP accepts a legacy Editorial operation without persisting its legacy ID", async () => {
+    const engine = new FixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "legacy-flow", text: "Improved" },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "legacy-flow-request",
+                authorMessage: "Improve the flow.",
+                explicitSkillId: "flow_revision",
+                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+            }),
+        });
+
+        assert.match(await response.text(), /"skillId":"flow_and_clarity"/);
+        assert.equal(repositories.assistant.getRequest("legacy-flow-request")?.explicitSkillId, "flow_and_clarity");
+    });
+});
+
+
 test("Narrative Draft without guidance uses the whole Article and its selected character limit", async () => {
     const engine = new FixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-whole-article", text: "improved Article" },

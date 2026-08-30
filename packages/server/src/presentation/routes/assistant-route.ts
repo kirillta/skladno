@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { APPLICATION_ERROR, HTTP_STATUS, isBuiltInSkillId, type AssistantEvent, type AssistantRequestScope, type BuiltInSkillId, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, HTTP_STATUS, resolveBuiltInSkillId, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
 
 import { AssistantService, type PreparedAssistantRequest } from "../../application/assistant/assistant-service.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
@@ -33,7 +33,8 @@ function scope(value: unknown): AssistantRequestScope {
 
 function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequest {
     const explicitSkillValue = body.explicitSkillId === undefined ? undefined : string(body.explicitSkillId, "explicitSkillId");
-    if (explicitSkillValue && !isBuiltInSkillId(explicitSkillValue))
+    const explicitSkillId = explicitSkillValue && resolveBuiltInSkillId(explicitSkillValue);
+    if (explicitSkillValue && !explicitSkillId)
         throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
 
     const targetLanguage = body.targetLanguage === undefined ? undefined : string(body.targetLanguage, "targetLanguage");
@@ -46,7 +47,7 @@ function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequ
         requestId: string(body.requestId, "requestId"),
         authorMessage: string(body.authorMessage, "authorMessage"),
         scope: scope(body.scope),
-        ...(explicitSkillValue ? { explicitSkillId: explicitSkillValue as BuiltInSkillId } : {}),
+        ...(explicitSkillId ? { explicitSkillId } : {}),
         ...(skillOffset === undefined ? {} : { skillOffset }),
         ...(targetLanguage ? { targetLanguage } : {}),
         ...(retryOfRequestId ? { retryOfRequestId } : {}),

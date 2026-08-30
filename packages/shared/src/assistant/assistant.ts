@@ -70,6 +70,47 @@ export type AssistantMessageTemplate = "greeting" | "request_cancelled" | "reque
 export type AssistantMessageStatus = "completed" | "pending" | "failed" | "cancelled";
 export type AssistantRequestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type AssistantSkillSource = "explicit" | "inferred";
+
+
+/** A source-neutral Skill pointer. Skills guide requests; they grant no capability. */
+export interface AssistantSkillReference {
+    source: string;
+    id: string;
+    version: string;
+}
+
+
+/** Compact discovery data. Full Skill instructions stay outside transport contracts. */
+export interface AssistantSkillSummary {
+    reference: AssistantSkillReference;
+    name: string;
+    description: string;
+}
+
+
+/** Renderer-safe progress for a validated capability, never a tool name or input. */
+export interface AssistantCapabilityActivity {
+    summary: string;
+    status: "started" | "completed";
+}
+
+
+/** Completion data held until the run is valid and its artifacts can be committed. */
+export interface AssistantStagedCompletion {
+    responseKind: AssistantResponseKind;
+    result?: AssistantEditorialResult;
+}
+
+
+/** The only execution detail eligible for local Assistant-request persistence. */
+export interface AssistantExecutionMetadata {
+    capability: string;
+    status: AssistantRequestStatus;
+    requestId: string;
+    baseRevisionId: string;
+}
+
+
 export type AssistantResponseKind = "editorial_conversation"
     | "skill_response"
     | "proposal_prepared"
@@ -92,6 +133,7 @@ export interface AssistantRequest {
     retryOfRequestId?: string;
     errorCode?: string;
     errorParameters?: Record<string, unknown>;
+    execution?: AssistantExecutionMetadata;
     createdAt: string;
     updatedAt: string;
 }
@@ -144,6 +186,8 @@ export const ASSISTANT_EVENT = {
     SKILL_RESOLVED: "skill_resolved",
     TEXT_DELTA: "text_delta",
     TOOL_STATUS: "tool_status",
+    CAPABILITY_ACTIVITY: "capability_activity",
+    STAGED_COMPLETION: "staged_completion",
     COMPLETED: "completed",
     ERROR: "error",
 } as const;
@@ -169,6 +213,8 @@ export type AssistantEvent =
     | { type: typeof ASSISTANT_EVENT.SKILL_RESOLVED; requestId: string; skillId?: BuiltInSkillId; source?: AssistantSkillSource }
     | { type: typeof ASSISTANT_EVENT.TEXT_DELTA; requestId: string; delta: string }
     | { type: typeof ASSISTANT_EVENT.TOOL_STATUS; requestId: string; tool: string; status: "started" | "completed"; claims?: FactCheckClaimPreview[] }
+    | { type: typeof ASSISTANT_EVENT.CAPABILITY_ACTIVITY; requestId: string; activity: AssistantCapabilityActivity }
+    | { type: typeof ASSISTANT_EVENT.STAGED_COMPLETION; requestId: string; completion: AssistantStagedCompletion }
     | { type: typeof ASSISTANT_EVENT.COMPLETED; requestId: string; responseKind: AssistantResponseKind; messageId: string; editorialArtifactId?: string; result?: AssistantEditorialResult }
     | { type: typeof ASSISTANT_EVENT.ERROR; requestId: string; errorCode: import("../cross-cutting/errors.js").ApplicationErrorCode; retryable: boolean };
 
