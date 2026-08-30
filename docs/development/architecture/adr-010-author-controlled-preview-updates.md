@@ -13,7 +13,7 @@ GitHub Releases can host the installer, full package, and `RELEASES` manifest re
 
 ## Decision
 
-Keep Windows 11 x64 as the only update target. Publish preview builds as GitHub prereleases with SemVer tags such as `v0.1.0-preview.2`. A security-related preview uses the exact optional suffix `.security`, for example `v0.1.1-preview.1.security`. The release workflow validates the tag and package versions.
+Keep Windows 11 x64 as the only update target. Publish stable builds as GitHub releases and preview builds as GitHub prereleases with SemVer tags such as `v0.1.0-preview.2`. A security-related preview uses the exact optional suffix `.security`, for example `v0.1.1-preview.1.security`. The release workflow validates the tag and package versions. In-app update discovery remains preview-only.
 
 Use GitHub directly. General Settings requires the author's persisted network permission, confirmed in an in-app dialog naming GitHub and the data boundary, before a packaged Electron main process checks public release metadata; after consent, it checks at startup and at most once every 24 hours unless the author disables automatic checks. It uses Electron's Chromium network stack so normal system networking policy applies. Settings contains the permission and automatic-check switches, current version, check status, release summary, explicit Check, Download, and Restart actions, plus privacy and recovery guidance. Discovery sends the repository identity, installed version, platform, architecture, and normal connection metadata to GitHub. It sends no device identifier, account, Article content, or analytics.
 
@@ -27,7 +27,7 @@ Restart and update is explicit. It first obtains the latest Draft checkpoint and
 
 The runtime records the prior version and recovery snapshot outside SQLite. Startup marks the update successful only after SQLite opens, migrations complete, application services start, and the renderer reports ready. Retain one snapshot from the previous installed version until the next update succeeds. A failed installation may use Squirrel recovery. After a migrated startup, rollback means reinstalling the prior preview together with restoring its matching pre-update snapshot. Opening a migrated database with an older binary alone is unsupported.
 
-CI creates a public GitHub prerelease, uploads the installer, `RELEASES`, and full package, and validates the complete asset set. The documented disposable-profile upgrade drill runs against that prerelease. Windows signing remains required before stable distribution and is tracked in issue #168.
+CI creates a public GitHub release or prerelease, uploads the installer, `RELEASES`, and full package, and validates the complete asset set. The documented disposable-profile upgrade drill runs against a prerelease. Stable and preview Windows releases remain unsigned until signing is completed in issue #168.
 
 ## Consequences
 
