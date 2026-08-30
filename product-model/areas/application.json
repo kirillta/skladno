@@ -79,10 +79,10 @@
                 "packages/web/src/desktop-client.ts",
                 ".github/workflows/electron-windows.yml"
             ],
-            "contract": "The unsigned Windows 11 x64 preview runs the existing React application in one context-isolated, sandboxed Electron window. Its Squirrel installer creates Desktop and Start menu shortcuts. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub prerelease discovery is optional, requires the author's stored network permission, and runs at most daily; download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
+            "contract": "The unsigned Windows 11 x64 application runs the existing React application in one context-isolated, sandboxed Electron window. CI publishes stable tags as GitHub releases and preview tags as prereleases, each with the installer, RELEASES manifest, and full package. Its Squirrel installer creates Desktop and Start menu shortcuts. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub prerelease discovery is optional, requires the author's stored network permission, and runs at most daily; download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
             "persistence": "The desktop client uses the existing user-local .skladno SQLite data. Runtime settings retain the network-permission and automatic-check preferences, staged version, prior version, and one recovery snapshot reference without Article content. Install, upgrade, reinstall, and uninstall do not delete or rewrite that directory.",
             "limitations": [
-                "The preview is unsigned and Windows-only; signing before stable distribution remains in #168.",
+                "Stable and preview releases are unsigned and Windows-only; signing remains in #168.",
                 "Native backup pickers and other Electron-specific Settings work remain in #34."
             ]
         },

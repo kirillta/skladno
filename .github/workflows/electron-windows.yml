@@ -1,10 +1,15 @@
-name: Electron Windows preview
+name: Electron Windows release
 
 on:
     pull_request:
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: Existing release tag
+                required: true
     push:
         tags:
-            - "v*-preview.*"
+            - "v*"
 
 permissions:
     contents: read
@@ -34,8 +39,8 @@ jobs:
             - name: Build packaged application
               run: npm run package:electron
 
-    release-preview:
-        if: github.event_name == 'push'
+    release-windows:
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         runs-on: windows-latest
         timeout-minutes: 25
         permissions:
@@ -44,6 +49,8 @@ jobs:
         steps:
             - name: Check out repository
               uses: actions/checkout@v4
+              with:
+                  ref: ${{ inputs.tag || github.ref }}
 
             - name: Set up Node.js
               uses: actions/setup-node@v4
@@ -55,18 +62,22 @@ jobs:
               run: npm ci
 
             - name: Verify release version
-              run: node scripts/check-electron-release-tag.mjs $env:GITHUB_REF_NAME
+              env:
+                  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+              run: node scripts/check-electron-release-tag.mjs $env:RELEASE_TAG
 
             - name: Build installer
               run: npm run make:electron
 
-            - name: Create unsigned prerelease
+            - name: Create unsigned release
               env:
                   GH_TOKEN: ${{ github.token }}
+                  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
               run: |
                   $assets = Get-ChildItem packages/electron/out/make -Recurse -File | Where-Object { $_.Name -match 'setup\.exe$|^RELEASES$|-full\.nupkg$' }
                   $setup = $assets | Where-Object Name -match 'setup\.exe$'
                   $releases = $assets | Where-Object Name -eq 'RELEASES'
                   $package = $assets | Where-Object Name -match '-full\.nupkg$'
                   if ($setup.Count -ne 1 -or $releases.Count -ne 1 -or $package.Count -ne 1) { throw 'Expected exactly one setup executable, RELEASES manifest, and full nupkg.' }
-                  gh release create $env:GITHUB_REF_NAME $setup.FullName $releases.FullName $package.FullName --prerelease --title "Skladno $env:GITHUB_REF_NAME" --notes "Unsigned Windows 11 x64 preview with unsigned updater. Windows may show a SmartScreen warning. Signing remains tracked in issue #168."
+                  $prerelease = if ($env:RELEASE_TAG -match '-preview\.') { @('--prerelease') } else { @() }
+                  gh release create $env:RELEASE_TAG $setup.FullName $releases.FullName $package.FullName @prerelease --title "Skladno $env:RELEASE_TAG" --notes "Unsigned Windows 11 x64 release. Windows may show a SmartScreen warning. Signing remains tracked in issue #168."

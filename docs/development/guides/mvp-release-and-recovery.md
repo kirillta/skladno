@@ -55,13 +55,15 @@ The supported releases are the browser-based local-first MVP and the unsigned Wi
 
 ## Windows Electron preview
 
-The preview target is Windows 11 x64. It is unsigned, so Windows may show a SmartScreen warning. GitHub prerelease updates are optional, author-controlled, and unsigned; signing remains in issue #168. Native backup folder selection, Explorer reveal, and manual snapshots use the restricted desktop Settings client.
+The release target is Windows 11 x64. Stable releases and prereleases are unsigned, so Windows may show a SmartScreen warning. GitHub prerelease updates are optional and author-controlled; signing remains in issue #168. Native backup folder selection, Explorer reveal, and manual snapshots use the restricted desktop Settings client.
 
 Build the unpacked application with `npm run package:electron`, or build the Squirrel.Windows installer with `npm run make:electron`. Both commands build the existing React application first. The packaged renderer uses local IPC and does not require the loopback HTTP server.
 
 Environment-variable credentials remain supported. Managed credentials use Windows Credential Manager and never enter SQLite, backup snapshots, or renderer responses. The installer does not create or import a `.env` file.
 
 Run `npm run release` to release the next stable patch or `npm run release -- 1.2.3` to release an explicit stable version. Run `npm run release:preview` to advance the current version's preview number or `npm run release:preview -- 1.2.3` to release the next available preview of `1.2.3`. Both commands require a clean worktree, update both package versions and the lockfile, run verification, commit, tag, and atomically push the commit and tag.
+
+If a tag exists without a release, run `gh workflow run electron-windows.yml -f tag=v1.2.3` after the workflow change reaches the default branch.
 
 ### Desktop acceptance scenario
 
