@@ -699,6 +699,22 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("keeps the Article title field focused when its autosave updates the current Article", async () => {
+        const user = userEvent.setup();
+        const updateArticle = vi.fn().mockResolvedValue(undefined);
+        const header = renderLocalized(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} />);
+        const headerScope = within(header.container);
+
+        await user.click(headerScope.getByRole("button", { name: "Rename article: Untitled article" }));
+        const titleField = headerScope.getByRole("textbox", { name: "Article title" });
+        await user.clear(titleField);
+        await user.type(titleField, "A better title");
+        header.rerender(<IntlProvider locale="en" messages={messages}><ArticleHeader article={article("one", "A better title")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} /></IntlProvider>);
+
+        expect(document.activeElement).toBe(headerScope.getByRole("textbox", { name: "Article title" }));
+    });
+
+
     it("requires confirmation before deleting an Article", async () => {
         const user = userEvent.setup();
         const remove = vi.fn().mockResolvedValue(undefined);
