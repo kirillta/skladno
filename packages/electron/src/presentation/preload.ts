@@ -7,6 +7,7 @@ import {
 } from "@skladno/shared";
 import { exposeElectronApplicationClient } from "./preload-bridge.js";
 import { createDesktopSettingsClient } from "./desktop-settings.js";
+import { createDesktopShellClient } from "./desktop-shell.js";
 import { createDesktopUpdateClient } from "./desktop-updates.js";
 
 
@@ -41,6 +42,7 @@ function checkpointResult(value: unknown, requestId: string): ElectronCheckpoint
 
 exposeElectronApplicationClient(ipcRenderer, contextBridge);
 contextBridge.exposeInMainWorld("skladnoDesktop", createDesktopSettingsClient(ipcRenderer));
+contextBridge.exposeInMainWorld("skladnoShell", createDesktopShellClient(ipcRenderer));
 contextBridge.exposeInMainWorld("skladnoUpdates", createDesktopUpdateClient(ipcRenderer));
 
 ipcRenderer.on(ELECTRON_LIFECYCLE_CHANNEL.prepareClose, (_event, payload: unknown) => {

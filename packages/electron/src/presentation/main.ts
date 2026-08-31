@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { app, autoUpdater, BrowserWindow, dialog, ipcMain, net, screen, shell } from "electron";
+import { app, autoUpdater, BrowserWindow, dialog, ipcMain, Menu, net, screen, shell } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter } from "@skladno/server/electron";
 import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
@@ -7,6 +7,7 @@ import { requestDraftCheckpoint } from "../application/close-coordinator.js";
 import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window-policy.js";
 import { readWindowBounds, writeWindowBounds } from "../infrastructure/window-state.js";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
+import { registerDesktopShellAdapter } from "./desktop-shell.js";
 import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter } from "./desktop-updates.js";
 
 
@@ -92,6 +93,12 @@ async function createMainWindow(): Promise<void> {
     const preload = join(import.meta.dirname, "preload.cjs");
     const window = new BrowserWindow(createWindowOptions(preload, readWindowBounds(statePath, displays), app.isPackaged));
     mainWindow = window;
+    registerDesktopShellAdapter({
+        ipcMain,
+        window,
+        checkForUpdates: () => void updates?.checkNow(),
+        quit: () => void quitFrom(window),
+    });
 
     window.webContents.setWindowOpenHandler(({ url }) => {
         if (isExternalWebUrl(url))
@@ -175,6 +182,7 @@ if (squirrelStartup) {
             supported: app.isPackaged,
         });
         registerDesktopUpdatesAdapter({ ipcMain, coordinator: updates });
+        Menu.setApplicationMenu(null);
 
         await createMainWindow();
         updates?.schedule();

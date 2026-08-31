@@ -3,6 +3,15 @@ export const KEY_BINDING_COMMAND = {
     SAVE_REVISION: "save_revision",
     SEARCH_ARTICLES: "search_articles",
     OPEN_SETTINGS: "open_settings",
+    CLOSE_WINDOW: "close_window",
+    QUIT: "quit",
+    CHECK_FOR_UPDATES: "check_for_updates",
+    UNDO: "undo",
+    REDO: "redo",
+    CUT: "cut",
+    COPY: "copy",
+    PASTE: "paste",
+    SELECT_ALL: "select_all",
     TOGGLE_FOCUS_MODE: "toggle_focus_mode",
     TOGGLE_ARTICLE_LIBRARY: "toggle_article_library",
     TOGGLE_EDITORIAL_ASSISTANT: "toggle_editorial_assistant",
@@ -12,12 +21,18 @@ export const KEY_BINDING_COMMAND = {
     VIEW_FACT_CHECK: "view_fact_check",
     VIEW_STYLE_PROFILE: "view_style_profile",
     VIEW_TRANSLATIONS: "view_translations",
+    ZOOM_IN: "zoom_in",
+    ZOOM_OUT: "zoom_out",
+    RESET_ZOOM: "reset_zoom",
+    TOGGLE_FULLSCREEN: "toggle_fullscreen",
+    MINIMIZE_WINDOW: "minimize_window",
+    TOGGLE_MAXIMIZE: "toggle_maximize",
     SEND_EDITORIAL_REQUEST: "send_editorial_request",
     STOP_EDITORIAL_REQUEST: "stop_editorial_request",
 } as const;
 
 export type KeyBindingCommandId = typeof KEY_BINDING_COMMAND[keyof typeof KEY_BINDING_COMMAND];
-export type KeyBindingCategory = "general" | "workspace" | "assistant";
+export type KeyBindingCategory = "general" | "editing" | "workspace" | "window" | "assistant";
 export type KeyBindingScope = "application" | "assistant";
 
 
@@ -53,6 +68,15 @@ export const keyBindingCommands = [
     { id: KEY_BINDING_COMMAND.SAVE_REVISION, category: "general", labelMessageId: "keyBindings.saveRevision", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("s"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.SEARCH_ARTICLES, category: "general", labelMessageId: "keyBindings.searchArticles", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("f"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.OPEN_SETTINGS, category: "general", labelMessageId: "keyBindings.openSettings", hintMessageId: "keyBindings.generalHint", defaultBinding: binding(","), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.CLOSE_WINDOW, category: "general", labelMessageId: "keyBindings.closeWindow", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("w"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.QUIT, category: "general", labelMessageId: "keyBindings.quit", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("q"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.CHECK_FOR_UPDATES, category: "general", labelMessageId: "keyBindings.checkForUpdates", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("u", { shift: true }), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.UNDO, category: "editing", labelMessageId: "keyBindings.undo", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("z"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.REDO, category: "editing", labelMessageId: "keyBindings.redo", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("y"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.CUT, category: "editing", labelMessageId: "keyBindings.cut", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("x"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.COPY, category: "editing", labelMessageId: "keyBindings.copy", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("c"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.PASTE, category: "editing", labelMessageId: "keyBindings.paste", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("v"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.SELECT_ALL, category: "editing", labelMessageId: "keyBindings.selectAll", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("a"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, category: "workspace", labelMessageId: "keyBindings.toggleFocusMode", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("f", { shift: true }), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, category: "workspace", labelMessageId: "keyBindings.toggleArticleLibrary", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("l", { shift: true }), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, category: "workspace", labelMessageId: "keyBindings.toggleEditorialAssistant", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("a", { shift: true }), scope: "application", allowInEditable: true },
@@ -62,6 +86,12 @@ export const keyBindingCommands = [
     { id: KEY_BINDING_COMMAND.VIEW_FACT_CHECK, category: "workspace", labelMessageId: "keyBindings.viewFactCheck", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("4"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, category: "workspace", labelMessageId: "keyBindings.viewStyleProfile", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("5"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, category: "workspace", labelMessageId: "keyBindings.viewTranslations", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("6"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.ZOOM_IN, category: "window", labelMessageId: "keyBindings.zoomIn", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("+", { shift: true }), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.ZOOM_OUT, category: "window", labelMessageId: "keyBindings.zoomOut", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("-"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.RESET_ZOOM, category: "window", labelMessageId: "keyBindings.resetZoom", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("0"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.TOGGLE_FULLSCREEN, category: "window", labelMessageId: "keyBindings.toggleFullscreen", hintMessageId: "keyBindings.windowHint", defaultBinding: { primary: false, shift: false, alt: false, key: "f11" }, scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.MINIMIZE_WINDOW, category: "window", labelMessageId: "keyBindings.minimizeWindow", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("m"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.TOGGLE_MAXIMIZE, category: "window", labelMessageId: "keyBindings.toggleMaximize", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("m", { shift: true }), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.sendEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: binding("enter"), scope: "assistant", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.stopEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: { primary: false, shift: false, alt: false, key: "escape" }, scope: "assistant", allowInEditable: false },
 ] as const satisfies readonly KeyBindingCommand[];
@@ -133,7 +163,8 @@ export function formatKeyBinding(binding: KeyBinding | null, platform = ""): str
     else if (binding.key === "escape")
         key = "Esc";
 
-    const parts = [primary, alt, binding.shift ? "Shift" : "", key].filter(Boolean);
+    const implicitPlusShift = binding.primary && binding.key === "+";
+    const parts = [primary, alt, binding.shift && !implicitPlusShift ? "Shift" : "", key].filter(Boolean);
 
     return parts.join("+");
 }
