@@ -7,7 +7,8 @@ export default defineConfig({
     base: "./",
     plugins: [
         react(),
-        tailwindcss(),
+        // Lightning CSS does not yet recognize the standard ::highlight() pseudo-element.
+        tailwindcss({ optimize: false }),
     ],
     test: {
         environment: "jsdom",
