@@ -79,7 +79,7 @@
                 "packages/web/src/desktop-client.ts",
                 ".github/workflows/electron-windows.yml"
             ],
-            "contract": "The unsigned Windows 11 x64 application runs the existing React application in one context-isolated, sandboxed Electron window. CI publishes stable tags as GitHub releases and preview tags as prereleases, each with the installer, RELEASES manifest, and full package. Its Squirrel installer creates Desktop and Start menu shortcuts. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub release discovery is optional, requires the author's stored network permission, and runs at most daily; the author chooses stable-only or prerelease-inclusive discovery, while download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
+            "contract": "The unsigned Windows 11 x64 application runs the existing React application in one context-isolated, sandboxed Electron window. CI publishes stable tags as GitHub releases and preview tags as prereleases, each with the installer, RELEASES manifest, and full package. Its Squirrel installer creates Desktop and Start menu shortcuts. The native menu bar is hidden by default and appears with Alt; its workspace commands cross to the renderer only through an allowlisted command channel. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub release discovery is optional, requires the author's stored network permission, and runs at most daily; the author chooses stable-only or prerelease-inclusive discovery, while download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
             "persistence": "The desktop client uses the existing user-local .skladno SQLite data. Runtime settings retain the network-permission, automatic-check, and prerelease-channel preferences, staged version, prior version, and one recovery snapshot reference without Article content. Install, upgrade, reinstall, and uninstall do not delete or rewrite that directory.",
             "limitations": [
                 "Stable and preview releases are unsigned and Windows-only; signing remains in #168.",
@@ -210,6 +210,16 @@
                 "kind": "automated",
                 "path": "packages/electron/src/infrastructure/window-policy.test.ts"
             }
+        },
+        {
+            "id": "application.electron-native-menu",
+            "title": "Electron menu exposes workspace commands without taking vertical workspace space",
+            "capabilityIds": ["application.electron-windows-preview"],
+            "preconditions": ["The Windows desktop client is open."],
+            "event": "The author presses Alt and chooses an application-menu command.",
+            "expected": ["The native menu is normally hidden.", "The selected workspace command is sent only as an allowlisted command ID."],
+            "forbidden": ["The renderer receiving arbitrary native IPC payloads.", "A persistent menu row reducing the workspace height."],
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/application-menu.test.ts" }
         },
         {
             "id": "application.electron-draft-preserving-close",

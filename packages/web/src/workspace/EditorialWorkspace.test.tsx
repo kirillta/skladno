@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defaultGeneralSettings, defaultPublishingSettings, publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
+import { defaultGeneralSettings, defaultPublishingSettings, ELECTRON_LIFECYCLE_EVENT, KEY_BINDING_COMMAND, publishLimitProfiles, type Article, type ArticleRevision } from "@skladno/shared";
 import { IntlProvider } from "react-intl";
 import { useState, type ReactElement } from "react";
 
@@ -342,6 +342,17 @@ describe("Editorial Workspace", () => {
         render(<App client={fakeClient()} />);
         expect(await screen.findByRole("heading", { name: "First Article" })).toBeTruthy();
         await user.click(screen.getByRole("button", { name: message("navigation.newArticle") }));
+        expect(await screen.findByRole("heading", { name: "New Article" })).toBeTruthy();
+    });
+
+
+    it("runs native menu commands through the registered workspace action", async () => {
+        const client = fakeClient();
+        render(<App client={client} />);
+
+        await screen.findByRole("heading", { name: "First Article" });
+        window.dispatchEvent(new CustomEvent(ELECTRON_LIFECYCLE_EVENT.menuCommand, { detail: KEY_BINDING_COMMAND.NEW_ARTICLE }));
+
         expect(await screen.findByRole("heading", { name: "New Article" })).toBeTruthy();
     });
 
