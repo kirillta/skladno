@@ -320,12 +320,12 @@ export class AssistantService {
                 this.assistant.setExecution(request.requestId, definition.id);
 
                 if (definition.execution === "read") {
-                    const read = () => this.capabilities!.read({ 
-                        capability: definition.id as Extract<typeof definition.id, 
-                        "inspect_article" | "inspect_revisions" | "inspect_artifacts" | "inspect_publishing_guidance" | "inspect_style_corpus">, 
-                        context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId } 
+                    const read = () => this.capabilities!.read({
+                        capability: definition.id as Extract<typeof definition.id,
+                        "inspect_article" | "inspect_revisions" | "inspect_artifacts" | "inspect_publishing_guidance" | "inspect_style_corpus">,
+                        context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId }
                     });
-                    
+
                     let result: unknown;
                     try {
                         result = read();
@@ -344,7 +344,6 @@ export class AssistantService {
                     const action = definition.id as "add_revision_to_style_corpus" | "rebuild_style_profile";
                     request.pendingActions.push(action);
                     request.capabilityActivities.push({ summary: definition.activity, status: "completed" });
-                    
                     return { status: "staged" };
                 }
 
