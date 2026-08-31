@@ -86,6 +86,25 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("opens Proposal Review when an Assistant request prepares a Proposal", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "write", selectedArticleId: "one" }));
+        client.streamAssistantRequest = vi.fn(async (_articleId, _input, onEvent) => {
+            onEvent({ type: "completed", requestId: "proposal-request", responseKind: "proposal_prepared", messageId: "proposal-message", result: { proposal: "Improved Draft" } });
+        });
+
+        render(<App client={client} />);
+
+        await screen.findByRole("heading", { name: "First Article" });
+        await user.type(screen.getByRole("textbox", { name: "Editorial guidance" }), "Improve flow");
+        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+
+        expect(await screen.findByText("Improved Draft")).toBeTruthy();
+    });
+
+
     it("restores the latest completed translation from local Assistant records", async () => {
         const client = fakeClient();
         const user = userEvent.setup();

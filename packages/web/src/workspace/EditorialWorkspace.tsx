@@ -43,7 +43,9 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     const [assistantSelection, setAssistantSelection] = useState<string>();
     const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
         editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
-    }, [editorial]);
+        if (result.proposal)
+            layout.setView("proposal");
+    }, [editorial, layout]);
     const assistant = useAssistantMessages(client, workspace, assistantSelection, applyAssistantResult, profileRebuilt);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
     const flushSelectedRef = useRef(workspace.flushSelected);
