@@ -30,7 +30,7 @@
                 "packages/server/src/presentation/routes/health-route.ts",
                 "packages/web/src/application-client.ts",
                 "packages/web/src/notifications",
-                "packages/electron/src/preload-bridge.ts",
+                "packages/electron/src/presentation/preload-bridge.ts",
                 "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts"
             ],
             "contract": "Health and stable error codes allow the renderer to present recoverable failures without exposing secrets or full Article bodies.",
@@ -208,7 +208,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/electron/src/window-policy.test.ts"
+                "path": "packages/electron/src/infrastructure/window-policy.test.ts"
             }
         },
         {
@@ -230,7 +230,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/electron/src/close-coordinator.test.ts"
+                "path": "packages/electron/src/application/close-coordinator.test.ts"
             }
         },
         {
@@ -284,7 +284,7 @@
             "event": "The desktop coordinator checks release metadata.",
             "expected": ["Only the newest complete compatible release allowed by the stable-only or prerelease-inclusive preference is offered and no download starts before the author requests it."],
             "forbidden": ["Making an update-discovery request without author permission or sending Article content or raw GitHub errors to the renderer."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/desktop-updates.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-updates.test.ts" }
         },
         {
             "id": "application.electron-preview-update-recovery",
@@ -294,7 +294,7 @@
             "event": "The author requests Restart and update.",
             "expected": ["A Draft checkpoint and SQLite snapshot succeed before native apply."],
             "forbidden": ["Applying an update after a failed checkpoint or snapshot."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/desktop-updates.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-updates.test.ts" }
         },
         {
             "id": "application.desktop-shell-layout",

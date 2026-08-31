@@ -3,9 +3,9 @@ import { app, autoUpdater, BrowserWindow, dialog, ipcMain, net, screen, shell } 
 import squirrelStartup from "electron-squirrel-startup";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter } from "@skladno/server/electron";
 import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
-import { requestDraftCheckpoint } from "./close-coordinator.js";
-import { createWindowOptions, focusWindow, isExternalWebUrl } from "./window-policy.js";
-import { readWindowBounds, writeWindowBounds } from "./window-state.js";
+import { requestDraftCheckpoint } from "../application/close-coordinator.js";
+import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window-policy.js";
+import { readWindowBounds, writeWindowBounds } from "../infrastructure/window-state.js";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
 import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter } from "./desktop-updates.js";
 

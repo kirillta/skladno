@@ -21,7 +21,7 @@ presentation -> application -> application ports
 
 Presentation owns HTTP and Electron IPC adaptation, transport validation, serialization, streaming, and error mapping. Application services own use cases and product invariants through narrow ports. Infrastructure owns SQLite, configuration, AI providers, filesystem work, diagnostics, and runtime lifecycle.
 
-Composition roots construct infrastructure and inject ready application services into presentation. `packages/server/src/local-application.ts` composes the shared repositories and application services. `packages/server/src/index.ts` adds the loopback HTTP server, while `packages/electron/src/main.ts` registers the allowlisted IPC adapter and opens the existing React build. Both runtimes use the same SQLite data and application behavior.
+Composition roots construct infrastructure and inject ready application services into presentation. `packages/server/src/local-application.ts` composes the shared repositories and application services. `packages/server/src/index.ts` adds the loopback HTTP server, while `packages/electron/src/presentation/main.ts` registers the allowlisted IPC adapter and opens the existing React build. Both runtimes use the same SQLite data and application behavior.
 
 `packages/shared` contains transport-neutral, renderer-safe contracts. The Electron preload exposes only the typed application client through a context-isolated bridge.
 

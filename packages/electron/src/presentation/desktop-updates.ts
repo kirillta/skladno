@@ -2,7 +2,7 @@ import { mkdirSync, renameSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { IpcMain, IpcRenderer } from "electron";
 import { ApplicationClientError, isDesktopUpdateState, type ApplicationErrorCode, type DesktopUpdateClient, type DesktopUpdateState } from "@skladno/shared";
-import { readRuntimeSettings, writeRuntimeSettings, type RuntimeSettings } from "./runtime-settings.js";
+import { readRuntimeSettings, writeRuntimeSettings, type RuntimeSettings } from "../infrastructure/runtime-settings.js";
 
 export const desktopUpdatesChannel = "skladno:desktop-updates";
 export const desktopUpdatesEvent = "skladno:desktop-updates:state";
