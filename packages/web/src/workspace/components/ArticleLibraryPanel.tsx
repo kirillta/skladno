@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { KEY_BINDING_COMMAND, type Article, type KeyBindingOverrides } from "@skladno/shared";
 import type { DraftPresentationState as SaveState } from "../drafts/draft-lifecycle.js";
 import { Button, Field, IconButton } from "../../ui/primitives.js";
-import { ArticleIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
+import { ArticleIcon, ChevronRightIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";
 import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
@@ -64,7 +64,8 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     const rootArticles = articles.filter((article) => !article.sourceArticleId || !articleIds.has(article.sourceArticleId));
     const children = (articleId: string) => articles.filter((article) => article.sourceArticleId === articleId);
     const visibleRoots = rootArticles.filter((article) => !query || matchesQuery(article) || children(article.id).some(matchesQuery));
-    const visibleArticles = visibleRoots.flatMap((article) => [article, ...children(article.id).filter((child) => !query || matchesQuery(article) || matchesQuery(child))]);
+    const selectedArticle = articles.find((article) => article.id === selectedArticleId);
+    const expandedRootId = selectedArticle?.sourceArticleId ?? selectedArticle?.id;
     const saveLabels: Record<SaveState, string> = {
         saved: intl.formatMessage({ id: "navigation.saved" }),
         unsaved: intl.formatMessage({ id: "navigation.unsaved" }),
@@ -75,6 +76,29 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     };
     const saveLabel = saveLabels[saveState];
     const saveTone = saveState === "saved" || saveState === "draft-saved" ? "text-success" : saveState === "unsaved" || saveState === "saving" ? "text-warning" : "text-danger";
+    const articleRow = ({ article, isChild = false, childCount = 0, isExpanded = false, isHidden = false }: { article: Article; isChild?: boolean; childCount?: number; isExpanded?: boolean; isHidden?: boolean }) => {
+        const isSelected = article.id === selectedArticleId;
+        const detail = [article.language, formatUpdatedAt(article.updatedAt, intl.formatMessage)].filter(Boolean).join(" · ");
+        let tone = "text-ink/85 hover:bg-surface-raised";
+
+        if (isChild)
+            tone = "text-muted hover:bg-surface-raised";
+
+        if (isSelected)
+            tone = "bg-brand-soft text-ink";
+
+        return <button key={article.id} onClick={() => selectArticle(article.id)} className={`${isChild ? "ml-4 w-[calc(100%-1rem)] border-l border-border py-1.5" : "w-full py-2.5"} rounded-panel px-2 text-left transition-colors ${tone}`} aria-current={isSelected ? "page" : undefined} aria-expanded={childCount > 0 ? isExpanded : undefined} tabIndex={isHidden ? -1 : undefined}>
+            <span className="flex gap-2">
+                {childCount > 0
+                    ? <ChevronRightIcon className={`mt-1 size-3 shrink-0 text-muted transition-transform duration-150 motion-reduce:transition-none ${isExpanded ? "rotate-90" : ""}`} />
+                    : <ArticleIcon className="mt-0.5 size-4 shrink-0 text-muted" />}
+                <span className="min-w-0 flex-1">
+                    <span className={`block truncate font-medium ${isChild ? "text-xs leading-4" : "text-sm leading-5"}`} title={article.title}>{article.title}</span>
+                    <span className="mt-0.5 block text-xs leading-4 text-muted">{detail}</span>
+                </span>
+            </span>
+        </button>;
+    };
 
     return <aside data-workspace-panel="article-library" className={collapsed ? "flex h-full w-full flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-full flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
         {collapsed ? <>
@@ -116,23 +140,22 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                 {articles.length > 0 && <>
                     <p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "navigation.recent" })}</p>
                     <div className="mt-2 space-y-1">
-                        {visibleArticles.map((article) => {
-                            const isSelected = article.id === selectedArticleId;
-                            const detail = [article.language, formatUpdatedAt(article.updatedAt, intl.formatMessage)].filter(Boolean).join(" · ");
+                        {visibleRoots.map((article) => {
+                            const articleChildren = children(article.id).filter((child) => !query || matchesQuery(article) || matchesQuery(child));
+                            const isExpanded = Boolean(query) || article.id === expandedRootId;
 
-                            return <button key={article.id} onClick={() => selectArticle(article.id)} className={`${article.sourceArticleId ? "ml-4 w-[calc(100%-1rem)] border-l border-border" : "w-full"} rounded-panel px-2 py-2.5 text-left transition-colors ${isSelected ? "bg-brand-soft text-ink" : "text-ink/85 hover:bg-surface-raised"}`} aria-current={isSelected ? "page" : undefined}>
-                                <span className="flex gap-2">
-                                    <ArticleIcon className="mt-0.5 size-4 shrink-0 text-muted" />
-                                    <span className="min-w-0">
-                                        <span className="block text-sm font-medium leading-5">{article.title}</span>
-                                        <span className="mt-0.5 block text-xs leading-4 text-muted">{detail}</span>
-                                    </span>
-                                </span>
-                            </button>;
+                            return <div key={article.id}>
+                                {articleRow({ article, childCount: articleChildren.length, isExpanded })}
+                                {articleChildren.length > 0 && <div className={`grid transition-[grid-template-rows,opacity] duration-150 motion-reduce:transition-none ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} aria-hidden={!isExpanded}>
+                                    <div className="min-h-0 space-y-1 overflow-hidden">
+                                        {articleChildren.map((child) => articleRow({ article: child, isChild: true, isHidden: !isExpanded }))}
+                                    </div>
+                                </div>}
+                            </div>;
                         })}
                     </div>
 
-                    {visibleArticles.length === 0 && <p className="px-2 py-5 text-sm text-muted">{intl.formatMessage({ id: "navigation.noArticlesMatch" })}</p>}
+                    {visibleRoots.length === 0 && <p className="px-2 py-5 text-sm text-muted">{intl.formatMessage({ id: "navigation.noArticlesMatch" })}</p>}
                 </>}
             </nav>
 
