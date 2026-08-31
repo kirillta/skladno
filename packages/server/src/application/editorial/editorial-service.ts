@@ -9,7 +9,6 @@ import {
     type StyleProfile
 } from "@skladno/shared";
 import { createHash } from "node:crypto";
-
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { EditorialEngine } from "../ports/editorial-engine.js";
 import type { EditorialEngineEvent } from "../ports/editorial-engine-event.js";
@@ -96,7 +95,9 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
 function engineRequest(request: EditorialServiceRequest, context: EditorialStreamContext) {
     return {
         operation: request.operation,
-        article: context.article.currentRevision.content,
+        article: request.articleContent ?? context.article.currentRevision.content,
+        ...(request.articleSelection ? { articleSelection: true } : {}),
+        ...(request.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: request.surroundingArticleCharacterCount } : {}),
         authorContext: request.authorContext,
         ...(context.styleProfile ? { styleProfile: context.styleProfile } : {}),
         ...(context.styleProfile ? { articleStyleRules: context.articleStyleRules } : {}),
@@ -171,12 +172,13 @@ function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifa
 }
 
 
-async function* streamEditorialOperation(request: EditorialServiceRequest, context: EditorialStreamContext, signal: AbortSignal, onCompleted: (event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>) => string): AsyncIterable<EditorialEngineEvent> {
+async function* streamEditorialOperation(request: EditorialServiceRequest, context: EditorialStreamContext, signal: AbortSignal, onCompleted: (event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>) => string | undefined): AsyncIterable<EditorialEngineEvent> {
     let completed = false;
     for await (const event of context.engine.stream(engineRequest(request, context), signal)) {
         if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
             completed = true;
-            yield { ...event, editorialArtifactId: onCompleted(event) };
+            const editorialArtifactId = onCompleted(event);
+            yield { ...event, ...(editorialArtifactId ? { editorialArtifactId } : {}) };
             continue;
         }
 
@@ -210,6 +212,20 @@ export class EditorialService {
                 signal,
                 (event) => persistCompletedEditorialOutput(this.sessions, this.artifacts, this.factChecks, request, context, this.sessionContinuationEnabled, event),
             );
+        } catch (error) {
+            if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
+                this.sessions.remove(request.articleId);
+
+            throw error;
+        }
+    }
+
+
+    async *streamStaged(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        const context = prepareEditorialStream(this.articles, this.sessions, this.styleCorpus, this.engines, this.sessionContinuationEnabled, request);
+
+        try {
+            yield* streamEditorialOperation(request, context, signal, () => undefined);
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
                 this.sessions.remove(request.articleId);

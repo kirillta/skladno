@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEventHandler, type KeyboardEventHandler } from "react";
 import { useIntl, type IntlShape } from "react-intl";
-import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, keyBindingsEqual, resolveKeyBindings, type Article, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
+import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, keyBindingsEqual, resolveKeyBindings, type Article, type AssistantCapabilityActivity, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
 import { eventKeyBinding, type KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
@@ -300,10 +300,11 @@ function useElapsedDuration(state: AssistantState, intl: IntlShape) {
 }
 
 
-export function EditorialAssistantPanel({ state, message, errorDetails, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
+export function EditorialAssistantPanel({ state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
     state: AssistantState;
     message: string;
     errorDetails?: string;
+    activity?: AssistantCapabilityActivity;
     factCheckClaims?: FactCheckClaimPreview[];
     onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
     onCancel: () => void;
@@ -338,7 +339,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, factChec
                 <ChevronRightIcon className="size-3" />
             </Button>
         </header>
-        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} generalSettings={generalSettings} elapsedDuration={elapsedDuration} />
+        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} activity={activity} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} generalSettings={generalSettings} elapsedDuration={elapsedDuration} />
         <AssistantComposer {...composerState} state={state} selection={selection} onCancel={onCancel} shortcutOverrides={shortcutOverrides} />
     </aside>;
 }

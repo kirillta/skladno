@@ -30,8 +30,13 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
     const renameTimer = useRef<ReturnType<typeof setTimeout>>();
     const pendingTitle = useRef<string>();
+    const selectedArticleId = useRef(article.id);
 
     useEffect(() => {
+        if (selectedArticleId.current === article.id)
+            return;
+
+        selectedArticleId.current = article.id;
         setTitle(article.title);
         setEditingTitle(false);
         setDeleteConfirmationOpen(false);

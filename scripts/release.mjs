@@ -47,6 +47,7 @@ export function runNpm(args, options = {}) {
 function release() {
     assert.equal(run("git", ["status", "--porcelain"], { stdio: "pipe" }).trim(), "", "Commit or stash existing changes before releasing.");
     run("git", ["fetch", "origin", "--tags", "--quiet"]);
+    runNpm(["run", "verify"]);
 
     const { version: currentVersion } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
     const tags = run("git", ["tag", "--list", "v*"], { stdio: "pipe" })
@@ -63,7 +64,6 @@ function release() {
     runNpm(["pkg", "set", `version=${version}`, "--workspace", "@skladno/electron"]);
     runNpm(["install", "--package-lock-only", "--ignore-scripts"]);
     run("node", ["scripts/check-electron-release-tag.mjs", tag]);
-    runNpm(["run", "verify"]);
     run("git", ["add", "package.json", "package-lock.json", "packages/electron/package.json"]);
     run("git", ["commit", "-m", `Release ${tag}`]);
     run("git", ["tag", tag]);

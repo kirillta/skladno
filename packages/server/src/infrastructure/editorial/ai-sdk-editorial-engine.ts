@@ -1,9 +1,10 @@
-import { generateText, Output, streamText, type ModelMessage } from "ai";
+import { generateText, isStepCount, Output, streamText, tool, ToolLoopAgent, type ModelMessage } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { EDITORIAL_OPERATION, type StyleProfile, type StyleReview } from "@skladno/shared";
 
 import type { EditorialConversationRequest } from "../../application/ports/editorial-conversation-request.js";
+import type { EditorialAssistantRequest } from "../../application/ports/editorial-assistant-request.js";
 import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
 import type { EditorialEngineEvent } from "../../application/ports/editorial-engine-event.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
@@ -136,6 +137,54 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
             throw providerError(error, false);
         }
+    }
+
+
+    async *streamAssistant(request: EditorialAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        const execute = (capability: string, input: Readonly<Record<string, string>>) => request.tools.find((candidate) => candidate.capability === capability)?.execute(input, signal)
+            ?? Promise.reject(new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT));
+        const assistantTool = (candidate: EditorialAssistantRequest["tools"][number]) => {
+            if (candidate.input === "proposal-operation")
+                return tool({ description: candidate.description, inputSchema: z.object({ operation: z.enum(["thesis_to_narrative", "flow_revision"]) }), execute: ({ operation }) => execute(candidate.capability, { operation }) });
+
+            if (candidate.input === "target-language")
+                return tool({ description: candidate.description, inputSchema: z.object({ targetLanguage: z.string().min(1) }), execute: ({ targetLanguage }) => execute(candidate.capability, { targetLanguage }) });
+
+            return tool({ description: candidate.description, inputSchema: z.object({}), execute: () => execute(candidate.capability, {}) });
+        };
+        const loadSkill = tool({
+            description: "Load the full instructions for one relevant Skladno Skill.",
+            inputSchema: z.object({ id: z.string().min(1) }),
+            execute: ({ id }) => request.skills.find((skill) => skill.id === id)?.instructions ?? "Unknown Skill.",
+        });
+        const agent = new ToolLoopAgent({
+            model: this.openai.responses(this.options.model),
+            instructions: [
+                "You are Skladno's editorial assistant. Use only the supplied tools when an editorial result is needed.",
+                "Never claim that a tool ran when it did not. Preserve author control. Finish with a concise response after the necessary work.",
+                `Available Skills:\n${request.skills.map((skill) => `${skill.id}: ${skill.name}. ${skill.description}`).join("\n")}`,
+                ...request.instructions,
+            ].join("\n\n"),
+            tools: { ...Object.fromEntries(request.tools.map((candidate) => [candidate.capability, assistantTool(candidate)])), load_skill: loadSkill },
+            stopWhen: isStepCount(6),
+            telemetry: { isEnabled: false },
+            providerOptions: this.providerOptions(),
+        });
+        const result = await agent.stream({
+            prompt: `Recent conversation:\n${request.history.map((turn) => `${turn.role}: ${turn.content}`).join("\n")}\n\nAuthor request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`,
+            abortSignal: signal,
+        });
+        let text = "";
+        for await (const delta of result.textStream) {
+            text += delta;
+            yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta };
+        }
+
+        const steps = await result.steps;
+        if (!text.trim() || signal.aborted || (steps.length >= 6 && (await result.finalStep).finishReason === "tool-calls"))
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
+
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: responseId((await result.finalStep).providerMetadata) ?? "assistant-tool-loop", text };
     }
 
 

@@ -18,6 +18,8 @@ These terms describe concepts visible to authors and the domain language used th
 
 ## Editorial work
 
+- **Editorial capability**: a validated Skladno operation that declares the Article context it may use, its prerequisites, and its result. Workspace Views and Assistant Skills can invoke the same capability.
+- **Skill**: a reusable instruction package that helps Assistant choose and sequence Editorial capabilities for an Author's request. A Skill grants no capability or permission. A **built-in Skill** ships with Skladno. Author-created Skills are not available yet.
 - **Editorial operation**: an author-requested assistant activity, such as composing, smoothing, fact-checking, style review, or translation.
 - **Editorial request**: one invocation of an Editorial operation.
 - **Editorial session**: the interaction sequence and activity history for Editorial requests.

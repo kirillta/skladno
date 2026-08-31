@@ -86,6 +86,25 @@ describe("Editorial Workspace", () => {
     });
 
 
+    it("opens Proposal Review when an Assistant request prepares a Proposal", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "write", selectedArticleId: "one" }));
+        client.streamAssistantRequest = vi.fn(async (_articleId, _input, onEvent) => {
+            onEvent({ type: "completed", requestId: "proposal-request", responseKind: "proposal_prepared", messageId: "proposal-message", result: { proposal: "Improved Draft" } });
+        });
+
+        render(<App client={client} />);
+
+        await screen.findByRole("heading", { name: "First Article" });
+        await user.type(screen.getByRole("textbox", { name: "Editorial guidance" }), "Improve flow");
+        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+
+        expect(await screen.findByText("Improved Draft")).toBeTruthy();
+    });
+
+
     it("restores the latest completed translation from local Assistant records", async () => {
         const client = fakeClient();
         const user = userEvent.setup();
@@ -696,6 +715,22 @@ describe("Editorial Workspace", () => {
         await user.tab();
 
         expect(updateArticle).toHaveBeenCalledWith("one", { title: "A better title" });
+    });
+
+
+    it("keeps the Article title field focused when its autosave updates the current Article", async () => {
+        const user = userEvent.setup();
+        const updateArticle = vi.fn().mockResolvedValue(undefined);
+        const header = renderLocalized(<ArticleHeader article={article("one", "Untitled article")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} />);
+        const headerScope = within(header.container);
+
+        await user.click(headerScope.getByRole("button", { name: "Rename article: Untitled article" }));
+        const titleField = headerScope.getByRole("textbox", { name: "Article title" });
+        await user.clear(titleField);
+        await user.type(titleField, "A better title");
+        header.rerender(<IntlProvider locale="en" messages={messages}><ArticleHeader article={article("one", "A better title")} updateArticle={updateArticle} save={vi.fn()} remove={vi.fn()} focusMode={false} setFocusMode={vi.fn()} /></IntlProvider>);
+
+        expect(document.activeElement).toBe(headerScope.getByRole("textbox", { name: "Article title" }));
     });
 
 

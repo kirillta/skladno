@@ -34,7 +34,7 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
-            "contract": "Selected Article is restored locally, Article activity includes retained Draft checkpoints, and independently selectable translation Articles appear as children of their source Article.",
+            "contract": "Selected Article is restored locally, Article activity includes retained Draft checkpoints, and independently selectable translation Articles appear under the selected source group or during search while other source groups show a collapsed-child indicator.",
             "persistence": "Article service plus local workspace preferences."
         },
         {

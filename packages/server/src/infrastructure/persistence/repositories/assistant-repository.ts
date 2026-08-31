@@ -1,4 +1,4 @@
-import { isBuiltInSkillId, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId } from "@skladno/shared";
+import { resolveBuiltInSkillId, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { createId, now, type Row } from "./repository-utils.js";
@@ -82,6 +82,11 @@ export class AssistantRepository {
     }
 
 
+    setExecution(requestId: string, capability: string): void {
+        this.database.prepare("UPDATE assistant_requests SET capability_name = ?, updated_at = ? WHERE id = ?").run(capability, now(), requestId);
+    }
+
+
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
         const timestamp = now();
         const messageId = createId();
@@ -134,16 +139,17 @@ export class AssistantRepository {
         const explicitSkillValue = row.explicit_skill_id === null ? undefined : String(row.explicit_skill_id);
         const resolvedSkillValue = row.resolved_skill_id === null ? undefined : String(row.resolved_skill_id);
         const skillSource = row.skill_source === null ? undefined : String(row.skill_source) as AssistantSkillSource;
-        if ((explicitSkillValue && !isBuiltInSkillId(explicitSkillValue)) || (resolvedSkillValue && !isBuiltInSkillId(resolvedSkillValue)) || (skillSource && !skillSources.includes(skillSource)))
+        const explicitSkillId = explicitSkillValue && resolveBuiltInSkillId(explicitSkillValue);
+        const resolvedSkillId = resolvedSkillValue && resolveBuiltInSkillId(resolvedSkillValue);
+        if ((explicitSkillValue && !explicitSkillId) || (resolvedSkillValue && !resolvedSkillId) || (skillSource && !skillSources.includes(skillSource)))
             throw new Error("Invalid persisted assistant request.");
 
-        const explicitSkillId = explicitSkillValue as BuiltInSkillId | undefined;
-        const resolvedSkillId = resolvedSkillValue as BuiltInSkillId | undefined;
-
+        const capability = row.capability_name === null || row.capability_name === undefined ? undefined : String(row.capability_name);
         return {
             id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
             ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}), status,
             ...(row.retry_of_request_id === null ? {} : { retryOfRequestId: String(row.retry_of_request_id) }), ...(row.error_code === null ? {} : { errorCode: String(row.error_code) }),
+            ...(capability ? { execution: { capability, status, requestId: String(row.id), baseRevisionId: String(row.base_revision_id) } } : {}),
             createdAt: String(row.created_at), updatedAt: String(row.updated_at)
         };
     }
@@ -156,8 +162,9 @@ export class AssistantRepository {
         if (!roles.includes(role) || !kinds.includes(kind) || !statuses.includes(status))
             throw new Error("Invalid persisted assistant message.");
 
-        const skillId = row.skill_id === null ? undefined : String(row.skill_id);
-        if (skillId !== undefined && !isBuiltInSkillId(skillId))
+        const skillValue = row.skill_id === null ? undefined : String(row.skill_id);
+        const skillId = skillValue === undefined ? undefined : resolveBuiltInSkillId(skillValue);
+        if (skillValue !== undefined && !skillId)
             throw new Error("Invalid persisted assistant skill.");
 
         const skillOffset = row.skill_offset === null || row.skill_offset === undefined ? undefined : Number(row.skill_offset);

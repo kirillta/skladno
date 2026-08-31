@@ -3,7 +3,7 @@ import { join, parse, relative, resolve } from "node:path";
 import type { Dialog, IpcMain, IpcRenderer, Shell } from "electron";
 import type { ApplicationServices } from "@skladno/server/electron";
 import { ApplicationClientError, type ApplicationErrorCode, type DesktopSettingsClient, type DesktopSettingsLocations, type ElectronMessages } from "@skladno/shared";
-import { readRuntimeSettings, writeRuntimeSettings } from "./runtime-settings.js";
+import { readRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
 
 
 export const desktopSettingsChannel = "skladno:desktop-settings";

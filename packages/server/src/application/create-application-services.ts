@@ -16,6 +16,9 @@ import type { SettingsStore } from "./ports/settings-store.js";
 import type { StyleCorpusStore } from "./ports/style-corpus-store.js";
 import type { SystemDateTimeFormatProvider } from "./ports/system-date-time-format-provider.js";
 import type { ManagedCredentials } from "./ports/managed-credentials.js";
+import { EditorialCapabilityCatalog } from "./assistant/editorial-capability-catalog.js";
+import type { EditorialService } from "./editorial/editorial-service.js";
+import { AssistantSkillCatalog, builtInSkillSource } from "./assistant/assistant-skill-catalog.js";
 
 
 export function createApplicationServices(
@@ -31,14 +34,22 @@ export function createApplicationServices(
     factChecks: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void } = { list: () => [], resolve: () => undefined, save: () => undefined },
     backups?: BackupManager,
     credentials?: ManagedCredentials,
+    editorial?: EditorialService,
 ): ApplicationServices {
+    const articleService = new ArticleService(articles, assistant);
+    const publishing = new PublishingService(settings);
+    const factCheckService = new FactCheckService(factChecks);
+    const styleCorpusService = new StyleCorpusService(styleCorpus, engines, articles);
+    const capabilities = editorial ? new EditorialCapabilityCatalog(articleService, artifacts, publishing, editorial, styleCorpusService) : undefined;
     return {
-        articles: new ArticleService(articles, assistant),
-        assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks),
+        articles: articleService,
+        assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks, capabilities),
         settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId, backups, credentials),
-        publishing: new PublishingService(settings),
-        styleCorpus: new StyleCorpusService(styleCorpus, engines, articles),
+        publishing,
+        styleCorpus: styleCorpusService,
         proposalSummaries: new ProposalSummaryService(engines, artifacts),
-        factChecks: new FactCheckService(factChecks),
+        factChecks: factCheckService,
+        skills: new AssistantSkillCatalog([builtInSkillSource]),
+        ...(capabilities ? { capabilities } : {}),
     };
 }

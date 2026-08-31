@@ -7,6 +7,7 @@ import test from "node:test";
 import { openDatabase } from "./database.js";
 import { createTestPersistence, type TestPersistence } from "../../test-support/test-persistence.js";
 import { StyleCorpusService } from "../../application/editorial/style-corpus-service.js";
+import { builtInSkills, legacyEditorialOperationSkillMap } from "@skladno/shared";
 
 
 // Product scenarios: history-and-publishing.revision-restore-creates-new, history-and-publishing.style-corpus-local, cross-cutting.assistant-records-local
@@ -21,6 +22,29 @@ function withRepository(run: (repositories: TestPersistence, close: () => void, 
         rmSync(directory, { recursive: true, force: true });
     }
 }
+
+
+test("Assistant compatibility records load current and legacy Skill IDs without rewriting SQLite", () => withRepository((repositories, _close, database) => {
+    const article = repositories.articleService.createArticle({ title: "Compatibility", content: "Draft" });
+    for (const skillId of builtInSkills) {
+        repositories.assistant.createRequest({ id: `current-${skillId}`, articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId }, explicitSkillId: skillId });
+        assert.equal(repositories.assistant.getRequest(`current-${skillId}`)?.explicitSkillId, skillId);
+    }
+
+    for (const [legacyOperation, skillId] of Object.entries(legacyEditorialOperationSkillMap)) {
+        const requestId = `legacy-${legacyOperation}`;
+        repositories.assistant.createRequest({ id: requestId, articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+        database.prepare("UPDATE assistant_requests SET explicit_skill_id = ?, resolved_skill_id = ?, skill_source = 'explicit' WHERE id = ?").run(legacyOperation, legacyOperation, requestId);
+        assert.equal(repositories.assistant.getRequest(requestId)?.explicitSkillId, skillId);
+        assert.equal(repositories.assistant.getRequest(requestId)?.resolvedSkillId, skillId);
+        assert.equal(database.prepare("SELECT explicit_skill_id FROM assistant_requests WHERE id = ?").get(requestId)?.explicit_skill_id, legacyOperation);
+    }
+
+    repositories.assistant.createRequest({ id: "legacy-completed", articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+    repositories.assistant.completeRequest({ requestId: "legacy-completed", articleId: article.id, responseKind: "proposal_prepared", content: "Done" });
+    database.prepare("UPDATE assistant_messages SET skill_id = ? WHERE request_id = ? AND role = 'assistant'").run("flow_revision", "legacy-completed");
+    assert.equal(repositories.assistant.listMessages(article.id).find((message) => message.requestId === "legacy-completed" && message.role === "assistant")?.skillId, "flow_and_clarity");
+}));
 
 
 test("accepted edits and restores create immutable ordered Revisions", () => withRepository((repositories) => {

@@ -7,7 +7,7 @@
             "area": "Internationalization",
             "title": "Typed, validated catalogs and English interface catalog",
             "status": "implemented",
-            "owners": ["packages/shared/src/application/electron-messages.ts", "packages/web/src/i18n", "packages/electron/src/main.ts"],
+            "owners": ["packages/shared/src/application/electron-messages.ts", "packages/web/src/i18n", "packages/electron/src/presentation/main.ts"],
             "contract": "English is the only complete installed catalog. Application copy, including Electron-native dialogs, skill-specific Assistant completion labels, and fallback Proposal summaries, is catalog-validated; production surfaces use the selected Interface locale, localized text is excluded from selectors and logic, and generated supporting UI text requests the active Interface locale independently of Article language.",
             "persistence": "Localized defaults become Article data only when author-editable content is created."
         },
@@ -115,7 +115,7 @@
             "event": "The native dialog options are created.",
             "expected": ["Titles, messages, details, and buttons come from the catalog for the selected Interface locale."],
             "forbidden": ["User-visible English literals in the Electron main process."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/electron-messages.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/electron-messages.test.ts" }
         },
         {
             "id": "cross-cutting.accessible-workspace-separators",

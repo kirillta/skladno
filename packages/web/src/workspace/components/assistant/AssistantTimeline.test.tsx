@@ -14,4 +14,12 @@ describe("AssistantTimeline", () => {
         expect(screen.getByRole("region", { name: message("assistant.factCheckClaimsChecked") })).toBeTruthy();
         expect(screen.getByText("HTTP was standardized in 1999.")).toBeTruthy();
     });
+
+
+    it("keeps human-readable activity secondary while a request streams", () => {
+        render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="streaming" message="" activity={{ summary: "Checking facts.", status: "started" }} collapsed={false} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+
+        expect(screen.getByRole("status").textContent).toContain("Checking facts.");
+        expect(screen.queryByText("Working for 1 second")).toBeNull();
+    });
 });

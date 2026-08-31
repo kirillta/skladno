@@ -14,6 +14,7 @@ import {
     factChecksPath,
     healthPath,
     HTTP_METHOD,
+    isAssistantEvent,
     HTTP_STATUS,
     parseHealthResponse,
     type CreateArticleInput,
@@ -74,6 +75,15 @@ function applicationClientError(payload: unknown, status: number): ApplicationCl
 
 function streamData(message: string): string | undefined {
     return message.split("\n").find((line) => line.startsWith("data:"))?.slice(5).trim();
+}
+
+
+function parseAssistantEvent(data: string): AssistantEvent {
+    const event: unknown = JSON.parse(data);
+    if (!isAssistantEvent(event))
+        throw new ApplicationClientError("editorial_request_failed", undefined, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+
+    return event;
 }
 
 
@@ -212,7 +222,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
             throw applicationClientError(payload, response.status);
         }
 
-        await streamEvents(response.body, (data) => JSON.parse(data) as AssistantEvent, (event) => {
+        await streamEvents(response.body, parseAssistantEvent, (event) => {
             if (event.type === "error")
                 throw new ApplicationClientError(event.errorCode, undefined, response.status);
 

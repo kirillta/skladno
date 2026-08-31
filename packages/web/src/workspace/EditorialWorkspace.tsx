@@ -206,6 +206,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             state={assistant.state}
             message={assistant.message}
             errorDetails={assistant.errorDetails}
+            activity={assistant.activity}
             factCheckClaims={assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true }))}
             onRequest={assistant.request}
             onCancel={assistant.cancel}

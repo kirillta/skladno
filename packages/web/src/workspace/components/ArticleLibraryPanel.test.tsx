@@ -29,17 +29,30 @@ describe("ArticleLibraryPanel", () => {
         const user = userEvent.setup();
         const selectArticle = vi.fn();
         const translation: Article = { ...source, id: "translation", title: "Spanish edition", language: "es", sourceArticleId: source.id, sourceRevisionId: source.currentRevisionId, sourceRevisionNumber: 1 };
+        const other: Article = { ...source, id: "other", title: "Other Article" };
+        const otherTranslation: Article = { ...translation, id: "other-translation", title: "Other Spanish edition", sourceArticleId: other.id };
         render(<IntlProvider locale="en" messages={messages}>
-            <ArticleLibraryPanel articles={[translation, source]} selectedArticleId={source.id} selectArticle={selectArticle} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" saveState="saved" />
+            <ArticleLibraryPanel articles={[translation, source, otherTranslation, other]} selectedArticleId={source.id} selectArticle={selectArticle} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" saveState="saved" />
         </IntlProvider>);
 
         const sourceButton = screen.getByRole("button", { name: /Mother Article/ });
         const translationButton = screen.getByRole("button", { name: /Spanish edition/ });
+        const otherButton = screen.getByRole("button", { name: /Other Article/ });
+        expect(screen.getByText("Mother Article").title).toBe("Mother Article");
+        expect(screen.getByText("Mother Article").classList.contains("truncate")).toBe(true);
+        expect(sourceButton.classList.contains("py-2.5")).toBe(true);
+        expect(translationButton.classList.contains("py-1.5")).toBe(true);
+        expect(screen.getByText("Spanish edition").classList.contains("text-xs")).toBe(true);
+        expect(sourceButton.getAttribute("aria-expanded")).toBe("true");
+        expect(otherButton.getAttribute("aria-expanded")).toBe("false");
+        expect(screen.queryByRole("button", { name: /Other Spanish edition/ })).toBeNull();
+        expect(otherButton.querySelector("svg")?.classList.contains("transition-transform")).toBe(true);
+        expect(screen.getByText("Other Spanish edition").closest("[aria-hidden]")?.classList.contains("grid-rows-[0fr]")).toBe(true);
         expect(sourceButton.compareDocumentPosition(translationButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        await user.type(screen.getByRole("textbox", { name: message("navigation.searchArticles") }), "Spanish");
-        await user.click(screen.getByRole("button", { name: /Spanish edition/ }));
-        expect(screen.getByRole("button", { name: /Mother Article/ })).toBeTruthy();
-        expect(selectArticle).toHaveBeenCalledWith("translation");
+        await user.type(screen.getByRole("textbox", { name: message("navigation.searchArticles") }), "Other Spanish");
+        await user.click(screen.getByRole("button", { name: /Other Spanish edition/ }));
+        expect(screen.getByRole("button", { name: /Other Article/ })).toBeTruthy();
+        expect(selectArticle).toHaveBeenCalledWith("other-translation");
     });
 
 

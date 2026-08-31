@@ -71,7 +71,7 @@
             "area": "Data & backups",
             "title": "Explicit Electron local-data deletion",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/shared/src/settings/settings.ts", "packages/electron/src/desktop-settings.ts", "packages/electron/src/main.ts"],
+            "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/shared/src/settings/settings.ts", "packages/electron/src/presentation/desktop-settings.ts", "packages/electron/src/presentation/main.ts"],
             "contract": "In Electron, an author can request deletion of the active resolved Skladno data directory through a no-argument native operation. The native confirmation explains the irreversible scope and always shows a Create a backup before deletion checkbox, checked only when a separate backup directory is configured. A requested backup must succeed before deletion continues. It cancels without changes, closes SQLite and background work before deletion, then exits only after successful removal. The renderer cannot supply a filesystem path.",
             "persistence": "The confirmed active local data directory is removed. Installer and uninstaller behavior remains data-preserving."
         },
@@ -80,7 +80,7 @@
             "area": "General",
             "title": "Author-controlled unsigned Windows updates",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/web/src/workspace/components/ArticleLibraryPanel.tsx", "packages/electron/src/desktop-updates.ts"],
+            "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/web/src/workspace/components/ArticleLibraryPanel.tsx", "packages/electron/src/presentation/desktop-updates.ts"],
             "contract": "General Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes automatic checks, a stable-only or prerelease-inclusive channel preference, explicit download, guarded restart, release notes, and recovery guidance. An available update appears in the Article Library utility area and opens Updates. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
             "persistence": "The desktop runtime file stores the network-permission, automatic-check, and prerelease-channel preferences plus non-content update recovery metadata."
         }
@@ -184,7 +184,7 @@
             "event": "The author cancels deletion, deletes after a native confirmation, or selects backup and deletion.",
             "expected": ["Cancellation leaves the data unchanged.", "A requested backup must complete and be non-empty before deletion proceeds.", "Only the active resolved Skladno data directory is deleted after background work and SQLite close, and Skladno exits after success."],
             "forbidden": ["Deleting an unresolved or broad path.", "Continuing to deletion after backup failure.", "Deleting local author data during ordinary uninstall."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/desktop-settings.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-settings.test.ts" }
         }
     ]
 }

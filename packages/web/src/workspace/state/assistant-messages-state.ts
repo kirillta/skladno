@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
+import { ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantCapabilityActivity, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
@@ -23,12 +23,14 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const [messageByArticle, setMessageByArticle] = useState<Record<string, string>>({});
     const [errorDetailsByArticle, setErrorDetailsByArticle] = useState<Record<string, string>>({});
     const [factCheckClaimsByArticle, setFactCheckClaimsByArticle] = useState<Record<string, FactCheckClaimPreview[]>>({});
+    const [activityByArticle, setActivityByArticle] = useState<Record<string, AssistantCapabilityActivity>>({});
     const controller = useRef<AbortController>();
     const article = workspace.selectedArticle;
     const messages = article ? messagesByArticle[article.id] : undefined;
     const state = article ? stateByArticle[article.id] ?? "idle" : "idle";
     const message = article ? messageByArticle[article.id] ?? "" : "";
     const errorDetails = article ? errorDetailsByArticle[article.id] : undefined;
+    const activity = article ? activityByArticle[article.id] : undefined;
 
     const reload = useCallback(async (articleId: string | undefined = article?.id) => {
         if (!articleId)
@@ -94,6 +96,9 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
 
 
     const handleAssistantEvent = useCallback((event: AssistantEvent, articleId: string, revisionId: string, streamedId: string) => {
+        if (event.type === ASSISTANT_EVENT.CAPABILITY_ACTIVITY)
+            setActivityByArticle((current) => ({ ...current, [articleId]: event.activity }));
+
         if (event.type === ASSISTANT_EVENT.TOOL_STATUS && event.claims) {
             const claims = event.claims;
             setFactCheckClaimsByArticle((current) => ({ ...current, [articleId]: claims }));
@@ -165,6 +170,12 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                 [current.id]: "streaming",
             }));
             setFactCheckClaimsByArticle((claims) => ({ ...claims, [current.id]: [] }));
+            setActivityByArticle((activities) => {
+                const next = { ...activities };
+                delete next[current.id];
+
+                return next;
+            });
             controller.current = new AbortController();
             const streamedId = `streaming-${crypto.randomUUID()}`;
             const selectedContent = selection && workspace.content.includes(selection) ? selection : undefined;
@@ -214,7 +225,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         }
     }, [client, handleAssistantEvent, intl, reload, selection, workspace]);
 
-    return { messages, state, message, errorDetails, factCheckClaims: article ? factCheckClaimsByArticle[article.id] : undefined, request, cancel: () => controller.current?.abort() };
+    return { messages, state, message, errorDetails, activity, factCheckClaims: article ? factCheckClaimsByArticle[article.id] : undefined, request, cancel: () => controller.current?.abort() };
 }
 
 

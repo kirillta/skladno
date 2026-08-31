@@ -14,6 +14,7 @@ import type { EditorialEngineResolver } from "../application/ports/editorial-eng
 import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../application/ports/editorial-engine-error.js";
 import type { EditorialEngineRequest } from "../application/ports/editorial-engine-request.js";
+import type { EditorialAssistantRequest } from "../application/ports/editorial-assistant-request.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
@@ -45,6 +46,21 @@ class FixtureEngine implements EditorialEngine {
 }
 
 
+class CapabilityFixtureEngine extends FixtureEngine {
+    constructor(events: EditorialEngineEvent[], private readonly capability = "generate_proposal") {
+        super(events);
+    }
+
+
+    async *streamAssistant(request: EditorialAssistantRequest): AsyncIterable<EditorialEngineEvent> {
+        const selected = request.tools.find((tool) => tool.capability === this.capability);
+        assert.ok(selected);
+        await selected.execute(this.capability === "generate_proposal" ? { operation: EDITORIAL_OPERATION.FLOW_REVISION } : {}, new AbortController().signal);
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-tool-loop", text: "Proposal prepared." };
+    }
+}
+
+
 async function withService(engine: EditorialEngine, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
@@ -59,8 +75,8 @@ async function withService(engine: EditorialEngine, run: (baseUrl: string, persi
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: storeResponses
     };
-    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection", persistence.factChecks);
     const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses, persistence.factChecks);
+    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection", persistence.factChecks, undefined, undefined, editorial);
     const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");
@@ -452,6 +468,8 @@ test("assistant requests persist a revision-bound proposal and splice only the s
 
         assert.match(body, /"type":"accepted"/);
         assert.match(body, /"type":"skill_resolved".*"skillId":"flow_and_clarity"/);
+        assert.match(body, /"type":"capability_activity".*"summary":"Preparing a Proposal\.".*"status":"started"/);
+        assert.match(body, /"type":"capability_activity".*"summary":"Preparing a Proposal\.".*"status":"completed"/);
         assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
         assert.equal(engine.requests[0]?.article, "selected");
         assert.equal(engine.requests[0]?.articleSelection, true);
@@ -464,6 +482,83 @@ test("assistant requests persist a revision-bound proposal and splice only the s
         assert.equal(proposalMessage?.proposalContent, "before improved after");
         assert.equal(proposalMessage?.baseRevisionId, article.currentRevisionId);
         assert.equal(proposalMessage?.baseRevisionContent, "before selected after");
+    });
+});
+
+
+test("the live Assistant tool loop stages one catalog Proposal before completion", async () => {
+    const engine = new CapabilityFixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "catalog-proposal", text: "Improved Article" },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "assistant-tool-loop-request",
+                authorMessage: "Improve the flow.",
+                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+            }),
+        });
+        const body = await response.text();
+        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
+
+        assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
+        assert.equal(JSON.parse(artifact.content).capability, "generate_proposal");
+        assert.equal(JSON.parse(artifact.content).proposal, "Improved Article");
+        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original Article");
+    });
+});
+
+
+test("the live Assistant tool loop runs no-input artifact capabilities", async () => {
+    const engine = new CapabilityFixtureEngine([{
+        type: EDITORIAL_ENGINE_EVENT.COMPLETED,
+        responseId: "catalog-fact-check",
+        text: "",
+        factCheck: { findings: [{ claim: "A claim", status: "unverifiable", rationale: "No source.", uncertainty: "Unknown.", sources: [] }] },
+    }], "fact_check");
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "A claim" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "assistant-tool-fact", authorMessage: "Check this fact.", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+        const body = await response.text();
+
+        assert.match(body, /"summary":"Checking facts\."/);
+        assert.match(body, /"type":"staged_completion"/);
+        assert.match(body, /"responseKind":"findings_prepared"/);
+        assert.equal(repositories.editorialArtifacts.list(article.id)[0]?.kind, "fact-check");
+        assert.equal(repositories.assistant.getRequest("assistant-tool-fact")?.execution?.capability, "fact_check");
+    });
+});
+
+
+test("Assistant HTTP accepts a legacy Editorial operation without persisting its legacy ID", async () => {
+    const engine = new FixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "legacy-flow", text: "Improved" },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "legacy-flow-request",
+                authorMessage: "Improve the flow.",
+                explicitSkillId: "flow_revision",
+                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+            }),
+        });
+
+        assert.match(await response.text(), /"skillId":"flow_and_clarity"/);
+        assert.equal(repositories.assistant.getRequest("legacy-flow-request")?.explicitSkillId, "flow_and_clarity");
     });
 });
 

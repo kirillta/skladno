@@ -1,6 +1,6 @@
 {
     "name": "@skladno/electron",
-    "version": "0.0.3",
+    "version": "0.0.5",
     "private": true,
     "type": "module",
     "main": "dist/main.js",
@@ -8,7 +8,7 @@
     "description": "Local-first AI editorial workspace",
     "author": "Kirill Taran",
     "scripts": {
-        "build": "tsc -b && esbuild src/main.ts --bundle --platform=node --format=esm --external:electron --external:@napi-rs/keyring --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=dist/main.js && esbuild src/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload.cjs",
+        "build": "tsc -b && esbuild src/presentation/main.ts --bundle --platform=node --format=esm --external:electron --external:@napi-rs/keyring --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=dist/main.js && esbuild src/presentation/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload.cjs",
         "start": "electron .",
         "package": "npm run build --workspace @skladno/web && npm run build && electron-forge package --arch=x64",
         "make": "npm run build --workspace @skladno/web && npm run build && electron-forge make --arch=x64 --platform=win32",
