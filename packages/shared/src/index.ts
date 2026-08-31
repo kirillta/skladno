@@ -26,6 +26,7 @@ export {
     type ElectronPrepareCloseRequest,
 } from "./application/electron-lifecycle.js";
 export { electronMessagesFor, type ElectronMessages } from "./application/electron-messages.js";
+export { desktopShellCommands, isDesktopShellCommand, type DesktopShellClient, type DesktopShellCommand } from "./application/desktop-shell.js";
 export { isDesktopUpdateState, type DesktopUpdateClient, type DesktopUpdateState } from "./application/desktop-updates.js";
 export { HTTP_METHOD, HTTP_STATUS } from "./transport/http.js";
 export {

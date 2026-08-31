@@ -20,16 +20,6 @@ describe("KeyBindingDispatcher", () => {
         expect(keydown.preventDefault).toHaveBeenCalledOnce();
     });
 
-    it("triggers a registered command without requiring a keyboard event", () => {
-        const dispatcher = new KeyBindingDispatcher();
-        const handler = vi.fn();
-        dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, handler);
-
-        expect(dispatcher.trigger(KEY_BINDING_COMMAND.SAVE_REVISION)).toBe(true);
-        expect(handler).toHaveBeenCalledOnce();
-        expect(dispatcher.trigger(KEY_BINDING_COMMAND.OPEN_SETTINGS)).toBe(false);
-    });
-
     it("does not dispatch unmatched, composing, or repeated events", () => {
         const dispatcher = new KeyBindingDispatcher();
         const handler = vi.fn();

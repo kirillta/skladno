@@ -48,7 +48,7 @@ export function KeyBindingSettings({ overrides, save, general, saveGeneral }: { 
 
     return <>
         <p className="mt-3 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.keyBindingsIntro" })}</p>
-        {(["general", "workspace", "assistant"] as const).map((category) => <SettingsGroup key={category} label={intl.formatMessage({ id: `settings.keyBindingCategory.${category}` })}>
+        {(["general", "editing", "workspace", "window", "assistant"] as const).map((category) => <SettingsGroup key={category} label={intl.formatMessage({ id: `settings.keyBindingCategory.${category}` })}>
             {category === "assistant" && <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.assistantSendMode" })} hint={intl.formatMessage({ id: "settings.assistantSendModeHint" })}>
                 <Select aria-label={intl.formatMessage({ id: "settings.assistantSendMode" })} value={general.assistantSendMode} onChange={(event) => {
                     const value = event.target.value;

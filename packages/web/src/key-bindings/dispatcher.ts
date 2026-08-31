@@ -51,17 +51,6 @@ export class KeyBindingDispatcher {
     }
 
 
-    trigger(commandId: KeyBindingCommandId): boolean {
-        const handler = this.handlers.get(commandId);
-        if (!handler)
-            return false;
-
-        handler();
-
-        return true;
-    }
-
-
     dispatch(event: KeyBindingEvent, scope: KeyBindingScope = "application"): boolean {
         if (event.repeat || event.isComposing)
             return false;

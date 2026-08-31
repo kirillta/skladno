@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import type { EditorialWorkspaceClient } from "./application-client.js";
-import { createRendererApplicationClient, getDesktopUpdateClient } from "./desktop-client.js";
+import { createRendererApplicationClient, getDesktopShellClient, getDesktopUpdateClient } from "./desktop-client.js";
 import { EditorialWorkspaceProvider } from "./workspace/EditorialWorkspace.js";
 import { I18nProvider } from "./i18n/I18nProvider.js";
 import { NotificationProvider } from "./notifications/NotificationProvider.js";
 import { useKeyBindingDispatcher } from "./key-bindings/KeyBindingProvider.js";
 import { saveScheduledWebBackup } from "./settings/web-backups.js";
-import { ELECTRON_LIFECYCLE_EVENT, isKeyBindingCommandId, resolveTheme, type KeyBindingOverrides, type ResolvedTheme, type ThemePreference } from "@skladno/shared";
+import { desktopShellCommands, resolveTheme, type KeyBindingOverrides, type ResolvedTheme, type ThemePreference } from "@skladno/shared";
 
 const defaultClient = createRendererApplicationClient();
 
@@ -60,6 +60,15 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
     }, []);
 
     useEffect(() => {
+        const desktopShell = getDesktopShellClient();
+        if (!desktopShell)
+            return;
+
+        const unregister = desktopShellCommands.map((command) => dispatcher.register(command, () => desktopShell.execute(command)));
+        return () => unregister.forEach((remove) => remove());
+    }, [dispatcher]);
+
+    useEffect(() => {
         const openUpdates = () => {
             setFocusUpdates(true);
             setScreen("application-settings");
@@ -67,17 +76,6 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
         window.addEventListener("skladno:open-updates", openUpdates);
         return () => window.removeEventListener("skladno:open-updates", openUpdates);
     }, []);
-
-    useEffect(() => {
-        const triggerMenuCommand = (event: Event) => {
-            if (event instanceof CustomEvent && isKeyBindingCommandId(event.detail))
-                dispatcher.trigger(event.detail);
-        };
-
-        window.addEventListener(ELECTRON_LIFECYCLE_EVENT.menuCommand, triggerMenuCommand);
-
-        return () => window.removeEventListener(ELECTRON_LIFECYCLE_EVENT.menuCommand, triggerMenuCommand);
-    }, [dispatcher]);
 
     return <I18nProvider client={client}>
         <NotificationProvider>

@@ -2,13 +2,13 @@ import { dirname, join } from "node:path";
 import { app, autoUpdater, BrowserWindow, dialog, ipcMain, Menu, net, screen, shell } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter } from "@skladno/server/electron";
-import { defaultInterfaceLocale, ELECTRON_LIFECYCLE_CHANNEL, electronMessagesFor } from "@skladno/shared";
+import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
 import { requestDraftCheckpoint } from "../application/close-coordinator.js";
 import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window-policy.js";
 import { readWindowBounds, writeWindowBounds } from "../infrastructure/window-state.js";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
+import { registerDesktopShellAdapter } from "./desktop-shell.js";
 import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter } from "./desktop-updates.js";
-import { createApplicationMenu } from "./application-menu.js";
 
 
 const rendererUrl = "http://localhost:5173";
@@ -17,14 +17,6 @@ let closeApplication: (() => void) | undefined;
 let closing = false;
 let nativeMessages = electronMessagesFor(defaultInterfaceLocale);
 let updates: ReturnType<typeof createDesktopUpdateCoordinator> | undefined;
-
-
-function installApplicationMenu(): void {
-    Menu.setApplicationMenu(Menu.buildFromTemplate(createApplicationMenu(nativeMessages, {
-        triggerCommand: (command) => mainWindow?.webContents.send(ELECTRON_LIFECYCLE_CHANNEL.menuCommand, command),
-        checkForUpdates: () => void updates?.checkNow(),
-    })));
-}
 
 
 async function loadRenderer(window: BrowserWindow): Promise<void> {
@@ -101,6 +93,12 @@ async function createMainWindow(): Promise<void> {
     const preload = join(import.meta.dirname, "preload.cjs");
     const window = new BrowserWindow(createWindowOptions(preload, readWindowBounds(statePath, displays), app.isPackaged));
     mainWindow = window;
+    registerDesktopShellAdapter({
+        ipcMain,
+        window,
+        checkForUpdates: () => void updates?.checkNow(),
+        quit: () => void quitFrom(window),
+    });
 
     window.webContents.setWindowOpenHandler(({ url }) => {
         if (isExternalWebUrl(url))
@@ -184,7 +182,7 @@ if (squirrelStartup) {
             supported: app.isPackaged,
         });
         registerDesktopUpdatesAdapter({ ipcMain, coordinator: updates });
-        installApplicationMenu();
+        Menu.setApplicationMenu(null);
 
         await createMainWindow();
         updates?.schedule();

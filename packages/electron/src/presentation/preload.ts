@@ -2,12 +2,12 @@ import { contextBridge, ipcRenderer } from "electron";
 import {
     ELECTRON_LIFECYCLE_CHANNEL,
     ELECTRON_LIFECYCLE_EVENT,
-    isKeyBindingCommandId,
     type ElectronCheckpointResult,
     type ElectronPrepareCloseRequest,
 } from "@skladno/shared";
 import { exposeElectronApplicationClient } from "./preload-bridge.js";
 import { createDesktopSettingsClient } from "./desktop-settings.js";
+import { createDesktopShellClient } from "./desktop-shell.js";
 import { createDesktopUpdateClient } from "./desktop-updates.js";
 
 
@@ -42,6 +42,7 @@ function checkpointResult(value: unknown, requestId: string): ElectronCheckpoint
 
 exposeElectronApplicationClient(ipcRenderer, contextBridge);
 contextBridge.exposeInMainWorld("skladnoDesktop", createDesktopSettingsClient(ipcRenderer));
+contextBridge.exposeInMainWorld("skladnoShell", createDesktopShellClient(ipcRenderer));
 contextBridge.exposeInMainWorld("skladnoUpdates", createDesktopUpdateClient(ipcRenderer));
 
 ipcRenderer.on(ELECTRON_LIFECYCLE_CHANNEL.prepareClose, (_event, payload: unknown) => {
@@ -62,9 +63,4 @@ ipcRenderer.on(ELECTRON_LIFECYCLE_CHANNEL.prepareClose, (_event, payload: unknow
 
     window.addEventListener(ELECTRON_LIFECYCLE_EVENT.checkpointResult, receiveResult);
     window.dispatchEvent(new CustomEvent<string>(ELECTRON_LIFECYCLE_EVENT.prepareClose, { detail: payload.requestId }));
-});
-
-ipcRenderer.on(ELECTRON_LIFECYCLE_CHANNEL.menuCommand, (_event, command: unknown) => {
-    if (isKeyBindingCommandId(command))
-        window.dispatchEvent(new CustomEvent(ELECTRON_LIFECYCLE_EVENT.menuCommand, { detail: command }));
 });

@@ -15,7 +15,6 @@ export function createWindowOptions(preload: string, bounds: Electron.Rectangle,
         minWidth: 900,
         minHeight: 640,
         show: false,
-        autoHideMenuBar: true,
         backgroundColor: "#f7f6f2",
         webPreferences: {
             preload,

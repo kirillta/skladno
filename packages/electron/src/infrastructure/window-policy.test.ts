@@ -15,7 +15,6 @@ test("desktop window keeps the renderer isolated and only accepts web links", ()
         webSecurity: true,
         allowRunningInsecureContent: false,
     });
-    assert.equal(options.autoHideMenuBar, true);
     assert.equal(isExternalWebUrl("https://example.com/article"), true);
     assert.equal(isExternalWebUrl("http://example.com/article"), true);
     assert.equal(isExternalWebUrl("file:///C:/private.txt"), false);
