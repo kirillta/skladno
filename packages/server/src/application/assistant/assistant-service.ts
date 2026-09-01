@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type FactCheck, type FactCheckFinding, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantAuthorizedAction, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type FactCheck, type FactCheckFinding, type StartAssistantRequest } from "@skladno/shared";
 import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
@@ -32,6 +32,7 @@ export interface PreparedAssistantRequest extends AssistantServiceRequest {
     completedCapability?: string;
     capabilityActivities: { summary: string; status: "started" | "completed" }[];
     pendingActions: ("add_revision_to_style_corpus" | "rebuild_style_profile")[];
+    authorizedActions: readonly AssistantAuthorizedAction[];
 }
 
 
@@ -53,6 +54,23 @@ function inferSkill(message: string, requestScope: AssistantRequestScope): Built
     const matched = candidates.filter(([skill, pattern]) => pattern.test(message.toLowerCase()) && builtInSkillScopeCompatibility[skill].includes(requestScope.kind));
 
     return matched.length === 1 ? matched[0]![0] : undefined;
+}
+
+
+function authorizedActions(message: string): readonly AssistantAuthorizedAction[] {
+    const action = message.trim().toLowerCase();
+    if (action === "/add-revision-to-style-corpus")
+        return [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS];
+
+    if (action === "/rebuild-style-profile")
+        return [EDITORIAL_CAPABILITY.REBUILD_STYLE_PROFILE];
+
+    return [];
+}
+
+
+function isTransientReadFailure(error: unknown): boolean {
+    return error instanceof ApplicationServiceError && error.code === APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;
 }
 
 
@@ -196,6 +214,7 @@ export class AssistantService {
             usesCapabilityLoop,
             capabilityActivities: [],
             pendingActions: [],
+            authorizedActions: authorizedActions(request.authorMessage),
             ...(!usesCapabilityLoop && fallbackSkillId ? { completedCapability: capabilityForEditorialOperation(operation) } : {}),
             ...(reusableFactFindings.length ? { reusableFactFindings } : {})
         };
@@ -225,9 +244,6 @@ export class AssistantService {
 
         let completed = false;
         try {
-            if (request.usesCapabilityLoop)
-                yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: "Working on your request.", status: "started" } };
-
             for await (const event of (request.usesCapabilityLoop ? this.capabilityLoopStream(request, signal) : this.engineStream(request, signal))) {
                 if (event.type === EDITORIAL_ENGINE_EVENT.TEXT_DELTA) {
                     yield { type: ASSISTANT_EVENT.TEXT_DELTA, requestId: request.requestId, delta: event.delta };
@@ -330,20 +346,27 @@ export class AssistantService {
                     try {
                         result = read();
                     } catch (error) {
-                        if (definition.retry !== "transient-read")
+                        if (definition.retry !== "transient-read" || !isTransientReadFailure(error))
                             throw error;
 
                         result = read();
                     }
 
                     request.capabilityActivities.push({ summary: definition.activity, status: "completed" });
+                    this.assistant.setExecution(request.requestId, definition.id, "completed");
+                    
                     return result;
                 }
 
                 if (definition.execution === "action") {
                     const action = definition.id as "add_revision_to_style_corpus" | "rebuild_style_profile";
+                    if (!request.authorizedActions.includes(action))
+                        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
                     request.pendingActions.push(action);
                     request.capabilityActivities.push({ summary: definition.activity, status: "completed" });
+                    this.assistant.setExecution(request.requestId, definition.id, "completed");
+                    
                     return { status: "staged" };
                 }
 
@@ -368,6 +391,7 @@ export class AssistantService {
                 }
 
                 request.capabilityActivities.push({ summary: definition.activity, status: "completed" });
+                this.assistant.setExecution(request.requestId, definition.id, "completed");
                 return { status: "prepared" };
             },
         }));
@@ -392,12 +416,17 @@ export class AssistantService {
 
 
     private persistCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
+        return this.assistant.completeRun(() => this.persistCompletionInTransaction(request, event));
+    }
+
+
+    private persistCompletionInTransaction(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
         const article = this.articles.get(request.articleId);
         if (!article || article.currentRevisionId !== request.scope.baseRevisionId)
             throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
 
         for (const action of request.pendingActions)
-            this.capabilities!.action(action, { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId });
+            this.capabilities!.action(action, { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId, authorizedActions: request.authorizedActions });
 
         const content = completedContent(request, event.text);
         const kind = responseKind(request.completedCapability);

@@ -94,6 +94,25 @@ test("Assistant author messages retain their resolved skill", () => withReposito
 }));
 
 
+test("Assistant capability history is minimal and completion transactions roll back staged writes", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Bounded run", content: "Draft" });
+    const request = repositories.assistant.createRequest({ id: "bounded-run", articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+    repositories.assistant.setExecution(request.id, "inspect_article");
+    repositories.assistant.setExecution(request.id, "inspect_article", "completed");
+
+    const execution = repositories.assistant.getRequest(request.id)?.executions;
+    assert.equal(execution?.length, 1);
+    assert.deepEqual(Object.keys(execution?.[0] ?? {}).sort(), ["baseRevisionId", "capability", "completedAt", "requestId", "startedAt", "status"]);
+    assert.equal(execution?.[0]?.status, "completed");
+
+    assert.throws(() => repositories.assistant.completeRun(() => {
+        repositories.editorialArtifacts.create({ articleId: article.id, revisionId: article.currentRevisionId, kind: "assistant-proposal", content: "staged" });
+        throw new Error("forced completion failure");
+    }), /forced completion failure/);
+    assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
+}));
+
+
 test("Proposal summaries remain recoverable with their Assistant Proposal", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Summaries", content: "Before" });
     const request = repositories.assistant.createRequest({

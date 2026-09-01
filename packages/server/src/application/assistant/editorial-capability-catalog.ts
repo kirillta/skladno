@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, EDITORIAL_OPERATION, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type Article, type EditorialArtifact, type EditorialOperation } from "@skladno/shared";
+import { APPLICATION_ERROR, EDITORIAL_OPERATION, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type Article, type AssistantAuthorizedAction, type EditorialArtifact, type EditorialOperation } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleService } from "../articles/article-service.js";
@@ -57,6 +57,7 @@ export const editorialCapabilityDefinitions: readonly EditorialCapabilityDefinit
 export interface EditorialCapabilityContext {
     articleId: string;
     baseRevisionId: string;
+    authorizedActions?: readonly AssistantAuthorizedAction[];
 }
 
 
@@ -114,19 +115,19 @@ interface ArtifactStore {
 
 interface ReadContext {
     capability: typeof EDITORIAL_CAPABILITY.INSPECT_ARTICLE
-        | typeof EDITORIAL_CAPABILITY.INSPECT_REVISIONS
-        | typeof EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS
-        | typeof EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE
-        | typeof EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS;
+    | typeof EDITORIAL_CAPABILITY.INSPECT_REVISIONS
+    | typeof EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS
+    | typeof EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE
+    | typeof EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS;
     context: EditorialCapabilityContext;
 }
 
 
 export interface StreamContext {
     capability: typeof EDITORIAL_CAPABILITY.GENERATE_PROPOSAL
-        | typeof EDITORIAL_CAPABILITY.FACT_CHECK
-        | typeof EDITORIAL_CAPABILITY.STYLE_REVIEW
-        | typeof EDITORIAL_CAPABILITY.TRANSLATE;
+    | typeof EDITORIAL_CAPABILITY.FACT_CHECK
+    | typeof EDITORIAL_CAPABILITY.STYLE_REVIEW
+    | typeof EDITORIAL_CAPABILITY.TRANSLATE;
     context: EditorialCapabilityContext;
     requestId: string;
     authorContext: string;
@@ -210,13 +211,22 @@ export class EditorialCapabilityCatalog {
             }
             case EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS: {
                 const corpus = this.styleCorpus.get();
-                return { status: corpus.status, itemCount: corpus.items.length, rules: corpus.rules, articleRules: this.styleCorpus.getArticleRules(article.id), currentRevisionIncluded: corpus.items.some((item) => item.revisionId === article.currentRevisionId) };
+                return {
+                    status: corpus.status,
+                    itemCount: corpus.items.length,
+                    rules: corpus.rules,
+                    articleRules: this.styleCorpus.getArticleRules(article.id),
+                    currentRevisionIncluded: corpus.items.some((item) => item.revisionId === article.currentRevisionId)
+                };
             }
         }
     }
 
 
     action(capability: typeof EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS | typeof EDITORIAL_CAPABILITY.REBUILD_STYLE_PROFILE, context: EditorialCapabilityContext) {
+        if (!context.authorizedActions?.includes(capability))
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
         const article = currentArticle(this.articles, context);
         return capability === EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS
             ? this.styleCorpus.addArticleRevision(article.id, article.currentRevisionId)

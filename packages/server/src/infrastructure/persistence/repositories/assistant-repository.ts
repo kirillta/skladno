@@ -1,4 +1,4 @@
-import { resolveBuiltInSkillId, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId } from "@skladno/shared";
+import { resolveBuiltInSkillId, type AssistantCapabilityExecution, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { createId, now, type Row } from "./repository-utils.js";
@@ -11,6 +11,9 @@ const skillSources: readonly AssistantSkillSource[] = ["explicit", "inferred"];
 
 
 export class AssistantRepository {
+    private completionDepth = 0;
+
+
     constructor(private readonly database: SqliteDatabase) { }
 
 
@@ -82,26 +85,48 @@ export class AssistantRepository {
     }
 
 
-    setExecution(requestId: string, capability: string): void {
-        this.database.prepare("UPDATE assistant_requests SET capability_name = ?, updated_at = ? WHERE id = ?").run(capability, now(), requestId);
+    setExecution(requestId: string, capability: string, status: "started" | "completed" | "failed" | "cancelled" = "started"): void {
+        const timestamp = now();
+        this.database.prepare("UPDATE assistant_requests SET capability_name = ?, updated_at = ? WHERE id = ?").run(capability, timestamp, requestId);
+        if (status === "started") {
+            this.database.prepare("INSERT INTO assistant_capability_executions (request_id, capability_name, status, base_revision_id, started_at) SELECT id, ?, 'started', base_revision_id, ? FROM assistant_requests WHERE id = ?")
+                .run(capability, timestamp, requestId);
+            return;
+        }
+
+        this.database.prepare("UPDATE assistant_capability_executions SET status = ?, completed_at = ? WHERE id = (SELECT id FROM assistant_capability_executions WHERE request_id = ? AND capability_name = ? AND status = 'started' ORDER BY id DESC LIMIT 1)")
+            .run(status, timestamp, requestId, capability);
+    }
+
+
+    completeRun<T>(run: () => T): T {
+        if (this.completionDepth > 0)
+            return run();
+
+        this.database.exec("BEGIN IMMEDIATE;");
+        this.completionDepth += 1;
+        try {
+            const result = run();
+            this.database.exec("COMMIT;");
+            return result;
+        } catch (error) {
+            this.database.exec("ROLLBACK;");
+            throw error;
+        } finally {
+            this.completionDepth -= 1;
+        }
     }
 
 
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
         const timestamp = now();
         const messageId = createId();
-        this.database.exec("BEGIN IMMEDIATE;");
-        try {
+        return this.completeRun(() => {
             this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, proposal_content, skill_id, response_kind, editorial_artifact_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 .run(messageId, input.articleId, input.requestId, "assistant", "response", "completed", input.content, input.proposalContent ?? null, input.skillId ?? null, input.responseKind, input.editorialArtifactId ?? null, timestamp, timestamp);
             this.database.prepare("UPDATE assistant_requests SET status = 'completed', updated_at = ? WHERE id = ?").run(timestamp, input.requestId);
-            this.database.exec("COMMIT;");
-        } catch (error) {
-            this.database.exec("ROLLBACK;");
-            throw error;
-        }
-
-        return this.toMessage(this.database.prepare("SELECT * FROM assistant_messages WHERE id = ?").get(messageId) as Row);
+            return this.toMessage(this.database.prepare("SELECT * FROM assistant_messages WHERE id = ?").get(messageId) as Row);
+        });
     }
 
 
@@ -145,11 +170,22 @@ export class AssistantRepository {
             throw new Error("Invalid persisted assistant request.");
 
         const capability = row.capability_name === null || row.capability_name === undefined ? undefined : String(row.capability_name);
+        const executions = (this.database.prepare("SELECT capability_name, status, base_revision_id, started_at, completed_at FROM assistant_capability_executions WHERE request_id = ? ORDER BY id").all(requestId) as Row[])
+            .map((execution): AssistantCapabilityExecution => ({
+                capability: String(execution.capability_name),
+                status: String(execution.status) as AssistantCapabilityExecution["status"],
+                requestId,
+                baseRevisionId: String(execution.base_revision_id),
+                startedAt: String(execution.started_at),
+                ...(execution.completed_at === null ? {} : { completedAt: String(execution.completed_at) }),
+            }));
+            
         return {
             id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
             ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}), status,
             ...(row.retry_of_request_id === null ? {} : { retryOfRequestId: String(row.retry_of_request_id) }), ...(row.error_code === null ? {} : { errorCode: String(row.error_code) }),
             ...(capability ? { execution: { capability, status, requestId: String(row.id), baseRevisionId: String(row.base_revision_id) } } : {}),
+            ...(executions.length ? { executions } : {}),
             createdAt: String(row.created_at), updatedAt: String(row.updated_at)
         };
     }

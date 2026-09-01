@@ -41,7 +41,7 @@ Built-in Skills are versioned application assets. Author-created Skills, their s
 
 ### One bounded foreground run
 
-Every run starts from an explicit Author request. The model may select and sequence registered read or artifact-producing tools for at most six model steps. Safe calls run without per-call confirmation. Assistant asks one concise question when a simple required parameter is missing and links to a Workspace View when the Author must manage a prerequisite.
+Every run starts from an explicit Author request. The model may select and sequence registered read or artifact-producing tools for at most six model steps. Safe calls run without per-call confirmation. Adding the current Revision to the Style Corpus or rebuilding the Style Profile requires a server-validated request intent that names that exact action; general Article-scoped conversation does not authorize either mutation, and the model does not attest authorization. Assistant asks one concise question when a simple required parameter is missing and links to a Workspace View when the Author must manage a prerequisite.
 
 The completion gate applies to the full run. New artifacts remain staged until the run and all required validation complete. Failure, cancellation, step exhaustion, a stale Revision, an unregistered call, or invalid output persists no new artifact as valid work. Assistant may retry once only for a classified transient failure from a side-effect-free read. Artifact-producing and validation failures do not retry automatically.
 
@@ -55,7 +55,7 @@ The existing typed Assistant stream carries quiet, human-readable activity such 
 
 A completed artifact produces a short conversational summary and a result card with an explicit action to review it in its owning Workspace View. Completion does not change the current view automatically. Proposal decisions, Finding resolution, Revision restoration, translation Article creation, style-profile management, and publishing remain in their current screens.
 
-Persist minimal local execution metadata with the Assistant request: capability name, status, request ID, and base Revision. It follows the Article conversation lifecycle and stores no prompt, private argument, result body, secret, or raw provider response.
+Persist an append-only minimal local activity record for each capability call: capability ID, status, request ID, base Revision, and timestamps. It follows the Article conversation lifecycle and stores no prompt, tool argument, private context, result body, secret, or raw provider response. Legacy last-capability metadata remains readable for compatibility only.
 
 ## Consequences
 

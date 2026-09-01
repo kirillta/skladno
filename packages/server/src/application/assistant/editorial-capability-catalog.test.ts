@@ -64,7 +64,8 @@ test("the catalog owns capability-specific tool input validation", () => {
 
 test("the catalog adds only the current immutable Revision to the Style Corpus", () => withCatalog((catalog, article) => {
     const context = { articleId: article.id, baseRevisionId: article.currentRevisionId };
-    const corpus = catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, context);
-    assert.equal(corpus.items[0]?.revisionId, article.currentRevisionId);
     assert.throws(() => catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, context), { name: "ApplicationServiceError" });
+    const corpus = catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, { ...context, authorizedActions: [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS] });
+    assert.equal(corpus.items[0]?.revisionId, article.currentRevisionId);
+    assert.throws(() => catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, { ...context, authorizedActions: [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS] }), { name: "ApplicationServiceError" });
 }));
