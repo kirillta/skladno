@@ -431,7 +431,7 @@ export class AssistantService {
             input: "capability-query",
             execute: async (input) => this.capabilities!.discover(input.query ?? "", request.scope.kind),
         });
-        
+
         return tools;
     }
 
