@@ -197,6 +197,8 @@ export {
     type AssistantStagedCompletion,
     type BuiltInSkillId,
     type FactCheckClaimPreview,
+    type NewAssistantRequest,
+    type RetryAssistantRequest,
     type StartAssistantRequest
 } from "./assistant/assistant.js";
 export { ARTICLE_LANGUAGE, articleLanguages, isArticleLanguage, type ArticleLanguage } from "./cross-cutting/languages.js";

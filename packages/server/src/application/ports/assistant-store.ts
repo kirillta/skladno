@@ -5,7 +5,7 @@ export interface AssistantStore {
     ensureGreeting(articleId: string): void;
     listMessages(articleId: string): AssistantMessage[];
     getRequest(requestId: string): AssistantRequest | undefined;
-    createRequest(input: { id: string; articleId: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; skillOffset?: number; retryOfRequestId?: string }): AssistantRequest;
+    createRequest(input: { id: string; articleId: string; authorMessage?: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; skillOffset?: number; targetLanguage?: string; retryOfRequestId?: string }): AssistantRequest;
     setAuthorMessage(requestId: string, content: string): void;
     resolveRequest(requestId: string, skillId: BuiltInSkillId | undefined, source: AssistantSkillSource | undefined): void;
     setExecution(requestId: string, capability: string, status?: "started" | "completed" | "failed" | "cancelled"): void;

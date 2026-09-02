@@ -509,7 +509,7 @@ describe("Editorial Workspace", () => {
         await user.click(screen.getByRole("button", { name: message("assistant.send") }));
 
         await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalledTimes(2));
-        expect(vi.mocked(client.streamAssistantRequest).mock.calls.map(([, request]) => request.scope.baseRevisionId)).toEqual([promoted.id, promoted.id]);
+        expect(vi.mocked(client.streamAssistantRequest).mock.calls.map(([, request]) => request.kind === "new" ? request.scope.baseRevisionId : undefined)).toEqual([promoted.id, promoted.id]);
     });
 
 
@@ -519,12 +519,12 @@ describe("Editorial Workspace", () => {
 
 
     it("summarizes an Article selection in a compact composer chip", () => {
-        const selection = "The first selected sentence provides enough context to identify the excerpt.";
+        const selection = { articleId: "one", fingerprint: "fingerprint", preview: "The first selected sentence provides enough context to identify the excerpt.", startOffset: 0, endOffset: 72 };
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection={selection} clearSelection={vi.fn()} />);
         const selectionChip = panel.container.querySelector<HTMLElement>("[data-assistant-composer-decoration]")!;
 
         expect(selectionChip.textContent).toBe("The first selected s…");
-        expect(selectionChip.getAttribute("title")).toBe(selection);
+        expect(selectionChip.getAttribute("title")).toBe(selection.preview);
         expect(within(selectionChip).getByRole("button", { name: message("assistant.clearArticleSelection") })).toBeTruthy();
     });
 
@@ -540,7 +540,7 @@ describe("Editorial Workspace", () => {
         await user.click(within(panel.container).getByRole("button", { name: message("assistant.skill.talkingPoints.label") }));
         expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy();
 
-        panel.rerender(<IntlProvider locale="en" messages={messages}><EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection="Selected Article text" clearSelection={vi.fn()} /></IntlProvider>);
+        panel.rerender(<IntlProvider locale="en" messages={messages}><EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection={{ articleId: "one", fingerprint: "fingerprint", preview: "Selected Article text", startOffset: 0, endOffset: 21 }} clearSelection={vi.fn()} /></IntlProvider>);
 
         await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy());
         await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));

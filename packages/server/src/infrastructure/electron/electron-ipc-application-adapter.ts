@@ -233,7 +233,7 @@ function editorialFailure(error: unknown): { category: Extract<EditorialEvent, {
 async function streamAssistant(event: ElectronIpcMainEvent, request: Extract<ElectronStreamRequest, { kind: "assistant" }>, services: ApplicationServices, controller: AbortController): Promise<void> {
     const input = request.input;
     try {
-        const explicitSkillId = input.explicitSkillId && resolveBuiltInSkillId(input.explicitSkillId);
+        const explicitSkillId = input.kind === "new" && input.explicitSkillId ? resolveBuiltInSkillId(input.explicitSkillId) : undefined;
         const prepared = services.assistant.prepare({ ...input, articleId: request.articleId, ...(explicitSkillId ? { explicitSkillId } : {}) });
         for await (const item of services.assistant.stream(prepared, controller.signal))
             send(event, { streamId: request.streamId, kind: "assistant", event: item });

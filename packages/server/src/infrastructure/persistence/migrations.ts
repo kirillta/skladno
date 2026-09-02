@@ -212,4 +212,11 @@ export const migrations = [
         CREATE INDEX assistant_capability_executions_request_id ON assistant_capability_executions(request_id, id);
         `,
     },
+    {
+        version: 16,
+        name: "assistant_retry_input",
+        sql: `
+        ALTER TABLE assistant_requests ADD COLUMN target_language TEXT;
+        `,
+    },
 ] as const;

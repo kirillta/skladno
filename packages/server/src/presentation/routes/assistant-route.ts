@@ -32,25 +32,31 @@ function scope(value: unknown): AssistantRequestScope {
 
 
 function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequest {
+    const requestId = string(body.requestId, "requestId");
+    if (body.kind === "retry")
+        return { kind: "retry", requestId, retryOfRequestId: string(body.retryOfRequestId, "retryOfRequestId") };
+
+    if (body.kind !== "new" && body.kind !== undefined)
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
     const explicitSkillValue = body.explicitSkillId === undefined ? undefined : string(body.explicitSkillId, "explicitSkillId");
     const explicitSkillId = explicitSkillValue && resolveBuiltInSkillId(explicitSkillValue);
     if (explicitSkillValue && !explicitSkillId)
         throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
 
     const targetLanguage = body.targetLanguage === undefined ? undefined : string(body.targetLanguage, "targetLanguage");
-    const retryOfRequestId = body.retryOfRequestId === undefined ? undefined : string(body.retryOfRequestId, "retryOfRequestId");
     const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
     if (skillOffset !== undefined && (!explicitSkillValue || !Number.isInteger(skillOffset) || skillOffset < 0 || skillOffset > String(body.authorMessage ?? "").length))
         throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
 
     return {
-        requestId: string(body.requestId, "requestId"),
+        kind: "new",
+        requestId,
         authorMessage: string(body.authorMessage, "authorMessage"),
         scope: scope(body.scope),
         ...(explicitSkillId ? { explicitSkillId } : {}),
         ...(skillOffset === undefined ? {} : { skillOffset }),
         ...(targetLanguage ? { targetLanguage } : {}),
-        ...(retryOfRequestId ? { retryOfRequestId } : {}),
     };
 }
 

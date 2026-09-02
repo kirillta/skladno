@@ -16,6 +16,7 @@ import { KEY_BINDING_COMMAND, PUBLISH_LIMIT_PROFILE } from "@skladno/shared";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
 import type { WorkspaceView } from "../workspace-views.js";
+import type { AssistantSelectionSnapshot } from "../editor/ArticleEditorPlugins.js";
 
 
 export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, runTranslation, shortcutOverrides, onSelectionChange, assistantSelection }: {
@@ -30,7 +31,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     runFactCheck: () => void;
     runTranslation: () => void;
     shortcutOverrides?: KeyBindingOverrides;
-    onSelectionChange?: (value: string | undefined) => void;
+    onSelectionChange?: (value: AssistantSelectionSnapshot | undefined) => void;
     assistantSelection?: string;
 }) {
     const intl = useIntl();

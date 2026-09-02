@@ -149,6 +149,9 @@ export interface AssistantRequest {
     skillSource?: AssistantSkillSource;
     status: AssistantRequestStatus;
     retryOfRequestId?: string;
+    authorMessage: string;
+    skillOffset?: number;
+    targetLanguage?: string;
     errorCode?: string;
     errorParameters?: Record<string, unknown>;
     execution?: AssistantExecutionMetadata;
@@ -168,6 +171,7 @@ export interface AssistantMessage {
     template?: AssistantMessageTemplate;
     content?: string;
     skillId?: BuiltInSkillId;
+    skillSource?: AssistantSkillSource;
     skillOffset?: number;
     selectionText?: string;
     responseKind?: AssistantResponseKind;
@@ -217,15 +221,25 @@ export const assistantMessagesPath = (articleId: string) => `/api/articles/${enc
 export const assistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
 
 
-export interface StartAssistantRequest {
+export interface NewAssistantRequest {
+    kind: "new";
     requestId: string;
     authorMessage: string;
     scope: AssistantRequestScope;
     explicitSkillId?: BuiltInSkillId;
     skillOffset?: number;
     targetLanguage?: string;
-    retryOfRequestId?: string;
 }
+
+
+export interface RetryAssistantRequest {
+    kind: "retry";
+    requestId: string;
+    retryOfRequestId: string;
+}
+
+
+export type StartAssistantRequest = NewAssistantRequest | RetryAssistantRequest;
 
 
 export type AssistantEvent =

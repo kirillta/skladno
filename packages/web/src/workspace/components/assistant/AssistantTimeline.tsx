@@ -6,7 +6,7 @@ import { FactCheckClaims } from "./FactCheckClaims.js";
 import { AssistantTimelineMessage } from "./AssistantTimelineMessage.js";
 
 
-export function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, openView, generalSettings, elapsedDuration }: {
+export function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, openView, onRetry, generalSettings, elapsedDuration }: {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
@@ -15,6 +15,7 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
     collapsed: boolean;
     assistantMessages?: AssistantMessage[];
     openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
+    onRetry?: (requestId: string) => void;
     generalSettings: GeneralSettings;
     elapsedDuration: string;
 }) {
@@ -37,7 +38,7 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
 
     return <div ref={timeline} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-live="polite">
         {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} />}
-        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
+        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
         {!assistantMessages?.length && <p className="text-sm leading-6 text-muted">{intl.formatMessage({ id: "assistant.intro" })}</p>}
         {factCheckClaims?.length && !completedFactCheck ? <FactCheckClaims claims={factCheckClaims} className="mr-6" /> : null}
         {state === "streaming" && <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted" role="status">

@@ -11,6 +11,7 @@ import type { WorkspaceView } from "../workspace-views.js";
 import { RevisionHistoryView } from "../views/RevisionHistoryView.js";
 import { StyleProfileView } from "../views/StyleProfileView.js";
 import { TranslationsView } from "../views/TranslationsView.js";
+import type { AssistantSelectionSnapshot } from "../editor/ArticleEditorPlugins.js";
 
 
 export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile, publishProfileLabel, runFactCheck, runTranslation, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
@@ -25,7 +26,7 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     publishProfileLabel: string;
     runFactCheck: () => void;
     runTranslation: () => void;
-    onSelectionChange?: (value: string | undefined) => void;
+    onSelectionChange?: (value: AssistantSelectionSnapshot | undefined) => void;
     assistantSelection?: string;
     proposalWarningsDismissed: boolean;
     dismissProposalWarnings: () => void;

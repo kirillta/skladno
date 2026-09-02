@@ -45,6 +45,7 @@ test("preload exposes only the typed application client and completes streams", 
     assert.equal((await client.getHealth()).status, "ok");
     assert.deepEqual(await client.listFactChecks?.("article-1"), []);
     await client.streamAssistantRequest("article-1", {
+        kind: "new",
         requestId: "request-1",
         authorMessage: "Check this",
         scope: { kind: "article", baseRevisionId: "revision-1" },

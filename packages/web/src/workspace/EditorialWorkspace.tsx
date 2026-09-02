@@ -18,7 +18,8 @@ import { useArticleWorkspace, articleContentForWorkspace, sortArticlesByActivity
 import { useArticleRevisions, type ArticleRevisionsState } from "./state/article-revisions-state.js";
 import { useEditorialProposal, type EditorialProposalState } from "./state/editorial-proposal-state.js";
 import { useStyleCorpus, type StyleCorpusState } from "./state/style-corpus-state.js";
-import { useAssistantMessages, type AssistantMessagesState } from "./state/assistant-messages-state.js";
+import { assistantSelectionScope, useAssistantMessages, type AssistantMessagesState, type AssistantSelectionScope } from "./state/assistant-messages-state.js";
+import type { AssistantSelectionSnapshot } from "./editor/ArticleEditorPlugins.js";
 import { usePublishing, type PublishingState } from "./state/publishing-state.js";
 
 export type { DraftConflict, DraftPresentationState as SaveState } from "./drafts/draft-lifecycle.js";
@@ -40,7 +41,10 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         if (workspace.selectedArticle)
             setProfileRebuilt({ articleId: workspace.selectedArticle.id, count, token: Date.now() });
     });
-    const [assistantSelection, setAssistantSelection] = useState<string>();
+    const [assistantSelection, setAssistantSelection] = useState<AssistantSelectionScope>();
+    useEffect(() => {
+        setAssistantSelection(undefined);
+    }, [workspace.content, workspace.selectedArticleId]);
     const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
         editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
         if (result.proposal)
@@ -210,6 +214,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             factCheckClaims={assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true }))}
             onRequest={assistant.request}
             onCancel={assistant.cancel}
+            onRetry={assistant.retry}
             collapsed={layout.assistantCollapsed}
             setCollapsed={layout.setAssistantCollapsed}
             translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== workspace.selectedArticle?.language)}
@@ -221,7 +226,14 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             generalSettings={generalSettings}
             clearSelection={() => setAssistantSelection(undefined)} />
         }>
-        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} runFactCheck={runFactCheck} runTranslation={runTranslation} shortcutOverrides={keyBindingOverrides} onSelectionChange={setAssistantSelection} assistantSelection={assistantSelection} />
+        <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} runFactCheck={runFactCheck} runTranslation={runTranslation} shortcutOverrides={keyBindingOverrides} onSelectionChange={(snapshot: AssistantSelectionSnapshot | undefined) => {
+            if (!snapshot || !workspace.selectedArticle) {
+                setAssistantSelection(undefined);
+                return;
+            }
+
+            void assistantSelectionScope(workspace.selectedArticle.id, snapshot).then(setAssistantSelection);
+        }} assistantSelection={assistantSelection?.preview} />
         <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
         <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
     </ExtractedWorkspaceShell>;

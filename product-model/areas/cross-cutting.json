@@ -72,7 +72,7 @@
             "title": "Local Article conversation records",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/ports/assistant-store.ts", "packages/server/src/presentation/routes/assistant-route.ts"],
-            "contract": "Greetings, messages, request scope, completions, and safe failure or cancellation status are isolated per Article; completed Proposal content and localized change summaries remain locally recoverable with their base Revision, and author messages retain resolved skills and offsets.",
+            "contract": "Greetings, messages, request scope, completions, and safe failure or cancellation status are isolated per Article; completed Proposal content and localized change summaries remain locally recoverable with their base Revision, and author messages retain resolved skills and offsets. Failed and cancelled retries reconstruct author content, skill, scope, and translation target solely from the local original request.",
             "persistence": "Conversation records are local and cascade with their Article; fixed application messages use stable templates while author and model content remain authored text."
         },
         {

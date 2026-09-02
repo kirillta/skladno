@@ -38,7 +38,7 @@ export class AssistantRepository {
     listMessages(articleId: string): AssistantMessage[] {
         this.ensureGreeting(articleId);
         const rows = this.database.prepare(`
-            SELECT assistant_messages.*, assistant_requests.scope_json AS request_scope_json, assistant_requests.base_revision_id AS request_base_revision_id, article_revisions.content AS request_revision_content, editorial_artifacts.content AS artifact_content
+            SELECT assistant_messages.*, assistant_requests.scope_json AS request_scope_json, assistant_requests.skill_source AS request_skill_source, assistant_requests.base_revision_id AS request_base_revision_id, article_revisions.content AS request_revision_content, editorial_artifacts.content AS artifact_content
             FROM assistant_messages
             LEFT JOIN assistant_requests ON assistant_requests.id = assistant_messages.request_id
             LEFT JOIN article_revisions ON article_revisions.id = assistant_requests.base_revision_id
@@ -51,17 +51,17 @@ export class AssistantRepository {
     }
 
 
-    createRequest(input: { id: string; articleId: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; skillOffset?: number; retryOfRequestId?: string }): AssistantRequest {
+    createRequest(input: { id: string; articleId: string; authorMessage?: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; skillOffset?: number; targetLanguage?: string; retryOfRequestId?: string }): AssistantRequest {
         if (this.database.prepare("SELECT 1 FROM assistant_requests WHERE id = ?").get(input.id))
             throw new Error("Assistant request already exists.");
 
         const timestamp = now();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            this.database.prepare("INSERT INTO assistant_requests (id, article_id, base_revision_id, scope_json, explicit_skill_id, status, retry_of_request_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .run(input.id, input.articleId, input.scope.baseRevisionId, JSON.stringify(input.scope), input.explicitSkillId ?? null, "running", input.retryOfRequestId ?? null, timestamp, timestamp);
+            this.database.prepare("INSERT INTO assistant_requests (id, article_id, base_revision_id, scope_json, explicit_skill_id, target_language, status, retry_of_request_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(input.id, input.articleId, input.scope.baseRevisionId, JSON.stringify(input.scope), input.explicitSkillId ?? null, input.targetLanguage ?? null, "running", input.retryOfRequestId ?? null, timestamp, timestamp);
             this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, skill_offset, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .run(createId(), input.articleId, input.id, "author", "message", "completed", "", input.skillOffset ?? null, timestamp, timestamp);
+                .run(createId(), input.articleId, input.id, "author", "message", "completed", input.authorMessage ?? "", input.skillOffset ?? null, timestamp, timestamp);
             this.database.exec("COMMIT;");
         } catch (error) {
             this.database.exec("ROLLBACK;");
@@ -169,6 +169,10 @@ export class AssistantRepository {
         if ((explicitSkillValue && !explicitSkillId) || (resolvedSkillValue && !resolvedSkillId) || (skillSource && !skillSources.includes(skillSource)))
             throw new Error("Invalid persisted assistant request.");
 
+        const authorMessage = this.database.prepare("SELECT content, skill_offset FROM assistant_messages WHERE request_id = ? AND role = 'author' ORDER BY created_at, id LIMIT 1").get(requestId) as Row | undefined;
+        if (!authorMessage || typeof authorMessage.content !== "string")
+            throw new Error("Missing persisted assistant author message.");
+
         const capability = row.capability_name === null || row.capability_name === undefined ? undefined : String(row.capability_name);
         const executions = (this.database.prepare("SELECT capability_name, status, base_revision_id, started_at, completed_at FROM assistant_capability_executions WHERE request_id = ? ORDER BY id").all(requestId) as Row[])
             .map((execution): AssistantCapabilityExecution => ({
@@ -184,6 +188,9 @@ export class AssistantRepository {
             id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
             ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}), status,
             ...(row.retry_of_request_id === null ? {} : { retryOfRequestId: String(row.retry_of_request_id) }), ...(row.error_code === null ? {} : { errorCode: String(row.error_code) }),
+            authorMessage: String(authorMessage.content),
+            ...(authorMessage.skill_offset === null || authorMessage.skill_offset === undefined ? {} : { skillOffset: Number(authorMessage.skill_offset) }),
+            ...(row.target_language === null || row.target_language === undefined ? {} : { targetLanguage: String(row.target_language) }),
             ...(capability ? { execution: { capability, status, requestId: String(row.id), baseRevisionId: String(row.base_revision_id) } } : {}),
             ...(executions.length ? { executions } : {}),
             createdAt: String(row.created_at), updatedAt: String(row.updated_at)
@@ -223,6 +230,7 @@ export class AssistantRepository {
             id: String(row.id), articleId: String(row.article_id), ...(row.request_id === null ? {} : { requestId: String(row.request_id) }), role, kind, status,
             ...(row.content === null ? {} : { content: String(row.content) }), ...(kind === "greeting" ? { template: "greeting" as const } : {}), ...(status === "cancelled" ? { template: "request_cancelled" as const } : {}), ...(status === "failed" ? { template: "request_failed" as const } : {}), ...(skillId === undefined ? {} : { skillId }), ...(skillOffset === undefined ? {} : { skillOffset }),
             ...(selectionText ? { selectionText } : {}),
+            ...(row.request_skill_source === "explicit" || row.request_skill_source === "inferred" ? { skillSource: row.request_skill_source } : {}),
             ...(row.response_kind === null ? {} : { responseKind: String(row.response_kind) as AssistantMessage["responseKind"] }),
             ...(row.editorial_artifact_id === null ? {} : { editorialArtifactId: String(row.editorial_artifact_id) }),
             ...(row.request_base_revision_id === null || row.request_base_revision_id === undefined ? {} : { baseRevisionId: String(row.request_base_revision_id) }),

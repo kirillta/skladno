@@ -8,10 +8,10 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { LexicalEditor } from "lexical";
 import { LinkControl } from "./ArticleEditorToolbar.js";
-import { AssistantSelectionHighlight, EditorBridge, EditorSelectionBridge, SupportedPastePlugin } from "./ArticleEditorPlugins.js";
+import { AssistantSelectionHighlight, EditorBridge, EditorSelectionBridge, SupportedPastePlugin, type AssistantSelectionSnapshot } from "./ArticleEditorPlugins.js";
 
 
-export function ArticleEditorContents({ content, onChange, onSelectionChange, assistantSelection }: { content: string; onChange: (value: string) => void; onSelectionChange?: (value: string | undefined) => void; assistantSelection?: string }) {
+export function ArticleEditorContents({ content, onChange, onSelectionChange, assistantSelection }: { content: string; onChange: (value: string) => void; onSelectionChange?: (value: AssistantSelectionSnapshot | undefined) => void; assistantSelection?: string }) {
     const intl = useIntl();
     const [editor, setEditor] = useState<LexicalEditor>();
     return <>{editor && <LinkControl editor={editor} />}

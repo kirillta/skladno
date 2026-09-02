@@ -9,6 +9,7 @@ import { AssistantComposer } from "./assistant/AssistantComposer.js";
 import { AssistantTimeline } from "./assistant/AssistantTimeline.js";
 import { composerCaretOffset, composerText, placeCaretAfterSkill, textBeforeSkill } from "./assistant/composer-utils.js";
 import { selectionPreview, skillMessages } from "./assistant/assistant-messages.js";
+import type { AssistantSelectionScope } from "../state/assistant-messages-state.js";
 
 
 function closeButton({ label, className, onClick }: { label: string; className: string; onClick: () => void }): HTMLButtonElement {
@@ -40,12 +41,30 @@ function closeButton({ label, className, onClick }: { label: string; className: 
 type AssistantState = "idle" | "streaming" | "error";
 
 
+function skillAliasKey(skill: BuiltInSkillId) {
+    switch (skill) {
+        case BUILT_IN_SKILL.TALKING_POINTS:
+            return "talkingPoints";
+        case BUILT_IN_SKILL.NARRATIVE_DRAFT:
+            return "narrativeDraft";
+        case BUILT_IN_SKILL.FLOW_AND_CLARITY:
+            return "flowAndClarity";
+        case BUILT_IN_SKILL.FACT_CHECKING:
+            return "factChecking";
+        case BUILT_IN_SKILL.STYLE_REVIEW:
+            return "styleReview";
+        default:
+            return "translation";
+    }
+}
+
+
 function renderAssistantComposerContent({ element, value, skill, offset = 0, selection, intl, clearSelection, removeSkill }: {
     element: HTMLDivElement | null;
     value: string;
     skill?: BuiltInSkillId;
     offset?: number;
-    selection?: string;
+    selection?: AssistantSelectionScope;
     intl: IntlShape;
     clearSelection?: () => void;
     removeSkill: () => void;
@@ -61,11 +80,11 @@ function renderAssistantComposerContent({ element, value, skill, offset = 0, sel
         selectionChip.contentEditable = "false";
         selectionChip.className = "mx-1 inline-flex h-5 min-h-0 max-w-[calc(100%-0.5rem)] items-center gap-1 align-middle rounded-full border border-border bg-surface px-1.5 text-xs font-semibold text-muted";
         selectionChip.ariaLabel = intl.formatMessage({ id: "assistant.articleSelection" });
-        selectionChip.title = selection;
+        selectionChip.title = selection.preview;
 
         const preview = document.createElement("span");
         preview.className = "relative -top-px max-w-48 truncate";
-        preview.append(selectionPreview(selection));
+        preview.append(selectionPreview(selection.preview));
         selectionChip.append(preview);
 
         const clearButton = closeButton({
@@ -115,7 +134,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
     onCancel: () => void;
     translationLanguages: readonly string[];
     dispatcher?: KeyBindingDispatcher;
-    selection?: string;
+    selection?: AssistantSelectionScope;
     clearSelection?: () => void;
     assistantSendMode: GeneralSettings["assistantSendMode"];
     shortcutOverrides: KeyBindingOverrides;
@@ -125,12 +144,21 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
     const [selectedSkill, setSelectedSkill] = useState<BuiltInSkillId>();
     const [skillOffset, setSkillOffset] = useState(0);
     const [slashTriggerOffset, setSlashTriggerOffset] = useState<number>();
+    const [slashQuery, setSlashQuery] = useState("");
     const [composerOffset, setComposerOffset] = useState(0);
     const [activeSkillIndex, setActiveSkillIndex] = useState(0);
     const composer = useRef<HTMLDivElement>(null);
     const composerState = useRef({ guidance, selectedSkill, skillOffset });
-    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0);
-    const availableSkills = builtInSkills.filter((skill) => !selection || builtInSkillScopeCompatibility[skill].includes("selection"));
+    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0) && (!selection || !selectedSkill || builtInSkillScopeCompatibility[selectedSkill].includes("selection"));
+    const availableSkills = builtInSkills;
+    const pickerSkills = slashTriggerOffset === undefined ? availableSkills : availableSkills.filter((skill) => {
+        const aliases = intl.formatMessage({ id: `assistant.skill.${skillAliasKey(skill)}.aliases` });
+        const query = slashQuery.toLocaleLowerCase();
+
+        return !query
+            || intl.formatMessage({ id: skillMessages[skill] }).toLocaleLowerCase().includes(query)
+            || aliases.toLocaleLowerCase().split(",").some((alias) => alias.trim().startsWith(query));
+    });
 
     composerState.current = { guidance, selectedSkill, skillOffset };
 
@@ -168,6 +196,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
         setSelectedSkill(skill);
         setSkillOffset(skillOffsetAfterSpace);
         setSlashTriggerOffset(undefined);
+        setSlashQuery("");
         setGuidance(nextGuidance);
         renderComposerContent(nextGuidance, skill, skillOffsetAfterSpace);
         composer.current?.focus();
@@ -181,7 +210,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
 
         const authorMessage = guidance.trim();
         const leadingWhitespace = guidance.length - guidance.trimStart().length;
-        const requestSkill = selectedSkill && (!selection || builtInSkillScopeCompatibility[selectedSkill].includes("selection")) ? selectedSkill : undefined;
+        const requestSkill = selectedSkill;
         const selectedSkillOffset = requestSkill ? Math.max(0, skillOffset - leadingWhitespace) : undefined;
 
         void onRequest(authorMessage, requestSkill, requestSkill === BUILT_IN_SKILL.TRANSLATION ? translationLanguages : undefined, selectedSkillOffset)
@@ -190,7 +219,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
                 setSelectedSkill(undefined);
                 renderComposerContent("");
             });
-    }, [canSend, guidance, onRequest, renderComposerContent, selectedSkill, selection, skillOffset, translationLanguages]);
+    }, [canSend, guidance, onRequest, renderComposerContent, selectedSkill, skillOffset, translationLanguages]);
 
     useEffect(() => {
         const unregisterSend = dispatcher?.register(KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, send);
@@ -225,10 +254,12 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
         if (selectedSkill)
             setSkillOffset(textBeforeSkill(element));
 
-        if (text[currentComposerOffset - 1] === "/" || text.endsWith("/")) {
+        const slashIndex = text.lastIndexOf("/", currentComposerOffset - 1);
+        if (slashIndex >= 0 && (slashIndex === 0 || /\s/.test(text[slashIndex - 1] ?? ""))) {
             setQuickActionsOpen(true);
             setActiveSkillIndex(-1);
-            setSlashTriggerOffset(text[currentComposerOffset - 1] === "/" ? currentComposerOffset : text.length);
+            setSlashTriggerOffset(slashIndex + 1);
+            setSlashQuery(text.slice(slashIndex + 1, currentComposerOffset));
         }
     };
 
@@ -272,7 +303,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
         }
     };
 
-    return { canSend, guidance, selectedSkill, composer, quickActionsOpen, availableSkills, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onInput, onKeyDown };
+    return { canSend, guidance, selectedSkill, composer, quickActionsOpen, availableSkills: pickerSkills, incompatibleSelectionSkill: Boolean(selection && selectedSkill && !builtInSkillScopeCompatibility[selectedSkill].includes("selection")), setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onInput, onKeyDown };
 }
 
 
@@ -300,7 +331,7 @@ function useElapsedDuration(state: AssistantState, intl: IntlShape) {
 }
 
 
-export function EditorialAssistantPanel({ state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
+export function EditorialAssistantPanel({ state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings }: {
     state: AssistantState;
     message: string;
     errorDetails?: string;
@@ -308,6 +339,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, activity
     factCheckClaims?: FactCheckClaimPreview[];
     onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
     onCancel: () => void;
+    onRetry?: (requestId: string) => void;
     collapsed: boolean;
     setCollapsed: (value: boolean) => void;
     language?: string;
@@ -318,7 +350,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, activity
     dispatcher?: KeyBindingDispatcher;
     shortcutOverrides?: KeyBindingOverrides;
     openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
-    selection?: string;
+    selection?: AssistantSelectionScope;
     clearSelection?: () => void;
     generalSettings?: GeneralSettings;
 }) {
@@ -339,7 +371,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, activity
                 <ChevronRightIcon className="size-3" />
             </Button>
         </header>
-        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} activity={activity} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} generalSettings={generalSettings} elapsedDuration={elapsedDuration} />
+        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} activity={activity} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} onRetry={onRetry} generalSettings={generalSettings} elapsedDuration={elapsedDuration} />
         <AssistantComposer {...composerState} state={state} selection={selection} onCancel={onCancel} shortcutOverrides={shortcutOverrides} />
     </aside>;
 }

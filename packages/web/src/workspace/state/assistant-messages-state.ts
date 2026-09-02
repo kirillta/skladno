@@ -9,6 +9,15 @@ import { providerLanguageName } from "./editorial-language.js";
 type ProposalState = "idle" | "streaming" | "error";
 
 
+export interface AssistantSelectionScope {
+    articleId: string;
+    fingerprint: string;
+    preview: string;
+    startOffset: number;
+    endOffset: number;
+}
+
+
 export function requestedTranslationLanguages(authorMessage: string, languages: readonly string[]): readonly string[] {
     const unique = [...new Set(languages)];
     const requested = articleLanguages.filter((language) => authorMessage.toLowerCase().includes(providerLanguageName(language).toLowerCase()));
@@ -16,7 +25,7 @@ export function requestedTranslationLanguages(authorMessage: string, languages: 
 }
 
 
-export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: string | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => void, profileRebuilt?: { articleId: string; count: number; token: number }) {
+export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: AssistantSelectionScope | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => void, profileRebuilt?: { articleId: string; count: number; token: number }) {
     const intl = useIntl();
     const [messagesByArticle, setMessagesByArticle] = useState<Record<string, AssistantMessage[]>>({});
     const [stateByArticle, setStateByArticle] = useState<Record<string, ProposalState>>({});
@@ -181,13 +190,17 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             });
             controller.current = new AbortController();
             const streamedId = `streaming-${crypto.randomUUID()}`;
-            const selectedContent = selection && workspace.content.includes(selection) ? selection : undefined;
-            const selectionStart = selectedContent ? workspace.content.indexOf(selectedContent) : -1;
+            const selectionMatchesRevision = selection && selection.articleId === current.id
+                && selection.fingerprint === await fingerprint(revision.content);
+            if (selection && !selectionMatchesRevision)
+                throw new ApplicationClientError("assistant_selection_invalid", undefined, 400);
+
             await client.streamAssistantRequest(current.id, {
+                kind: "new",
                 requestId: crypto.randomUUID(),
                 authorMessage,
-                scope: selectedContent && selectionStart >= 0
-                    ? { kind: "selection", baseRevisionId: revision.id, startOffset: selectionStart, endOffset: selectionStart + selectedContent.length }
+                scope: selectionMatchesRevision
+                    ? { kind: "selection", baseRevisionId: revision.id, startOffset: selection.startOffset, endOffset: selection.endOffset }
                     : { kind: "article", baseRevisionId: revision.id },
                 ...(explicitSkillId ? { explicitSkillId } : {}),
                 ...(skillOffset === undefined ? {} : { skillOffset }),
@@ -228,7 +241,76 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         }
     }, [client, handleAssistantEvent, intl, reload, selection, workspace]);
 
-    return { messages, state, message, errorDetails, activity, factCheckClaims: article ? factCheckClaimsByArticle[article.id] : undefined, request, cancel: () => controller.current?.abort() };
+
+    const retry = useCallback(async (retryOfRequestId: string) => {
+        const current = workspace.selectedArticle;
+        if (!current)
+            return;
+
+        try {
+            setMessageByArticle((messages) => ({ ...messages, [current.id]: "" }));
+            setErrorDetailsByArticle((details) => {
+                const next = { ...details };
+                delete next[current.id];
+
+                return next;
+            });
+
+            setStateByArticle((states) => ({ ...states, [current.id]: "streaming" }));
+            controller.current = new AbortController();
+            const streamedId = `streaming-${crypto.randomUUID()}`;
+            await client.streamAssistantRequest(current.id, {
+                kind: "retry",
+                requestId: crypto.randomUUID(),
+                retryOfRequestId,
+            }, (event) => handleAssistantEvent(event, current.id, current.currentRevisionId, streamedId), controller.current.signal);
+
+            await reload(current.id);
+            setStateByArticle((states) => ({ ...states, [current.id]: "idle" }));
+        } catch (error) {
+            if (error instanceof DOMException && error.name === "AbortError") {
+                await reload(current.id).catch(() => undefined);
+                setStateByArticle((states) => ({ ...states, [current.id]: "idle" }));
+
+                return;
+            }
+
+            setStateByArticle((states) => ({ ...states, [current.id]: "error" }));
+            setMessageByArticle((messages) => ({ ...messages, [current.id]: intl.formatMessage({ id: "assistant.requestStartFailed" }) }));
+            setErrorDetailsByArticle((details) => ({
+                ...details,
+                [current.id]: error instanceof ApplicationClientError
+                    ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
+                    : intl.formatMessage({ id: "errors.editorialRequestFailed" })
+            }));
+            await reload(current.id).catch(() => undefined);
+        }
+    }, [client, handleAssistantEvent, intl, reload, workspace]);
+
+    return {
+        messages,
+        state,
+        message,
+        errorDetails,
+        activity,
+        factCheckClaims: article
+            ? factCheckClaimsByArticle[article.id]
+            : undefined,
+        request,
+        retry,
+        cancel: () => controller.current?.abort()
+    };
+}
+
+
+async function fingerprint(content: string): Promise<string> {
+    const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(content));
+    return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+
+export async function assistantSelectionScope(articleId: string, snapshot: { markdown: string; preview: string; startOffset: number; endOffset: number }): Promise<AssistantSelectionScope> {
+    return { articleId, fingerprint: await fingerprint(snapshot.markdown), preview: snapshot.preview, startOffset: snapshot.startOffset, endOffset: snapshot.endOffset };
 }
 
 
