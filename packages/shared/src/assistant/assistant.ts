@@ -95,6 +95,14 @@ export interface AssistantCapabilityActivity {
 }
 
 
+export type AssistantAuthorizedAction = "rename_article"
+    | "change_article_language"
+    | "assign_publishing_profile"
+    | "set_article_style_rules"
+    | "add_revision_to_style_corpus"
+    | "rebuild_style_profile";
+
+
 /** Completion data held until the run is valid and its artifacts can be committed. */
 export interface AssistantStagedCompletion {
     responseKind: AssistantResponseKind;
@@ -108,6 +116,16 @@ export interface AssistantExecutionMetadata {
     status: AssistantRequestStatus;
     requestId: string;
     baseRevisionId: string;
+}
+
+
+export interface AssistantCapabilityExecution {
+    capability: string;
+    status: "started" | "completed" | "failed" | "cancelled";
+    requestId: string;
+    baseRevisionId: string;
+    startedAt: string;
+    completedAt?: string;
 }
 
 
@@ -134,6 +152,7 @@ export interface AssistantRequest {
     errorCode?: string;
     errorParameters?: Record<string, unknown>;
     execution?: AssistantExecutionMetadata;
+    executions?: AssistantCapabilityExecution[];
     createdAt: string;
     updatedAt: string;
 }
@@ -165,6 +184,7 @@ export interface AssistantMessage {
 
 
 export interface AssistantEditorialResult {
+    metadataChanged?: boolean;
     proposal?: string;
     factCheck?: import("../editorial/editorial.js").FactCheck;
     styleReview?: import("../editorial/editorial.js").StyleReview;

@@ -7,6 +7,7 @@ import type { ServerConfig } from "../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
 import { OpenAiProposalSummaryGeneratorAdapter } from "./openai-proposal-summary-generator-adaptor.js";
 import { OpenAiArticleTitleGeneratorAdapter } from "./article-title-generator.js";
+import { OpenAiAssistantActionIntentVerifier } from "./openai-assistant-action-intent-verifier.js";
 import type { ManagedCredentials } from "../../application/ports/managed-credentials.js";
 
 
@@ -62,6 +63,12 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
             return undefined;
 
         return new OpenAiArticleTitleGeneratorAdapter(configuration.apiKey, configuration.model, configuration.reasoningEffort);
+    }
+
+
+    resolveAssistantActionIntentVerifier() {
+        const configuration = this.resolveTextGenerationConfiguration();
+        return configuration ? new OpenAiAssistantActionIntentVerifier(configuration.apiKey, configuration.model, configuration.reasoningEffort) : undefined;
     }
 
 

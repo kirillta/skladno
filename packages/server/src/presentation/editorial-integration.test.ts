@@ -15,6 +15,7 @@ import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-ev
 import { EditorialEngineError } from "../application/ports/editorial-engine-error.js";
 import type { EditorialEngineRequest } from "../application/ports/editorial-engine-request.js";
 import type { EditorialAssistantRequest } from "../application/ports/editorial-assistant-request.js";
+import type { AssistantActionIntentVerifier } from "../application/ports/assistant-action-intent-verifier.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
@@ -47,7 +48,7 @@ class FixtureEngine implements EditorialEngine {
 
 
 class CapabilityFixtureEngine extends FixtureEngine {
-    constructor(events: EditorialEngineEvent[], private readonly capability = "generate_proposal") {
+    constructor(events: EditorialEngineEvent[], private readonly capability = "generate_proposal", private readonly input: Readonly<Record<string, string>> = {}) {
         super(events);
     }
 
@@ -55,17 +56,17 @@ class CapabilityFixtureEngine extends FixtureEngine {
     async *streamAssistant(request: EditorialAssistantRequest): AsyncIterable<EditorialEngineEvent> {
         const selected = request.tools.find((tool) => tool.capability === this.capability);
         assert.ok(selected);
-        await selected.execute(this.capability === "generate_proposal" ? { operation: EDITORIAL_OPERATION.FLOW_REVISION } : {}, new AbortController().signal);
+        await selected.execute(this.capability === "generate_proposal" ? { operation: EDITORIAL_OPERATION.FLOW_REVISION } : this.input, new AbortController().signal);
         yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-tool-loop", text: "Proposal prepared." };
     }
 }
 
 
-async function withService(engine: EditorialEngine, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true): Promise<void> {
+async function withService(engine: EditorialEngine, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
-    const engines: EditorialEngineResolver = { resolve: () => engine };
+    const engines: EditorialEngineResolver = { resolve: () => engine, resolveAssistantActionIntentVerifier: () => actionVerifier };
 
     const config = {
         host: "127.0.0.1",
@@ -536,6 +537,34 @@ test("the live Assistant tool loop runs no-input artifact capabilities", async (
         assert.equal(repositories.editorialArtifacts.list(article.id)[0]?.kind, "fact-check");
         assert.equal(repositories.assistant.getRequest("assistant-tool-fact")?.execution?.capability, "fact_check");
     });
+});
+
+
+test("the live Assistant authorizes an exact metadata action in the Author's language", async () => {
+    const engine = new CapabilityFixtureEngine([], "rename_article", { title: "Crónica del Río" });
+    const verifier: AssistantActionIntentVerifier = {
+        verify: async (message, capability, input) => message === "Renombra el artículo a Crónica del Río" && capability === "rename_article" && input.title === "Crónica del Río",
+    };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "assistant-spanish-rename", authorMessage: "Renombra el artículo a Crónica del Río", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+
+        assert.equal(response.status, 200);
+        assert.equal(repositories.articles.get(article.id)?.title, "Crónica del Río");
+
+        const rejectedArticle = repositories.articleService.createArticle({ title: "Keep this", content: "Original Article" });
+        await fetch(`${baseUrl}/api/articles/${rejectedArticle.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "assistant-rejected-rename", authorMessage: "No renombres el artículo", scope: { kind: "article", baseRevisionId: rejectedArticle.currentRevisionId } }),
+        });
+        assert.equal(repositories.articles.get(rejectedArticle.id)?.title, "Keep this");
+    }, true, verifier);
 });
 
 

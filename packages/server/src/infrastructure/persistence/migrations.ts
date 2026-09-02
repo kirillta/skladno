@@ -196,4 +196,20 @@ export const migrations = [
         ALTER TABLE assistant_requests ADD COLUMN capability_name TEXT;
         `,
     },
+    {
+        version: 15,
+        name: "assistant_capability_execution_history",
+        sql: `
+        CREATE TABLE assistant_capability_executions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_id TEXT NOT NULL REFERENCES assistant_requests(id) ON DELETE CASCADE,
+            capability_name TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('started', 'completed', 'failed', 'cancelled')),
+            base_revision_id TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            completed_at TEXT
+        );
+        CREATE INDEX assistant_capability_executions_request_id ON assistant_capability_executions(request_id, id);
+        `,
+    },
 ] as const;

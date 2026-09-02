@@ -8,7 +8,7 @@ import { PublishingService } from "../publishing/publishing-service.js";
 import { StyleCorpusService } from "../editorial/style-corpus-service.js";
 import { openDatabase } from "../../infrastructure/persistence/database.js";
 import { createTestPersistence } from "../../test-support/test-persistence.js";
-import { EDITORIAL_CAPABILITY, EditorialCapabilityCatalog, editorialCapabilityDefinitions, isValidatedEditorialCapabilityCall } from "./editorial-capability-catalog.js";
+import { EDITORIAL_CAPABILITY, EditorialCapabilityCatalog, editorialCapabilityDefinitions, isValidatedEditorialCapabilityCall, validateEditorialCapabilityCoverage } from "./editorial-capability-catalog.js";
 
 
 function withCatalog(run: (catalog: EditorialCapabilityCatalog, article: import("@skladno/shared").Article) => void): void {
@@ -62,9 +62,34 @@ test("the catalog owns capability-specific tool input validation", () => {
 });
 
 
+test("classified discovery is bounded and selection scope cannot expose Article reads", () => withCatalog((catalog) => {
+    validateEditorialCapabilityCoverage();
+
+    const results = catalog.discover("inspect and change Article language or prepare a translation", "article");
+    assert.ok(results.length <= 10);
+    assert.ok(results.some((result) => result.capability === EDITORIAL_CAPABILITY.CHANGE_ARTICLE_LANGUAGE));
+    assert.ok(results.some((result) => result.capability === EDITORIAL_CAPABILITY.TRANSLATE));
+
+    const selectionResults = catalog.discover("inspect Article metadata and improve clarity", "selection");
+    assert.equal(selectionResults.some((result) => result.capability === EDITORIAL_CAPABILITY.INSPECT_ARTICLE), false);
+}));
+
+
+test("catalog metadata actions change only the named current-Article field", () => withCatalog((catalog, article) => {
+    const context = { articleId: article.id, baseRevisionId: article.currentRevisionId, authorizedActions: [EDITORIAL_CAPABILITY.RENAME_ARTICLE] as const };
+    const renamed = catalog.action(EDITORIAL_CAPABILITY.RENAME_ARTICLE, context, { title: "Renamed Catalog" });
+
+    assert.ok("title" in renamed && "currentRevisionId" in renamed);
+    assert.equal(renamed.title, "Renamed Catalog");
+    assert.equal(renamed.currentRevisionId, article.currentRevisionId);
+    assert.throws(() => catalog.action(EDITORIAL_CAPABILITY.RENAME_ARTICLE, context, { title: "" }), { name: "ApplicationServiceError" });
+}));
+
+
 test("the catalog adds only the current immutable Revision to the Style Corpus", () => withCatalog((catalog, article) => {
     const context = { articleId: article.id, baseRevisionId: article.currentRevisionId };
-    const corpus = catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, context);
-    assert.equal(corpus.items[0]?.revisionId, article.currentRevisionId);
     assert.throws(() => catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, context), { name: "ApplicationServiceError" });
+    const corpus = catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, { ...context, authorizedActions: [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS] });
+    assert.equal(corpus.items[0]?.revisionId, article.currentRevisionId);
+    assert.throws(() => catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, { ...context, authorizedActions: [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS] }), { name: "ApplicationServiceError" });
 }));

@@ -107,6 +107,9 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         if (event.type === ASSISTANT_EVENT.COMPLETED && event.result) {
             const result = event.result;
             onResult(articleId, revisionId, result, event.editorialArtifactId);
+            if (result.metadataChanged)
+                void workspace.refreshArticle(articleId).catch(() => undefined);
+
             if (result.factCheck) {
                 const factCheck = result.factCheck;
                 setFactCheckClaimsByArticle((claims) => ({ ...claims, [articleId]: factCheck.findings.map(({ claim }) => ({ claim, checked: true })) }));
@@ -135,7 +138,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                 [articleId]: [...(items ?? []).filter((item) => item.id !== streamedId), next],
             };
         });
-    }, [onResult]);
+    }, [onResult, workspace]);
 
 
     const request = useCallback(async (authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string | readonly string[], skillOffset?: number) => {
