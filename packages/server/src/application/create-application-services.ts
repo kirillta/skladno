@@ -40,7 +40,7 @@ export function createApplicationServices(
     const publishing = new PublishingService(settings);
     const factCheckService = new FactCheckService(factChecks);
     const styleCorpusService = new StyleCorpusService(styleCorpus, engines, articles);
-    const capabilities = editorial ? new EditorialCapabilityCatalog(articleService, artifacts, publishing, editorial, styleCorpusService) : undefined;
+    const capabilities = editorial ? new EditorialCapabilityCatalog(articleService, artifacts, publishing, editorial, styleCorpusService, factChecks) : undefined;
     return {
         articles: articleService,
         assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks, capabilities),

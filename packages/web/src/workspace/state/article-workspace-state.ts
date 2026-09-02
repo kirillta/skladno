@@ -302,6 +302,13 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
     }
 
 
+    async function refreshArticle(articleId: string) {
+        const article = (await client.listArticles()).find((item) => item.id === articleId);
+        if (article)
+            replaceArticles((items) => items.map((item) => item.id === articleId ? article : item));
+    }
+
+
     async function remove(articleId: string) {
         await client.deleteArticle(articleId);
         const nextSelectedArticleId = selectedArticleId === articleId
@@ -378,6 +385,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
         resolveConflict,
         create,
         updateArticle,
+        refreshArticle,
         remove,
         updateRevision,
     };

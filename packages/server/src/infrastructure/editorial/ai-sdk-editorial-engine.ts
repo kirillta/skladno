@@ -1,4 +1,4 @@
-import { generateText, isStepCount, Output, streamText, tool, ToolLoopAgent, type ModelMessage } from "ai";
+import { generateText, isStepCount, Output, streamText, tool, ToolLoopAgent, type ModelMessage, type ToolSet } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { EDITORIAL_OPERATION, type StyleProfile, type StyleReview } from "@skladno/shared";
@@ -41,6 +41,54 @@ interface AiSdkEditorialEngineOptions {
     model: string;
     storeResponses: boolean;
     reasoningEffort?: "low" | "medium" | "high";
+}
+
+
+type AssistantToolExecutor = (capability: string, input: Readonly<Record<string, string>>) => Promise<unknown>;
+type AssistantTool = EditorialAssistantRequest["tools"][number];
+
+
+function createAssistantTool(candidate: AssistantTool, execute: AssistantToolExecutor) {
+    if (candidate.input === "proposal-operation")
+        return tool({ description: candidate.description, inputSchema: z.object({ operation: z.enum(["thesis_to_narrative", "flow_revision"]) }), execute: ({ operation }) => execute(candidate.capability, { operation }) });
+
+    if (candidate.input === "target-language")
+        return tool({ description: candidate.description, inputSchema: z.object({ targetLanguage: z.string().min(1) }), execute: ({ targetLanguage }) => execute(candidate.capability, { targetLanguage }) });
+
+    if (candidate.input === "title")
+        return tool({ description: candidate.description, inputSchema: z.object({ title: z.string().min(1) }), execute: ({ title }) => execute(candidate.capability, { title }) });
+
+    if (candidate.input === "language")
+        return tool({ description: candidate.description, inputSchema: z.object({ language: z.string().min(1) }), execute: ({ language }) => execute(candidate.capability, { language }) });
+
+    if (candidate.input === "publishing-profile")
+        return tool({ description: candidate.description, inputSchema: z.object({ profileId: z.string().min(1) }), execute: ({ profileId }) => execute(candidate.capability, { profileId }) });
+
+    if (candidate.input === "style-rules")
+        return tool({ description: candidate.description, inputSchema: z.object({ rules: z.string() }), execute: ({ rules }) => execute(candidate.capability, { rules }) });
+
+    if (candidate.input === "artifact-id")
+        return tool({ description: candidate.description, inputSchema: z.object({ artifactId: z.string().min(1) }), execute: ({ artifactId }) => execute(candidate.capability, { artifactId }) });
+
+    if (candidate.input === "finding-ids")
+        return tool({ description: candidate.description, inputSchema: z.object({ findingIds: z.string().min(1) }), execute: ({ findingIds }) => execute(candidate.capability, { findingIds }) });
+
+    if (candidate.input === "capability-query")
+        return tool({ description: candidate.description, inputSchema: z.object({ query: z.string().min(1) }), execute: ({ query }) => execute(candidate.capability, { query }) });
+
+    return tool({ description: candidate.description, inputSchema: z.object({}), execute: () => execute(candidate.capability, {}) });
+}
+
+
+function createAssistantTools(request: EditorialAssistantRequest, execute: AssistantToolExecutor): ToolSet {
+    return {
+        ...Object.fromEntries(request.tools.map((candidate) => [candidate.capability, createAssistantTool(candidate, execute)])),
+        load_skill: tool({
+            description: "Load the full instructions for one relevant Skladno Skill.",
+            inputSchema: z.object({ id: z.string().min(1) }),
+            execute: ({ id }) => request.skills.find((skill) => skill.id === id)?.instructions ?? "Unknown Skill.",
+        }),
+    };
 }
 
 
@@ -141,39 +189,10 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
 
     async *streamAssistant(request: EditorialAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const execute = (capability: string, input: Readonly<Record<string, string>>) => request.tools.find((candidate) => candidate.capability === capability)?.execute(input, signal)
-            ?? Promise.reject(new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT));
-        const assistantTool = (candidate: EditorialAssistantRequest["tools"][number]) => {
-            if (candidate.input === "proposal-operation")
-                return tool({ description: candidate.description, inputSchema: z.object({ operation: z.enum(["thesis_to_narrative", "flow_revision"]) }), execute: ({ operation }) => execute(candidate.capability, { operation }) });
-
-            if (candidate.input === "target-language")
-                return tool({ description: candidate.description, inputSchema: z.object({ targetLanguage: z.string().min(1) }), execute: ({ targetLanguage }) => execute(candidate.capability, { targetLanguage }) });
-
-            return tool({ description: candidate.description, inputSchema: z.object({}), execute: () => execute(candidate.capability, {}) });
-        };
-        const loadSkill = tool({
-            description: "Load the full instructions for one relevant Skladno Skill.",
-            inputSchema: z.object({ id: z.string().min(1) }),
-            execute: ({ id }) => request.skills.find((skill) => skill.id === id)?.instructions ?? "Unknown Skill.",
-        });
-        const agent = new ToolLoopAgent({
-            model: this.openai.responses(this.options.model),
-            instructions: [
-                "You are Skladno's editorial assistant. Use only the supplied tools when an editorial result is needed.",
-                "Never claim that a tool ran when it did not. Preserve author control. Finish with a concise response after the necessary work.",
-                `Available Skills:\n${request.skills.map((skill) => `${skill.id}: ${skill.name}. ${skill.description}`).join("\n")}`,
-                ...request.instructions,
-            ].join("\n\n"),
-            tools: { ...Object.fromEntries(request.tools.map((candidate) => [candidate.capability, assistantTool(candidate)])), load_skill: loadSkill },
-            stopWhen: isStepCount(6),
-            telemetry: { isEnabled: false },
-            providerOptions: this.providerOptions(),
-        });
-        const result = await agent.stream({
-            prompt: `Recent conversation:\n${request.history.map((turn) => `${turn.role}: ${turn.content}`).join("\n")}\n\nAuthor request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`,
-            abortSignal: signal,
-        });
+        const state = { activeCapabilities: request.initialActiveCapabilities };
+        const execute = (capability: string, input: Readonly<Record<string, string>>) => this.executeAssistantCapability(request, signal, state, capability, input);
+        const agent = this.createAssistantAgent(request, createAssistantTools(request, execute), state);
+        const result = await agent.stream({ prompt: this.assistantPrompt(request), abortSignal: signal });
         let text = "";
         for await (const delta of result.textStream) {
             text += delta;
@@ -181,10 +200,51 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         }
 
         const steps = await result.steps;
-        if (!text.trim() || signal.aborted || (steps.length >= 6 && (await result.finalStep).finishReason === "tool-calls"))
+        const finalStep = await result.finalStep;
+        if (!text.trim() || signal.aborted || (steps.length >= 6 && finalStep.finishReason === "tool-calls"))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
 
-        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: responseId((await result.finalStep).providerMetadata) ?? "assistant-tool-loop", text };
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: responseId(finalStep.providerMetadata) ?? "assistant-tool-loop", text };
+    }
+
+
+    private async executeAssistantCapability(request: EditorialAssistantRequest, signal: AbortSignal, state: { activeCapabilities?: readonly string[] }, capability: string, input: Readonly<Record<string, string>>): Promise<unknown> {
+        const candidate = request.tools.find((toolCandidate) => toolCandidate.capability === capability);
+        if (!candidate)
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
+        const result = await candidate.execute(input, signal);
+        if (capability === "find_capabilities" && Array.isArray(result))
+            state.activeCapabilities = result.flatMap((item) => item && typeof item === "object" && "capability" in item && typeof item.capability === "string" ? [item.capability] : []);
+
+        return result;
+    }
+
+
+    private createAssistantAgent(request: EditorialAssistantRequest, tools: ToolSet, state: { activeCapabilities?: readonly string[] }) {
+        const activeTools = () => state.activeCapabilities ? [...state.activeCapabilities, "load_skill"] : ["find_capabilities", "load_skill"];
+        const activeToolsForStep = () => state.activeCapabilities ? [...state.activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
+
+        return new ToolLoopAgent<never, ToolSet>({
+            model: this.openai.responses(this.options.model),
+            instructions: [
+                "You are Skladno's editorial assistant. Use only the supplied tools when an editorial result is needed.",
+                "Never claim that a tool ran when it did not. Preserve author control. Finish with a concise response after the necessary work.",
+                `Available Skills:\n${request.skills.map((skill) => `${skill.id}: ${skill.name}. ${skill.description}`).join("\n")}`,
+                ...request.instructions,
+            ].join("\n\n"),
+            tools,
+            activeTools: activeTools(),
+            prepareStep: () => ({ activeTools: activeToolsForStep() }),
+            stopWhen: isStepCount(6),
+            telemetry: { isEnabled: false },
+            providerOptions: this.providerOptions(),
+        });
+    }
+
+
+    private assistantPrompt(request: EditorialAssistantRequest): string {
+        return `Recent conversation:\n${request.history.map((turn) => `${turn.role}: ${turn.content}`).join("\n")}\n\nAuthor request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`;
     }
 
 

@@ -179,7 +179,7 @@ export class AssistantRepository {
                 startedAt: String(execution.started_at),
                 ...(execution.completed_at === null ? {} : { completedAt: String(execution.completed_at) }),
             }));
-            
+
         return {
             id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
             ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}), status,

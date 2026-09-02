@@ -95,7 +95,12 @@ export interface AssistantCapabilityActivity {
 }
 
 
-export type AssistantAuthorizedAction = "add_revision_to_style_corpus" | "rebuild_style_profile";
+export type AssistantAuthorizedAction = "rename_article"
+    | "change_article_language"
+    | "assign_publishing_profile"
+    | "set_article_style_rules"
+    | "add_revision_to_style_corpus"
+    | "rebuild_style_profile";
 
 
 /** Completion data held until the run is valid and its artifacts can be committed. */
@@ -179,6 +184,7 @@ export interface AssistantMessage {
 
 
 export interface AssistantEditorialResult {
+    metadataChanged?: boolean;
     proposal?: string;
     factCheck?: import("../editorial/editorial.js").FactCheck;
     styleReview?: import("../editorial/editorial.js").StyleReview;

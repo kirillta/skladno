@@ -47,8 +47,8 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
-            "contract": "A skill tag never sends a request, leaves the caret after a trailing space for continued guidance, and can run against the whole Article without additional guidance; Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
-            "persistence": "Per-Article Assistant records and explicit Editorial Requests."
+            "contract": "A skill tag never sends a request, leaves the caret after a trailing space for continued guidance, and can run against the whole Article without additional guidance; the Assistant discovers only classified current-Article capabilities, validates every action against the Author's exact request, and returns Workspace-owned decisions as handoffs. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
+            "persistence": "Per-Article Assistant records, minimal capability execution history, and explicit Editorial Requests."
         },
         {
             "id": "workspace.empty.create-article",
