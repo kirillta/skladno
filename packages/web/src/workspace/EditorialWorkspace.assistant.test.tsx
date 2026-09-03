@@ -13,7 +13,7 @@ import { requestedTranslationLanguages } from "./state/assistant-messages-state.
 import { article, fakeClient, renderLocalized, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
 
 
-// Product scenarios: workspace.assistant.quick-action
+// Product scenarios: workspace.assistant.quick-action, workspace.assistant.selection-deselection
 
 describe("Editorial Workspace assistant", () => {
     afterEach(resetWorkspaceTestEnvironment);
@@ -309,6 +309,42 @@ describe("Editorial Workspace assistant", () => {
         expect(selectionChip.textContent).toContain("The first selected s…");
         expect(selectionChip.getAttribute("title")).toBe(selection.preview);
         expect(within(selectionChip).getByRole("button", { name: message("assistant.clearArticleSelection") })).toBeTruthy();
+    });
+
+
+    it("keeps selected Article text while moving to the composer and drops it when cleared", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        const source = article("one", "First Article");
+        source.draft = { articleId: source.id, content: source.currentRevision.content, baseRevisionId: source.currentRevisionId, version: 1, updatedAt: source.updatedAt };
+        client.listArticles = vi.fn().mockResolvedValue([source]);
+        client.saveArticleDraft = vi.fn().mockResolvedValue(source.draft);
+        client.saveArticleRevision = vi.fn().mockResolvedValue(source.currentRevision);
+        render(<App client={client} />);
+        const editor = await screen.findByRole("textbox", { name: "Article draft" });
+        const text = editor.firstChild;
+        expect(text).toBeTruthy();
+
+        const selection = window.getSelection()!;
+        selection.setBaseAndExtent(text!, 0, text!, 1);
+        fireEvent(document, new Event("selectionchange"));
+        fireEvent.mouseUp(editor);
+        expect(await screen.findByLabelText(message("assistant.articleSelection"))).toBeTruthy();
+        await waitFor(() => expect(editor.textContent).toBe("Draft"));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(screen.getByLabelText(message("assistant.articleSelection"))).toBeTruthy();
+
+        await user.click(screen.getByRole("combobox", { name: message("assistant.guidance") }));
+        expect(screen.getByLabelText(message("assistant.articleSelection"))).toBeTruthy();
+
+        await user.click(screen.getByRole("button", { name: message("assistant.clearArticleSelection") }));
+        await waitFor(() => expect(screen.queryByLabelText(message("assistant.articleSelection"))).toBeNull());
+        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+
+        await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalled());
+        expect(vi.mocked(client.streamAssistantRequest).mock.calls[0]?.[1]).toMatchObject({ scope: { kind: "article" } });
     });
 
 
