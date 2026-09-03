@@ -94,7 +94,7 @@
             "event": "The author selects an explicit IANA time zone or restores the system setting.",
             "expected": ["The preference is saved with an accessible label, hint, and timestamp preview."],
             "forbidden": ["Changing display preferences rewrites saved timestamps or Revision history."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.general.test.tsx" }
         },
         {
             "id": "settings.theme-appearance",
@@ -124,7 +124,7 @@
             "event": "The author adds, selects, or confirms removal of a connection.",
             "expected": ["Environment-variable names are managed with duplicate names blocked. In Electron, authors choose one credential method before its form appears, and an API key can be verified and stored as a managed credential without being displayed or persisted in Skladno data."],
             "forbidden": ["Displaying or persisting API key values."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.ai.test.tsx" }
         },
         {
             "id": "settings.model-preferences-human-reviewed",
@@ -144,7 +144,7 @@
             "event": "The author opens AI Settings, changes the active connection, or manually refreshes the list.",
             "expected": ["The supported current editorial model list is offered for selection."],
             "forbidden": ["Persisting the refreshed list as a model preference."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.ai.test.tsx" }
         },
         {
             "id": "settings.publish-profile-default",
@@ -164,7 +164,7 @@
             "event": "The author chooses a backup folder, creates a manual backup, or the daily schedule runs at application startup.",
             "expected": ["A consistent local SQLite snapshot is written through the browser permission handle and automatic retention leaves manual snapshots untouched."],
             "forbidden": ["A backup failure interrupts Article editing or exposes environment-variable secrets."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.persistence.test.tsx" }
         },
         {
             "id": "settings.preview-update-controls",
@@ -174,7 +174,7 @@
             "event": "The author opens General Settings, allows update network access, and checks for updates.",
             "expected": ["The network-permission, automatic-check, and prerelease-channel switches are accessible, a confirmation dialog precedes the persisted network permission, no discovery request occurs before consent, and Download appears only after explicit discovery."],
             "forbidden": ["A browser or development build exposes update controls, an update-discovery request occurs without consent, or a download starts automatically."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.general.test.tsx" }
         },
         {
             "id": "settings.delete-local-data",

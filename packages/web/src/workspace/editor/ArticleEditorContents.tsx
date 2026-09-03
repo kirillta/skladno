@@ -7,14 +7,14 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { LexicalEditor } from "lexical";
-import { LinkControl } from "./ArticleEditorToolbar.js";
+import { ArticleEditorLinkControl } from "./ArticleEditorLinkControl.js";
 import { AssistantSelectionHighlight, EditorBridge, EditorSelectionBridge, SupportedPastePlugin, type AssistantSelectionSnapshot } from "./ArticleEditorPlugins.js";
 
 
 export function ArticleEditorContents({ content, onChange, onSelectionChange, assistantSelection }: { content: string; onChange: (value: string) => void; onSelectionChange?: (value: AssistantSelectionSnapshot | undefined) => void; assistantSelection?: string }) {
     const intl = useIntl();
     const [editor, setEditor] = useState<LexicalEditor>();
-    return <>{editor && <LinkControl editor={editor} />}
+    return <>{editor && <ArticleEditorLinkControl editor={editor} />}
         <div className="min-h-0 flex-1 overflow-y-auto bg-surface-raised [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             <div className="min-h-full px-8 py-7">
                 <div className="relative mx-auto w-full max-w-3xl">

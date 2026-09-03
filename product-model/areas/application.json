@@ -164,7 +164,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
             }
         },
         {
@@ -314,7 +314,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.assistant.test.tsx"
             }
         }
     ]

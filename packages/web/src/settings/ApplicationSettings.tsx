@@ -3,16 +3,12 @@ import { defaultGeneralSettings, defaultPublishingSettings, type AiConnection, t
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
-import { AiSettingsSection } from "./components/AiSettingsSection.js";
 import { getDesktopSettingsClient } from "../desktop-client.js";
 import { ConnectionRemovalDialog } from "./components/ConnectionRemovalDialog.js";
 import { ManagedConnectionRenameDialog } from "./components/ManagedConnectionRenameDialog.js";
-import { DataBackupsSettingsSection } from "./components/DataBackupsSettingsSection.js";
-import { GeneralSettingsSection } from "./components/GeneralSettingsSection.js";
-import { KeyBindingSettings } from "./components/KeyBindingSettings.js";
-import { PublishingSettingsSection } from "./components/PublishingSettingsSection.js";
+import { SettingsContent } from "./components/SettingsContent.js";
 import { SettingsNavigation } from "./components/SettingsNavigation.js";
-import { settingsSections, type SettingsSection } from "./settings-sections.js";
+import type { SettingsSection } from "./settings-sections.js";
 
 
 export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused }: { client: EditorialWorkspaceClient; back: () => void; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
@@ -267,16 +263,11 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
 
     return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
-        <section className="min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
-            <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8">
-                <h1 className="text-2xl font-semibold">{intl.formatMessage({ id: settingsSections.find((item) => item.id === section)?.label ?? "settings.general" })}</h1>
-                {!settings ? null : section === "general" ? <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} /> : section === "keyBindings" ? <KeyBindingSettings general={general} saveGeneral={saveGeneral} overrides={keyBindingOverrides} save={saveKeyBindingOverrides} /> : section === "ai" ? <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
-                    setEnvironmentName(value);
-                    setConnectionError(undefined);
-                }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} onAddConnection={() => void addConnection()} onAddManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} onSetActiveConnection={(connectionId) => void setActiveConnection(connectionId)} onRequestConnectionRename={requestManagedConnectionRename} canRenameManagedConnection={Boolean(desktopSettings)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} /> : section === "publishing" ? <PublishingSettingsSection publishing={publishingSettings} save={(next) => void savePublishingSettings(next)} general={general} saveGeneral={saveGeneral} /> : <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />}
-            </div>
-            {connectionPendingRemoval && <ConnectionRemovalDialog connection={connectionPendingRemoval} close={() => setConnectionPendingRemoval(undefined)} remove={() => void removeConnection()} />}
-            {connectionPendingRename && <ManagedConnectionRenameDialog label={renamedConnectionLabel} setLabel={setRenamedConnectionLabel} close={() => setConnectionPendingRename(undefined)} save={() => void renameManagedConnection()} />}
-        </section>
+        <SettingsContent client={client} section={section} settings={settings} general={general} preferences={preferences} backupPolicy={backupPolicy} keyBindingOverrides={keyBindingOverrides} publishingSettings={publishingSettings} models={models} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} desktopAvailable={Boolean(desktopSettings)} onThemeApplied={onThemeApplied} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
+            setEnvironmentName(value);
+            setConnectionError(undefined);
+        }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} saveGeneral={saveGeneral} savePreferences={savePreferences} saveBackupPolicy={saveBackupPolicy} saveKeyBindingOverrides={saveKeyBindingOverrides} savePublishingSettings={(next) => void savePublishingSettings(next)} addConnection={() => void addConnection()} addManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} setActiveConnection={(connectionId) => void setActiveConnection(connectionId)} requestConnectionRename={requestManagedConnectionRename} requestConnectionRemoval={setConnectionPendingRemoval} refreshModels={() => void refreshModels()} />
+        {connectionPendingRemoval && <ConnectionRemovalDialog connection={connectionPendingRemoval} close={() => setConnectionPendingRemoval(undefined)} remove={() => void removeConnection()} />}
+        {connectionPendingRename && <ManagedConnectionRenameDialog label={renamedConnectionLabel} setLabel={setRenamedConnectionLabel} close={() => setConnectionPendingRename(undefined)} save={() => void renameManagedConnection()} />}
     </main>;
 }

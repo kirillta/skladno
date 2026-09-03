@@ -125,7 +125,7 @@
             "event": "The author navigates or resizes workspace panels.",
             "expected": ["Panel controls expose accessible labels and semantic separators."],
             "forbidden": ["Panel behavior conveyed by color alone."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.layout.test.tsx" }
         },
         {
             "id": "cross-cutting.key-binding-conflicts",
