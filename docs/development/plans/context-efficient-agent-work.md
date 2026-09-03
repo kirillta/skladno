@@ -112,7 +112,7 @@ Phase 4 is complete when each behavioral area can be inspected and run without l
 
 ## 5. Add a renderer ownership map
 
-Create `packages/web/src/workspace/README.md` as a short agent-facing map. Describe only information that is expensive to rediscover:
+Add a short workspace ownership map to `docs/development/guides/context-efficient-agent-work.md`. Describe only information that is expensive to rediscover:
 
 - composition roots;
 - state owners;

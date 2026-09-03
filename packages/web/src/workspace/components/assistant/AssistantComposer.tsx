@@ -161,7 +161,7 @@ function PlainTextPaste() {
 
         event.preventDefault();
         selection.insertText(text);
-        
+
         return true;
     }, COMMAND_PRIORITY_HIGH), [editor]);
 

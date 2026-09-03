@@ -145,7 +145,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
         if (quickActionsOpen && (event.key === "Enter" || event.key === "Tab") && pickerSkills[activeSkillIndex]) {
             event.preventDefault();
             selectSkill(pickerSkills[activeSkillIndex]);
-            
+
             return;
         }
 

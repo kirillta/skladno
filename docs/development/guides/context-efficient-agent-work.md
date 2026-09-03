@@ -28,3 +28,13 @@ For TSX changes, inspect in this order:
 Search symbols and imports before full reads. A `.tsx` file may combine rendering, state, accessibility, localization, and integration wiring; it is not a reason to scan the feature.
 
 Follow [ADR-003](../architecture/adr-003-web-feature-oriented-react-architecture.md): extract a component, hook, helper, or fixture only when it gains an independent caller, test contract, state responsibility, or visual responsibility. Keep a single-use helper with its caller. Follow the [UI design system](../ui/design-system.md) for renderer changes.
+
+### Workspace ownership
+
+| Concern | Owner | Focused tests |
+| --- | --- | --- |
+| Composition and shortcuts | `EditorialWorkspace.tsx`, `components/WorkspaceScreen.tsx` | `EditorialWorkspace.lifecycle.test.tsx`, `EditorialWorkspace.layout.test.tsx` |
+| Article loading, Drafts, Revisions, and persistence | `state/article-workspace-state.ts`, `state/article-revisions-state.ts` | `drafts/draft-lifecycle.test.ts`, `EditorialWorkspace.lifecycle.test.tsx` |
+| Assistant requests and stored responses | `state/assistant-messages-state.ts`, `state/editorial-proposal-state.ts` | `EditorialWorkspace.assistant.test.tsx`, `components/assistant/AssistantTimeline.test.tsx` |
+| Article header, editor, views, and status bar | `components/ArticleWorkspace.tsx`, `components/WorkspaceViewRouter.tsx` | `EditorialWorkspace.article-controls.test.tsx`, `views/*.test.tsx` |
+| Shell, library, tabs, and panel layout | `components/WorkspaceShell.tsx`, `components/ArticleLibraryPanel.tsx`, `components/WorkspaceTabBar.tsx` | matching `components/*.test.tsx`, `EditorialWorkspace.layout.test.tsx` |
