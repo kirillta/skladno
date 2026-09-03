@@ -46,13 +46,16 @@ Opacity-derived text color is reserved for established placeholder treatment. St
 | `canvas` | `bg-canvas` | Outermost application canvas |
 | `surface` | `bg-surface` | Supporting panels and quiet regions |
 | `surface-supporting` | `bg-surface-supporting` | Elevated Library, Assistant, and Settings Navigation panels |
-| `surface-raised` | `bg-surface-raised` | Writing surface, fields, menus, dialogs, and cards |
+| `surface-raised` | `bg-surface-raised` | Fields, menus, dialogs, and cards |
+| `editor-surface` | `bg-editor-surface` | Article writing and revision preview surfaces |
 | `border` | `border-border` | Default separators and outlines |
 | `border-strong` | `border-border-strong` | Stronger structural separation |
 | `brand` | `text-brand`, `bg-brand`, `border-brand` | Primary actions, selection, identity, and links |
 | `brand-hover` | `bg-brand-hover` | Solid-action hover |
 | `brand-soft` | `bg-brand-soft` | Selected navigation and quiet hover |
 | `focus` | `outline-focus` | Keyboard focus |
+
+Article body text uses `text-editor-ink`. In the dark theme it is softer and more neutral than the general UI ink so long-form reading stays legible without making every interface label brighter.
 
 Use each semantic status foreground with its matching `*-soft` background through `Status`, `Banner`, or the relevant control state.
 
