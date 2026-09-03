@@ -195,7 +195,7 @@
                 "packages/web/src/workspace/views/TranslationsView.tsx",
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
-            "contract": "A stale source blocks creation and translation text never overwrites its source Article.",
+            "contract": "A stale source blocks creation, and the completed translated title and text create an independent linked Article without overwriting its source Article.",
             "persistence": "Independent Article with source Article and Revision linkage.",
             "relatedCapabilityIds": ["history-and-publishing.translations", "editorial-workflows.translation-request"]
         },

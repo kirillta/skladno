@@ -5,6 +5,7 @@ import { BUILT_IN_SKILL, EDITORIAL_OPERATION, type BuiltInSkillId, type Editoria
 interface EditorialPromptInput {
     operation: EditorialOperation;
     article: string;
+    articleTitle?: string;
     articleSelection?: boolean;
     authorContext: string;
     skillId?: BuiltInSkillId;
@@ -101,8 +102,8 @@ export function createEditorialMessages(input: EditorialPromptInput): ModelMessa
             throw new Error("Choose a target language before requesting a translation.");
 
         return [
-            { role: "system", content: `You are a technical translator. Translate faithfully without changing claims, numbers, intended voice, or Markdown formatting. Return valid Markdown. Tokens in the form [[SKLADNO_PROTECTED_N]] are protected code, URLs, or technical names: copy every token exactly once and do not translate it. This is a proposal for author review. ${authorControlInstruction}` },
-            { role: "user", content: `Workflow: translation. Translate the complete article into ${input.targetLanguage.trim()}. Return the translation and metadata through the requested structured response.\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${authorGuidance(input.authorContext)}` },
+            { role: "system", content: `You are a technical translator. Translate faithfully without changing claims, numbers, intended voice, or Markdown formatting. Return valid Markdown. Tokens in the form [[SKLADNO_PROTECTED_N]] are protected code, URLs, or technical names: copy every token exactly once in the field where it appears and do not translate it. This is a proposal for author review. ${authorControlInstruction}` },
+            { role: "user", content: `Workflow: translation. Translate the complete article into ${input.targetLanguage.trim()}. Translate the Article title and body in the same response. Return the translation and metadata through the requested structured response.\n\nCurrent Article title:\n${input.articleTitle ?? ""}\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${authorGuidance(input.authorContext)}` },
         ];
     }
 

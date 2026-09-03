@@ -31,6 +31,7 @@ type ReplayedAssistantRequest = NewAssistantRequest & { articleId: string; retry
 export interface PreparedAssistantRequest extends ReplayedAssistantRequest {
     articleId: string;
     articleContent: string;
+    articleTitle: string;
     publishingCharacterLimit?: number;
     resolvedSkillId?: BuiltInSkillId;
     operation: EditorialOperation;
@@ -183,6 +184,7 @@ export class AssistantService {
         return {
             ...replay,
             articleContent,
+            articleTitle: article.title,
             ...this.publishingLimit(article.publishingProfileId),
             ...routing,
             capabilityActivities: [],
@@ -377,6 +379,7 @@ export class AssistantService {
         return {
             operation: request.operation,
             article: excerpt,
+            ...(request.operation === EDITORIAL_OPERATION.TRANSLATION ? { articleTitle: request.articleTitle } : {}),
             ...(request.scope.kind === "selection" ? { articleSelection: true } : {}),
             authorContext: request.authorMessage,
             skillId: request.resolvedSkillId!,

@@ -71,7 +71,7 @@ describe("Editorial Workspace assistant", () => {
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "translations", selectedArticleId: "one" }));
         client.listAssistantMessages = vi.fn().mockResolvedValue([{
             id: "spanish-translation-message", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision",
-            translation: { content: "Borrador traducido", metadata: { targetLanguage: "Spanish", protectedSpans: [] } },
+            translation: { content: "Borrador traducido", metadata: { targetLanguage: "Spanish", protectedSpans: [], title: "Título traducido" } },
             createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
         }, {
             id: "german-translation-message", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision",
@@ -84,7 +84,13 @@ describe("Editorial Workspace assistant", () => {
         expect(await screen.findByText("Deutscher Entwurf")).toBeTruthy();
         await user.click(screen.getByRole("tab", { name: "Spanish" }));
         expect(screen.getByText("Borrador traducido")).toBeTruthy();
-        expect(screen.getByRole("button", { name: "Edit Spanish translation" })).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: "Edit Spanish translation" }));
+        expect(client.createArticle).toHaveBeenCalledWith(expect.objectContaining({
+            title: "Título traducido",
+            content: "Borrador traducido",
+            sourceArticleId: "one",
+            sourceRevisionId: "one-revision",
+        }));
     });
 
     // product: application.desktop-shell-layout

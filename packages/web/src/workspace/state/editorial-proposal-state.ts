@@ -254,7 +254,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         try {
             const { defaultProfileId: configuredDefaultProfile } = await client.getPublishingSettings();
             await workspace.create({
-                title: `${article.title} \u2014 ${translation.targetLanguage}`,
+                title: translation.title ?? article.title,
                 content: translationResult.value.content,
                 language: targetLanguageId(translationResult.value.metadata.targetLanguage),
                 publishingProfileId: isPublishLimitProfileId(article.publishingProfileId)

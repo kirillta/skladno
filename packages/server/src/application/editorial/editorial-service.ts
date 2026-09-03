@@ -96,6 +96,7 @@ function engineRequest(request: EditorialServiceRequest, context: EditorialStrea
     return {
         operation: request.operation,
         article: request.articleContent ?? context.article.currentRevision.content,
+        ...(request.operation === EDITORIAL_OPERATION.TRANSLATION ? { articleTitle: context.article.title } : {}),
         ...(request.articleSelection ? { articleSelection: true } : {}),
         ...(request.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: request.surroundingArticleCharacterCount } : {}),
         authorContext: request.authorContext,

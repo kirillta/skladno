@@ -4,6 +4,7 @@ import type { BuiltInSkillId, EditorialOperation, FactCheckFinding, StyleProfile
 export interface EditorialEngineRequest {
     operation: EditorialOperation;
     article: string;
+    articleTitle?: string;
     authorContext: string;
     articleSelection?: boolean;
     skillId?: BuiltInSkillId;

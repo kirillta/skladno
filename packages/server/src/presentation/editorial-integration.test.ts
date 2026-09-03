@@ -326,6 +326,7 @@ test("translation carries its target language, preserves the source, and records
         translation: {
             targetLanguage: "Spanish",
             protectedSpans: ["`npm test`", "https://example.com"],
+            title: "Fuente",
         },
     }]);
 
@@ -349,10 +350,12 @@ test("translation carries its target language, preserves the source, and records
 
         assert.match(body, /"targetLanguage":"Spanish"/);
         assert.equal(engine.requests[0]?.targetLanguage, "Spanish");
+        assert.equal(engine.requests[0]?.articleTitle, "Source");
         assert.equal(repositories.articles.get(source.id)?.currentRevision.content, "Run `npm test` at https://example.com.");
         assert.deepEqual(JSON.parse(artifact.content).translation, {
             targetLanguage: "Spanish",
             protectedSpans: ["`npm test`", "https://example.com"],
+            title: "Fuente",
         });
         assert.equal(translated.language, "es");
         assert.equal(translated.sourceArticleId, source.id);

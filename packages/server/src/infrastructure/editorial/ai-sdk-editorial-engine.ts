@@ -32,6 +32,7 @@ const styleReviewSchema = z.object({
 
 const translationSchema = z.object({
     translation: z.string().min(1),
+    title: z.string(),
     targetLanguage: z.string().min(1),
 });
 
@@ -325,9 +326,10 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
         const protectedArticle = protectArticleSpans(boundedArticleContext(request.article));
+        const protectedTitle = protectArticleSpans(request.articleTitle ?? "");
         const result = await generateText({
             model: this.openai.responses(this.options.model),
-            ...responsesPrompt(createEditorialMessages({ operation: request.operation, article: protectedArticle.protectedText, authorContext: request.authorContext, targetLanguage })),
+            ...responsesPrompt(createEditorialMessages({ operation: request.operation, article: protectedArticle.protectedText, articleTitle: protectedTitle.protectedText, authorContext: request.authorContext, targetLanguage })),
             output: Output.object({ schema: translationSchema }),
             abortSignal: signal,
             telemetry: { isEnabled: false },
@@ -338,9 +340,10 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
         const text = restoreProtectedSpans(result.output.translation, protectedArticle.protectedSpans);
-        if (!text)
+        const title = restoreProtectedSpans(result.output.title, protectedTitle.protectedSpans);
+        if (!text || title === undefined)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: completedResponseId, text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans } };
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: completedResponseId, text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans, title } };
     }
 }

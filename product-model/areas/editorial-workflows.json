@@ -62,7 +62,7 @@
             "title": "Translation request",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial/translation.ts", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "Translation requests prepare linked Article content; the source Article is never overwritten.",
+            "contract": "Translation requests prepare a translated Article title and linked Article content together; the source Article is never overwritten.",
             "persistence": "Translation review metadata is local and source linkage remains recoverable."
         },
         {
