@@ -17,7 +17,7 @@
             "title": "Streamed responses, progress, cancellation, and error recovery",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/components/EditorialAssistantPanel.tsx", "packages/web/src/application-client.ts", "packages/electron/src/presentation/preload-bridge.ts", "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/presentation/routes/assistant-route.ts"],
-            "contract": "Assistant requests stream typed status, renderer-safe capability activity, and response events. Activity stays secondary to the conversation, completed review artifacts add a short result card with an explicit action to their owning Workspace View, and the current View stays unchanged until the Author follows that action. Failed and cancelled requests expose a Retry action that replays only the local persisted input. Incomplete streams do not modify an Article.",
+            "contract": "Assistant requests stream typed status, renderer-safe capability activity, and response events. Activity stays secondary to the conversation, completed review artifacts add a short result card with an explicit action to their owning Workspace View, and the current View stays unchanged until the Author follows that action. Failed and cancelled requests expose a Retry action that replays only the local persisted input; an unavailable AI connection also offers Application Settings. Incomplete streams do not modify an Article.",
             "persistence": "Only valid completed request output becomes local message or review-artifact state."
         },
         {

@@ -1,180 +1,128 @@
-# Issue 93: complete the Assistant experience
+# Issue 93: finish the Assistant experience
 
 Issue: [#93](https://github.com/kirillta/skladno/issues/93)
 
-## Status
+## Objective
 
-PR [#96](https://github.com/kirillta/skladno/pull/96) delivered the first version and marked the issue complete, but the current implementation still misses parts of the contract:
+Finish the requirements that remain after commit `5232b44`. Keep the implemented durable conversation, exact selection snapshot, Retry transport, read-only Markdown, timeline labels, handoffs, and current capability rules intact.
 
-- the composer is a hand-built `contentEditable` instead of the required focused Lexical editor;
-- slash invocation has no boundary rules, filtering, aliases, result count, or combobox/listbox semantics;
-- Article selection scope uses selected text plus `indexOf`, so repeated text and formatted Markdown can produce the wrong offsets;
-- assistant responses render as plain text instead of sanitized read-only Markdown;
-- failed and cancelled attempts have no deliberate Retry action;
-- the timeline does not expose every required skill-source and status indicator.
+ADR-011 and the product model are authoritative where they differ from the original issue. Talking Points and Narrative Draft accept Article selections. Translation requires the whole Article.
 
-The implementation must preserve the durable conversation, streaming, cancellation, Proposal and Finding handoffs, Article-first layout, and current Assistant capability model.
+## Completion gate
 
-## Current decisions that override the original issue
+Treat every requirement in this plan as release-blocking. For each numbered step:
 
-ADR-011 and the product model now allow Talking Points and Narrative Draft to use an Article selection. Translation remains whole-Article only. Keep the current capability rules instead of restoring the older compatibility list from #93.
+1. add a focused test that fails for the missing behavior;
+2. implement the smallest fix that makes the test pass;
+3. run the focused test file and record the command in the PR.
 
-Capability progress remains renderer-safe, human-readable activity. Do not expose internal capability or tool identifiers in the timeline.
+The work is complete only when every requirement below has named automated or manual evidence, every required check passes, and the PR description contains the evidence table. A passing pre-existing suite is regression evidence, not completion evidence.
 
-Selection behavior must also satisfy #156. Moving focus into the Assistant preserves the captured scope. Deliberately collapsing the editor selection, editing the Article, switching Articles, or removing the chip clears or invalidates it.
+## 1. Replace the manual composer with Lexical
 
-The streaming completion work overlaps #161. Fix the shared timeline transition once and use it as verification for both issues.
+Build the Assistant composer with the installed Lexical packages and a focused node set:
 
-## Implementation plan
+- plain text and line breaks;
+- one inline, non-editable skill-tag node;
+- plain-text paste;
+- serialized author text and structured skill ID as separate values.
 
-### 1. Make Retry durable
+The skill tag behaves as one token during caret movement and selection. It has an accessible name and remove action. Backspace and Delete remove it at either boundary. Replacing the selected skill preserves the current caret position. A tag without author text remains sendable.
 
-- Change the shared Assistant start contract into a discriminated union for a new request or a retry request.
-- Persist every value needed to replay an attempt, including the translation target.
-- Let the server reconstruct the original author message, explicit skill, scope, and target from the stored request. The renderer sends only a new request ID and the original request ID.
-- Validate that the original request belongs to the same Article and ended as failed or cancelled.
-- Revalidate the current Revision and selection offsets before the provider call. A stale attempt fails with a safe recovery message.
-- Reuse the existing Assistant streaming endpoint and application-client method.
-
-Expected owners:
-
-- `packages/shared/src/assistant/assistant.ts`
-- `packages/server/src/application/assistant/assistant-service.ts`
-- `packages/server/src/application/ports/assistant-store.ts`
-- `packages/server/src/infrastructure/persistence/database.ts`
-- `packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts`
-- `packages/server/src/presentation/routes/assistant-route.ts`
-- existing HTTP and Electron application-client adapters
-
-### 2. Capture exact Markdown selections
-
-- Add a focused editor helper that clones the Lexical range selection.
-- Insert collision-resistant boundary sentinels in a tagged, non-history update.
-- Export normalized Article Markdown, locate and remove both sentinels, and calculate UTF-16 offsets.
-- Remove the temporary nodes and restore the original selection without emitting an Article change.
-- Return no selection when either sentinel is missing or ordered incorrectly. Never guess offsets.
-- Store a workspace snapshot containing the Article ID, SHA-256 content fingerprint, Markdown preview, and offsets.
-- Use Web Crypto for the fingerprint. Do not add a hashing dependency.
-- Clear the snapshot on Article switch and deliberate deselection. Invalidate it after an Article edit.
-- Before Send, promote the Draft through the existing save flow and compare the snapshot fingerprint with the promoted Revision content. Require reselection if they differ.
-
-Expected owners:
-
-- `packages/web/src/workspace/editor/ArticleEditorPlugins.tsx`
-- a focused helper beside the Article editor
-- `packages/web/src/workspace/editor/markdown.ts`
-- `packages/web/src/workspace/EditorialWorkspace.tsx`
-- `packages/web/src/workspace/state/assistant-messages-state.ts`
-
-### 3. Replace the composer with Lexical
-
-- Rebuild `AssistantComposer` with the installed Lexical packages.
-- Support only text, line breaks, and one inline skill-tag node.
-- Make the tag an indivisible keyboard-selectable token with an accessible name and remove action.
-- Support Backspace and Delete at tag boundaries.
-- Serialize author text and the skill ID separately. Keep the skill insertion offset for persisted timeline display.
-- Handle paste as plain text. Pasted markup or text that resembles a tag must not create a skill node.
-- Keep serialized text, skill, caret, and selection scope in the existing panel state so collapse and expansion do not lose work.
-- Delete the manual DOM composer helpers once no caller remains.
+Keep composer text, tag, caret, Article-selection scope, and streaming state when the panel collapses and expands. Remove the manual DOM composer helpers once Lexical owns every composer path.
 
 Expected owners:
 
 - `packages/web/src/workspace/components/assistant/AssistantComposer.tsx`
-- one focused skill-tag node beside the composer
+- a focused skill-tag node and plugin beside the composer
 - `packages/web/src/workspace/components/EditorialAssistantPanel.tsx`
-- `packages/web/src/workspace/components/assistant/composer-utils.ts`, removed when unused
+- `packages/web/src/workspace/components/assistant/composer-utils.ts`, deleted when unused
 
-### 4. Use one Quick actions and slash picker
+Step 1 is complete when focused real-Lexical tests prove caret insertion at the beginning, middle, and end; tag replacement; arrow navigation; Backspace; Delete; accessible removal; tag-only Send; plain-text paste; and collapse restoration.
 
-- Keep one ordered six-skill registry for both entry points.
-- Quick actions inserts at the last valid caret and never sends a request.
-- Typing `/` opens the picker only at the start or after whitespace.
-- Filter the same picker by localized skill label and typed aliases.
-- Arrow Up and Arrow Down change the active option. Enter, Tab, and click replace the slash query with the skill tag. Escape closes the picker without changing text.
-- Add combobox/listbox relationships, active-option state, and a polite announced result count.
-- Position the popup inside the fixed footer without panel reflow.
-- Keep all six skills visible. Disable Send with a localized explanation when the selected skill cannot use the current scope. Under current rules, this applies to Translation with selection scope.
+## 2. Complete the shared skill picker
 
-### 5. Finish the timeline
+Use the ordered six-skill registry for Quick actions and slash invocation.
 
-- Add a small read-only Assistant Markdown renderer using the existing Lexical Markdown transformers.
-- Render no raw HTML and allow only safe link schemes.
-- Keep author messages and application-authored status templates as plain catalog-backed text.
-- Show explicit or inferred skill source, semantic response label, timestamp, and an icon plus visible status text.
-- Add Retry to failed and cancelled attempts. Tie the action to the original request ID.
-- Keep streamed text visible until the persisted completion replaces it. Do not render a second full artifact body when the Workspace View owns review.
-- Preserve `Review Proposal`, `View Findings`, Style Review, and Translation handoffs without moving focus or changing the current view automatically.
-- Add an inline AI-unavailable action that opens Application Settings. Do not use a global notification for request-level failures.
+- Selecting a Quick action inserts at the last valid caret and performs no request.
+- A slash opens the picker only at the start or after whitespace.
+- Localized labels and aliases filter the options.
+- Enter, Tab, or click replaces the entire slash query, including `/` and every typed query character, with one skill tag.
+- Arrow Up and Arrow Down move the active option.
+- Escape closes the picker and preserves the typed query.
+- Removing the slash or moving the caret outside its query closes the slash picker.
+- The composer exposes the combobox relationship, the popup is a listbox, each skill is an option, and the active option and result count are announced.
+- The popup stays inside the fixed composer footer without panel reflow.
 
-Expected owners:
+Keep an incompatible explicit tag visible. Disable Send and show the localized scope explanation until the author removes either the tag or the Article-selection chip. Under current capability rules this applies to Translation with selection scope.
 
-- `packages/web/src/workspace/components/assistant/AssistantTimeline.tsx`
-- `packages/web/src/workspace/components/assistant/AssistantTimelineMessage.tsx`
-- one small read-only Markdown component beside the timeline
-- `packages/web/src/workspace/state/assistant-messages-state.ts`
-- `packages/web/src/i18n/messages.ts`
+Step 2 is complete when focused tests prove slash boundaries inside words, URLs, and code-like text; full query replacement; localized filtering and aliases; Arrow keys; Enter; Tab; Escape; click; zero results; ARIA relationships; Quick action caret insertion; and the incompatible-scope recovery path.
 
-### 6. Update product records
+## 3. Finish contextual failure recovery
 
-Run product impact routing before editing owner paths. Preserve the reported capabilities and scenarios unless this issue explicitly changes them.
+When an Assistant request fails because no usable AI connection exists, show an inline action that opens Application Settings. Keep ordinary request failures inside the Assistant timeline. Preserve focus, Article content, Draft state, Revision history, and the selected Workspace View.
 
-Update the canonical records for visible selection, retry, composer, or timeline behavior:
+Step 3 is complete when an integration test starts from an unavailable AI connection, opens Application Settings through the inline action, and proves that the Article and Workspace View did not change.
 
-- `product-model/areas/article-workspace.json`
-- `product-model/areas/editorial-workflows.json`
-- `product-model/areas/cross-cutting.json` if the transport or persisted retry contract changes
+## 4. Add missing proof for the new selection, Retry, Markdown, and timeline code
 
-Regenerate the affected inventories. Do not edit generated inventory files directly.
-
-## Automated verification
-
-### Composer
-
-- caret insertion at the beginning, middle, and end;
-- replacement of the existing tag;
-- Backspace, Delete, and accessible removal;
-- tag-only Send;
-- plain-text paste sanitization;
-- slash boundaries inside words, URLs, and code-like text;
-- localized filtering and aliases;
-- Arrow keys, Enter, Tab, Escape, click, and ARIA relationships;
-- state restoration after panel collapse and expansion.
+The implementations added in `5232b44` need focused tests before they count as complete. Repair the implementation if any test goes red.
 
 ### Article selection
 
-- plain and partial paragraphs;
-- multiple blocks and headings;
-- bold, italic, links, lists, inline code, fenced code, and Unicode;
-- repeated selected text with different Markdown positions;
-- focus transfer into the Assistant;
-- deliberate deselection, chip removal, Article editing, and Article switching;
-- no Article change or history entry from sentinel capture;
-- mapping failure and fingerprint mismatch recovery;
-- exact request offsets against the promoted Revision.
+Use real Lexical editor state to prove:
 
-### Timeline and Retry
+- partial paragraphs, multiple blocks, headings, bold, italic, links, lists, inline code, fenced code, Unicode, and repeated selected text;
+- exact UTF-16 offsets against the promoted Revision;
+- no Article change, Draft change, or history entry from sentinel capture;
+- scope preservation when focus moves into the Assistant;
+- deliberate deselection, chip removal, Article editing, and Article switching clear or invalidate scope as specified by #156;
+- missing sentinels and fingerprint mismatch produce the localized reselection path instead of guessed offsets.
 
-- persisted greeting and per-Article history;
-- streamed deltas and stable completion replacement;
-- safe Markdown and raw HTML handling;
-- semantic labels and explicit or inferred skill indicators;
-- visible cancelled and failed states;
-- retry reconstruction after reload;
-- stale Revision and stale selection rejection;
-- Proposal, Fact Check, Style Review, and Translation handoffs;
-- no automatic Article mutation or view change.
+### Retry
 
-Use focused real-Lexical tests rather than mocking editor behavior. Keep cross-component journeys in `EditorialWorkspace.test.tsx`; put node, picker, selection mapping, and Markdown parsing cases in focused test files.
+Use server and repository tests to prove:
 
-## Required checks
+- retry after reload reconstructs the original author text, explicit skill, skill offset, scope, and translation target;
+- only failed or cancelled attempts from the same Article can be retried;
+- stale Revision and stale or out-of-range selection fail before provider execution;
+- a retry creates a new linked request and cannot duplicate an accepted Revision or completed artifact;
+- cancellation and failure persist no partial assistant content or incomplete artifact.
+
+### Markdown and timeline
+
+Use focused component tests to prove:
+
+- Markdown formatting renders read-only;
+- raw HTML stays inert and unsafe link schemes are plain text;
+- streamed content is replaced once by persisted completion;
+- semantic response label, explicit or inferred skill source, timestamp, and icon plus visible status appear together;
+- failed and cancelled attempts expose Retry tied to the original request ID;
+- Proposal, Finding, Style Review, and Translation handoffs leave the current view unchanged until the author activates them;
+- the timeline does not repeat a full artifact body owned by a Workspace View.
+
+Step 4 is complete when every case above has a focused passing test. Mocked string selections do not count as selection-mapping evidence.
+
+## 5. Update product records from the finished behavior
+
+Before editing owner paths, run `npm run product:impact -- <affected paths>`. Update only canonical records whose visible behavior or contract changed, then regenerate their inventories. Keep generated inventories read-only.
+
+Likely canonical records:
+
+- `product-model/areas/article-workspace.json`
+- `product-model/areas/editorial-workflows.json`
+- `product-model/areas/cross-cutting.json` only if the transport or persisted contract changes again
+
+Step 5 is complete when `npm run product:check` passes and each changed product claim points to current evidence.
+
+## 6. Verify and hand off
 
 Run:
 
 ```text
-npm run product:impact -- <affected paths>
-npm test --workspace @skladno/web -- <focused tests>
-npm test --workspace @skladno/shared -- <focused tests>
-npm test --workspace @skladno/server -- <focused tests>
+npm test --workspace @skladno/web -- <new focused test files>
+npm test --workspace @skladno/shared -- <affected focused test files>
+npm test --workspace @skladno/server -- <new focused test files>
 npm run lint
 npm run typecheck
 npm test
@@ -183,8 +131,26 @@ npm run build
 npm run test:e2e
 ```
 
-Manually verify the Electron app at 1440x1024 and 1280x800. Cover expanded, resized, collapsed, and constrained Assistant states; long timeline scrolling; keyboard-only Quick actions and slash use; selection-scoped conversation and Proposal generation; Stop and Retry; AI unavailable; stale selection recovery; and the unaffected Publish Workspace View.
+Manually verify the Electron app at 1440x1024 and 1280x800:
 
-## Completion
+- keyboard-only Quick actions, slash filtering, tag removal, Send, Stop, and Retry;
+- expanded, resized, collapsed, and constrained Assistant states;
+- selection-scoped conversation and Proposal generation with formatted and repeated Markdown;
+- AI-unavailable and stale-selection recovery;
+- long timeline scrolling with a fixed composer;
+- unchanged Publish Workspace View.
 
-Close #93 only after the missing behavior above works and its tests pass. Update or close #156 and #161 when the shared fixes satisfy their narrower acceptance criteria. Move any lasting architectural decision into an ADR or guide, then delete this plan.
+Add this table to the PR description and fill every row with a test name, command, or manual result:
+
+| Requirement | Evidence |
+| --- | --- |
+| Lexical composer and skill tag | |
+| Quick actions and slash picker | |
+| Selection scope | |
+| Retry durability | |
+| Markdown and timeline | |
+| AI-unavailable recovery | |
+| Electron layouts and keyboard flow | |
+| Full repository checks | |
+
+Step 6 is complete when the table has no empty cells and every listed command passes. Then move any lasting decision into an ADR or guide, delete this plan, and close #93. If any row lacks evidence, keep the plan and issue open.

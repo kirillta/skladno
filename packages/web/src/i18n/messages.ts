@@ -209,6 +209,7 @@ export const messages = {
     "assistant.profileRebuilt": "Profile rebuilt from {count, plural, one {# active source} other {# active sources}}.",
     "assistant.requestStartFailed": "Couldn’t complete this editorial request.",
     "assistant.errorDetails": "Error details",
+    "assistant.openSettings": "Open Application Settings",
     "assistant.retry": "Retry",
     "assistant.status.completed": "Completed",
     "assistant.status.pending": "Working",

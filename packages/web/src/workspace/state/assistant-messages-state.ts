@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantCapabilityActivity, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantCapabilityActivity, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName } from "./editorial-language.js";
 
 type ProposalState = "idle" | "streaming" | "error";
+
+
+function aiConnectionUnavailable(error: unknown): boolean {
+    return error instanceof ApplicationClientError && (error.code === APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED
+        || error.code === APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND
+        || error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING);
+}
 
 
 export interface AssistantSelectionScope {
@@ -31,6 +38,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const [stateByArticle, setStateByArticle] = useState<Record<string, ProposalState>>({});
     const [messageByArticle, setMessageByArticle] = useState<Record<string, string>>({});
     const [errorDetailsByArticle, setErrorDetailsByArticle] = useState<Record<string, string>>({});
+    const [aiConnectionUnavailableByArticle, setAiConnectionUnavailableByArticle] = useState<Record<string, boolean>>({});
     const [factCheckClaimsByArticle, setFactCheckClaimsByArticle] = useState<Record<string, FactCheckClaimPreview[]>>({});
     const [activityByArticle, setActivityByArticle] = useState<Record<string, AssistantCapabilityActivity>>({});
     const controller = useRef<AbortController>();
@@ -39,6 +47,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const state = article ? stateByArticle[article.id] ?? "idle" : "idle";
     const message = article ? messageByArticle[article.id] ?? "" : "";
     const errorDetails = article ? errorDetailsByArticle[article.id] : undefined;
+    const hasUnavailableAiConnection = article ? aiConnectionUnavailableByArticle[article.id] ?? false : false;
     const activity = article ? activityByArticle[article.id] : undefined;
 
     const reload = useCallback(async (articleId: string | undefined = article?.id) => {
@@ -177,6 +186,12 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
 
                 return next;
             });
+            setAiConnectionUnavailableByArticle((connections) => {
+                const next = { ...connections };
+                delete next[current.id];
+
+                return next;
+            });
             setStateByArticle((states) => ({
                 ...states,
                 [current.id]: "streaming",
@@ -236,6 +251,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                     ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
                     : intl.formatMessage({ id: "errors.editorialRequestFailed" }),
             }));
+            setAiConnectionUnavailableByArticle((connections) => ({ ...connections, [current.id]: aiConnectionUnavailable(error) }));
 
             await reload(current.id).catch(() => undefined);
         }
@@ -251,6 +267,12 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             setMessageByArticle((messages) => ({ ...messages, [current.id]: "" }));
             setErrorDetailsByArticle((details) => {
                 const next = { ...details };
+                delete next[current.id];
+
+                return next;
+            });
+            setAiConnectionUnavailableByArticle((connections) => {
+                const next = { ...connections };
                 delete next[current.id];
 
                 return next;
@@ -283,6 +305,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                     ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
                     : intl.formatMessage({ id: "errors.editorialRequestFailed" })
             }));
+            setAiConnectionUnavailableByArticle((connections) => ({ ...connections, [current.id]: aiConnectionUnavailable(error) }));
             await reload(current.id).catch(() => undefined);
         }
     }, [client, handleAssistantEvent, intl, reload, workspace]);
@@ -292,6 +315,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         state,
         message,
         errorDetails,
+        hasUnavailableAiConnection,
         activity,
         factCheckClaims: article
             ? factCheckClaimsByArticle[article.id]

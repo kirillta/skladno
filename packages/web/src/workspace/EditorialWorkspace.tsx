@@ -47,9 +47,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
     }, [workspace.content, workspace.selectedArticleId]);
     const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
         editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
-        if (result.proposal)
-            layout.setView("proposal");
-    }, [editorial, layout]);
+    }, [editorial]);
     const assistant = useAssistantMessages(client, workspace, assistantSelection, applyAssistantResult, profileRebuilt);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
     const flushSelectedRef = useRef(workspace.flushSelected);
@@ -210,6 +208,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             state={assistant.state}
             message={assistant.message}
             errorDetails={assistant.errorDetails}
+            hasUnavailableAiConnection={assistant.hasUnavailableAiConnection}
             activity={assistant.activity}
             factCheckClaims={assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true }))}
             onRequest={assistant.request}
@@ -224,6 +223,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             selection={assistantSelection}
             openView={layout.setView}
             generalSettings={generalSettings}
+            openSettings={enterSettings}
             clearSelection={() => setAssistantSelection(undefined)} />
         }>
         <ExtractedArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} runFactCheck={runFactCheck} runTranslation={runTranslation} shortcutOverrides={keyBindingOverrides} onSelectionChange={(snapshot: AssistantSelectionSnapshot | undefined) => {

@@ -83,7 +83,7 @@ function captureAssistantSelection(editor: LexicalEditor, selection: RangeSelect
                 endOffset: end - startMarker.length,
             };
     }, { tag: "assistant-selection-capture" });
-    
+
     editor.setEditorState(originalState, { tag: "assistant-selection-restore" });
     return snapshot;
 }

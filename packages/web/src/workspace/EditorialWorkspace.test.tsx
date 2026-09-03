@@ -86,7 +86,7 @@ describe("Editorial Workspace", () => {
     });
 
 
-    it("opens Proposal Review when an Assistant request prepares a Proposal", async () => {
+    it("keeps the current Workspace View when an Assistant request prepares a Proposal", async () => {
         const client = fakeClient();
         const user = userEvent.setup();
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
@@ -98,10 +98,13 @@ describe("Editorial Workspace", () => {
         render(<App client={client} />);
 
         await screen.findByRole("heading", { name: "First Article" });
-        await user.type(screen.getByRole("textbox", { name: "Editorial guidance" }), "Improve flow");
+        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
         await user.click(screen.getByRole("button", { name: message("assistant.send") }));
 
-        expect(await screen.findByText("Improved Draft")).toBeTruthy();
+        await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalled());
+        expect(screen.getByRole("tab", { name: "Write" }).getAttribute("aria-selected")).toBe("true");
+        expect(screen.queryByText("Improved Draft")).toBeNull();
     });
 
 
@@ -253,7 +256,8 @@ describe("Editorial Workspace", () => {
         render(<App client={client} />);
 
         await screen.findByRole("heading", { name: "First Article" });
-        await user.type(screen.getByRole("textbox", { name: "Editorial guidance" }), "Please help.");
+        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
         await user.click(screen.getByRole("button", { name: message("assistant.send") }));
 
         expect((await screen.findByRole("alert")).textContent).toContain("complete this editorial request.");
@@ -404,45 +408,34 @@ describe("Editorial Workspace", () => {
 
         await user.click(panelScope.getByRole("button", { name: message("assistant.quickActions") }));
 
-        expect(panelScope.getByRole("button", { name: "Talking points" })).toBeTruthy();
-        expect(panelScope.getByRole("button", { name: "Narrative draft" })).toBeTruthy();
-        expect(panelScope.getByRole("button", { name: "Flow and clarity" })).toBeTruthy();
-        expect(panelScope.getByRole("button", { name: "Fact checking" })).toBeTruthy();
-        expect(panelScope.getByRole("button", { name: "Style review" })).toBeTruthy();
-        expect(panelScope.getByRole("button", { name: "Translation" })).toBeTruthy();
+        expect(panelScope.getByRole("option", { name: "Talking points" })).toBeTruthy();
+        expect(panelScope.getByRole("option", { name: "Narrative draft" })).toBeTruthy();
+        expect(panelScope.getByRole("option", { name: "Flow and clarity" })).toBeTruthy();
+        expect(panelScope.getByRole("option", { name: "Fact checking" })).toBeTruthy();
+        expect(panelScope.getByRole("option", { name: "Style review" })).toBeTruthy();
+        expect(panelScope.getByRole("option", { name: "Translation" })).toBeTruthy();
 
-        await user.type(panelScope.getByRole("textbox", { name: message("assistant.guidance") }), "Preserve the key claims.");
-        await user.click(panelScope.getByRole("button", { name: message("assistant.skill.translation.label") }));
+        await user.click(panelScope.getByRole("option", { name: message("assistant.skill.translation.label") }));
         expect(onRequest).not.toHaveBeenCalled();
 
         await user.click(panelScope.getByRole("button", { name: message("assistant.send") }));
 
-        expect(onRequest).toHaveBeenCalledWith("Preserve the key claims.", "translation", ["Portuguese"], "Preserve the key claims.".length);
+        expect(onRequest).toHaveBeenCalledWith("", "translation", ["Portuguese"], 0);
     });
 
 
-    it("replaces a slash trigger with a Quick action selected from the keyboard", async () => {
+    it("selects a Quick action", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} article={article("one", "First Article")} updateArticle={vi.fn()} />);
         const panelScope = within(panel.container);
-        const composer = panelScope.getByRole("textbox", { name: message("assistant.guidance") });
-
-        await user.type(composer, "Keep this /");
-        await user.keyboard("{ArrowDown}{Enter}");
-        await user.type(composer, "focused.");
-
-        expect(composer.textContent).toContain("Talking points focused.");
-        expect(composer.textContent).not.toContain("/");
-        expect(composer.textContent).toContain("Talking points");
-        expect(composer.childNodes[0]?.textContent).toBe("Keep this");
-        expect((composer.childNodes[1] as HTMLElement | undefined)?.dataset.assistantSkillChip).toBe("");
-        expect((composer.childNodes[1] as HTMLElement | undefined)?.contentEditable).toBe("false");
-        expect([...composer.childNodes].slice(2).map((node) => node.textContent).join("")).toBe(" focused.");
+        await user.click(panelScope.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(panelScope.getByRole("option", { name: message("assistant.skill.narrativeDraft.label") }));
+        await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")?.textContent).toContain("Narrative draft"));
 
         await user.click(panelScope.getByRole("button", { name: message("assistant.send") }));
 
-        expect(onRequest).toHaveBeenCalledWith("Keep this focused.", "talking_points", undefined, "Keep this".length);
+        expect(onRequest).toHaveBeenCalledWith("", "narrative_draft", undefined, 0);
     });
 
 
@@ -452,12 +445,13 @@ describe("Editorial Workspace", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} generalSettings={{ ...defaultGeneralSettings, assistantSendMode: "ctrl-enter" }} assistantMessages={[]} />);
         const composer = within(panel.container).getByRole("textbox", { name: message("assistant.guidance") });
 
-        await user.type(composer, "Keep this focused.");
+        await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(within(panel.container).getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
         fireEvent.keyDown(composer, { key: "Enter" });
         expect(onRequest).not.toHaveBeenCalled();
 
         fireEvent.keyDown(composer, { key: "Enter", ctrlKey: true });
-        await waitFor(() => expect(onRequest).toHaveBeenCalledWith("Keep this focused.", undefined, undefined, undefined));
+        await waitFor(() => expect(onRequest).toHaveBeenCalledWith("", "talking_points", undefined, 0));
     });
 
 
@@ -468,7 +462,7 @@ describe("Editorial Workspace", () => {
         const panelScope = within(panel.container);
 
         await user.click(panelScope.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(panelScope.getByRole("button", { name: message("assistant.skill.flowAndClarity.label") }));
+        await user.click(panelScope.getByRole("option", { name: message("assistant.skill.flowAndClarity.label") }));
 
         expect(panelScope.getByRole("button", { name: message("assistant.send") }).hasAttribute("disabled")).toBe(false);
 
@@ -484,7 +478,7 @@ describe("Editorial Workspace", () => {
         const panelScope = within(panel.container);
 
         await user.click(panelScope.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(panelScope.getByRole("button", { name: message("assistant.skill.translation.label") }));
+        await user.click(panelScope.getByRole("option", { name: message("assistant.skill.translation.label") }));
         await user.click(panelScope.getByRole("button", { name: message("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("", "translation", ["Spanish", "German"], 0);
@@ -505,7 +499,7 @@ describe("Editorial Workspace", () => {
         render(<App client={client} />);
         await screen.findByRole("textbox", { name: "Article draft" });
         await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(screen.getByRole("button", { name: message("assistant.skill.translation.label") }));
+        await user.click(screen.getByRole("option", { name: message("assistant.skill.translation.label") }));
         await user.click(screen.getByRole("button", { name: message("assistant.send") }));
 
         await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalledTimes(2));
@@ -523,7 +517,7 @@ describe("Editorial Workspace", () => {
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection={selection} clearSelection={vi.fn()} />);
         const selectionChip = panel.container.querySelector<HTMLElement>("[data-assistant-composer-decoration]")!;
 
-        expect(selectionChip.textContent).toBe("The first selected s…");
+        expect(selectionChip.textContent).toContain("The first selected s…");
         expect(selectionChip.getAttribute("title")).toBe(selection.preview);
         expect(within(selectionChip).getByRole("button", { name: message("assistant.clearArticleSelection") })).toBeTruthy();
     });
@@ -533,21 +527,18 @@ describe("Editorial Workspace", () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} />);
-        const composer = within(panel.container).getByRole("textbox", { name: "Editorial guidance" });
-
-        await user.type(composer, "Review this selection.");
         await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(within(panel.container).getByRole("button", { name: message("assistant.skill.talkingPoints.label") }));
+        await user.click(within(panel.container).getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
         expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy();
 
         panel.rerender(<IntlProvider locale="en" messages={messages}><EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection={{ articleId: "one", fingerprint: "fingerprint", preview: "Selected Article text", startOffset: 0, endOffset: 21 }} clearSelection={vi.fn()} /></IntlProvider>);
 
         await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy());
         await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));
-        expect(within(panel.container).getByRole("button", { name: message("assistant.skill.narrativeDraft.label") })).toBeTruthy();
+        expect(within(panel.container).getByRole("option", { name: message("assistant.skill.narrativeDraft.label") })).toBeTruthy();
         await user.click(within(panel.container).getByRole("button", { name: message("assistant.send") }));
 
-        expect(onRequest).toHaveBeenCalledWith("Review this selection.", "talking_points", undefined, "Review this selection.".length);
+        expect(onRequest).toHaveBeenCalledWith("", "talking_points", undefined, 0);
     });
 
 

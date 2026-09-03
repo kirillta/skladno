@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef } from "react";
 import { useIntl } from "react-intl";
 import type { AssistantCapabilityActivity, AssistantMessage, FactCheckClaimPreview, GeneralSettings } from "@skladno/shared";
-import { Banner } from "../../../ui/primitives.js";
+import { Banner, Button } from "../../../ui/primitives.js";
 import { FactCheckClaims } from "./FactCheckClaims.js";
 import { AssistantTimelineMessage } from "./AssistantTimelineMessage.js";
 
 
-export function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, openView, onRetry, generalSettings, elapsedDuration }: {
+export function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, openView, onRetry, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings }: {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
@@ -18,6 +18,8 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
     onRetry?: (requestId: string) => void;
     generalSettings: GeneralSettings;
     elapsedDuration: string;
+    hasUnavailableAiConnection?: boolean;
+    openSettings?: () => void;
 }) {
     const intl = useIntl();
     const timeline = useRef<HTMLDivElement>(null);
@@ -52,6 +54,7 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
         {message && <Banner tone="error" className="border-danger/35 bg-surface-raised text-ink" role="alert">
             <div>
                 <p>{message}</p>
+                {hasUnavailableAiConnection && openSettings ? <Button className="mt-2" variant="secondary" onClick={openSettings}>{intl.formatMessage({ id: "assistant.openSettings" })}</Button> : null}
                 {errorDetails && <details className="mt-1 border-t border-border pt-1 text-xs leading-5 text-muted">
                     <summary className="flex min-h-9 cursor-pointer items-center hover:text-ink">{intl.formatMessage({ id: "assistant.errorDetails" })}</summary>
                     <p className="mb-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-4">{errorDetails}</p>
