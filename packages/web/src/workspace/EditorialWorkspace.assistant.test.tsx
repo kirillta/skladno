@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defaultGeneralSettings, type ArticleRevision } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, defaultGeneralSettings, type ArticleRevision } from "@skladno/shared";
 
 import { App } from "../App.js";
 import { messages } from "../i18n/messages.js";
@@ -161,6 +161,28 @@ describe("Editorial Workspace assistant", () => {
     });
 
 
+    it("opens Application Settings after an unavailable AI connection without changing the Article or Workspace View", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "revisions", selectedArticleId: "one" }));
+        client.streamAssistantRequest = vi.fn().mockRejectedValue(new ApplicationClientError(APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED, undefined, 400));
+
+        render(<App client={client} />);
+
+        await screen.findByRole("heading", { name: "First Article" });
+        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+        await user.click(await screen.findByRole("button", { name: "Open Application Settings" }));
+        await user.click(screen.getAllByRole("button", { name: "Back to workspace" })[0]);
+
+        expect(screen.getByRole("heading", { name: "First Article" })).toBeTruthy();
+        expect(screen.getByRole("tab", { name: "Revisions" }).getAttribute("aria-selected")).toBe("true");
+        expect(client.saveArticleRevision).not.toHaveBeenCalled();
+    });
+
+
 
     it("inserts a Quick action before sending an editorial request", async () => {
         const user = userEvent.setup();
@@ -210,7 +232,7 @@ describe("Editorial Workspace assistant", () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} generalSettings={{ ...defaultGeneralSettings, assistantSendMode: "ctrl-enter" }} assistantMessages={[]} />);
-        const composer = within(panel.container).getByRole("textbox", { name: message("assistant.guidance") });
+        const composer = within(panel.container).getByRole("combobox", { name: message("assistant.guidance") });
 
         await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));
         await user.click(within(panel.container).getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));

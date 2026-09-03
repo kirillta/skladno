@@ -49,15 +49,16 @@ export interface AssistantSelectionSnapshot {
 }
 
 
-function captureAssistantSelection(editor: LexicalEditor, selection: RangeSelection): AssistantSelectionSnapshot | undefined {
+export function captureAssistantSelection(editor: LexicalEditor, selection: RangeSelection): AssistantSelectionSnapshot | undefined {
     const originalState = editor.getEditorState();
     const boundaries = selection.getStartEndPoints();
     if (!boundaries)
         return undefined;
 
-    const nonce = crypto.randomUUID();
-    const startMarker = `__skladno_selection_start_${nonce}__`;
-    const endMarker = `__skladno_selection_end_${nonce}__`;
+    const preview = originalState.read(() => selection.getTextContent());
+    const nonce = crypto.randomUUID().replaceAll("-", "");
+    const startMarker = `skladnoselectionstart${nonce}`;
+    const endMarker = `skladnoselectionend${nonce}`;
     let snapshot: AssistantSelectionSnapshot | undefined;
 
     editor.update(() => {
@@ -78,11 +79,11 @@ function captureAssistantSelection(editor: LexicalEditor, selection: RangeSelect
         if (start >= 0 && end > start)
             snapshot = {
                 markdown: `${markdown.slice(0, start)}${markdown.slice(start + startMarker.length, end)}${markdown.slice(end + endMarker.length)}`,
-                preview: selection.getTextContent(),
+                preview,
                 startOffset: start,
                 endOffset: end - startMarker.length,
             };
-    }, { tag: "assistant-selection-capture" });
+    }, { discrete: true, tag: "assistant-selection-capture" });
 
     editor.setEditorState(originalState, { tag: "assistant-selection-restore" });
     return snapshot;
