@@ -24,6 +24,9 @@ export function useKeyBindingDispatcher(overrides: KeyBindingOverrides | undefin
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented)
+                return;
+
             const target = event.target;
             const scope = target instanceof HTMLElement && target.closest('[data-workspace-panel="editorial-assistant"]') ? "assistant" : "application";
             if (!dispatcher.dispatch(event, scope) && isReservedDesktopShortcut(event))

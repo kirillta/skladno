@@ -31,6 +31,7 @@ export function fakeClient(): EditorialWorkspaceClient {
 export function resetWorkspaceTestEnvironment() {
     cleanup();
     localStorage.clear();
+    window.skladnoShell = undefined;
     window.skladnoUpdates = undefined;
 }
 
