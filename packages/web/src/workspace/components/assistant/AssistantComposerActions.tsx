@@ -20,7 +20,7 @@ export function AssistantQuickActions({ state, composer, quickActionsOpen, avail
                 setActiveSkillIndex(0);
 
             return !open;
-        })}><ChevronDownIcon className={`size-4 ${quickActionsOpen ? "rotate-180" : ""}`} /></Button>
+        })}><ChevronDownIcon className={`size-4 transition-transform duration-150 motion-reduce:transition-none ${quickActionsOpen ? "rotate-180" : ""}`} /></Button>
     </div>;
 }
 

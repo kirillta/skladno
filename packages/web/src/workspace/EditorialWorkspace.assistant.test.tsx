@@ -197,6 +197,7 @@ describe("Editorial Workspace assistant", () => {
 
         const quickActions = panelScope.getByRole("button", { name: message("assistant.quickActions") });
         expect(quickActions.getAttribute("aria-haspopup")).toBe("listbox");
+        expect(quickActions.querySelector("svg")?.classList.contains("transition-transform")).toBe(true);
         await user.click(quickActions);
 
         expect(panelScope.getByRole("option", { name: "Talking points" })).toBeTruthy();
