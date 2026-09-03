@@ -60,7 +60,15 @@ export class KeyBindingDispatcher {
             return false;
 
         const resolved = resolveKeyBindings(this.overrides);
-        const command = keyBindingCommands.find((candidate) => candidate.scope === scope && resolved[candidate.id] && keyBindingsEqual(resolved[candidate.id]!, binding));
+        const matches = (candidate: typeof keyBindingCommands[number]) => {
+            const candidateBinding = resolved[candidate.id];
+            return candidateBinding != null && keyBindingsEqual(candidateBinding, binding);
+        };
+        let command = keyBindingCommands.find((candidate) => candidate.scope === scope && matches(candidate));
+
+        if (!command && scope !== "application")
+            command = keyBindingCommands.find((candidate) => candidate.scope === "application" && matches(candidate));
+
         if (!command || (isEditableTarget(event.target) && !command.allowInEditable))
             return false;
 

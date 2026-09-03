@@ -228,6 +228,18 @@ describe("Editorial Workspace assistant", () => {
     });
 
 
+    it("undoes composer edits with Ctrl+Z", async () => {
+        const user = userEvent.setup();
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn()} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} />);
+        const composer = within(panel.container).getByRole("combobox", { name: message("assistant.guidance") });
+
+        await user.type(composer, "Draft guidance");
+        await user.keyboard("{Control>}z{/Control}");
+
+        await waitFor(() => expect(composer.textContent).toBe(""));
+    });
+
+
     it("sends the assistant request with Ctrl+Enter when configured", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
