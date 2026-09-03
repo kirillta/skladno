@@ -195,7 +195,9 @@ describe("Editorial Workspace assistant", () => {
         expect(panelScope.getByText(/I’m here to help shape this Article/)).toBeTruthy();
         expect(panelScope.queryByRole("button", { name: "Talking points" })).toBeNull();
 
-        await user.click(panelScope.getByRole("button", { name: message("assistant.quickActions") }));
+        const quickActions = panelScope.getByRole("button", { name: message("assistant.quickActions") });
+        expect(quickActions.getAttribute("aria-haspopup")).toBe("listbox");
+        await user.click(quickActions);
 
         expect(panelScope.getByRole("option", { name: "Talking points" })).toBeTruthy();
         expect(panelScope.getByRole("option", { name: "Narrative draft" })).toBeTruthy();
