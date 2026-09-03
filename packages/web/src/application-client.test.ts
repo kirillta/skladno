@@ -65,6 +65,7 @@ describe("HttpApplicationClient", () => {
         vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("event: assistant\ndata: {\"type\":\"error\",\"requestId\":\"request-1\",\"errorCode\":\"editorial_provider_failed\",\"retryable\":true}\n\n")));
 
         await expect(new HttpApplicationClient().streamAssistantRequest(article.id, {
+            kind: "new",
             requestId: "request-1",
             authorMessage: "Help with this Article.",
             scope: { kind: "article", baseRevisionId: article.currentRevisionId },
@@ -82,6 +83,7 @@ describe("HttpApplicationClient", () => {
         }), { status: 500 })));
 
         await expect(new HttpApplicationClient().streamAssistantRequest(article.id, {
+            kind: "new",
             requestId: "request-1",
             authorMessage: "Help with this Article.",
             scope: { kind: "article", baseRevisionId: article.currentRevisionId },

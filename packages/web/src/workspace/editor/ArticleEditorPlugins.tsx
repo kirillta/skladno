@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { $generateNodesFromDOM } from "@lexical/html";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $getSelection, $isRangeSelection, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_CRITICAL, PASTE_COMMAND, type LexicalEditor } from "lexical";
+import { $createRangeSelection, $getSelection, $isRangeSelection, $setSelection, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_CRITICAL, PASTE_COMMAND, type LexicalEditor, type RangeSelection } from "lexical";
 import { exportArticleMarkdown, importArticleMarkdown } from "./markdown.js";
 import { sanitizeRichPasteDocument } from "./paste.js";
 
@@ -41,13 +41,70 @@ export function EditorBridge({ content, onChange, onReady }: { content: string; 
 }
 
 
-export function EditorSelectionBridge({ onSelectionChange }: { onSelectionChange?: (value: string | undefined) => void }) {
-    return <OnChangePlugin ignoreHistoryMergeTagChange ignoreSelectionChange={false} onChange={(state) => {
+export interface AssistantSelectionSnapshot {
+    markdown: string;
+    preview: string;
+    startOffset: number;
+    endOffset: number;
+}
+
+
+export function captureAssistantSelection(editor: LexicalEditor, selection: RangeSelection): AssistantSelectionSnapshot | undefined {
+    const originalState = editor.getEditorState();
+    const boundaries = selection.getStartEndPoints();
+    if (!boundaries)
+        return undefined;
+
+    const preview = originalState.read(() => selection.getTextContent());
+    const nonce = crypto.randomUUID().replaceAll("-", "");
+    const startMarker = `skladnoselectionstart${nonce}`;
+    const endMarker = `skladnoselectionend${nonce}`;
+    let snapshot: AssistantSelectionSnapshot | undefined;
+
+    editor.update(() => {
+        const insertAt = (point: typeof boundaries[number], text: string) => {
+            const cursor = $createRangeSelection();
+            cursor.anchor.set(point.key, point.offset, point.type);
+            cursor.focus.set(point.key, point.offset, point.type);
+            $setSelection(cursor);
+            cursor.insertText(text);
+        };
+
+        // Insert from right to left so the start point remains valid in its original node.
+        insertAt(boundaries[1], endMarker);
+        insertAt(boundaries[0], startMarker);
+        const markdown = exportArticleMarkdown();
+        const start = markdown.indexOf(startMarker);
+        const end = markdown.indexOf(endMarker);
+        if (start >= 0 && end > start)
+            snapshot = {
+                markdown: `${markdown.slice(0, start)}${markdown.slice(start + startMarker.length, end)}${markdown.slice(end + endMarker.length)}`,
+                preview,
+                startOffset: start,
+                endOffset: end - startMarker.length,
+            };
+    }, { discrete: true, tag: "assistant-selection-capture" });
+
+    editor.setEditorState(originalState, { tag: "assistant-selection-restore" });
+    return snapshot;
+}
+
+
+export function EditorSelectionBridge({ onSelectionChange }: { onSelectionChange?: (value: AssistantSelectionSnapshot | undefined) => void }) {
+    const [editor] = useLexicalComposerContext();
+    return <OnChangePlugin ignoreHistoryMergeTagChange ignoreSelectionChange={false} onChange={(state, _editor, tags) => {
+        if (tags.has("assistant-selection-capture") || tags.has("assistant-selection-restore"))
+            return;
+
         state.read(() => {
             const selection = $getSelection();
-            const text = $isRangeSelection(selection) ? selection.getTextContent() : "";
-            if (text)
-                onSelectionChange?.(text);
+            if ($isRangeSelection(selection) && !selection.isCollapsed() && selection.getTextContent()) {
+                onSelectionChange?.(captureAssistantSelection(editor, selection.clone()));
+                return;
+            }
+
+            if ($isRangeSelection(selection))
+                onSelectionChange?.(undefined);
         });
     }} />;
 }

@@ -1,63 +1,58 @@
-import type { FormEventHandler, KeyboardEventHandler, RefObject } from "react";
+import { useRef, type KeyboardEventHandler } from "react";
 import { useIntl } from "react-intl";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { BuiltInSkillId, KeyBindingOverrides } from "@skladno/shared";
-import { Button } from "../../../ui/primitives.js";
-import { ChevronDownIcon, SendIcon, StopIcon } from "../../../ui/icons.js";
 import { KEY_BINDING_COMMAND } from "@skladno/shared";
+import { Button } from "../../../ui/primitives.js";
+import { SendIcon, StopIcon } from "../../../ui/icons.js";
 import { shortcutHint } from "../../../key-bindings/shortcut-hint.js";
-import { skillMessages } from "./assistant-messages.js";
+import type { AssistantSelectionScope } from "../../state/assistant-messages-state.js";
+import { AssistantQuickActions, SelectionChip } from "./AssistantComposerActions.js";
+import { AssistantSkillTagNode } from "./AssistantSkillTagNode.js";
+import { ComposerBridge, PickerKeyboard, PlainTextPaste, type AssistantComposerValue, type AssistantSkillPickerControls } from "./assistant-composer-plugins.js";
+
+export type { AssistantComposerValue } from "./assistant-composer-plugins.js";
 
 
-export function AssistantComposer({ state, canSend, guidance, selectedSkill, selection, composer, quickActionsOpen, availableSkills, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onCancel, onInput, onKeyDown, shortcutOverrides }: {
+type AssistantComposerProps = AssistantSkillPickerControls & {
     state: "idle" | "streaming" | "error";
     canSend: boolean;
     guidance: string;
     selectedSkill?: BuiltInSkillId;
-    selection?: string;
-    composer: RefObject<HTMLDivElement>;
-    quickActionsOpen: boolean;
-    availableSkills: readonly BuiltInSkillId[];
-    setQuickActionsOpen: (value: boolean | ((current: boolean) => boolean)) => void;
+    skillOffset: number;
+    caretOffset: number;
+    selection?: AssistantSelectionScope;
+    clearSelection?: () => void;
+    incompatibleSelectionSkill: boolean;
     setActiveSkillIndex: (value: number) => void;
-    selectSkill: (skill: BuiltInSkillId) => void;
-    focusQuickAction: (index: number) => void;
     send: () => void;
     onCancel: () => void;
-    onInput: FormEventHandler<HTMLDivElement>;
+    onChange: (value: AssistantComposerValue) => void;
     onKeyDown: KeyboardEventHandler<HTMLDivElement>;
     shortcutOverrides?: KeyBindingOverrides;
-}) {
+};
+
+
+export function AssistantComposer({ state, canSend, guidance, selectedSkill, skillOffset, caretOffset, selection, clearSelection, quickActionsOpen, availableSkills, activeSkillIndex, incompatibleSelectionSkill, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onCancel, onChange, onKeyDown, shortcutOverrides }: AssistantComposerProps) {
     const intl = useIntl();
+    const composer = useRef<HTMLDivElement>(null);
+    const value: AssistantComposerValue = { guidance, selectedSkill, skillOffset, caretOffset };
+    const activeSkill = availableSkills[activeSkillIndex];
+
     return <footer className="shrink-0 border-t border-border px-5 py-4">
-        <div className="relative mb-3">
-            {quickActionsOpen && <div className="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "assistant.quickActions" })}>
-                {availableSkills.map((skill, index) => <Button data-assistant-skill className="flex w-full justify-start text-xs" key={skill} disabled={state === "streaming"} variant="quiet" onClick={() => selectSkill(skill)} onKeyDown={(event) => {
-                    if (event.key === "ArrowDown") {
-                        event.preventDefault();
-                        focusQuickAction(index + 1);
-                    }
-
-                    if (event.key === "ArrowUp") {
-                        event.preventDefault();
-                        focusQuickAction(index - 1);
-                    }
-
-                    if (event.key === "Escape") {
-                        event.preventDefault();
-                        setQuickActionsOpen(false);
-                        composer.current?.focus();
-                    }
-                }}>{intl.formatMessage({ id: skillMessages[skill] })}</Button>)}
-            </div>}
-            <Button className="flex items-center gap-2" variant="secondary" aria-expanded={quickActionsOpen} onClick={() => setQuickActionsOpen((open) => {
-                if (!open)
-                    setActiveSkillIndex(0);
-
-                return !open;
-            })}>{intl.formatMessage({ id: "assistant.quickActions" })}<ChevronDownIcon className={`size-4 ${quickActionsOpen ? "rotate-180" : ""}`} /></Button>
-        </div>
+        <AssistantQuickActions state={state} composer={composer} quickActionsOpen={quickActionsOpen} availableSkills={availableSkills} activeSkillIndex={activeSkillIndex} setQuickActionsOpen={setQuickActionsOpen} setActiveSkillIndex={setActiveSkillIndex} selectSkill={selectSkill} focusQuickAction={focusQuickAction} />
+        {incompatibleSelectionSkill && <p className="mb-2 text-xs text-muted" role="status">{intl.formatMessage({ id: "assistant.selectionSkillUnavailable" })}</p>}
         <div className="relative min-h-25 rounded-control border border-border bg-surface-raised px-3 py-2">
-            <div ref={composer} data-assistant-composer data-placeholder={!guidance && !selectedSkill && !selection ? intl.formatMessage({ id: "assistant.guidancePlaceholder" }) : undefined} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label={intl.formatMessage({ id: "assistant.guidance" })} className="min-h-20 whitespace-pre-wrap pr-10 text-sm leading-5 text-ink outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-ink/45" onInput={onInput} onKeyDown={onKeyDown} />
+            <SelectionChip selection={selection} clearSelection={clearSelection} />
+            <LexicalComposer initialConfig={{ namespace: "skladno-assistant-composer", nodes: [AssistantSkillTagNode], onError: () => undefined }}>
+                <RichTextPlugin contentEditable={<ContentEditable ref={composer} data-assistant-composer role="combobox" aria-autocomplete="list" aria-expanded={quickActionsOpen} aria-activedescendant={quickActionsOpen && activeSkill ? `assistant-skill-option-${activeSkill}` : undefined} aria-multiline="true" aria-label={intl.formatMessage({ id: "assistant.guidance" })} aria-controls={quickActionsOpen ? "assistant-skill-picker" : undefined} className="min-h-20 whitespace-pre-wrap pr-10 text-sm leading-5 text-ink outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-ink/45" data-placeholder={!guidance && !selectedSkill ? intl.formatMessage({ id: "assistant.guidancePlaceholder" }) : undefined} onKeyDown={onKeyDown} />} placeholder={null} ErrorBoundary={LexicalErrorBoundary} />
+                <ComposerBridge value={value} onChange={onChange} />
+                <PlainTextPaste />
+                <PickerKeyboard quickActionsOpen={quickActionsOpen} availableSkills={availableSkills} activeSkillIndex={activeSkillIndex} setQuickActionsOpen={setQuickActionsOpen} selectSkill={selectSkill} focusQuickAction={focusQuickAction} />
+            </LexicalComposer>
             {state === "streaming"
                 ? <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center !p-0" variant="danger" title={shortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></Button>
                 : <Button className="absolute bottom-2 right-2 inline-grid size-9 place-items-center !p-0" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button>}

@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantAuthorizedAction, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type FactCheck, type FactCheckFinding, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantAuthorizedAction, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type AssistantRequestScope, type AssistantResponseKind, type BuiltInSkillId, type EditorialOperation, type FactCheck, type FactCheckFinding, type NewAssistantRequest, type StartAssistantRequest } from "@skladno/shared";
 import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
@@ -22,12 +22,14 @@ type ActionCapability = Extract<EditorialCapabilityId, "rename_article" | "chang
 type CompletionEvent = Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>;
 
 
-export interface AssistantServiceRequest extends StartAssistantRequest {
+export type AssistantServiceRequest = StartAssistantRequest & { articleId: string };
+
+
+type ReplayedAssistantRequest = NewAssistantRequest & { articleId: string; retryOfRequestId?: string };
+
+
+export interface PreparedAssistantRequest extends ReplayedAssistantRequest {
     articleId: string;
-}
-
-
-export interface PreparedAssistantRequest extends AssistantServiceRequest {
     articleContent: string;
     publishingCharacterLimit?: number;
     resolvedSkillId?: BuiltInSkillId;
@@ -170,15 +172,16 @@ export class AssistantService {
         if (!article)
             throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
+        const replay = this.replayInput(request);
         const articleContent = article.currentRevision.content;
-        this.validatePreparation(request, article.currentRevisionId, articleContent);
+        this.validatePreparation(replay, article.currentRevisionId, articleContent);
 
-        const routing = this.resolveRequestRouting(request);
-        this.validateResolvedRequest(request, routing.resolvedSkillId);
+        const routing = this.resolveRequestRouting(replay);
+        this.validateResolvedRequest(replay, routing.resolvedSkillId);
         const reusableFactFindings = this.reusableFactFindings(article.id, routing.resolvedSkillId);
 
         return {
-            ...request,
+            ...replay,
             articleContent,
             ...this.publishingLimit(article.publishingProfileId),
             ...routing,
@@ -191,22 +194,41 @@ export class AssistantService {
     }
 
 
-    private validatePreparation(request: AssistantServiceRequest, currentRevisionId: string, articleContent: string): void {
+    private replayInput(request: AssistantServiceRequest): ReplayedAssistantRequest {
+        if (request.kind === "new")
+            return request;
+
+        const original = this.assistant.getRequest(request.retryOfRequestId);
+        if (!original || original.articleId !== request.articleId || (original.status !== "failed" && original.status !== "cancelled"))
+            throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_RETRY_INVALID, HTTP_STATUS.BAD_REQUEST);
+
+        return {
+            kind: "new",
+            requestId: request.requestId,
+            authorMessage: original.authorMessage,
+            scope: original.scope,
+            ...(original.explicitSkillId ? { explicitSkillId: original.explicitSkillId } : {}),
+            ...(original.skillOffset === undefined ? {} : { skillOffset: original.skillOffset }),
+            ...(original.targetLanguage ? { targetLanguage: original.targetLanguage } : {}),
+            retryOfRequestId: original.id,
+            articleId: request.articleId,
+        };
+    }
+
+
+    private validatePreparation(request: ReplayedAssistantRequest, currentRevisionId: string, articleContent: string): void {
         if (currentRevisionId !== request.scope.baseRevisionId)
             throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
 
         if (request.explicitSkillId && !builtInSkillScopeCompatibility[request.explicitSkillId].includes(request.scope.kind))
             throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_SCOPE_INCOMPATIBLE, HTTP_STATUS.BAD_REQUEST);
 
-        if (request.retryOfRequestId && !this.assistant.getRequest(request.retryOfRequestId))
-            throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_RETRY_INVALID, HTTP_STATUS.BAD_REQUEST);
-
-        if (request.scope.kind === "selection" && request.scope.endOffset > articleContent.length)
+        if (request.scope.kind === "selection" && (request.scope.endOffset > articleContent.length || request.scope.startOffset >= request.scope.endOffset))
             throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SELECTION_INVALID, HTTP_STATUS.BAD_REQUEST);
     }
 
 
-    private resolveRequestRouting(request: AssistantServiceRequest): { resolvedSkillId?: BuiltInSkillId; operation: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
+    private resolveRequestRouting(request: ReplayedAssistantRequest): { resolvedSkillId?: BuiltInSkillId; operation: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
         let fallbackSkillId = request.explicitSkillId;
         let operation: EditorialOperation = EDITORIAL_OPERATION.FLOW_REVISION;
         let engine = this.resolveEngine(operation, fallbackSkillId);
@@ -230,7 +252,7 @@ export class AssistantService {
     }
 
 
-    private validateResolvedRequest(request: AssistantServiceRequest, resolvedSkillId?: BuiltInSkillId): void {
+    private validateResolvedRequest(request: ReplayedAssistantRequest, resolvedSkillId?: BuiltInSkillId): void {
         if (resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !request.targetLanguage?.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
@@ -283,12 +305,13 @@ export class AssistantService {
         this.assistant.createRequest({
             id: request.requestId,
             articleId: request.articleId,
+            authorMessage: request.authorMessage,
             scope: request.scope,
             explicitSkillId: request.explicitSkillId,
             skillOffset: request.skillOffset,
+            targetLanguage: request.targetLanguage,
             retryOfRequestId: request.retryOfRequestId
         });
-        this.assistant.setAuthorMessage(request.requestId, request.authorMessage);
         this.assistant.resolveRequest(request.requestId, request.resolvedSkillId, request.explicitSkillId ? "explicit" : request.resolvedSkillId ? "inferred" : undefined);
     }
 

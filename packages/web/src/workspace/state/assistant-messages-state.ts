@@ -1,12 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantCapabilityActivity, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantCapabilityActivity, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName } from "./editorial-language.js";
 
 type ProposalState = "idle" | "streaming" | "error";
+
+
+function aiConnectionUnavailable(error: unknown): boolean {
+    return error instanceof ApplicationClientError && (error.code === APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED
+        || error.code === APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND
+        || error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING);
+}
+
+
+export interface AssistantSelectionScope {
+    articleId: string;
+    fingerprint: string;
+    preview: string;
+    startOffset: number;
+    endOffset: number;
+}
 
 
 export function requestedTranslationLanguages(authorMessage: string, languages: readonly string[]): readonly string[] {
@@ -16,12 +32,13 @@ export function requestedTranslationLanguages(authorMessage: string, languages: 
 }
 
 
-export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: string | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => void, profileRebuilt?: { articleId: string; count: number; token: number }) {
+export function useAssistantMessages(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState, selection: AssistantSelectionScope | undefined, onResult: (articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => void, profileRebuilt?: { articleId: string; count: number; token: number }) {
     const intl = useIntl();
     const [messagesByArticle, setMessagesByArticle] = useState<Record<string, AssistantMessage[]>>({});
     const [stateByArticle, setStateByArticle] = useState<Record<string, ProposalState>>({});
     const [messageByArticle, setMessageByArticle] = useState<Record<string, string>>({});
     const [errorDetailsByArticle, setErrorDetailsByArticle] = useState<Record<string, string>>({});
+    const [aiConnectionUnavailableByArticle, setAiConnectionUnavailableByArticle] = useState<Record<string, boolean>>({});
     const [factCheckClaimsByArticle, setFactCheckClaimsByArticle] = useState<Record<string, FactCheckClaimPreview[]>>({});
     const [activityByArticle, setActivityByArticle] = useState<Record<string, AssistantCapabilityActivity>>({});
     const controller = useRef<AbortController>();
@@ -30,6 +47,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const state = article ? stateByArticle[article.id] ?? "idle" : "idle";
     const message = article ? messageByArticle[article.id] ?? "" : "";
     const errorDetails = article ? errorDetailsByArticle[article.id] : undefined;
+    const hasUnavailableAiConnection = article ? aiConnectionUnavailableByArticle[article.id] ?? false : false;
     const activity = article ? activityByArticle[article.id] : undefined;
 
     const reload = useCallback(async (articleId: string | undefined = article?.id) => {
@@ -168,6 +186,12 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
 
                 return next;
             });
+            setAiConnectionUnavailableByArticle((connections) => {
+                const next = { ...connections };
+                delete next[current.id];
+
+                return next;
+            });
             setStateByArticle((states) => ({
                 ...states,
                 [current.id]: "streaming",
@@ -181,13 +205,17 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             });
             controller.current = new AbortController();
             const streamedId = `streaming-${crypto.randomUUID()}`;
-            const selectedContent = selection && workspace.content.includes(selection) ? selection : undefined;
-            const selectionStart = selectedContent ? workspace.content.indexOf(selectedContent) : -1;
+            const selectionMatchesRevision = selection && selection.articleId === current.id
+                && selection.fingerprint === await fingerprint(revision.content);
+            if (selection && !selectionMatchesRevision)
+                throw new ApplicationClientError("assistant_selection_invalid", undefined, 400);
+
             await client.streamAssistantRequest(current.id, {
+                kind: "new",
                 requestId: crypto.randomUUID(),
                 authorMessage,
-                scope: selectedContent && selectionStart >= 0
-                    ? { kind: "selection", baseRevisionId: revision.id, startOffset: selectionStart, endOffset: selectionStart + selectedContent.length }
+                scope: selectionMatchesRevision
+                    ? { kind: "selection", baseRevisionId: revision.id, startOffset: selection.startOffset, endOffset: selection.endOffset }
                     : { kind: "article", baseRevisionId: revision.id },
                 ...(explicitSkillId ? { explicitSkillId } : {}),
                 ...(skillOffset === undefined ? {} : { skillOffset }),
@@ -223,12 +251,90 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                     ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
                     : intl.formatMessage({ id: "errors.editorialRequestFailed" }),
             }));
+            setAiConnectionUnavailableByArticle((connections) => ({ ...connections, [current.id]: aiConnectionUnavailable(error) }));
 
             await reload(current.id).catch(() => undefined);
         }
     }, [client, handleAssistantEvent, intl, reload, selection, workspace]);
 
-    return { messages, state, message, errorDetails, activity, factCheckClaims: article ? factCheckClaimsByArticle[article.id] : undefined, request, cancel: () => controller.current?.abort() };
+
+    const retry = useCallback(async (retryOfRequestId: string) => {
+        const current = workspace.selectedArticle;
+        if (!current)
+            return;
+
+        try {
+            setMessageByArticle((messages) => ({ ...messages, [current.id]: "" }));
+            setErrorDetailsByArticle((details) => {
+                const next = { ...details };
+                delete next[current.id];
+
+                return next;
+            });
+            setAiConnectionUnavailableByArticle((connections) => {
+                const next = { ...connections };
+                delete next[current.id];
+
+                return next;
+            });
+
+            setStateByArticle((states) => ({ ...states, [current.id]: "streaming" }));
+            controller.current = new AbortController();
+            const streamedId = `streaming-${crypto.randomUUID()}`;
+            await client.streamAssistantRequest(current.id, {
+                kind: "retry",
+                requestId: crypto.randomUUID(),
+                retryOfRequestId,
+            }, (event) => handleAssistantEvent(event, current.id, current.currentRevisionId, streamedId), controller.current.signal);
+
+            await reload(current.id);
+            setStateByArticle((states) => ({ ...states, [current.id]: "idle" }));
+        } catch (error) {
+            if (error instanceof DOMException && error.name === "AbortError") {
+                await reload(current.id).catch(() => undefined);
+                setStateByArticle((states) => ({ ...states, [current.id]: "idle" }));
+
+                return;
+            }
+
+            setStateByArticle((states) => ({ ...states, [current.id]: "error" }));
+            setMessageByArticle((messages) => ({ ...messages, [current.id]: intl.formatMessage({ id: "assistant.requestStartFailed" }) }));
+            setErrorDetailsByArticle((details) => ({
+                ...details,
+                [current.id]: error instanceof ApplicationClientError
+                    ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
+                    : intl.formatMessage({ id: "errors.editorialRequestFailed" })
+            }));
+            setAiConnectionUnavailableByArticle((connections) => ({ ...connections, [current.id]: aiConnectionUnavailable(error) }));
+            await reload(current.id).catch(() => undefined);
+        }
+    }, [client, handleAssistantEvent, intl, reload, workspace]);
+
+    return {
+        messages,
+        state,
+        message,
+        errorDetails,
+        hasUnavailableAiConnection,
+        activity,
+        factCheckClaims: article
+            ? factCheckClaimsByArticle[article.id]
+            : undefined,
+        request,
+        retry,
+        cancel: () => controller.current?.abort()
+    };
+}
+
+
+async function fingerprint(content: string): Promise<string> {
+    const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(content));
+    return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+
+export async function assistantSelectionScope(articleId: string, snapshot: { markdown: string; preview: string; startOffset: number; endOffset: number }): Promise<AssistantSelectionScope> {
+    return { articleId, fingerprint: await fingerprint(snapshot.markdown), preview: snapshot.preview, startOffset: snapshot.startOffset, endOffset: snapshot.endOffset };
 }
 
 

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { defaultGeneralSettings } from "@skladno/shared";
 import { messages } from "../../../i18n/messages.js";
 import { message } from "../../../i18n/test-message.js";
@@ -21,5 +22,16 @@ describe("AssistantTimeline", () => {
 
         expect(screen.getByRole("status").textContent).toContain("Checking facts.");
         expect(screen.queryByText("Working for 1 second")).toBeNull();
+    });
+
+
+    it("offers Application Settings only for an unavailable AI connection", async () => {
+        const user = userEvent.setup();
+        const openSettings = vi.fn();
+        render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="error" message="Couldn’t complete this editorial request." collapsed={false} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" hasUnavailableAiConnection openSettings={openSettings} /></IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: "Open Application Settings" }));
+
+        expect(openSettings).toHaveBeenCalledOnce();
     });
 });

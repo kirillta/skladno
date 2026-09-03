@@ -126,7 +126,7 @@
             "event": "The author uses the Status Bar Copy control.",
             "expected": ["The main action copies Markdown and the menu offers deterministic plain text without AI."],
             "forbidden": ["Direct publishing to a platform."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.article-controls.test.tsx" }
         },
         {
             "id": "history-and-publishing.publishing-profile-persistence",

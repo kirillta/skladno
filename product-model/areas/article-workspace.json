@@ -44,10 +44,11 @@
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/EditorialAssistantPanel.tsx",
+                "packages/web/src/workspace/components/assistant/AssistantComposer.tsx",
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
-            "contract": "A skill tag never sends a request, leaves the caret after a trailing space for continued guidance, and can run against the whole Article without additional guidance; the Assistant discovers only classified current-Article capabilities, validates every action against the Author's exact request, and returns Workspace-owned decisions as handoffs. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
+            "contract": "A Lexical composer stores plain author text and one structured skill tag separately; selecting a skill never sends a request, and a tag can run against the whole Article without additional guidance. Selection scope records exact Markdown offsets and a content fingerprint, then requires the same promoted Revision before sending. The Assistant discovers only classified current-Article capabilities, validates every action against the Author's exact request, and returns Workspace-owned decisions as handoffs. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
             "persistence": "Per-Article Assistant records, minimal capability execution history, and explicit Editorial Requests."
         },
         {
@@ -275,7 +276,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
             }
         },
         {
@@ -297,7 +298,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.assistant.test.tsx"
             }
         },
         {
@@ -318,7 +319,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
             }
         },
         {
@@ -340,7 +341,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.article-controls.test.tsx"
             }
         },
         {
@@ -382,7 +383,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
             }
         },
         {
@@ -613,7 +614,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.article-controls.test.tsx"
             }
         }
     ]

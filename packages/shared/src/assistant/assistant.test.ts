@@ -34,6 +34,7 @@ test("describes source-neutral Skills and capability-run transport fixtures", ()
         baseRevisionId: execution.baseRevisionId,
         scope: { kind: "article", baseRevisionId: execution.baseRevisionId },
         status: execution.status,
+        authorMessage: "Check this.",
         execution,
         createdAt: "2026-08-30T00:00:00.000Z",
         updatedAt: "2026-08-30T00:00:00.000Z",
@@ -43,6 +44,7 @@ test("describes source-neutral Skills and capability-run transport fixtures", ()
         { type: ASSISTANT_EVENT.STAGED_COMPLETION, requestId: request.id, completion: { responseKind: "findings_prepared" } },
     ] satisfies AssistantEvent[];
     const input = {
+        kind: "new",
         requestId: request.id,
         authorMessage: "Check this.",
         scope: request.scope,
