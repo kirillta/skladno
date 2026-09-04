@@ -75,7 +75,8 @@ class E2eFixtureEngine implements EditorialEngine {
                 text: "Texto de traducción de prueba.",
                 translation: {
                     targetLanguage: request.targetLanguage ?? "Spanish",
-                    protectedSpans: []
+                    protectedSpans: [],
+                    title: "Fixture Article — Spanish"
                 }
             };
 
