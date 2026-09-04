@@ -93,6 +93,16 @@ function createAssistantTools(request: EditorialAssistantRequest, execute: Assis
 }
 
 
+export function assistantStepOptions(stepNumber: number, activeCapabilities?: readonly string[]): { activeTools: string[]; toolChoice?: { type: "tool"; toolName: string } } {
+    const activeTools = activeCapabilities ? [...activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
+    const requiredCapability = activeCapabilities?.[0];
+
+    return stepNumber === 0 && requiredCapability
+        ? { activeTools, toolChoice: { type: "tool", toolName: requiredCapability } }
+        : { activeTools };
+}
+
+
 function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StyleProfile, articleRules = ""): StyleReview {
     const availableTraits = new Set([
         ...profile.traits.map((trait) => trait.id),
@@ -224,7 +234,6 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
     private createAssistantAgent(request: EditorialAssistantRequest, tools: ToolSet, state: { activeCapabilities?: readonly string[] }) {
         const activeTools = () => state.activeCapabilities ? [...state.activeCapabilities, "load_skill"] : ["find_capabilities", "load_skill"];
-        const activeToolsForStep = () => state.activeCapabilities ? [...state.activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
 
         return new ToolLoopAgent<never, ToolSet>({
             model: this.openai.responses(this.options.model),
@@ -236,7 +245,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             ].join("\n\n"),
             tools,
             activeTools: activeTools(),
-            prepareStep: () => ({ activeTools: activeToolsForStep() }),
+            prepareStep: ({ stepNumber }) => assistantStepOptions(stepNumber, state.activeCapabilities),
             stopWhen: isStepCount(6),
             telemetry: { isEnabled: false },
             providerOptions: this.providerOptions(),

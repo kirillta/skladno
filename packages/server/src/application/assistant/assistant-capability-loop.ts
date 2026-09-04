@@ -44,13 +44,13 @@ export class AssistantCapabilityLoop {
             message: request.authorMessage,
             article: excerpt,
             scope: request.scope.kind,
-            instructions: request.explicitSkillId
-                ? builtInSkillPackages.filter((skillPackage) => skillPackage.reference.id === request.explicitSkillId).map((skillPackage) => skillPackage.instructions)
+            instructions: request.resolvedSkillId
+                ? builtInSkillPackages.filter((skillPackage) => skillPackage.reference.id === request.resolvedSkillId).map((skillPackage) => skillPackage.instructions)
                 : [],
             history: this.dependencies.conversationHistory(request.articleId, 12),
             skills: builtInSkillPackages.map((skillPackage) => ({ id: skillPackage.reference.id, name: skillPackage.name, description: skillPackage.description, instructions: skillPackage.instructions })),
             tools,
-            ...(request.explicitSkillId ? { initialActiveCapabilities: this.initialCapabilities(request.explicitSkillId) } : {}),
+            ...(request.resolvedSkillId ? { initialActiveCapabilities: this.initialCapabilities(request.resolvedSkillId) } : {}),
         }, signal)) {
             if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED && primary)
                 yield primary;

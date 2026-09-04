@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, EDITORIAL_OPERATION, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantMessage, type AssistantRequestScope, type BuiltInSkillId, type EditorialOperation, type FactCheckFinding } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantMessage, type AssistantRequestScope, type BuiltInSkillId, type EditorialOperation, type FactCheckFinding } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleStore } from "../ports/article-store.js";
@@ -71,7 +71,7 @@ export class AssistantRequestPreparation {
         this.validatePreparation(replay, article.currentRevisionId, articleContent);
 
         const routing = this.resolveRequestRouting(replay);
-        this.validateResolvedRequest(replay, routing.resolvedSkillId);
+        this.validateResolvedRequest(replay, routing.resolvedSkillId, routing.usesCapabilityLoop);
         const reusableFactFindings = this.reusableFactFindings(article.id, routing.resolvedSkillId);
 
         return {
@@ -124,17 +124,12 @@ export class AssistantRequestPreparation {
 
 
     private resolveRequestRouting(request: ReplayedAssistantRequest): { resolvedSkillId?: BuiltInSkillId; operation: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
-        let fallbackSkillId = request.explicitSkillId;
-        let operation: EditorialOperation = EDITORIAL_OPERATION.FLOW_REVISION;
-        let engine = this.resolveEngine(operation, fallbackSkillId);
+        const resolvedSkillId = request.explicitSkillId ?? inferSkill(request.authorMessage, request.scope);
+        const operation = operationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
+        const engine = this.resolveEngine(operation, resolvedSkillId);
         const usesCapabilityLoop = Boolean(engine.streamAssistant && this.dependencies.capabilities);
-        if (!usesCapabilityLoop) {
-            fallbackSkillId = request.explicitSkillId ?? inferSkill(request.authorMessage, request.scope);
-            operation = operationFor(fallbackSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
-            engine = this.resolveEngine(operation, fallbackSkillId);
-        }
 
-        return { resolvedSkillId: usesCapabilityLoop ? request.explicitSkillId : fallbackSkillId, operation, engine, usesCapabilityLoop };
+        return { resolvedSkillId, operation, engine, usesCapabilityLoop };
     }
 
 
@@ -147,8 +142,8 @@ export class AssistantRequestPreparation {
     }
 
 
-    private validateResolvedRequest(request: ReplayedAssistantRequest, resolvedSkillId?: BuiltInSkillId): void {
-        if (resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !request.targetLanguage?.trim())
+    private validateResolvedRequest(request: ReplayedAssistantRequest, resolvedSkillId: BuiltInSkillId | undefined, usesCapabilityLoop: boolean): void {
+        if (!usesCapabilityLoop && resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !request.targetLanguage?.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
         if (resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && this.dependencies.styleCorpus.get().status !== "ready")

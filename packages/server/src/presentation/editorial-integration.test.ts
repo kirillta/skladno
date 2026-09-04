@@ -48,12 +48,15 @@ class FixtureEngine implements EditorialEngine {
 
 
 class CapabilityFixtureEngine extends FixtureEngine {
-    constructor(events: EditorialEngineEvent[], private readonly capability = "generate_proposal", private readonly input: Readonly<Record<string, string>> = {}) {
+    constructor(events: EditorialEngineEvent[], private readonly capability = "generate_proposal", private readonly input: Readonly<Record<string, string>> = {}, private readonly requiredActiveCapability?: string) {
         super(events);
     }
 
 
     async *streamAssistant(request: EditorialAssistantRequest): AsyncIterable<EditorialEngineEvent> {
+        if (this.requiredActiveCapability)
+            assert.ok(request.initialActiveCapabilities?.includes(this.requiredActiveCapability));
+
         const selected = request.tools.find((tool) => tool.capability === this.capability);
         assert.ok(selected);
         await selected.execute(this.capability === "generate_proposal" ? { operation: EDITORIAL_OPERATION.FLOW_REVISION } : this.input, new AbortController().signal);
@@ -513,6 +516,30 @@ test("the live Assistant tool loop stages one catalog Proposal before completion
         assert.equal(JSON.parse(artifact.content).capability, "generate_proposal");
         assert.equal(JSON.parse(artifact.content).proposal, "Improved Article");
         assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original Article");
+    });
+});
+
+
+test("the live Assistant routes a plain-language translation request through the Translation tool", async () => {
+    const engine = new CapabilityFixtureEngine([{
+        type: EDITORIAL_ENGINE_EVENT.COMPLETED,
+        responseId: "catalog-translation",
+        text: "Artículo traducido",
+        translation: { targetLanguage: "Spanish", protectedSpans: [] },
+    }], "translate", { targetLanguage: "Spanish" }, "translate");
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "assistant-tool-translation", authorMessage: "Translate the Article into Spanish.", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+        const body = await response.text();
+
+        assert.match(body, /"skillId":"translation".*"source":"inferred"/);
+        assert.match(body, /"responseKind":"translation_proposal_prepared"/);
+        assert.equal(JSON.parse(repositories.editorialArtifacts.list(article.id)[0]!.content).capability, "translate");
     });
 });
 
