@@ -6,6 +6,7 @@ import {
     ELECTRON_IPC_CHANNEL,
     isAssistantEvent,
     type ElectronApplicationMethod,
+    type ElectronApplicationBridge,
     type ElectronApplicationOperationMap,
     type ElectronCancelRequest,
     type ElectronIpcError,
@@ -26,7 +27,7 @@ export interface ElectronIpcRenderer {
 
 
 export interface ElectronContextBridge {
-    exposeInMainWorld(name: string, api: EditorialWorkspaceClient): void;
+    exposeInMainWorld(name: string, api: ElectronApplicationBridge): void;
 }
 
 
@@ -196,5 +197,11 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
 
 
 export function exposeElectronApplicationClient(ipcRenderer: ElectronIpcRenderer, contextBridge: ElectronContextBridge, name = "skladno"): void {
-    contextBridge.exposeInMainWorld(name, createElectronApplicationClient(ipcRenderer));
+    const client = createElectronApplicationClient(ipcRenderer);
+    contextBridge.exposeInMainWorld(name, {
+        ...client,
+        streamAssistantRequest: (streamId, articleId, input, onEvent) => createStream(ipcRenderer, { kind: "assistant", request: { streamId, kind: "assistant", articleId, input }, onEvent }),
+        streamEditorial: (streamId, articleId, input, onEvent) => createStream(ipcRenderer, { kind: "editorial", request: { streamId, kind: "editorial", articleId, input }, onEvent }),
+        cancelStream: (streamId) => ipcRenderer.send(ELECTRON_IPC_CHANNEL.cancel, { streamId }),
+    });
 }

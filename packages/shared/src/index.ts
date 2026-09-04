@@ -11,6 +11,7 @@ export {
     ELECTRON_IPC_CHANNEL,
     isElectronApplicationMethod,
     type ElectronApplicationMethod,
+    type ElectronApplicationBridge,
     type ElectronApplicationOperationMap,
     type ElectronCancelRequest,
     type ElectronIpcError,
