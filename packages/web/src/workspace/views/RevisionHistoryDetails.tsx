@@ -39,7 +39,7 @@ export function RevisionHistoryDetails({ revisions, selected, currentRevisionId,
                     : <Button variant="secondary" onClick={() => select(selected)}>{intl.formatMessage({ id: "revisions.restore" })}</Button>}
             </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto bg-surface-raised px-8 py-7 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-editor-surface px-8 py-7 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             <article className="mx-auto w-full max-w-3xl"><RevisionArticlePreview revisionId={selected.id} content={selected.content} /></article>
         </div>
     </section>;

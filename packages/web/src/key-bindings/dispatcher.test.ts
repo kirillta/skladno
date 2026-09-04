@@ -55,4 +55,15 @@ describe("KeyBindingDispatcher", () => {
         expect(oldHandler).not.toHaveBeenCalled();
         expect(newHandler).toHaveBeenCalledOnce();
     });
+
+    it("falls back to application editing commands inside the Assistant", () => {
+        const dispatcher = new KeyBindingDispatcher();
+        const paste = vi.fn();
+        dispatcher.register(KEY_BINDING_COMMAND.PASTE, paste);
+        const composer = document.createElement("div");
+        composer.contentEditable = "true";
+
+        expect(dispatcher.dispatch(event("v", { target: composer }), "assistant")).toBe(true);
+        expect(paste).toHaveBeenCalledOnce();
+    });
 });

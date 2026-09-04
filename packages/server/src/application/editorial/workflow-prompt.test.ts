@@ -139,11 +139,14 @@ test("translation prompt names the target language and preserves protected token
     const prompt = promptText({
         operation: EDITORIAL_OPERATION.TRANSLATION,
         article: "Use [[SKLADNO_PROTECTED_0]].",
+        articleTitle: "Deploy Node.js safely",
         authorContext: "Keep the direct tone.",
         targetLanguage: "Spanish",
     });
 
     assert.match(prompt, /Translate the complete article into Spanish/);
+    assert.match(prompt, /Translate the Article title and body in the same response/);
+    assert.match(prompt, /Deploy Node\.js safely/);
     assert.match(prompt, /copy every token exactly once/);
     assert.match(prompt, /\[\[SKLADNO_PROTECTED_0\]\]/);
 });

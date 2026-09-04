@@ -10,6 +10,7 @@ import type { AiConnection, ApplicationSettingsSnapshot, BackupPolicy, GeneralSe
 import type { KeyBindingOverrides } from "../cross-cutting/key-bindings.js";
 import type { CreateStyleCorpusItemInput, StyleCorpus } from "../style/style.js";
 import type { PublishingSettings } from "../publishing/publishing.js";
+import type { EditorialWorkspaceClient } from "./client.js";
 
 
 export const ELECTRON_IPC_CHANNEL = {
@@ -155,6 +156,13 @@ export type ElectronStreamEvent =
 export interface ElectronCancelRequest {
     streamId: string;
 }
+
+
+export type ElectronApplicationBridge = Omit<EditorialWorkspaceClient, "streamAssistantRequest" | "streamEditorial"> & {
+    streamAssistantRequest(streamId: string, articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void): Promise<void>;
+    streamEditorial(streamId: string, articleId: string, input: StartEditorialRequest, onEvent: (event: EditorialEvent) => void): Promise<void>;
+    cancelStream(streamId: string): void;
+};
 
 
 export function isElectronApplicationMethod(value: unknown): value is ElectronApplicationMethod {

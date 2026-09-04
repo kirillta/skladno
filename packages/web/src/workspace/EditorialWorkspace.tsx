@@ -39,7 +39,9 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
             setProfileRebuilt({ articleId: workspace.selectedArticle.id, count, token: Date.now() });
     });
     const [assistantSelection, setAssistantSelection] = useState<AssistantSelectionScope>();
+    const assistantSelectionVersion = useRef(0);
     useEffect(() => {
+        assistantSelectionVersion.current += 1;
         setAssistantSelection(undefined);
     }, [workspace.content, workspace.selectedArticleId]);
     const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
@@ -193,14 +195,21 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         openSettings={enterSettings}
         assistantSelection={assistantSelection}
         onSelectionChange={(snapshot: AssistantSelectionSnapshot | undefined) => {
+            const version = ++assistantSelectionVersion.current;
             if (!snapshot || !workspace.selectedArticle) {
                 setAssistantSelection(undefined);
                 return;
             }
 
-            void assistantSelectionScope(workspace.selectedArticle.id, snapshot).then(setAssistantSelection);
+            void assistantSelectionScope(workspace.selectedArticle.id, snapshot).then((selection) => {
+                if (version === assistantSelectionVersion.current)
+                    setAssistantSelection(selection);
+            });
         }}
-        clearAssistantSelection={() => setAssistantSelection(undefined)}
+        clearAssistantSelection={() => {
+            assistantSelectionVersion.current += 1;
+            setAssistantSelection(undefined);
+        }}
         overlays={<>
             <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
             <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />

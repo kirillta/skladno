@@ -10,17 +10,17 @@ import type { AssistantSkillPickerControls } from "./assistant-composer-plugins.
 
 export function AssistantQuickActions({ state, composer, quickActionsOpen, availableSkills, activeSkillIndex, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction }: AssistantSkillPickerControls & { state: "idle" | "streaming" | "error"; composer: RefObject<HTMLDivElement>; setActiveSkillIndex: (value: number) => void }) {
     const intl = useIntl();
-    return <div className="relative mb-3">
-        {quickActionsOpen && <div id="assistant-skill-picker" className="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised" role="listbox" aria-label={intl.formatMessage({ id: "assistant.quickActions" })}>
+    return <div className="relative">
+        {quickActionsOpen && <div id="assistant-skill-picker" className="absolute bottom-full right-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised" role="listbox" aria-label={intl.formatMessage({ id: "assistant.quickActions" })}>
             {availableSkills.map((skill, index) => <SkillOption key={skill} skill={skill} index={index} state={state} activeSkillIndex={activeSkillIndex} selectSkill={selectSkill} focusQuickAction={focusQuickAction} setQuickActionsOpen={setQuickActionsOpen} composer={composer} />)}
         </div>}
         {quickActionsOpen && <span className="sr-only" aria-live="polite">{intl.formatMessage({ id: "assistant.skillResultCount" }, { count: availableSkills.length })}</span>}
-        <Button className="flex items-center gap-2" variant="secondary" aria-expanded={quickActionsOpen} aria-controls="assistant-skill-picker" onClick={() => setQuickActionsOpen((open) => {
+        <Button className="inline-grid size-8 place-items-center rounded-l-none border-l-0 !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.quickActions" })} aria-expanded={quickActionsOpen} aria-controls={quickActionsOpen ? "assistant-skill-picker" : undefined} aria-haspopup="listbox" onClick={() => setQuickActionsOpen((open) => {
             if (!open)
                 setActiveSkillIndex(0);
 
             return !open;
-        })}>{intl.formatMessage({ id: "assistant.quickActions" })}<ChevronDownIcon className={`size-4 ${quickActionsOpen ? "rotate-180" : ""}`} /></Button>
+        })}><ChevronDownIcon className={`size-4 transition-transform duration-150 motion-reduce:transition-none ${quickActionsOpen ? "rotate-180" : ""}`} /></Button>
     </div>;
 }
 

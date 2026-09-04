@@ -48,7 +48,7 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
-            "contract": "A Lexical composer stores plain author text and one structured skill tag separately; selecting a skill never sends a request, and a tag can run against the whole Article without additional guidance. Selection scope records exact Markdown offsets and a content fingerprint, then requires the same promoted Revision before sending. The Assistant discovers only classified current-Article capabilities, validates every action against the Author's exact request, and returns Workspace-owned decisions as handoffs. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
+            "contract": "A Lexical composer stores plain author text and one structured skill tag separately; selecting a skill never sends a request, and a tag can run against the whole Article without additional guidance. Selection scope records exact Markdown offsets and a content fingerprint, then requires the same promoted Revision before sending. Deselecting Article text clears that scope and its visible indicator before the next request. The Assistant discovers only classified current-Article capabilities, validates every action against the Author's exact request, and returns Workspace-owned decisions as handoffs. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
             "persistence": "Per-Article Assistant records, minimal capability execution history, and explicit Editorial Requests."
         },
         {
@@ -195,7 +195,7 @@
                 "packages/web/src/workspace/views/TranslationsView.tsx",
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
-            "contract": "A stale source blocks creation and translation text never overwrites its source Article.",
+            "contract": "A stale source blocks creation, and the completed translated title and text create an independent linked Article without overwriting its source Article.",
             "persistence": "Independent Article with source Article and Revision linkage.",
             "relatedCapabilityIds": ["history-and-publishing.translations", "editorial-workflows.translation-request"]
         },
@@ -295,6 +295,28 @@
             ],
             "forbidden": [
                 "Sending an Editorial Request when selecting a Quick action"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.assistant.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.assistant.selection-deselection",
+            "title": "Deselecting Article text clears the Assistant request scope",
+            "capabilityIds": [
+                "workspace.assistant.explicit-request"
+            ],
+            "preconditions": [
+                "An Article area is selected and shown in the Assistant composer"
+            ],
+            "event": "The author clears the editor selection with the mouse, keyboard, or a focus-changing panel control.",
+            "expected": [
+                "The selection indicator disappears",
+                "The next request uses whole-Article scope"
+            ],
+            "forbidden": [
+                "Sending stale selected text or triggering a request during deselection"
             ],
             "evidence": {
                 "kind": "automated",

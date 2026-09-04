@@ -32,6 +32,7 @@ const styleReviewSchema = z.object({
 
 const translationSchema = z.object({
     translation: z.string().min(1),
+    title: z.string(),
     targetLanguage: z.string().min(1),
 });
 
@@ -89,6 +90,16 @@ function createAssistantTools(request: EditorialAssistantRequest, execute: Assis
             execute: ({ id }) => request.skills.find((skill) => skill.id === id)?.instructions ?? "Unknown Skill.",
         }),
     };
+}
+
+
+export function assistantStepOptions(stepNumber: number, activeCapabilities?: readonly string[]): { activeTools: string[]; toolChoice?: { type: "tool"; toolName: string } } {
+    const activeTools = activeCapabilities ? [...activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
+    const requiredCapability = activeCapabilities?.[0];
+
+    return stepNumber === 0 && requiredCapability
+        ? { activeTools, toolChoice: { type: "tool", toolName: requiredCapability } }
+        : { activeTools };
 }
 
 
@@ -223,7 +234,6 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
     private createAssistantAgent(request: EditorialAssistantRequest, tools: ToolSet, state: { activeCapabilities?: readonly string[] }) {
         const activeTools = () => state.activeCapabilities ? [...state.activeCapabilities, "load_skill"] : ["find_capabilities", "load_skill"];
-        const activeToolsForStep = () => state.activeCapabilities ? [...state.activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
 
         return new ToolLoopAgent<never, ToolSet>({
             model: this.openai.responses(this.options.model),
@@ -235,7 +245,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             ].join("\n\n"),
             tools,
             activeTools: activeTools(),
-            prepareStep: () => ({ activeTools: activeToolsForStep() }),
+            prepareStep: ({ stepNumber }) => assistantStepOptions(stepNumber, state.activeCapabilities),
             stopWhen: isStepCount(6),
             telemetry: { isEnabled: false },
             providerOptions: this.providerOptions(),
@@ -325,9 +335,10 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
         const protectedArticle = protectArticleSpans(boundedArticleContext(request.article));
+        const protectedTitle = protectArticleSpans(request.articleTitle ?? "");
         const result = await generateText({
             model: this.openai.responses(this.options.model),
-            ...responsesPrompt(createEditorialMessages({ operation: request.operation, article: protectedArticle.protectedText, authorContext: request.authorContext, targetLanguage })),
+            ...responsesPrompt(createEditorialMessages({ operation: request.operation, article: protectedArticle.protectedText, articleTitle: protectedTitle.protectedText, authorContext: request.authorContext, targetLanguage })),
             output: Output.object({ schema: translationSchema }),
             abortSignal: signal,
             telemetry: { isEnabled: false },
@@ -338,9 +349,10 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
         const text = restoreProtectedSpans(result.output.translation, protectedArticle.protectedSpans);
-        if (!text)
+        const title = restoreProtectedSpans(result.output.title, protectedTitle.protectedSpans);
+        if (!text || title === undefined)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: completedResponseId, text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans } };
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: completedResponseId, text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans, title } };
     }
 }

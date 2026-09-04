@@ -60,6 +60,8 @@ export interface EditorialCompletedEvent {
 export interface TranslationMetadata {
     targetLanguage: string;
     protectedSpans: string[];
+    /** Present for completed title-and-body translations; omitted by legacy saved proposals. */
+    title?: string;
 }
 
 
