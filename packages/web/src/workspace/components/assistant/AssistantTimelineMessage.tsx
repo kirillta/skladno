@@ -110,13 +110,13 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
     const retryRequestId = message.requestId;
     const handoffOwnsContent = !authorMessage && Boolean(view);
     const messageStatusLabel = statusLabel(message.status, intl);
+    const messageDateTime = formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
     const sourceLabel = message.skillSource
         ? intl.formatMessage({ id: message.skillSource === "explicit" ? "assistant.skillSource.explicit" : "assistant.skillSource.inferred" })
         : undefined;
 
-    return <article className={`rounded-panel border p-3 ${authorMessage ? "ml-6 border-brand/45 bg-brand-soft" : "mr-6 border-border bg-surface-raised"}`} aria-label={authorMessage ? label : undefined}>
+    return <article className={authorMessage ? "ml-6 rounded-panel border border-brand/45 bg-brand-soft p-3" : "p-0"} aria-label={authorMessage ? label : undefined}>
         {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
-        {!authorMessage && <p className="mt-1 flex items-center gap-1 text-xs text-muted"><StatusIcon className="size-3" tone={statusTone(message.status)} /><span>{messageStatusLabel}</span>{sourceLabel && <span>· {sourceLabel}</span>}</p>}
         {(authorMessage && (content || selectionText || skillOffset !== undefined)) && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">
             {selectionText && <span className="mx-1 inline-flex h-5 max-w-[calc(100%-0.5rem)] items-center align-middle rounded-full border border-border bg-surface-raised px-1.5 text-xs font-semibold text-muted" aria-label={intl.formatMessage({ id: "assistant.articleSelection" })} title={selectionText}>
                 <span className="relative -top-px max-w-48 truncate">{selectionPreview(selectionText)}</span>
@@ -132,6 +132,13 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
             {viewLabel(view, intl)}
         </Button>}
         {(message.status === "failed" || message.status === "cancelled") && retryRequestId && <Button className="mt-3" variant="secondary" onClick={() => onRetry?.(retryRequestId)}>{intl.formatMessage({ id: "assistant.retry" })}</Button>}
-        <time className="mt-2 block text-xs text-muted">{formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)}</time>
+        {!authorMessage && <p className="mt-2 flex items-center gap-1 text-xs text-muted">
+            <StatusIcon className="size-3" tone={statusTone(message.status)} />
+            <span>{messageStatusLabel}</span>
+            {sourceLabel && <span>· {sourceLabel}</span>}
+            <span>·</span>
+            <time>{messageDateTime}</time>
+        </p>}
+        {authorMessage && <time className="mt-2 block text-xs text-muted">{messageDateTime}</time>}
     </article>;
 }
