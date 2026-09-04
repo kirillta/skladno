@@ -99,7 +99,7 @@ test("a provider failure does not change the Article", async ({ page }) => {
     await page.getByRole("combobox", { name: "Editorial guidance" }).fill("provider error");
     await page.getByRole("button", { name: "Send editorial request" }).click();
     await expect(page.getByRole("alert")).toBeVisible();
-    await expect(page.getByText("Original fixture Article.").first()).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Article draft" })).toContainText("Original fixture Article.");
 });
 
 
