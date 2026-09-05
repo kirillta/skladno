@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
@@ -22,6 +22,24 @@ describe("AssistantTimeline", () => {
 
         expect(screen.getByRole("status").textContent).toContain("Checking facts.");
         expect(screen.queryByText("Working for 1 second")).toBeNull();
+    });
+
+
+    it("offers scrolling to the end when the timeline is away from it", async () => {
+        const user = userEvent.setup();
+        const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+        const timeline = view.container.querySelector<HTMLElement>("[aria-live='polite']")!;
+        Object.defineProperties(timeline, {
+            clientHeight: { configurable: true, value: 200 },
+            scrollHeight: { configurable: true, value: 500 },
+            scrollTop: { configurable: true, writable: true, value: 0 },
+        });
+
+        fireEvent.scroll(timeline);
+        await user.click(screen.getByRole("button", { name: "Scroll to end" }));
+
+        expect(timeline.scrollTop).toBe(500);
+        expect(screen.queryByRole("button", { name: "Scroll to end" })).toBeNull();
     });
 
 

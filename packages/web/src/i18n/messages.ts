@@ -175,6 +175,7 @@ export const messages = {
     "assistant.expand": "Expand Editorial Assistant Panel",
     "assistant.collapse": "Collapse Editorial Assistant Panel",
     "assistant.resize": "Resize Editorial Assistant Panel",
+    "assistant.scrollToEnd": "Scroll to end",
     "assistant.heading": "Editorial Assistant",
     "assistant.intro": "Ask for a focused editorial operation when you are ready. Suggestions stay separate from your Article until you accept them.",
     "assistant.preparing": "Preparing your proposal…",
