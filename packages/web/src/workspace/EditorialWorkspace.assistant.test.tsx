@@ -297,6 +297,27 @@ describe("Editorial Workspace assistant", () => {
     });
 
 
+    it("does not move focus to the composer when an Assistant request finishes", async () => {
+        const user = userEvent.setup();
+        let finishRequest: (() => void) | undefined;
+        const onRequest = vi.fn(() => new Promise<void>((resolve) => {
+            finishRequest = resolve;
+        }));
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} assistantMessages={[]} />);
+        const composer = within(panel.container).getByRole("combobox", { name: message("assistant.guidance") });
+        const articleControl = document.createElement("button");
+        panel.container.append(articleControl);
+
+        await user.type(composer, "Review this");
+        await user.click(within(panel.container).getByRole("button", { name: message("assistant.send") }));
+        articleControl.focus();
+        finishRequest?.();
+
+        await waitFor(() => expect(composer.textContent).toBe(""));
+        expect(document.activeElement).toBe(articleControl);
+    });
+
+
     it("sends the assistant request with Ctrl+Enter when configured", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);

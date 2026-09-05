@@ -48,12 +48,21 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
         if (state === "streaming" && followStream.current)
             element.scrollTop = element.scrollHeight;
 
-        if (previousState.current === "streaming" && state === "idle" && !element.contains(document.activeElement))
-            element.scrollTop = element.scrollHeight;
+        const completionNeedsScroll = previousState.current === "streaming" && state === "idle" && !element.contains(document.activeElement);
 
         previousState.current = state;
         previousCollapsed.current = collapsed;
         initialized.current = true;
+
+        if (!completionNeedsScroll)
+            return;
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                if (!element.contains(document.activeElement))
+                    element.scrollTop = element.scrollHeight;
+            });
+        });
     }, [assistantMessages, collapsed, factCheckClaims, state, streamedMessage]);
 
 

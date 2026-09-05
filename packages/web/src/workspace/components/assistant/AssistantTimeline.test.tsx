@@ -25,6 +25,37 @@ describe("AssistantTimeline", () => {
     });
 
 
+    it("scrolls to the rendered completion when focus is outside the Assistant", () => {
+        const frames: FrameRequestCallback[] = [];
+        const requestFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+            frames.push(callback);
+            return frames.length;
+        });
+        const cancelFrame = vi.spyOn(window, "cancelAnimationFrame");
+        let scrollHeight = 100;
+        const message = { id: "response", articleId: "article", role: "assistant" as const, kind: "response" as const, status: "completed" as const, content: "Completed response.", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+
+        try {
+            const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="streaming" message="" collapsed={false} assistantMessages={[]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+            const timeline = view.container.querySelector<HTMLElement>("[aria-live='polite']")!;
+            Object.defineProperty(timeline, "scrollHeight", { configurable: true, get: () => scrollHeight });
+            view.rerender(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={[message]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+
+            expect(frames).toHaveLength(1);
+            view.rerender(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={[message]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+            expect(cancelFrame).not.toHaveBeenCalled();
+            frames[0]?.(0);
+            expect(frames).toHaveLength(2);
+            scrollHeight = 500;
+            frames[1]?.(0);
+            expect(timeline.scrollTop).toBe(500);
+        } finally {
+            requestFrame.mockRestore();
+            cancelFrame.mockRestore();
+        }
+    });
+
+
     it("offers Application Settings only for an unavailable AI connection", async () => {
         const user = userEvent.setup();
         const openSettings = vi.fn();

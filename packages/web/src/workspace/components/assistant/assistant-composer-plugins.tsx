@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_ESCAPE_COMMAND, KEY_TAB_COMMAND, PASTE_COMMAND } from "lexical";
+import { $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_ESCAPE_COMMAND, KEY_TAB_COMMAND, PASTE_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical";
 import type { BuiltInSkillId } from "@skladno/shared";
 import { $createAssistantSkillTagNode, $isAssistantSkillTagNode, type AssistantSkillTagNode } from "./AssistantSkillTagNode.js";
 
@@ -127,7 +127,7 @@ export function ComposerBridge({ value, onChange }: { value: AssistantComposerVa
             const tag = setComposerValue({ guidance, selectedSkill, skillOffset, caretOffset });
             tag?.selectNext();
             insertedTag = tag !== undefined;
-        }, { tag: "assistant-composer-external" });
+        }, { tag: ["assistant-composer-external", SKIP_DOM_SELECTION_TAG] });
 
         if (insertedTag)
             editor.focus();
