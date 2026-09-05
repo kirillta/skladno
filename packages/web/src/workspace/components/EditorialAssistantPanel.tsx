@@ -8,7 +8,7 @@ import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { AssistantComposer, type AssistantComposerValue } from "./assistant/AssistantComposer.js";
 import { AssistantTimeline } from "./assistant/AssistantTimeline.js";
 import { skillMessages } from "./assistant/assistant-messages.js";
-import type { AssistantSelectionScope } from "../state/assistant-messages-state.js";
+import type { AssistantSelectionScope, StreamedAssistantMessage } from "../state/assistant-messages-state.js";
 
 
 type AssistantState = "idle" | "streaming" | "error";
@@ -216,7 +216,7 @@ function useElapsedDuration(state: AssistantState, intl: IntlShape) {
 }
 
 
-export function EditorialAssistantPanel({ state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages = [], assistantMessages, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, openSettings }: {
+export function EditorialAssistantPanel({ state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages = [], assistantMessages, streamedMessage, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, openSettings }: {
     state: AssistantState;
     message: string;
     errorDetails?: string;
@@ -230,6 +230,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, activity
     language?: string;
     translationLanguages?: readonly string[];
     assistantMessages?: AssistantMessage[];
+    streamedMessage?: StreamedAssistantMessage;
     article?: Article;
     updateArticle?: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
     dispatcher?: KeyBindingDispatcher;
@@ -258,7 +259,7 @@ export function EditorialAssistantPanel({ state, message, errorDetails, activity
                 <ChevronRightIcon className="size-3" />
             </Button>
         </header>
-        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} activity={activity} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} openView={openView} onRetry={onRetry} generalSettings={generalSettings} elapsedDuration={elapsedDuration} hasUnavailableAiConnection={hasUnavailableAiConnection} openSettings={openSettings} />
+        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} activity={activity} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} streamedMessage={streamedMessage} openView={openView} onRetry={onRetry} generalSettings={generalSettings} elapsedDuration={elapsedDuration} hasUnavailableAiConnection={hasUnavailableAiConnection} openSettings={openSettings} />
         <AssistantComposer {...composerState} state={state} selection={selection} onCancel={onCancel} shortcutOverrides={shortcutOverrides} />
     </aside>;
 }

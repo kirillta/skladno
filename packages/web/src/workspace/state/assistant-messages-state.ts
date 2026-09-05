@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { APPLICATION_ERROR, ApplicationClientError, articleLanguages, ASSISTANT_EVENT, type AssistantCapabilityActivity, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, ASSISTANT_EVENT, type AssistantCapabilityActivity, type AssistantEditorialResult, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName } from "./editorial-language.js";
+import { fingerprintArticleContent, requestedTranslationLanguages, type AssistantSelectionScope } from "./assistant-selection.js";
+import { type StreamBuffer, type StreamedAssistantMessage, updateStreamedMessage } from "./assistant-streaming.js";
+
+export { assistantSelectionScope, requestedTranslationLanguages, type AssistantSelectionScope } from "./assistant-selection.js";
+export type { StreamedAssistantMessage } from "./assistant-streaming.js";
 
 type ProposalState = "idle" | "streaming" | "error";
 
@@ -13,22 +18,6 @@ function aiConnectionUnavailable(error: unknown): boolean {
     return error instanceof ApplicationClientError && (error.code === APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED
         || error.code === APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND
         || error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING);
-}
-
-
-export interface AssistantSelectionScope {
-    articleId: string;
-    fingerprint: string;
-    preview: string;
-    startOffset: number;
-    endOffset: number;
-}
-
-
-export function requestedTranslationLanguages(authorMessage: string, languages: readonly string[]): readonly string[] {
-    const unique = [...new Set(languages)];
-    const requested = articleLanguages.filter((language) => authorMessage.toLowerCase().includes(providerLanguageName(language).toLowerCase()));
-    return requested.length ? requested : unique;
 }
 
 
@@ -41,7 +30,9 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const [aiConnectionUnavailableByArticle, setAiConnectionUnavailableByArticle] = useState<Record<string, boolean>>({});
     const [factCheckClaimsByArticle, setFactCheckClaimsByArticle] = useState<Record<string, FactCheckClaimPreview[]>>({});
     const [activityByArticle, setActivityByArticle] = useState<Record<string, AssistantCapabilityActivity>>({});
+    const [streamedMessagesByArticle, setStreamedMessagesByArticle] = useState<Record<string, StreamedAssistantMessage>>({});
     const controller = useRef<AbortController>();
+    const streamBuffers = useRef<Record<string, StreamBuffer>>({});
     const article = workspace.selectedArticle;
     const messages = article ? messagesByArticle[article.id] : undefined;
     const state = article ? stateByArticle[article.id] ?? "idle" : "idle";
@@ -49,6 +40,17 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const errorDetails = article ? errorDetailsByArticle[article.id] : undefined;
     const hasUnavailableAiConnection = article ? aiConnectionUnavailableByArticle[article.id] ?? false : false;
     const activity = article ? activityByArticle[article.id] : undefined;
+    const streamedMessage = article ? streamedMessagesByArticle[article.id] : undefined;
+
+    const clearStream = useCallback((articleId: string) => {
+        delete streamBuffers.current[articleId];
+        setStreamedMessagesByArticle((current) => {
+            const next = { ...current };
+            delete next[articleId];
+
+            return next;
+        });
+    }, []);
 
     const reload = useCallback(async (articleId: string | undefined = article?.id) => {
         if (!articleId)
@@ -60,6 +62,11 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             [articleId]: items,
         }));
     }, [article, client]);
+
+    useEffect(() => {
+        streamBuffers.current = {};
+        setStreamedMessagesByArticle({});
+    }, [article?.id]);
 
     useEffect(() => {
         let cancelled = false;
@@ -134,27 +141,15 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             }
         }
 
-        if (event.type !== ASSISTANT_EVENT.TEXT_DELTA)
-            return;
-
-        setMessagesByArticle((itemsByArticle) => {
-            const items = itemsByArticle[articleId];
-            const streamed = items?.find((item) => item.id === streamedId);
-            const next = {
-                id: streamedId,
-                articleId,
-                role: "assistant" as const,
-                kind: "response" as const,
-                status: "pending" as const,
-                content: `${streamed?.content ?? ""}${event.delta}`,
-                createdAt: streamed?.createdAt ?? new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
-
-            return {
-                ...itemsByArticle,
-                [articleId]: [...(items ?? []).filter((item) => item.id !== streamedId), next],
-            };
+        updateStreamedMessage({
+            event,
+            articleId,
+            streamedId,
+            buffers: streamBuffers.current,
+            update: (streamedMessage) => setStreamedMessagesByArticle((current) => ({
+                ...current,
+                [articleId]: { ...streamedMessage, createdAt: current[articleId]?.createdAt ?? streamedMessage.createdAt },
+            })),
         });
     }, [onResult, workspace]);
 
@@ -206,7 +201,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             controller.current = new AbortController();
             const streamedId = `streaming-${crypto.randomUUID()}`;
             const selectionMatchesRevision = selection && selection.articleId === current.id
-                && selection.fingerprint === await fingerprint(revision.content);
+                && selection.fingerprint === await fingerprintArticleContent(revision.content);
             if (selection && !selectionMatchesRevision)
                 throw new ApplicationClientError("assistant_selection_invalid", undefined, 400);
 
@@ -222,6 +217,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                 ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}),
             }, (event) => handleAssistantEvent(event, current.id, revision.id, streamedId), controller.current.signal);
             await reload(current.id);
+            clearStream(current.id);
             setStateByArticle((states) => ({
                 ...states,
                 [current.id]: "idle",
@@ -229,6 +225,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         } catch (error) {
             if (error instanceof DOMException && error.name === "AbortError") {
                 await reload(current.id).catch(() => undefined);
+                clearStream(current.id);
                 setStateByArticle((states) => ({
                     ...states,
                     [current.id]: "idle",
@@ -254,8 +251,9 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             setAiConnectionUnavailableByArticle((connections) => ({ ...connections, [current.id]: aiConnectionUnavailable(error) }));
 
             await reload(current.id).catch(() => undefined);
+            clearStream(current.id);
         }
-    }, [client, handleAssistantEvent, intl, reload, selection, workspace]);
+    }, [clearStream, client, handleAssistantEvent, intl, reload, selection, workspace]);
 
 
     const retry = useCallback(async (retryOfRequestId: string) => {
@@ -288,10 +286,12 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             }, (event) => handleAssistantEvent(event, current.id, current.currentRevisionId, streamedId), controller.current.signal);
 
             await reload(current.id);
+            clearStream(current.id);
             setStateByArticle((states) => ({ ...states, [current.id]: "idle" }));
         } catch (error) {
             if (error instanceof DOMException && error.name === "AbortError") {
                 await reload(current.id).catch(() => undefined);
+                clearStream(current.id);
                 setStateByArticle((states) => ({ ...states, [current.id]: "idle" }));
 
                 return;
@@ -307,8 +307,9 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             }));
             setAiConnectionUnavailableByArticle((connections) => ({ ...connections, [current.id]: aiConnectionUnavailable(error) }));
             await reload(current.id).catch(() => undefined);
+            clearStream(current.id);
         }
-    }, [client, handleAssistantEvent, intl, reload, workspace]);
+    }, [clearStream, client, handleAssistantEvent, intl, reload, workspace]);
 
     return {
         messages,
@@ -317,6 +318,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         errorDetails,
         hasUnavailableAiConnection,
         activity,
+        streamedMessage,
         factCheckClaims: article
             ? factCheckClaimsByArticle[article.id]
             : undefined,
@@ -324,17 +326,6 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         retry,
         cancel: () => controller.current?.abort()
     };
-}
-
-
-async function fingerprint(content: string): Promise<string> {
-    const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(content));
-    return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-
-export async function assistantSelectionScope(articleId: string, snapshot: { markdown: string; preview: string; startOffset: number; endOffset: number }): Promise<AssistantSelectionScope> {
-    return { articleId, fingerprint: await fingerprint(snapshot.markdown), preview: snapshot.preview, startOffset: snapshot.startOffset, endOffset: snapshot.endOffset };
 }
 
 

@@ -64,6 +64,7 @@ export function WorkspaceScreen({ layout, workspace, assistant, editorial, revis
             message={assistant.message}
             errorDetails={assistant.errorDetails}
             hasUnavailableAiConnection={assistant.hasUnavailableAiConnection}
+            streamedMessage={assistant.streamedMessage}
             activity={assistant.activity}
             factCheckClaims={assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true }))}
             onRequest={assistant.request}

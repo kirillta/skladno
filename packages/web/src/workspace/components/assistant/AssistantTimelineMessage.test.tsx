@@ -6,6 +6,7 @@ import { defaultGeneralSettings, type AssistantMessage } from "@skladno/shared";
 import { describe, expect, it, vi } from "vitest";
 import { messages } from "../../../i18n/messages.js";
 import { AssistantTimelineMessage } from "./AssistantTimelineMessage.js";
+import { AssistantMarkdown } from "./AssistantMarkdown.js";
 
 
 function renderMessage(message: AssistantMessage, props: Partial<ComponentProps<typeof AssistantTimelineMessage>> = {}) {
@@ -14,6 +15,17 @@ function renderMessage(message: AssistantMessage, props: Partial<ComponentProps<
 
 
 describe("AssistantTimelineMessage", () => {
+    it("replaces Markdown when a response body changes", async () => {
+        const view = render(<IntlProvider locale="en" messages={messages}><AssistantMarkdown content="First response." /></IntlProvider>);
+
+        expect(await screen.findByText("First response.")).toBeTruthy();
+        view.rerender(<IntlProvider locale="en" messages={messages}><AssistantMarkdown content="Second response." /></IntlProvider>);
+
+        expect(await screen.findByText("Second response.")).toBeTruthy();
+        expect(screen.queryByText("First response.")).toBeNull();
+    });
+
+
     it("renders read-only Markdown while keeping HTML and unsafe links inert", async () => {
         const { container } = renderMessage({ id: "response", articleId: "article", requestId: "request", role: "assistant", kind: "response", status: "completed", content: "**Bold** [safe](https://example.test) [unsafe](javascript:alert(1)) <img src=x onerror=alert(1)>", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" });
 

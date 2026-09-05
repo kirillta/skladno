@@ -203,7 +203,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         const state = { activeCapabilities: request.initialActiveCapabilities };
         const execute = (capability: string, input: Readonly<Record<string, string>>) => this.executeAssistantCapability(request, signal, state, capability, input);
         const agent = this.createAssistantAgent(request, createAssistantTools(request, execute), state);
-        const result = await agent.stream({ prompt: this.assistantPrompt(request), abortSignal: signal });
+        const result = await agent.stream({ prompt: assistantConversationPrompt(request), abortSignal: signal });
         let text = "";
         for await (const delta of result.textStream) {
             text += delta;
@@ -250,11 +250,6 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             telemetry: { isEnabled: false },
             providerOptions: this.providerOptions(),
         });
-    }
-
-
-    private assistantPrompt(request: EditorialAssistantRequest): string {
-        return `Recent conversation:\n${request.history.map((turn) => `${turn.role}: ${turn.content}`).join("\n")}\n\nAuthor request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`;
     }
 
 
@@ -355,4 +350,15 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
         yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: completedResponseId, text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans, title } };
     }
+}
+
+
+export function assistantConversationPrompt(request: Pick<EditorialAssistantRequest, "article" | "history" | "message" | "scope">): ModelMessage[] {
+    return [
+        ...request.history.map((turn): ModelMessage => ({ role: turn.role === "author" ? "user" : "assistant", content: turn.content })),
+        {
+            role: "user",
+            content: `Author request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`,
+        },
+    ];
 }
