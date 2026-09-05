@@ -29,6 +29,7 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
     const followStream = useRef(true);
     const previousState = useRef(state);
     const previousCollapsed = useRef(collapsed);
+    const messagesLoaded = useRef(assistantMessages !== undefined);
     const initialized = useRef(false);
     const greeting = assistantMessages?.find((item) => item.template === "greeting" || item.kind === "greeting");
     const skillByRequest = new Map(assistantMessages?.flatMap((item) => item.requestId && item.skillId ? [[item.requestId, item.skillId] as const] : []));
@@ -42,7 +43,8 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
         if (!element)
             return;
 
-        if (!initialized.current || (!collapsed && previousCollapsed.current))
+        const loadedPersistedMessages = !messagesLoaded.current && assistantMessages !== undefined;
+        if (!initialized.current || loadedPersistedMessages || (!collapsed && previousCollapsed.current))
             element.scrollTop = element.scrollHeight;
 
         if (state === "streaming" && followStream.current)
@@ -52,14 +54,15 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
 
         previousState.current = state;
         previousCollapsed.current = collapsed;
+        messagesLoaded.current = assistantMessages !== undefined;
         initialized.current = true;
 
-        if (!completionNeedsScroll)
+        if (!loadedPersistedMessages && !completionNeedsScroll)
             return;
 
         window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => {
-                if (!element.contains(document.activeElement))
+                if (loadedPersistedMessages || !element.contains(document.activeElement))
                     element.scrollTop = element.scrollHeight;
             });
         });
