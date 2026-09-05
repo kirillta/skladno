@@ -2,66 +2,56 @@
 
 > Your ideas, in your voice.
 
-Skladno is a local-first writing workspace for technical authors. It helps turn rough notes into a coherent Article, improve the writing, check facts, preserve the author's style, translate the result, and prepare copy for publishing.
+Skladno is a desktop writing workspace for technical Authors. Turn rough notes into an Article, work through difficult passages, check claims, and prepare translations with an AI Editorial Assistant. You decide what to ask for and which changes to keep.
 
-The author stays in control. AI output is always a Proposal: Skladno shows the changes, and nothing enters an Article until the author accepts it. Every accepted change creates an immutable Revision.
+## Write with help, stay in control
 
-## What you can do
+Ask the Assistant to develop your talking points into a draft or improve the flow of an existing Article. Select a passage to focus the request, or work on the whole Article.
 
-- Write and autosave Articles locally.
-- Ask the Editorial Assistant to compose, revise, fact-check, review style, or translate, then open the matching Workspace View to review the result.
-- Review all proposed changes before accepting them.
-- Restore earlier Revisions without rewriting history.
-- Keep translations as separate linked Articles.
-- Preview copy using configurable publishing guidance.
-- Manage AI, language, publishing, and backup settings locally.
+Review the proposed changes before they enter your writing. Accept the edits you want and reject the rest. Skladno never changes your Article without your approval.
 
-See the [feature inventory](docs/development/product/feature-inventory.md) for current implementation status and the [glossary](docs/user/Glossary.md) for Skladno's product language.
+## Keep your voice
 
-## How it works
+Use samples of your own writing to build a style profile, then ask for feedback against that profile and your Article's style rules. You decide whether a suggestion fits what you mean and how you want to say it.
 
-```text
-Draft
-  -> explicit author request
-  -> AI Proposal or Finding
-  -> author review
-  -> new Revision when accepted
-```
+## Check claims before you share
 
-Draft checkpoints, Articles, Revisions, settings, and style samples remain local. Credentials stay in the local service and are never exposed to the browser. Network-dependent editorial actions happen only when requested by the author.
+Request a fact check to see claims that need attention, with sources to help you assess them. Findings are advice, not a guarantee of accuracy, and they leave your text untouched until you choose to make a change.
 
-## Run locally
+## Reach readers in another language
 
-Requirements: Node.js 22 or later and npm 10 or later.
+Review a proposed translation before accepting it. Each translation becomes a separate Article linked to the original, so you can refine it for its readers without overwriting the source.
 
-```powershell
-npm install
-npm run dev
-```
+## Keep your work and its history
 
-Open `http://localhost:5173`.
+Your Articles and autosaved drafts stay on your computer. Save Revisions as you work; accepted AI edits also create a Revision. You can return to an earlier Revision while keeping the history that came after it.
 
-The AI API key is read server-side from `SKLADNO_AI_API_KEY`. Copy `.env.example` to `.env` if you need to configure local ports or AI behavior. Never expose credentials through `VITE_` variables.
+Choose a backup folder and create manual or daily automatic backups. See [Backups and recovery](docs/user/Backups-and-recovery.md) for details.
 
-Useful checks:
+AI assistance requires an internet connection and an AI provider connection. When you request it, Skladno sends the relevant text and context to your chosen provider, whose data policies apply.
 
-```powershell
-npm run lint
-npm run typecheck
-npm test
-npm run build
-```
+## Prepare your Article for publishing
 
-## Project structure
+Preview your writing against your publishing preferences and length guidance, then copy it as Markdown or plain text to the platform you use. Skladno does not publish directly. You handle the final publication.
 
-- `packages/web`: React interface.
-- `packages/server`: local service, AI integration, and SQLite persistence.
-- `packages/shared`: domain types and application contracts.
-- `packages/electron`: secured Electron desktop runtime and Windows preview packaging.
+## Install Skladno
 
-Run `npm run dev:electron` to open the existing Vite application in Electron without starting the HTTP server. On Windows, `npm run package:electron` creates an unpacked x64 application and `npm run make:electron` creates the unsigned Squirrel installer.
+Skladno is currently available for **Windows 11 x64**.
 
-User documentation lives in [`docs/user`](docs/user). Technical documentation lives in [`docs/development`](docs/development). Product capabilities are maintained in [`product-model`](product-model).
+1. Open the [latest release](https://github.com/kirillta/skladno/releases/latest) and download the setup `.exe` from **Assets**.
+2. Run the installer and open Skladno.
+3. To use the Editorial Assistant, open **Settings > AI**, add your provider connection and API key, and verify the connection. Your provider's pricing applies.
+4. Create an Article and start writing. Set up a backup folder in **Settings > Data & backups** to protect your work.
+
+**Releases are not digitally signed.** Windows may show a SmartScreen warning when you run the installer. Check that you downloaded it from this repository's release page before choosing to continue.
+
+You control update checks, downloads, and when to restart for an update in **Settings > General**. If an update causes trouble, follow the [update recovery guide](docs/user/update-recovery.md).
+
+## Help
+
+- [Using the Editorial Assistant](docs/user/Assistant.md)
+- [Backups and recovery](docs/user/Backups-and-recovery.md)
+- [Report a problem or suggest an improvement](https://github.com/kirillta/skladno/issues)
 
 ## License
 
