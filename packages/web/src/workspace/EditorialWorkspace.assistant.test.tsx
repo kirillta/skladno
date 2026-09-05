@@ -495,7 +495,7 @@ describe("Editorial Workspace assistant", () => {
 
         try {
             const panel = renderLocalized(<AssistantPanelHarness />);
-            const timeline = () => panel.container.querySelector<HTMLElement>('aside[data-workspace-panel="editorial-assistant"] > div')!;
+            const timeline = () => panel.container.querySelector<HTMLElement>("[aria-live='polite']")!;
 
             expect(timeline().scrollTop).toBe(640);
 
