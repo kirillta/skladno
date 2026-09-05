@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isAssistantSendMode, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, KEY_BINDING_COMMAND, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type AiConnection, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
+import { APPLICATION_ERROR, AI_PROVIDER, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isAiProvider, isAssistantSendMode, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, KEY_BINDING_COMMAND, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type AiConnection, type AiProvider, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { AvailableModelsProvider } from "../ports/available-models-provider.js";
@@ -8,6 +8,7 @@ import type { SystemDateTimeFormatProvider } from "../ports/system-date-time-for
 import type { ManagedCredentials } from "../ports/managed-credentials.js";
 
 
+// TODO: refactor, too long
 function generalSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
     const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
     if (rejectInvalidPreferences
@@ -51,7 +52,7 @@ function normalizeAiConnection(value: unknown): AiConnection | undefined {
         return undefined;
 
     const candidate = value as Record<string, unknown>;
-    if (typeof candidate.provider !== "string" || !candidate.provider || typeof candidate.id !== "string" || typeof candidate.label !== "string")
+    if (!isAiProvider(candidate.provider) || typeof candidate.id !== "string" || typeof candidate.label !== "string")
         return undefined;
 
     const source = candidate.credentialSource;
@@ -126,6 +127,31 @@ function modelPreferences(value: unknown): ModelPreferences {
 }
 
 
+function modelPreferencesForConnection(value: unknown, connectionId?: string): ModelPreferences {
+    if (!connectionId || !value || typeof value !== "object" || Array.isArray(value))
+        return modelPreferences(value);
+
+    const byConnection = (value as { byConnection?: unknown }).byConnection;
+    if (!byConnection || typeof byConnection !== "object" || Array.isArray(byConnection))
+        return modelPreferences(value);
+
+    return modelPreferences((byConnection as Record<string, unknown>)[connectionId]);
+}
+
+
+function storedModelPreferences(value: unknown, connectionId: string | undefined, preferences: ModelPreferences): unknown {
+    if (!connectionId)
+        return preferences;
+
+    const candidate = value && typeof value === "object" && !Array.isArray(value) ? value as { byConnection?: unknown } : {};
+    const byConnection = candidate.byConnection && typeof candidate.byConnection === "object" && !Array.isArray(candidate.byConnection)
+        ? candidate.byConnection as Record<string, unknown>
+        : {};
+
+    return { byConnection: { ...byConnection, [connectionId]: preferences } };
+}
+
+
 function normalizeKeyBindingOverrides(value: unknown, rejectInvalid: boolean): KeyBindingOverrides {
     if (!value || typeof value !== "object" || Array.isArray(value))
         if (rejectInvalid)
@@ -193,11 +219,17 @@ export class ApplicationSettingsService {
 
 
     async getSnapshot(): Promise<ApplicationSettingsSnapshot> {
+        const connections = aiConnections(this.settings.get("application-ai-connections")?.value);
+        const rawPreferences = this.settings.get("application-model-preferences")?.value;
+        const preferences = modelPreferencesForConnection(rawPreferences, connections.activeConnectionId);
+        if (connections.activeConnectionId && (!rawPreferences || typeof rawPreferences !== "object" || !("byConnection" in rawPreferences)))
+            this.settings.set("application-model-preferences", storedModelPreferences(rawPreferences, connections.activeConnectionId, preferences));
+
         return {
             general: generalSettings(this.settings.get("application-general")?.value),
             systemDateTimeFormat: await this.dateTimeFormat.read(),
-            ...aiConnections(this.settings.get("application-ai-connections")?.value),
-            modelPreferences: modelPreferences(this.settings.get("application-model-preferences")?.value),
+            ...connections,
+            modelPreferences: preferences,
             backupPolicy: backupPolicy(this.settings.get("application-backup-policy")?.value),
             keyBindingOverrides: keyBindingOverrides(this.settings.get("application-key-bindings")?.value),
         };
@@ -238,13 +270,14 @@ export class ApplicationSettingsService {
 
     updateModelPreferences(value: unknown): ModelPreferences {
         const normalized = modelPreferences(value);
-        this.settings.set("application-model-preferences", normalized);
+        const activeConnectionId = aiConnections(this.settings.get("application-ai-connections")?.value).activeConnectionId;
+        this.settings.set("application-model-preferences", storedModelPreferences(this.settings.get("application-model-preferences")?.value, activeConnectionId, normalized));
 
         return normalized;
     }
 
 
-    createAiConnection(value: { label?: unknown; environmentVariableName?: unknown }): AiConnection {
+    createAiConnection(value: { provider?: unknown; label?: unknown; environmentVariableName?: unknown }): AiConnection {
         const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
         const requestedName = environmentVariableName(value.environmentVariableName);
         if (saved.connections.some((connection) => connection.credentialSource.kind === "environment-variable" && connection.credentialSource.environmentVariableName === requestedName))
@@ -252,8 +285,8 @@ export class ApplicationSettingsService {
 
         const connection: AiConnection = {
             id: this.createConnectionId(),
-            provider: "openai",
-            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : "OpenAI",
+            provider: this.provider(value.provider),
+            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.providerLabel(this.provider(value.provider)),
             credentialSource: { kind: "environment-variable", environmentVariableName: requestedName }, status: "unchecked"
         };
         saved.connections.push(connection);
@@ -263,11 +296,12 @@ export class ApplicationSettingsService {
     }
 
 
-    async createManagedAiConnection(value: { label?: unknown; apiKey?: unknown }): Promise<AiConnection> {
+    async createManagedAiConnection(value: { provider?: unknown; label?: unknown; apiKey?: unknown }): Promise<AiConnection> {
         if (!this.credentials?.available() || typeof value.apiKey !== "string" || !value.apiKey.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        const connection: AiConnection = { id: this.createConnectionId(), provider: "openai", label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : "OpenAI", credentialSource: { kind: "managed" }, status: "unchecked" };
+        const provider = this.provider(value.provider);
+        const connection: AiConnection = { id: this.createConnectionId(), provider, label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.providerLabel(provider), credentialSource: { kind: "managed" }, status: "unchecked" };
         try {
             await this.models.list(connection, value.apiKey);
         } catch {
@@ -373,5 +407,28 @@ export class ApplicationSettingsService {
             throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
         return { saved, index, connection: saved.connections[index]! };
+    }
+
+
+    private provider(value: unknown): AiProvider {
+        if (value === undefined)
+            return AI_PROVIDER.OPENAI;
+
+        if (!isAiProvider(value))
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+        return value;
+    }
+
+
+    private providerLabel(provider: AiProvider): string {
+        return {
+            [AI_PROVIDER.OPENAI]: "OpenAI",
+            [AI_PROVIDER.OPENCODE]: "OpenCode Zen",
+            [AI_PROVIDER.ANTHROPIC]: "Anthropic",
+            [AI_PROVIDER.GOOGLE]: "Google Gemini",
+            [AI_PROVIDER.XAI]: "xAI Grok",
+            [AI_PROVIDER.DEEPSEEK]: "DeepSeek",
+        }[provider];
     }
 }

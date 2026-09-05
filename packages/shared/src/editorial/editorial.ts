@@ -25,7 +25,13 @@ export interface StartEditorialRequest {
 
 export interface EditorialSession {
     articleId: string;
+    // TODO: remove legacy
+    /** Legacy, unscoped values are never reused for provider continuation. */
     previousResponseId?: string;
+    continuationToken?: string;
+    connectionId?: string;
+    provider?: import("../settings/settings.js").AiProvider;
+    model?: string;
     updatedAt: string;
 }
 

@@ -1,4 +1,4 @@
-import type { AiConnection, ApplicationSettingsSnapshot, BackupPolicy, GeneralSettings, KeyBindingOverrides, ModelPreferences, PublishingSettings } from "@skladno/shared";
+import type { AiConnection, AiProvider, ApplicationSettingsSnapshot, BackupPolicy, GeneralSettings, KeyBindingOverrides, ModelPreferences, PublishingSettings } from "@skladno/shared";
 
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { AiSettingsSection } from "./AiSettingsSection.js";
@@ -10,7 +10,7 @@ import { settingsSections, type SettingsSection } from "../settings-sections.js"
 import { useIntl } from "react-intl";
 
 
-export function SettingsContent({ client, section, settings, general, preferences, backupPolicy, keyBindingOverrides, publishingSettings, models, connectionName, environmentName, managedConnectionName, apiKey, connectionError, desktopAvailable, onThemeApplied, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, saveGeneral, savePreferences, saveBackupPolicy, saveKeyBindingOverrides, savePublishingSettings, addConnection, addManagedConnection, setActiveConnection, requestConnectionRename, requestConnectionRemoval, refreshModels }: {
+export function SettingsContent({ client, section, settings, general, preferences, backupPolicy, keyBindingOverrides, publishingSettings, models, connectionProvider, connectionName, environmentName, managedConnectionName, apiKey, connectionError, desktopAvailable, onThemeApplied, setConnectionProvider, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, saveGeneral, savePreferences, saveBackupPolicy, saveKeyBindingOverrides, savePublishingSettings, addConnection, addManagedConnection, setActiveConnection, requestConnectionRename, requestConnectionRemoval, refreshModels }: {
     client: EditorialWorkspaceClient;
     section: SettingsSection;
     settings: ApplicationSettingsSnapshot | undefined;
@@ -20,6 +20,7 @@ export function SettingsContent({ client, section, settings, general, preference
     keyBindingOverrides: KeyBindingOverrides;
     publishingSettings: PublishingSettings;
     models: string[];
+    connectionProvider: AiProvider;
     connectionName: string;
     environmentName: string;
     managedConnectionName: string;
@@ -27,6 +28,7 @@ export function SettingsContent({ client, section, settings, general, preference
     connectionError: string | undefined;
     desktopAvailable: boolean;
     onThemeApplied: ((theme: GeneralSettings["theme"]) => void) | undefined;
+    setConnectionProvider: (value: AiProvider) => void;
     setConnectionName: (value: string) => void;
     setEnvironmentName: (value: string) => void;
     setManagedConnectionName: (value: string) => void;
@@ -51,7 +53,7 @@ export function SettingsContent({ client, section, settings, general, preference
     else if (settings && section === "keyBindings")
         content = <KeyBindingSettings general={general} saveGeneral={saveGeneral} overrides={keyBindingOverrides} save={saveKeyBindingOverrides} />;
     else if (settings && section === "ai")
-        content = <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionName={setConnectionName} setEnvironmentName={setEnvironmentName} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} onAddConnection={addConnection} onAddManagedConnection={addManagedConnection} onSetActiveConnection={setActiveConnection} onRequestConnectionRename={requestConnectionRename} canRenameManagedConnection={desktopAvailable} onRequestConnectionRemoval={requestConnectionRemoval} onRefreshModels={refreshModels} savePreferences={savePreferences} />;
+        content = <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={setEnvironmentName} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} onAddConnection={addConnection} onAddManagedConnection={addManagedConnection} onSetActiveConnection={setActiveConnection} onRequestConnectionRename={requestConnectionRename} canRenameManagedConnection={desktopAvailable} onRequestConnectionRemoval={requestConnectionRemoval} onRefreshModels={refreshModels} savePreferences={savePreferences} />;
     else if (settings && section === "publishing")
         content = <PublishingSettingsSection publishing={publishingSettings} save={savePublishingSettings} general={general} saveGeneral={saveGeneral} />;
 

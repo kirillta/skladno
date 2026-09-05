@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { assistantConversationPrompt, assistantStepOptions, responsesPrompt, responsesProviderOptions } from "./ai-sdk-editorial-engine.js";
+import { supportingTextProviderOptions } from "./ai-sdk-editorial-helpers.js";
+import { AI_PROVIDER } from "@skladno/shared";
 
 
 test("moves system messages into Responses API instructions", () => {
@@ -38,6 +40,12 @@ test("Responses storage is opt-in and continuation stays scoped to it", () => {
     assert.deepEqual(responsesProviderOptions(true), { openai: { store: true } });
     assert.deepEqual(responsesProviderOptions(true, "resp-earlier"), { openai: { store: true, previousResponseId: "resp-earlier" } });
     assert.deepEqual(responsesProviderOptions(false, undefined, "high"), { openai: { store: false, reasoningEffort: "high" } });
+});
+
+
+test("supporting text keeps OpenAI reasoning settings without forwarding them to other providers", () => {
+    assert.deepEqual(supportingTextProviderOptions(AI_PROVIDER.OPENAI, "high"), { openai: { store: false, reasoningEffort: "high" } });
+    assert.equal(supportingTextProviderOptions(AI_PROVIDER.ANTHROPIC, "high"), undefined);
 });
 
 

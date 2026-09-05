@@ -1,10 +1,12 @@
-import { builtInSkills, type AiConnection, type ApplicationSettingsSnapshot, type BuiltInSkillId, type ModelPreferences } from "@skladno/shared";
+import { AI_PROVIDER, builtInSkills, isAiProvider, type AiConnection, type AiProvider, type ApplicationSettingsSnapshot, type BuiltInSkillId, type ModelPreferences } from "@skladno/shared";
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Banner, Button, Field, IconButton, Select } from "../../ui/primitives.js";
 import { ChevronDownIcon, CloseIcon, OpenAiIcon, SearchIcon, SettingsIcon, StarIcon } from "../../ui/icons.js";
 import { Control, SettingRow, SettingsGroup } from "./SettingRow.js";
 
+
+// TODO: refactor
 const skillMessages: Record<BuiltInSkillId, { label: "assistant.skill.talkingPoints.label" | "assistant.skill.narrativeDraft.label" | "assistant.skill.flowAndClarity.label" | "assistant.skill.factChecking.label" | "assistant.skill.styleReview.label" | "assistant.skill.translation.label"; hint: "assistant.skill.talkingPoints.hint" | "assistant.skill.narrativeDraft.hint" | "assistant.skill.flowAndClarity.hint" | "assistant.skill.factChecking.hint" | "assistant.skill.styleReview.hint" | "assistant.skill.translation.hint" }> = {
     talking_points: { label: "assistant.skill.talkingPoints.label", hint: "assistant.skill.talkingPoints.hint" },
     narrative_draft: { label: "assistant.skill.narrativeDraft.label", hint: "assistant.skill.narrativeDraft.hint" },
@@ -15,6 +17,15 @@ const skillMessages: Record<BuiltInSkillId, { label: "assistant.skill.talkingPoi
 };
 
 type ConnectionMethod = "managed" | "environment-variable";
+
+const providerMessages: Record<AiProvider, "settings.provider.openai" | "settings.provider.opencode" | "settings.provider.anthropic" | "settings.provider.google" | "settings.provider.xai" | "settings.provider.deepseek"> = {
+    [AI_PROVIDER.OPENAI]: "settings.provider.openai",
+    [AI_PROVIDER.OPENCODE]: "settings.provider.opencode",
+    [AI_PROVIDER.ANTHROPIC]: "settings.provider.anthropic",
+    [AI_PROVIDER.GOOGLE]: "settings.provider.google",
+    [AI_PROVIDER.XAI]: "settings.provider.xai",
+    [AI_PROVIDER.DEEPSEEK]: "settings.provider.deepseek",
+};
 
 
 function pasteIntoField(current: string, pasted: string, selectionStart: number | null, selectionEnd: number | null): string {
@@ -171,15 +182,17 @@ function ModelSelect({ value, models, favorites, sourceVendor, placeholder, allo
 }
 
 
-export function AiSettingsSection({ settings, preferences, models, connectionName, environmentName, managedConnectionName, apiKey, connectionError, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, onAddConnection, onAddManagedConnection, onSetActiveConnection, onRequestConnectionRename, canRenameManagedConnection, onRequestConnectionRemoval, onRefreshModels, savePreferences }: {
+export function AiSettingsSection({ settings, preferences, models, connectionProvider, connectionName, environmentName, managedConnectionName, apiKey, connectionError, setConnectionProvider, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, onAddConnection, onAddManagedConnection, onSetActiveConnection, onRequestConnectionRename, canRenameManagedConnection, onRequestConnectionRemoval, onRefreshModels, savePreferences }: {
     settings: ApplicationSettingsSnapshot;
     preferences: ModelPreferences;
     models: string[];
+    connectionProvider: AiProvider;
     connectionName: string;
     environmentName: string;
     managedConnectionName: string;
     apiKey: string;
     connectionError?: string;
+    setConnectionProvider: (value: AiProvider) => void;
     setConnectionName: (value: string) => void;
     setEnvironmentName: (value: string) => void;
     setManagedConnectionName: (value: string) => void;
@@ -199,6 +212,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
     const specificModelsContent = useRef<HTMLDivElement>(null);
     const activeConnection = settings.connections.find((connection) => connection.id === settings.activeConnectionId);
     const sourceVendor: ModelVendor = activeConnection && activeConnection.provider !== "openai" ? "other" : "openai";
+    const providerLabel = (provider: AiProvider) => intl.formatMessage({ id: providerMessages[provider] });
 
 
     function toggleSpecificModels() {
@@ -225,7 +239,8 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
                             <p className="text-sm font-medium">{connection.label}</p>
                             {connection.id === settings.activeConnectionId && <p className="inline-flex min-h-8 items-center rounded-control border border-brand bg-brand-soft px-2 py-1 text-xs font-semibold text-brand" role="status">{intl.formatMessage({ id: "settings.activeConnectionShort" })}</p>}
                         </div>
-                        <p className="mt-1 truncate text-xs text-muted">{credentialSourceLabel(connection, intl.formatMessage({ id: "settings.managedCredential" }))}</p>
+                        <p className="mt-1 truncate text-xs text-muted">{providerLabel(connection.provider)}</p>
+                        <p className="truncate text-xs text-muted">{credentialSourceLabel(connection, intl.formatMessage({ id: "settings.managedCredential" }))}</p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
                         {onRequestConnectionRename && (credentialSource(connection).kind !== "managed" || canRenameManagedConnection) && <Button className="!px-2" variant="quiet" onClick={() => onRequestConnectionRename(connection)}>{intl.formatMessage({ id: "settings.renameConnectionShort" })}</Button>}
@@ -241,6 +256,17 @@ export function AiSettingsSection({ settings, preferences, models, connectionNam
                     <Button variant={connectionMethod === "environment-variable" ? "secondary" : "quiet"} aria-pressed={connectionMethod === "environment-variable"} onClick={() => setConnectionMethod("environment-variable")}>{intl.formatMessage({ id: "settings.environmentVariable" })}</Button>
                 </div>
             </div>}
+            <div className="mt-6">
+                <Control label={intl.formatMessage({ id: "settings.provider" })} hint={intl.formatMessage({ id: "settings.providerHint" })}>
+                    <Select aria-label={intl.formatMessage({ id: "settings.provider" })} value={connectionProvider} onChange={(event) => {
+                        if (isAiProvider(event.target.value))
+                            setConnectionProvider(event.target.value);
+                    }}>
+                        {Object.values(AI_PROVIDER).map((provider) => <option key={provider} value={provider}>{providerLabel(provider)}</option>)}
+                    </Select>
+                </Control>
+                <p className="mt-3 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.providerLimitations" })}</p>
+            </div>
             {connectionMethod === "managed" && <div className="mt-6 mb-8">
                 <div>
                     <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "settings.addApiKey" })}</h3>

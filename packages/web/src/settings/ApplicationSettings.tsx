@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
+import { AI_PROVIDER, defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type AiProvider, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
@@ -22,6 +22,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>({});
     const [publishingSettings, setPublishingSettings] = useState<PublishingSettings>(defaultPublishingSettings);
     const [models, setModels] = useState<string[]>([]);
+    const [connectionProvider, setConnectionProvider] = useState<AiProvider>(AI_PROVIDER.OPENAI);
     const [connectionName, setConnectionName] = useState("");
     const [environmentName, setEnvironmentName] = useState("");
     const [managedConnectionName, setManagedConnectionName] = useState("");
@@ -132,7 +133,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         setConnectionError(undefined);
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
-            const connection = await client.addAiConnection({ label: connectionName, environmentVariableName: environmentName });
+            const connection = await client.addAiConnection({ provider: connectionProvider, label: connectionName, environmentVariableName: environmentName });
             setSettings((current) => current ? {
                 ...current,
                 connections: [...current.connections, connection],
@@ -155,7 +156,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         setConnectionError(undefined);
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
-            const connection = await desktopSettings.addManagedAiConnection({ label: managedConnectionName, apiKey });
+            const connection = await desktopSettings.addManagedAiConnection({ provider: connectionProvider, label: managedConnectionName, apiKey });
             setSettings((current) => current ? {
                 ...current,
                 connections: [...current.connections, connection],
@@ -175,7 +176,9 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
             await client.setActiveAiConnection(connectionId);
-            setSettings((current) => current ? { ...current, activeConnectionId: connectionId } : current);
+            const updated = await client.getApplicationSettings();
+            setSettings({ ...updated, activeConnectionId: connectionId });
+            setPreferences(updated.modelPreferences);
             setModels([]);
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
@@ -263,7 +266,7 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
 
     return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
-        <SettingsContent client={client} section={section} settings={settings} general={general} preferences={preferences} backupPolicy={backupPolicy} keyBindingOverrides={keyBindingOverrides} publishingSettings={publishingSettings} models={models} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} desktopAvailable={Boolean(desktopSettings)} onThemeApplied={onThemeApplied} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
+        <SettingsContent client={client} section={section} settings={settings} general={general} preferences={preferences} backupPolicy={backupPolicy} keyBindingOverrides={keyBindingOverrides} publishingSettings={publishingSettings} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} desktopAvailable={Boolean(desktopSettings)} onThemeApplied={onThemeApplied} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
             setEnvironmentName(value);
             setConnectionError(undefined);
         }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} saveGeneral={saveGeneral} savePreferences={savePreferences} saveBackupPolicy={saveBackupPolicy} saveKeyBindingOverrides={saveKeyBindingOverrides} savePublishingSettings={(next) => void savePublishingSettings(next)} addConnection={() => void addConnection()} addManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} setActiveConnection={(connectionId) => void setActiveConnection(connectionId)} requestConnectionRename={requestManagedConnectionRename} requestConnectionRemoval={setConnectionPendingRemoval} refreshModels={() => void refreshModels()} />

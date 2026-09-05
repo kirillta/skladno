@@ -11,7 +11,7 @@ import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
 import { isEditorialOperation } from "../../application/editorial/workflow-prompt.js";
 
-
+// TODO: refactor, too long
 function isFactCheckResolution(value: unknown): value is NonNullable<import("@skladno/shared").FactCheckFinding["resolution"]> {
     return value === "corrected_or_removed" || value === "accepted_as_written" || value === "evidence_accepted";
 }
@@ -211,6 +211,9 @@ function assistantErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_
 
 
 function editorialFailure(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
+    if (error instanceof ApplicationServiceError && error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING)
+        return { category: EDITORIAL_ERROR_CATEGORY.CONFIGURATION, errorCode: error.code };
+
     let category: Extract<EditorialEvent, { type: "error" }>["code"] = EDITORIAL_ERROR_CATEGORY.PROVIDER;
     if (error instanceof EditorialEngineError) {
         if (error.code === EDITORIAL_ENGINE_ERROR.NETWORK)

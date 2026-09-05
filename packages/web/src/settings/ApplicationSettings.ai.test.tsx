@@ -51,6 +51,7 @@ describe("ApplicationSettings AI", () => {
         await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
 
         await waitFor(() => expect(addAiConnection).toHaveBeenCalledWith({
+            provider: "openai",
             label: "Personal AI",
             environmentVariableName: "AI_API_KEY",
         }));
@@ -92,8 +93,31 @@ describe("ApplicationSettings AI", () => {
         await user.type(screen.getByPlaceholderText("Paste your API key"), "<REDACTED>");
         await user.click(screen.getByRole("button", { name: message("settings.addApiKeyButton") }));
 
-        await waitFor(() => expect(addManagedAiConnection).toHaveBeenCalledWith({ label: "Personal AI", apiKey: "<REDACTED>" }));
+        await waitFor(() => expect(addManagedAiConnection).toHaveBeenCalledWith({ provider: "openai", label: "Personal AI", apiKey: "<REDACTED>" }));
         expect(screen.queryByDisplayValue("<REDACTED>")).toBeNull();
+    });
+
+    it("uses the selected provider and labels saved connections", async () => {
+        const user = userEvent.setup();
+        const addAiConnection = vi.fn().mockResolvedValue({ id: "connection-1", provider: "anthropic", label: "Personal Claude", credentialSource: { kind: "environment-variable" as const, environmentVariableName: "ANTHROPIC_API_KEY" }, status: "connected" as const });
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [{ id: "existing", provider: "deepseek", label: "DeepSeek", credentialSource: { kind: "managed" as const }, status: "connected" as const }] }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            addAiConnection,
+            refreshAiModels: vi.fn().mockResolvedValue([]),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        expect(screen.getAllByText("DeepSeek")).not.toHaveLength(0);
+        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.provider") }), "anthropic");
+        await user.type(screen.getByPlaceholderText("For example, Personal AI"), "Personal Claude");
+        await user.type(screen.getByPlaceholderText("For example, AI_API_KEY"), "ANTHROPIC_API_KEY");
+        await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
+
+        await waitFor(() => expect(addAiConnection).toHaveBeenCalledWith({ provider: "anthropic", label: "Personal Claude", environmentVariableName: "ANTHROPIC_API_KEY" }));
+        expect(screen.getByText(message("settings.providerLimitations"))).toBeTruthy();
     });
 
     it("renames a managed connection through the desktop credential client", async () => {

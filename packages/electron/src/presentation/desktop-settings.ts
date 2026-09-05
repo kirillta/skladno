@@ -134,7 +134,7 @@ async function deleteLocalData({ runtime, dataDirectory, database, dialog, messa
 
 
 async function addManagedAiConnection({ services }: Pick<DesktopSettingsContext, "services">, args: unknown[]): Promise<unknown> {
-    const value = await services.settings.createManagedAiConnection({ label: args[0], apiKey: args[1] });
+    const value = await services.settings.createManagedAiConnection({ provider: args[0], label: args[1], apiKey: args[2] });
     return { ok: true, value };
 }
 
@@ -204,7 +204,7 @@ export function createDesktopSettingsClient(ipcRenderer: Pick<IpcRenderer, "invo
         revealDataDirectory: () => invoke("revealDataDirectory"),
         createNativeBackup: () => invoke("createNativeBackup"),
         deleteLocalData: () => invoke("deleteLocalData"),
-        addManagedAiConnection: ({ label, apiKey }) => invoke("addManagedAiConnection", label, apiKey),
+        addManagedAiConnection: ({ provider, label, apiKey }) => invoke("addManagedAiConnection", provider, label, apiKey),
         renameManagedAiConnection: (connectionId, label) => invoke("renameManagedAiConnection", connectionId, label),
         removeManagedAiConnection: (connectionId) => invoke("removeManagedAiConnection", connectionId),
     };
