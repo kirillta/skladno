@@ -150,6 +150,11 @@ test("the Assistant Lexical composer supports skill tags and slash invocation", 
     await page.getByLabel("Remove Flow and clarity").click();
 
     await composer.focus();
+    await page.evaluate(() => navigator.clipboard.writeText("shortcut paste"));
+    await composer.press("Control+V");
+    await expect(composer).toContainText("shortcut paste");
+    await composer.fill("");
+
     await composer.evaluate((element) => {
         const clipboardData = new DataTransfer();
         clipboardData.setData("text/plain", "plain\ntext");

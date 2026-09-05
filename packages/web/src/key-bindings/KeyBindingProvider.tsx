@@ -4,6 +4,7 @@ import { KeyBindingDispatcher } from "./dispatcher.js";
 
 
 const reservedDesktopKeys = new Set(["a", "c", "m", "q", "u", "v", "w", "x", "y", "z", "+", "=", "-", "0"]);
+const clipboardKeys = new Set(["c", "v", "x"]);
 
 
 export function isReservedDesktopShortcut(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">): boolean {
@@ -15,7 +16,12 @@ export function isReservedDesktopShortcut(event: Pick<KeyboardEvent, "key" | "ct
 }
 
 
-export function useKeyBindingDispatcher(overrides: KeyBindingOverrides | undefined): KeyBindingDispatcher {
+function isClipboardShortcut(event: KeyboardEvent): boolean {
+    return !event.altKey && (event.ctrlKey || event.metaKey) && clipboardKeys.has(event.key.toLowerCase());
+}
+
+
+export function useKeyBindingDispatcher(overrides: KeyBindingOverrides | undefined, reserveDesktopShortcuts = false): KeyBindingDispatcher {
     const dispatcher = useMemo(() => new KeyBindingDispatcher(), []);
 
     useEffect(() => {
@@ -24,17 +30,17 @@ export function useKeyBindingDispatcher(overrides: KeyBindingOverrides | undefin
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
-            if (event.defaultPrevented)
+            if (event.defaultPrevented && !isClipboardShortcut(event))
                 return;
 
             const target = event.target;
             const scope = target instanceof HTMLElement && target.closest('[data-workspace-panel="editorial-assistant"]') ? "assistant" : "application";
-            if (!dispatcher.dispatch(event, scope) && isReservedDesktopShortcut(event))
+            if (!dispatcher.dispatch(event, scope) && reserveDesktopShortcuts && isReservedDesktopShortcut(event))
                 event.preventDefault();
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [dispatcher]);
+    }, [dispatcher, reserveDesktopShortcuts]);
 
     return dispatcher;
 }

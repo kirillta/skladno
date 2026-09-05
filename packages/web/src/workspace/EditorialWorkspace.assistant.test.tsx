@@ -298,6 +298,22 @@ describe("Editorial Workspace assistant", () => {
     });
 
 
+    it("keeps native copy and paste shortcuts in the composer", async () => {
+        const execute = vi.fn();
+        window.skladnoShell = { execute };
+        render(<App client={fakeClient()} />);
+        const composer = await screen.findByRole("combobox", { name: message("assistant.guidance") });
+
+        const copy = new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true, cancelable: true });
+        const paste = new KeyboardEvent("keydown", { key: "v", ctrlKey: true, bubbles: true, cancelable: true });
+
+        composer.dispatchEvent(copy);
+        composer.dispatchEvent(paste);
+        expect(execute).toHaveBeenCalledWith("copy");
+        expect(execute).toHaveBeenCalledWith("paste");
+    });
+
+
     it("does not move focus to the composer when an Assistant request finishes", async () => {
         const user = userEvent.setup();
         let finishRequest: (() => void) | undefined;

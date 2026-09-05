@@ -43,7 +43,8 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>();
     const [theme, setTheme] = useState<ThemePreference>("system");
     const [focusUpdates, setFocusUpdates] = useState(false);
-    const dispatcher = useKeyBindingDispatcher(keyBindingOverrides);
+    const desktopShell = getDesktopShellClient();
+    const dispatcher = useKeyBindingDispatcher(keyBindingOverrides, desktopShell !== undefined);
 
     useThemeAppearance(theme);
 
@@ -60,13 +61,12 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
     }, []);
 
     useEffect(() => {
-        const desktopShell = getDesktopShellClient();
         if (!desktopShell)
             return;
 
         const unregister = desktopShellCommands.map((command) => dispatcher.register(command, () => desktopShell.execute(command)));
         return () => unregister.forEach((remove) => remove());
-    }, [dispatcher]);
+    }, [desktopShell, dispatcher]);
 
     useEffect(() => {
         const openUpdates = () => {
