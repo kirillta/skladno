@@ -70,7 +70,7 @@
             "area": "Proposal lifecycle",
             "title": "Summarized diff review, bulk acceptance or rejection, fallback, and stale protection",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "owners": ["packages/shared/src/articles/revision/revisions.ts", "packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
             "contract": "Authors may review non-authoritative Interface-locale summaries, decide every change locally, apply the accepted subset in one Revision, accept a whole Proposal in one Revision, or dismiss stale and zero-change Proposals without Article changes. Fact corrections preserve blank-line formatting. Summary failure does not block review. Stale and preservation warnings precede labelled change navigation and diff; stale or unreliable Proposals cannot be partially accepted. Whole-Proposal fallback discloses its change count.",
             "persistence": "Completed Proposal content, summaries with their Interface locale, and the base Revision remain locally recoverable in the Proposal artifact; acceptance creates one immutable Revision and rejection leaves Article history unchanged.",
             "relatedCapabilityIds": ["workspace.proposal.explicit-acceptance"]
@@ -186,6 +186,16 @@
             "expected": ["The linked translation retains source metadata and protected spans."],
             "forbidden": ["Overwriting the source Article."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.paragraph-change-alignment",
+            "title": "Paragraph changes retain alignment and independent acceptance",
+            "capabilityIds": ["editorial-workflows.proposal-lifecycle"],
+            "preconditions": ["A Proposal inserts, deletes, splits, or merges paragraphs."],
+            "event": "The author reviews and accepts selected change groups.",
+            "expected": ["Unchanged nonblank lines anchor change groups; blank separators cannot shift later replacements.", "Applying a group preserves unselected content, Article order, and unchanged protected content."],
+            "forbidden": ["Pairing unrelated paragraphs solely by blank-line position."],
+            "evidence": { "kind": "automated", "path": "packages/shared/src/articles/revision/revisions.test.ts" }
         },
         {
             "id": "editorial-workflows.stale-proposal-blocked",

@@ -73,7 +73,7 @@ export function createTextProposal(baseContent: string, proposedContent: string)
 
     for (let baseIndex = baseLines.length - 1; baseIndex >= 0; baseIndex -= 1) {
         for (let proposalIndex = proposalLines.length - 1; proposalIndex >= 0; proposalIndex -= 1) {
-            table[baseIndex][proposalIndex] = baseLines[baseIndex] === proposalLines[proposalIndex]
+            table[baseIndex][proposalIndex] = baseLines[baseIndex].trim() !== "" && baseLines[baseIndex] === proposalLines[proposalIndex]
                 ? table[baseIndex + 1][proposalIndex + 1] + 1
                 : Math.max(table[baseIndex + 1][proposalIndex], table[baseIndex][proposalIndex + 1]);
         }
@@ -87,6 +87,22 @@ export function createTextProposal(baseContent: string, proposedContent: string)
     let added: string[] = [];
 
     const flush = () => {
+        // Blank separators cannot anchor alignment, but shared edges need no decision.
+        let start = 0;
+        while (start < removed.length && start < added.length && removed[start] === added[start])
+            start += 1;
+
+        let removedEnd = removed.length;
+        let addedEnd = added.length;
+        while (removedEnd > start && addedEnd > start && removed[removedEnd - 1] === added[addedEnd - 1]) {
+            removedEnd -= 1;
+            addedEnd -= 1;
+        }
+
+        changeBaseStart += start;
+        removed = removed.slice(start, removedEnd);
+        added = added.slice(start, addedEnd);
+
         if (removed.length === 0 && added.length === 0)
             return;
 
@@ -103,7 +119,7 @@ export function createTextProposal(baseContent: string, proposedContent: string)
     };
 
     while (baseIndex < baseLines.length || proposalIndex < proposalLines.length) {
-        if (baseIndex < baseLines.length && proposalIndex < proposalLines.length && baseLines[baseIndex] === proposalLines[proposalIndex]) {
+        if (baseIndex < baseLines.length && proposalIndex < proposalLines.length && baseLines[baseIndex].trim() !== "" && baseLines[baseIndex] === proposalLines[proposalIndex]) {
             flush();
             baseIndex += 1;
             proposalIndex += 1;
