@@ -12,6 +12,8 @@ Use application popup notifications for cross-screen outcomes and background act
 
 ## Accessibility
 
+For copy and locale formatting changes, follow the [internationalization guide](../guides/internationalization.md). For a release accessibility review, use the [walkthrough](../guides/accessibility-release-walkthrough.md) and its [finding routing rules](../guides/accessibility-review-routing.md).
+
 - Resolve application-owned visible and accessible copy through the typed ICU catalog; never use translated text as logic or persisted values.
 - Give every focusable control a visible focus indicator, every icon-only control an accessible name, and every status a visible non-color cue.
 - Keep controls at least 36px; use 44px for sparse icon-only actions where space allows.

@@ -6,7 +6,7 @@ Use this workflow when a coding task needs broad discovery, changes TypeScript o
 
 1. **Map the change.** Start with `rg` for the requested behavior, then run `npm run product:impact -- <affected paths>` when changing an existing behavior owner. Find direct callers and imports. Stop once the production owner, its immediate collaborators, and the smallest relevant test are known.
 2. **Read only the needed code.** Read ranges around relevant symbols first. Read a complete file only when its full structure is necessary to make the change safely. Stop when the confirmed flow explains every requested acceptance criterion.
-3. **Keep a short ledger.** Record the goal, owners, confirmed flow, decisions, checks passed, and remaining work. Replace raw exploration history with this ledger when it is sufficient; start a clean continuation if the old thread no longer helps.
+3. **Keep a short ledger for multi-step work.** Record the goal, owners, confirmed flow, decisions, checks passed, and remaining work in the working context. Include user constraints and unresolved failures so a continuation can resume without repeating discovery. Create a repository plan only when the task needs a durable handoff.
 4. **Make the smallest behavior change.** Run the smallest test that can fail for the requested behavior. Iterate on that check until it passes.
 5. **Run broad gates once.** After the focused loop passes, run the checks required by [the testing guide](testing.md) and the affected architecture guidance. Rerun a broad gate only after its failure or a source change that can affect it.
 6. **Review the production path.** Before reporting completion, trace each acceptance criterion through its production caller and confirm no direct caller was omitted.
@@ -27,9 +27,11 @@ For TSX changes, inspect in this order:
 
 Search symbols and imports before full reads. A `.tsx` file may combine rendering, state, accessibility, localization, and integration wiring; it is not a reason to scan the feature.
 
-Follow [ADR-003](../architecture/adr-003-web-feature-oriented-react-architecture.md): extract a component, hook, helper, or fixture only when it gains an independent caller, test contract, state responsibility, or visual responsibility. Keep a single-use helper with its caller. Follow the [UI design system](../ui/design-system.md) for renderer changes.
+Use [ADR-003](../architecture/adr-003-web-feature-oriented-react-architecture.md) to decide whether extraction is warranted and the [UI design system](../ui/design-system.md) for renderer changes.
 
 ### Workspace ownership
+
+Paths below are relative to `packages/web/src/workspace`. Use this map as a starting point, then confirm current callers and test paths with `rg`.
 
 | Concern | Owner | Focused tests |
 | --- | --- | --- |
