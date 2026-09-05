@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { assistantStepOptions, responsesPrompt, responsesProviderOptions } from "./ai-sdk-editorial-engine.js";
+import { assistantConversationPrompt, assistantStepOptions, responsesPrompt, responsesProviderOptions } from "./ai-sdk-editorial-engine.js";
 
 
 test("moves system messages into Responses API instructions", () => {
@@ -13,6 +13,23 @@ test("moves system messages into Responses API instructions", () => {
         instructions: "Assistant guidance\n\nArticle context",
         messages: [{ role: "user", content: "ping" }],
     });
+});
+
+
+test("keeps previous Assistant output separate from the next Author request", () => {
+    assert.deepEqual(assistantConversationPrompt({
+        article: "Article context",
+        history: [
+            { role: "author", content: "Previous question" },
+            { role: "assistant", content: "Previous answer" },
+        ],
+        message: "New question",
+        scope: "article",
+    }), [
+        { role: "user", content: "Previous question" },
+        { role: "assistant", content: "Previous answer" },
+        { role: "user", content: "Author request:\nNew question\n\nCurrent Article context:\nArticle context" },
+    ]);
 });
 
 

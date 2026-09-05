@@ -1,9 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { APPLICATION_ERROR, ApplicationClientError, defaultGeneralSettings, type ArticleRevision } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, defaultGeneralSettings, type AssistantEvent, type ArticleRevision } from "@skladno/shared";
 
 import { App } from "../App.js";
 import { messages } from "../i18n/messages.js";
@@ -17,6 +17,52 @@ import { article, fakeClient, renderLocalized, resetWorkspaceTestEnvironment } f
 
 describe("Editorial Workspace assistant", () => {
     afterEach(resetWorkspaceTestEnvironment);
+
+    // product: editorial-workflows.assistant-streaming-block-handoff
+    it("reveals stable streaming blocks and hands review output to one result card", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+        let emit: ((event: AssistantEvent) => void) | undefined;
+        let finish: (() => void) | undefined;
+        let completed = false;
+        client.listAssistantMessages = vi.fn().mockImplementation(async () => completed ? [{
+            id: "proposal-message", articleId: "one", requestId: "request", role: "assistant" as const, kind: "response" as const, status: "completed" as const, responseKind: "proposal_prepared" as const, content: "Full Proposal", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+        }] : []);
+        client.streamAssistantRequest = vi.fn(async (_articleId, _input, onEvent) => new Promise<void>((resolve) => {
+            emit = onEvent;
+            finish = resolve;
+        }));
+
+        render(<App client={client} />);
+        await screen.findByRole("heading", { name: "First Article" });
+        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+        await waitFor(() => expect(emit).toBeDefined());
+        expect(await screen.findByRole("article", { name: "Talking points" })).toBeTruthy();
+
+        act(() => emit?.({ type: "text_delta", requestId: "request", delta: "Hidden" }));
+        expect(screen.queryByText("Hidden")).toBeNull();
+        act(() => emit?.({ type: "text_delta", requestId: "request", delta: " paragraph.\n\n# Heading\n" }));
+        const paragraph = await screen.findByText("Hidden paragraph.");
+        const timeline = document.querySelector<HTMLElement>("[aria-live='polite']")!;
+        Object.defineProperties(timeline, { clientHeight: { configurable: true, value: 100 }, scrollHeight: { configurable: true, value: 500 } });
+        timeline.scrollTop = 120;
+        fireEvent.scroll(timeline);
+        act(() => emit?.({ type: "text_delta", requestId: "request", delta: "- First item\n" }));
+        expect(screen.getByText("Hidden paragraph.")).toBe(paragraph);
+        expect(timeline.scrollTop).toBe(120);
+
+        act(() => emit?.({ type: "staged_completion", requestId: "request", completion: { responseKind: "proposal_prepared" } }));
+        expect(screen.getByRole("button", { name: "Review Proposal" })).toBeTruthy();
+        expect(screen.queryByText("Hidden paragraph.")).toBeNull();
+        act(() => emit?.({ type: "completed", requestId: "request", responseKind: "proposal_prepared", messageId: "proposal-message", result: { proposal: "Full Proposal" } }));
+        completed = true;
+        act(() => finish?.());
+        await waitFor(() => expect(screen.getAllByRole("button", { name: "Review Proposal" })).toHaveLength(1));
+        expect(screen.queryByText("Full Proposal")).toBeNull();
+    });
 
     it("restores the latest completed Proposal Review from local Assistant records", async () => {
         const client = fakeClient();
@@ -252,6 +298,43 @@ describe("Editorial Workspace assistant", () => {
     });
 
 
+    it("keeps native copy and paste shortcuts in the composer", async () => {
+        const execute = vi.fn();
+        window.skladnoShell = { execute };
+        render(<App client={fakeClient()} />);
+        const composer = await screen.findByRole("combobox", { name: message("assistant.guidance") });
+
+        const copy = new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true, cancelable: true });
+        const paste = new KeyboardEvent("keydown", { key: "v", ctrlKey: true, bubbles: true, cancelable: true });
+
+        composer.dispatchEvent(copy);
+        composer.dispatchEvent(paste);
+        expect(execute).toHaveBeenCalledWith("copy");
+        expect(execute).toHaveBeenCalledWith("paste");
+    });
+
+
+    it("does not move focus to the composer when an Assistant request finishes", async () => {
+        const user = userEvent.setup();
+        let finishRequest: (() => void) | undefined;
+        const onRequest = vi.fn(() => new Promise<void>((resolve) => {
+            finishRequest = resolve;
+        }));
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} assistantMessages={[]} />);
+        const composer = within(panel.container).getByRole("combobox", { name: message("assistant.guidance") });
+        const articleControl = document.createElement("button");
+        panel.container.append(articleControl);
+
+        await user.type(composer, "Review this");
+        await user.click(within(panel.container).getByRole("button", { name: message("assistant.send") }));
+        articleControl.focus();
+        finishRequest?.();
+
+        await waitFor(() => expect(composer.textContent).toBe(""));
+        expect(document.activeElement).toBe(articleControl);
+    });
+
+
     it("sends the assistant request with Ctrl+Enter when configured", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
@@ -412,7 +495,7 @@ describe("Editorial Workspace assistant", () => {
 
         try {
             const panel = renderLocalized(<AssistantPanelHarness />);
-            const timeline = () => panel.container.querySelector<HTMLElement>('aside[data-workspace-panel="editorial-assistant"] > div')!;
+            const timeline = () => panel.container.querySelector<HTMLElement>("[aria-live='polite']")!;
 
             expect(timeline().scrollTop).toBe(640);
 
