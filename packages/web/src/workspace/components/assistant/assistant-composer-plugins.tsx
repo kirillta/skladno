@@ -127,7 +127,7 @@ export function ComposerBridge({ value, onChange }: { value: AssistantComposerVa
             const tag = setComposerValue({ guidance, selectedSkill, skillOffset, caretOffset });
             tag?.selectNext();
             insertedTag = tag !== undefined;
-        }, { tag: ["assistant-composer-external", SKIP_DOM_SELECTION_TAG] });
+        }, { tag: selectedSkill === undefined ? ["assistant-composer-external", SKIP_DOM_SELECTION_TAG] : "assistant-composer-external" });
 
         if (insertedTag)
             editor.focus();
