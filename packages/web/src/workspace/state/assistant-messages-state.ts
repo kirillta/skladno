@@ -80,7 +80,10 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
                 if (!cancelled)
                     setMessagesByArticle((current) => ({
                         ...current,
-                        [article.id]: items,
+                        [article.id]: [
+                            ...items,
+                            ...(current[article.id] ?? []).filter((message) => message.id.startsWith("pending-") && !items.some((item) => item.requestId === message.requestId)),
+                        ],
                     }));
             })
             .catch(() => {
@@ -200,14 +203,33 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
             });
             controller.current = new AbortController();
             const streamedId = `streaming-${crypto.randomUUID()}`;
+            const requestId = crypto.randomUUID();
             const selectionMatchesRevision = selection && selection.articleId === current.id
                 && selection.fingerprint === await fingerprintArticleContent(revision.content);
             if (selection && !selectionMatchesRevision)
                 throw new ApplicationClientError("assistant_selection_invalid", undefined, 400);
 
+            const timestamp = new Date().toISOString();
+            setMessagesByArticle((messages) => ({
+                ...messages,
+                [current.id]: [...(messages[current.id] ?? []), {
+                    id: `pending-${requestId}`,
+                    articleId: current.id,
+                    requestId,
+                    role: "author",
+                    kind: "message",
+                    status: "completed",
+                    content: authorMessage,
+                    ...(explicitSkillId ? { skillId: explicitSkillId } : {}),
+                    ...(skillOffset === undefined ? {} : { skillOffset }),
+                    ...(selectionMatchesRevision ? { selectionText: selection.preview } : {}),
+                    createdAt: timestamp,
+                    updatedAt: timestamp,
+                }],
+            }));
             await client.streamAssistantRequest(current.id, {
                 kind: "new",
-                requestId: crypto.randomUUID(),
+                requestId,
                 authorMessage,
                 scope: selectionMatchesRevision
                     ? { kind: "selection", baseRevisionId: revision.id, startOffset: selection.startOffset, endOffset: selection.endOffset }
