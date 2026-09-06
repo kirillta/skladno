@@ -262,11 +262,18 @@ describe("ApplicationSettings AI", () => {
     it("filters models by vendor and saves favorites", async () => {
         const user = userEvent.setup();
         const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
+        const anthropicConnection = { id: "connection-2", provider: "anthropic" as const, label: "Personal Claude", environmentVariableName: "ANTHROPIC_API_KEY", status: "connected" as const };
+        const openCodeConnection = { id: "connection-3", provider: "opencode" as const, label: "OpenCode Zen", environmentVariableName: "OPENCODE_API_KEY", status: "connected" as const };
         const updateModelPreferences = vi.fn().mockResolvedValue(undefined);
         const client = {
-            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id }),
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection, anthropicConnection, openCodeConnection], activeConnectionId: connection.id }),
             getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
-            refreshAiModels: vi.fn().mockResolvedValue(["gpt-5", "gpt-5-mini"]),
+            refreshAiModels: vi.fn().mockResolvedValue([
+                { id: aiModelPreferenceId(connection.id, "gpt-5"), model: "gpt-5", connectionId: connection.id, provider: connection.provider },
+                { id: aiModelPreferenceId(connection.id, "gpt-5-mini"), model: "gpt-5-mini", connectionId: connection.id, provider: connection.provider },
+                { id: aiModelPreferenceId(anthropicConnection.id, "claude-sonnet"), model: "claude-sonnet", connectionId: anthropicConnection.id, provider: anthropicConnection.provider },
+                { id: aiModelPreferenceId(openCodeConnection.id, "claude-sonnet-4-6"), model: "claude-sonnet-4-6", connectionId: openCodeConnection.id, provider: openCodeConnection.provider },
+            ]),
             updateModelPreferences,
         } as unknown as EditorialWorkspaceClient;
 
@@ -278,10 +285,16 @@ describe("ApplicationSettings AI", () => {
         const modelPicker = listbox.closest("details")!;
         expect(within(listbox).queryByRole("option", { name: message("settings.chooseModel") })).toBeNull();
         expect(screen.queryByRole("tab", { name: "All models" })).toBeNull();
-        const otherTab = within(modelPicker).getByRole("tab", { name: "Other" });
-        await user.click(otherTab);
-        expect(otherTab.getAttribute("aria-selected")).toBe("true");
+        expect(within(modelPicker).queryByRole("tab", { name: "Google Gemini API" })).toBeNull();
+        const anthropicTab = within(modelPicker).getByRole("tab", { name: "Anthropic" });
+        await user.click(anthropicTab);
+        expect(anthropicTab.getAttribute("aria-selected")).toBe("true");
         expect(within(listbox).queryByRole("option", { name: "GPT-5" })).toBeNull();
+        expect(within(listbox).getByRole("option", { name: "claude-sonnet" })).toBeTruthy();
+        expect(within(listbox).queryByRole("option", { name: "claude-sonnet-4-6" })).toBeNull();
+        await user.click(within(modelPicker).getByRole("tab", { name: "Other" }));
+        expect(within(listbox).getByRole("option", { name: "claude-sonnet-4-6" })).toBeTruthy();
+        expect(within(listbox).queryByRole("option", { name: "claude-sonnet" })).toBeNull();
         await user.click(within(modelPicker).getByRole("tab", { name: "OpenAI" }));
         expect(within(listbox).getByRole("option", { name: "GPT-5 mini" })).toBeTruthy();
         const search = screen.getAllByRole("textbox", { name: message("settings.searchModels") })[0]!;

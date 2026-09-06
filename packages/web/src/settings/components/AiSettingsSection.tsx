@@ -85,14 +85,14 @@ function ModelAndReasoning({ model, effort, onEffortChange, "aria-describedby": 
 }
 
 
-type ModelVendor = "openai" | "other";
+type ModelVendor = Exclude<AiProvider, "opencode"> | "other";
 
 
 function ModelVendorIcon({ vendor }: { vendor: ModelVendor }) {
-    if (vendor === "openai")
-        return <OpenAiIcon className="size-4" />;
+    if (vendor === "other")
+        return <SettingsIcon className="size-4" />;
 
-    return <SettingsIcon className="size-4" />;
+    return <ProviderMark provider={vendor} className="size-4" />;
 }
 
 
@@ -117,6 +117,14 @@ function modelProvider(model: string, connectionProvider: AiProvider): AiProvide
         return AI_PROVIDER.DEEPSEEK;
 
     return AI_PROVIDER.OPENCODE;
+}
+
+
+function modelVendor(connectionProvider: AiProvider): ModelVendor {
+    if (connectionProvider === AI_PROVIDER.OPENCODE)
+        return "other";
+
+    return connectionProvider;
 }
 
 
@@ -154,21 +162,23 @@ function ProviderIcon({ provider, viaProvider, className = "text-muted" }: { pro
 function ModelSelect({ value, models, favorites, placeholder, allowEmpty = false, disabled, label, "aria-describedby": describedBy, onChange, onFavoritesChange }: { value: string; models: AvailableAiModel[]; favorites: string[]; placeholder: string; allowEmpty?: boolean; disabled?: boolean; label: string; "aria-describedby"?: string; onChange: (value: string) => void; onFavoritesChange: (favorites: string[]) => void }) {
     const intl = useIntl();
     const [query, setQuery] = useState("");
-    const [vendor, setVendor] = useState<ModelVendor | "favorites">("openai");
+    const [vendor, setVendor] = useState<ModelVendor | "favorites">(AI_PROVIDER.OPENAI);
     const [open, setOpen] = useState(false);
     const [opensUpward, setOpensUpward] = useState(false);
     const select = useRef<HTMLDetailsElement>(null);
     const search = useRef<HTMLInputElement>(null);
     const selectedModel = models.find((model) => model.id === value || model.model === value);
-    const sourceVendor: ModelVendor = !selectedModel || modelProvider(selectedModel.model, selectedModel.provider) === AI_PROVIDER.OPENAI ? "openai" : "other";
     const selectedLabel = selectedModel ? modelLabel(selectedModel.model) : placeholder;
-    const tabs: (ModelVendor | "favorites")[] = ["favorites", "openai", "other"];
+    const vendorTabs: ModelVendor[] = [AI_PROVIDER.OPENAI, AI_PROVIDER.ANTHROPIC, AI_PROVIDER.GOOGLE, AI_PROVIDER.XAI, AI_PROVIDER.DEEPSEEK, "other"];
+    const availableVendors = vendorTabs.filter((item) => models.some((model) => modelVendor(model.provider) === item));
+    const sourceVendor: ModelVendor = selectedModel ? modelVendor(selectedModel.provider) : availableVendors[0] ?? AI_PROVIDER.OPENAI;
+    const tabs: (ModelVendor | "favorites")[] = ["favorites", ...availableVendors];
     const normalizedQuery = query.toLocaleLowerCase();
     const matchesSelectedVendor = vendor === "favorites"
         ? (model: AvailableAiModel) => favorites.includes(model.id) || favorites.includes(model.model)
-        : (model: AvailableAiModel) => (modelProvider(model.model, model.provider) === AI_PROVIDER.OPENAI ? "openai" : "other") === vendor;
-    const visibleModels = models.filter((model) => modelLabel(model.model).toLocaleLowerCase().includes(normalizedQuery) && (normalizedQuery.length > 0 || (vendor === "openai" && !selectedModel) || matchesSelectedVendor(model)));
-    const vendorLabel = (item: ModelVendor | "favorites") => intl.formatMessage({ id: item === "favorites" ? "settings.favoriteModels" : `settings.modelVendor.${item}` });
+        : (model: AvailableAiModel) => modelVendor(model.provider) === vendor;
+    const visibleModels = models.filter((model) => modelLabel(model.model).toLocaleLowerCase().includes(normalizedQuery) && (normalizedQuery.length > 0 || (vendor === AI_PROVIDER.OPENAI && !selectedModel) || matchesSelectedVendor(model)));
+    const vendorLabel = (item: ModelVendor | "favorites") => intl.formatMessage({ id: item === "favorites" ? "settings.favoriteModels" : item === "other" ? "settings.modelVendor.other" : providerMessages[item] });
 
 
     function close() {
