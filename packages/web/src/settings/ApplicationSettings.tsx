@@ -24,10 +24,10 @@ function availableModels(value: unknown, connections: AiConnection[]): Available
 }
 
 
-export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused }: { client: EditorialWorkspaceClient; back: () => void; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
+export function ApplicationSettings({ client, back, initialSection = "general", onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused }: { client: EditorialWorkspaceClient; back: () => void; initialSection?: SettingsSection; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
     const intl = useIntl();
     const { notify, notifyError } = useNotifications();
-    const [section, setSection] = useState<SettingsSection>("general");
+    const [section, setSection] = useState<SettingsSection>(initialSection);
     const [settings, setSettings] = useState<ApplicationSettingsSnapshot>();
     const [general, setGeneral] = useState(defaultGeneralSettings);
     const [preferences, setPreferences] = useState<ModelPreferences>({ defaultModel: "", skillOverrides: {} });

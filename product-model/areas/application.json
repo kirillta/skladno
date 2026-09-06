@@ -96,8 +96,8 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/useWorkspaceLayout.ts"
             ],
-            "contract": "The desktop shell supports collapsed panels, responsive workspace layout, and locally dismissible workspace advisories.",
-            "persistence": "Workspace layout and advisory-dismissal preferences are persisted locally in browser storage.",
+            "contract": "The desktop shell supports collapsed panels, responsive workspace layout, and a prominent non-blocking warning with a direct AI Settings action whenever no active connected AI connection is available.",
+            "persistence": "Workspace layout and proposal-advisory dismissal preferences are persisted locally in browser storage; AI connection readiness is read from application settings.",
             "limitations": [
                 "Mobile and browser-offline modes remain deferred."
             ]
@@ -315,6 +315,19 @@
             "evidence": {
                 "kind": "automated",
                 "path": "packages/web/src/workspace/EditorialWorkspace.assistant.test.tsx"
+            }
+        },
+        {
+            "id": "application.ai-connection-onboarding-warning",
+            "title": "Missing AI connection is visible from the workspace",
+            "capabilityIds": ["application.desktop-responsive-shell", "application.workspace-and-settings-screens"],
+            "preconditions": ["No active connected AI connection is available."],
+            "event": "The author opens the Editorial Workspace or selects Add model key.",
+            "expected": ["A non-blocking warning explains that AI-assisted actions need a usable model key.", "Add model key opens the AI Settings section.", "The warning is absent when an active connected connection is available."],
+            "forbidden": ["Preventing Article editing or showing the warning for a usable active connection."],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
             }
         }
     ]

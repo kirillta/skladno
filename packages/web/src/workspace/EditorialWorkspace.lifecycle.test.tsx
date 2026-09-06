@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { defaultGeneralSettings } from "@skladno/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "../App.js";
@@ -161,6 +162,44 @@ describe("Editorial Workspace lifecycle", () => {
 
         expect(screen.getByRole("heading", { name: message("settings.general") })).toBeTruthy();
         expect(screen.getByText("Preferred appearance")).toBeTruthy();
+    });
+
+
+    // product: application.ai-connection-onboarding-warning
+    it("warns when no active connected AI connection is available and opens AI Settings", async () => {
+        const client = fakeClient();
+        const user = userEvent.setup();
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText(message("workspace.aiConnectionRequired"))).toBeTruthy();
+        expect(screen.getByText(message("workspace.aiConnectionCapabilities"))).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: "Add model key" }));
+
+        expect(await screen.findByRole("heading", { name: "Connections" })).toBeTruthy();
+    });
+
+
+    it.each([
+        { active: true, status: "connected" as const },
+        { active: true, status: "unavailable" as const },
+    ])("shows the AI connection warning only for an unusable connection state", async (connection) => {
+        const client = fakeClient();
+        client.getApplicationSettings = vi.fn().mockResolvedValue({
+            general: defaultGeneralSettings,
+            connections: [{ id: "connection", provider: "openai", label: "Personal AI", credentialSource: { kind: "environment-variable", environmentVariableName: "AI_API_KEY" }, ...connection }],
+            modelPreferences: { defaultModel: "", skillOverrides: {} },
+            backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } },
+            keyBindingOverrides: {},
+        });
+
+        render(<App client={client} />);
+        await screen.findByRole("heading", { name: "First Article" });
+
+        if (connection.status === "unavailable")
+            expect(await screen.findByText(message("workspace.aiConnectionRequired"))).toBeTruthy();
+        else
+            await waitFor(() => expect(screen.queryByText(message("workspace.aiConnectionRequired"))).toBeNull());
     });
 
 

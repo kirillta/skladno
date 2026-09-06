@@ -25,12 +25,24 @@ export { articleContentForWorkspace, sortArticlesByActivity };
 export type { ArticleWorkspaceState, ArticleRevisionsState, EditorialProposalState, StyleCorpusState, PublishingState, WorkspaceLayoutState, AssistantMessagesState };
 
 
-export function EditorialWorkspaceProvider({ client, screen, openSettings, backToWorkspace, dispatcher, keyBindingOverrides, onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused = () => undefined }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; openSettings: () => void; backToWorkspace: () => void; dispatcher: KeyBindingDispatcher; keyBindingOverrides: KeyBindingOverrides; onKeyBindingsUpdated: (overrides: KeyBindingOverrides) => void; onThemeApplied: (theme: import("@skladno/shared").ThemePreference) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
+export function EditorialWorkspaceProvider({ client, screen, settingsSection, openSettings, openModelSettings, backToWorkspace, dispatcher, keyBindingOverrides, onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused = () => undefined }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; settingsSection: import("../settings/settings-sections.js").SettingsSection; openSettings: () => void; openModelSettings: () => void; backToWorkspace: () => void; dispatcher: KeyBindingDispatcher; keyBindingOverrides: KeyBindingOverrides; onKeyBindingsUpdated: (overrides: KeyBindingOverrides) => void; onThemeApplied: (theme: import("@skladno/shared").ThemePreference) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const layout = useWorkspaceLayout();
     const workspace = useArticleWorkspace(client, layout.selectedArticleId, layout.setSelectedArticleId);
     const generalSettings = useWorkspaceGeneralSettings(client, screen);
+    const [hasUsableAiConnection, setHasUsableAiConnection] = useState<boolean>();
+    useEffect(() => {
+        let cancelled = false;
+        void client.getApplicationSettings().then((settings) => {
+            if (!cancelled)
+                setHasUsableAiConnection(settings.connections.some((connection) => connection.active !== false && connection.status === "connected"));
+        }).catch(() => undefined);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [client, screen]);
     const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
     const editorial = useEditorialProposal(client, workspace);
     const [profileRebuilt, setProfileRebuilt] = useState<{ articleId: string; count: number; token: number }>();
@@ -177,7 +189,7 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         </main>;
 
     if (screen === "application-settings")
-        return <ApplicationSettings client={client} back={backToWorkspace} onKeyBindingsUpdated={onKeyBindingsUpdated} onThemeApplied={onThemeApplied} focusUpdates={focusUpdates} onUpdatesFocused={onUpdatesFocused} />;
+        return <ApplicationSettings client={client} back={backToWorkspace} initialSection={settingsSection} onKeyBindingsUpdated={onKeyBindingsUpdated} onThemeApplied={onThemeApplied} focusUpdates={focusUpdates} onUpdatesFocused={onUpdatesFocused} />;
 
     return <WorkspaceScreen layout={layout}
         workspace={workspace}
@@ -193,6 +205,8 @@ export function EditorialWorkspaceProvider({ client, screen, openSettings, backT
         dispatcher={dispatcher}
         shortcutOverrides={keyBindingOverrides}
         openSettings={enterSettings}
+        hasUsableAiConnection={hasUsableAiConnection}
+        openModelSettings={openModelSettings}
         assistantSelection={assistantSelection}
         onSelectionChange={(snapshot: AssistantSelectionSnapshot | undefined) => {
             const version = ++assistantSelectionVersion.current;

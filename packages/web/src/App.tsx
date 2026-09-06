@@ -6,6 +6,7 @@ import { I18nProvider } from "./i18n/I18nProvider.js";
 import { NotificationProvider } from "./notifications/NotificationProvider.js";
 import { useKeyBindingDispatcher } from "./key-bindings/KeyBindingProvider.js";
 import { saveScheduledWebBackup } from "./settings/web-backups.js";
+import type { SettingsSection } from "./settings/settings-sections.js";
 import { desktopShellCommands, resolveTheme, type KeyBindingOverrides, type ResolvedTheme, type ThemePreference } from "@skladno/shared";
 
 const defaultClient = createRendererApplicationClient();
@@ -40,6 +41,7 @@ function useThemeAppearance(theme: ThemePreference): void {
 
 export function App({ client = defaultClient }: { client?: EditorialWorkspaceClient }) {
     const [screen, setScreen] = useState<"editorial-workspace" | "application-settings">("editorial-workspace");
+    const [settingsSection, setSettingsSection] = useState<SettingsSection>("general");
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>();
     const [theme, setTheme] = useState<ThemePreference>("system");
     const [focusUpdates, setFocusUpdates] = useState(false);
@@ -81,7 +83,15 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
         <NotificationProvider>
             <EditorialWorkspaceProvider client={client}
                 screen={screen}
-                openSettings={() => setScreen("application-settings")}
+                settingsSection={settingsSection}
+                openSettings={() => {
+                    setSettingsSection("general");
+                    setScreen("application-settings");
+                }}
+                openModelSettings={() => {
+                    setSettingsSection("ai");
+                    setScreen("application-settings");
+                }}
                 backToWorkspace={() => setScreen("editorial-workspace")}
                 dispatcher={dispatcher}
                 keyBindingOverrides={keyBindingOverrides ?? {}}
