@@ -31,6 +31,11 @@ function requestOptions(provider: AiProvider, apiKey: string): RequestInit {
 }
 
 
+function normalizeModelId(id: string, provider: AiProvider): string {
+    return provider === AI_PROVIDER.GOOGLE ? id.replace(/^models\//, "") : id;
+}
+
+
 function modelIds(body: unknown, provider: AiProvider): string[] {
     if (!body || typeof body !== "object")
         return [];
@@ -49,8 +54,7 @@ function modelIds(body: unknown, provider: AiProvider): string[] {
         if (typeof id !== "string" || !id.trim())
             return [];
 
-        // TODO: Google models have a prefix of "models/" in their IDs, which we need to remove *in a separagte function* for consistency with other providers.
-        return [provider === AI_PROVIDER.GOOGLE ? id.replace(/^models\//, "") : id];
+        return [normalizeModelId(id, provider)];
     });
 }
 
