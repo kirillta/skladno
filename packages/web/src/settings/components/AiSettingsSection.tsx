@@ -92,7 +92,7 @@ function ModelVendorIcon({ vendor }: { vendor: ModelVendor }) {
     if (vendor === "other")
         return <SettingsIcon className="size-4" />;
 
-    return <ProviderMark provider={vendor} className="size-4" />;
+    return <ProviderMark provider={vendor} className={vendor === AI_PROVIDER.OPENAI ? "size-6" : "size-4"} />;
 }
 
 
@@ -152,10 +152,12 @@ function ProviderMark({ provider, className, viaProvider }: { provider: AiProvid
 
 
 function ProviderIcon({ provider, viaProvider, className = "text-muted" }: { provider: AiProvider; viaProvider?: AiProvider; className?: string }) {
-    if (viaProvider === AI_PROVIDER.OPENCODE && provider !== AI_PROVIDER.OPENCODE)
-        return <span aria-hidden="true" className={`relative inline-grid size-5 shrink-0 place-items-center ${className}`}><ProviderMark provider={provider} className="size-4" /><ProviderMark provider={AI_PROVIDER.OPENCODE} viaProvider={viaProvider} className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-surface-raised p-px" /></span>;
+    const markSize = provider === AI_PROVIDER.OPENAI ? "size-6" : "size-4";
 
-    return <ProviderMark provider={provider} className={`size-4 shrink-0 ${className}`} />;
+    if (viaProvider === AI_PROVIDER.OPENCODE && provider !== AI_PROVIDER.OPENCODE)
+        return <span aria-hidden="true" className={`relative inline-grid size-5 shrink-0 place-items-center ${className}`}><ProviderMark provider={provider} className={markSize} /><ProviderMark provider={AI_PROVIDER.OPENCODE} viaProvider={viaProvider} className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-surface-raised p-px" /></span>;
+
+    return <ProviderMark provider={provider} className={`${markSize} shrink-0 ${className}`} />;
 }
 
 
