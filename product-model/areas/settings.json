@@ -77,12 +77,21 @@
         },
         {
             "id": "settings.preview-updates",
-            "area": "General",
+            "area": "About",
             "title": "Author-controlled unsigned Windows updates",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/web/src/workspace/components/ArticleLibraryPanel.tsx", "packages/electron/src/presentation/desktop-updates.ts"],
-            "contract": "General Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes automatic checks, a stable-only or prerelease-inclusive channel preference, explicit download, guarded restart, release notes, and recovery guidance. An available update appears in the Article Library utility area and opens Updates. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
+            "contract": "About Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes automatic checks, a stable-only or prerelease-inclusive channel preference, explicit download, guarded restart, release notes, and recovery guidance. An available update appears in the Article Library utility area and opens About Settings with Updates focused. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
             "persistence": "The desktop runtime file stores the network-permission, automatic-check, and prerelease-channel preferences plus non-content update recovery metadata."
+        },
+        {
+            "id": "settings.about",
+            "area": "About",
+            "title": "Repository and license",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/components/AboutSettingsSection.tsx"],
+            "contract": "About Settings provides compact external links to the GitHub source repository, issue tracker, and MIT License. It keeps these details read-only and opens links in the system browser.",
+            "persistence": "Static application metadata; no author data is stored."
         }
     ],
     "scenarios": [
@@ -171,7 +180,7 @@
             "title": "Update controls require author action",
             "capabilityIds": ["settings.preview-updates"],
             "preconditions": ["A packaged Windows release exposes an available update."],
-            "event": "The author opens General Settings, allows update network access, and checks for updates.",
+            "event": "The author opens About Settings, allows update network access, and checks for updates.",
             "expected": ["The network-permission, automatic-check, and prerelease-channel switches are accessible, a confirmation dialog precedes the persisted network permission, no discovery request occurs before consent, and Download appears only after explicit discovery."],
             "forbidden": ["A browser or development build exposes update controls, an update-discovery request occurs without consent, or a download starts automatically."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.general.test.tsx" }

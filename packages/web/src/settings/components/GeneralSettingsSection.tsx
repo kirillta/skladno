@@ -4,8 +4,6 @@ import { catalogByLocale, installedLocaleCatalogs } from "../../i18n/catalogs.js
 import { formatDate, formatDateTime, formatTime, formatTimeZoneLabel, systemTimeZone, timeZoneOptions } from "../../i18n/formatting.js";
 import { Select, Button } from "../../ui/primitives.js";
 import { SettingRow } from "./SettingRow.js";
-import { getDesktopSettingsClient, getDesktopUpdateClient } from "../../desktop-client.js";
-import { UpdatesSettingsGroup } from "./UpdatesSettingsGroup.js";
 
 
 function formatExample(general: GeneralSettings): string {
@@ -92,6 +90,5 @@ export function GeneralSettingsSection({ general, save, applyTheme }: { general:
                 </Select>
             </SettingRow>
         </section>
-        <UpdatesSettingsGroup client={getDesktopUpdateClient()} desktop={Boolean(getDesktopSettingsClient())} />
     </>;
 }

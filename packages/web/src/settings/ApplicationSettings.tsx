@@ -66,12 +66,18 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
         if (!focusUpdates)
             return;
 
-        setSection("general");
+        setSection("about");
+    }, [focusUpdates]);
+
+    useEffect(() => {
+        if (!focusUpdates || section !== "about" || !settings)
+            return;
+
         requestAnimationFrame(() => {
             document.getElementById("settings-updates")?.focus();
             onUpdatesFocused?.();
         });
-    }, [focusUpdates, onUpdatesFocused]);
+    }, [focusUpdates, onUpdatesFocused, section, settings]);
 
     useEffect(() => {
         if (section !== "ai" || !settings?.connections.some((connection) => connection.active !== false))

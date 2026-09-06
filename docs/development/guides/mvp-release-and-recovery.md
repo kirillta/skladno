@@ -55,7 +55,7 @@ The supported releases are the browser-based local-first MVP and the unsigned Wi
 
 ## Windows Electron preview
 
-The release target is Windows 11 x64. Stable releases and prereleases are unsigned, so Windows may show a SmartScreen warning. GitHub release updates are optional and author-controlled. Stable builds default to stable-only updates, preview builds default to including prereleases, and General Settings can change the channel. Signing remains in issue #168. Native backup folder selection, Explorer reveal, and manual snapshots use the restricted desktop Settings client.
+The release target is Windows 11 x64. Stable releases and prereleases are unsigned, so Windows may show a SmartScreen warning. GitHub release updates are optional and author-controlled. Stable builds default to stable-only updates, preview builds default to including prereleases, and About Settings can change the channel. Signing remains in issue #168. Native backup folder selection, Explorer reveal, and manual snapshots use the restricted desktop Settings client.
 
 Build the unpacked application with `npm run package:electron`, or build the Squirrel.Windows installer with `npm run make:electron`. Both commands build the existing React application first. The packaged renderer uses local IPC and does not require the loopback HTTP server.
 
@@ -80,7 +80,7 @@ Run this pass with a disposable `SKLADNO_DATA_DIR` and no private content:
 
 ### Preview update drill
 
-Create a public GitHub prerelease with the setup executable, `RELEASES`, and full `.nupkg`. Install an older preview into a disposable profile, create an Article, Draft, Revision, and Settings change, then use General Settings to allow update network access, check, explicitly download, and Restart and update. Confirm all data reopens and the update status becomes current.
+Create a public GitHub prerelease with the setup executable, `RELEASES`, and full `.nupkg`. Install an older preview into a disposable profile, create an Article, Draft, Revision, and Settings change, then use About Settings to allow update network access, check, explicitly download, and Restart and update. Confirm all data reopens and the update status becomes current.
 
 Exercise failed discovery, failed download, and failed snapshot paths. A failed checkpoint or snapshot must leave the existing preview open. For a failed upgraded startup, follow the public [update recovery guide](../../user/update-recovery.md): reinstall the previous preview and restore its matching pre-update snapshot. Record old and new versions, Windows architecture, pass/fail, recovery result, and remaining checks without private paths or Article content.
 
