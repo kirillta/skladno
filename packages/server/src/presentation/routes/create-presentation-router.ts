@@ -9,7 +9,7 @@ import { createAssistantRequestRoute, listAssistantMessagesRoute } from "./assis
 import { handleEditorialRoute } from "./editorial-route.js";
 import { handleHealthRoute } from "./health-route.js";
 import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publish-settings-route.js";
-import { handleActivateAiConnectionRoute, handleAiModelsRoute, handleBackupPolicyRoute, handleCreateAiConnectionRoute, handleCreateBackupRoute, handleDeleteAiConnectionRoute, handleGeneralSettingsRoute, handleKeyBindingsRoute, handleModelPreferencesRoute, handleSettingsSnapshotRoute, handleTestAiConnectionRoute, handleUpdateAiConnectionRoute } from "./settings-route.js";
+import { handleAiModelsRoute, handleBackupPolicyRoute, handleCreateAiConnectionRoute, handleCreateBackupRoute, handleDeleteAiConnectionRoute, handleGeneralSettingsRoute, handleKeyBindingsRoute, handleModelPreferencesRoute, handleSetAiConnectionActiveRoute, handleSettingsSnapshotRoute, handleTestAiConnectionRoute, handleUpdateAiConnectionRoute } from "./settings-route.js";
 import { addArticleRevisionStyleCorpusItemRoute, createStyleCorpusItemRoute, deleteStyleCorpusItemRoute, getArticleStyleRulesRoute, handleStyleCorpusRoute, rebuildStyleCorpusRoute, setArticleStyleRulesRoute, updateStyleCorpusItemRoute, updateStyleCorpusRulesRoute } from "./style-corpus-route.js";
 import { summarizeProposalRoute } from "./proposal-summary-route.js";
 import { listFactChecksRoute, resolveFactCheckRoute } from "./fact-check-route.js";
@@ -68,7 +68,7 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.PUT, keyBindingsPath, (request, response) => handleKeyBindingsRoute(request, response, settings));
     router.register(HTTP_METHOD.PUT, aiModelPreferencesPath, (request, response) => handleModelPreferencesRoute(request, response, settings));
     router.register(HTTP_METHOD.POST, aiConnectionsPath, (request, response) => handleCreateAiConnectionRoute(request, response, settings));
-    router.register(HTTP_METHOD.PUT, ACTIVE_AI_CONNECTION_PATH, (_request, response, parameters) => handleActivateAiConnectionRoute(response, parameters[0]!, settings));
+    router.register(HTTP_METHOD.PUT, ACTIVE_AI_CONNECTION_PATH, (request, response, parameters) => handleSetAiConnectionActiveRoute(request, response, parameters[0]!, settings));
     router.register(HTTP_METHOD.POST, TEST_AI_CONNECTION_PATH, (_request, response, parameters) => handleTestAiConnectionRoute(response, parameters[0]!, settings));
     router.register(HTTP_METHOD.PUT, AI_CONNECTION_PATH, (request, response, parameters) => handleUpdateAiConnectionRoute(request, response, parameters[0]!, settings));
     router.register(HTTP_METHOD.DELETE, AI_CONNECTION_PATH, (_request, response, parameters) => handleDeleteAiConnectionRoute(response, parameters[0]!, settings));

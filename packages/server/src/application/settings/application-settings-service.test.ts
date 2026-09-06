@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { aiModelPreferenceId, type AiConnection } from "@skladno/shared";
+
 import { ApplicationSettingsService } from "./application-settings-service.js";
 
 
-function service(records: Map<string, unknown>) {
+function service(records: Map<string, unknown>, list: (connection: AiConnection) => Promise<string[]> = async () => []) {
     return new ApplicationSettingsService(
         {
             get: (key) => records.has(key) ? { key, value: records.get(key), updatedAt: "now" } : undefined,
@@ -14,7 +16,7 @@ function service(records: Map<string, unknown>) {
             },
         },
         { read: async () => ({}) },
-        { list: async () => [] },
+        { list },
         () => "new-connection",
     );
 }
@@ -32,7 +34,7 @@ test("allows more than one connection to use the same environment-variable key",
 });
 
 
-test("migrates legacy model preferences to the active connection and keeps later connections isolated", async () => {
+test("migrates legacy model preferences to a connection-bound selection", async () => {
     const records = new Map<string, unknown>([
         ["application-ai-connections", {
             connections: [
@@ -45,12 +47,21 @@ test("migrates legacy model preferences to the active connection and keeps later
     ]);
     const settings = service(records);
 
-    assert.equal((await settings.getSnapshot()).modelPreferences.defaultModel, "gpt-5.6");
-    settings.activateAiConnection("anthropic");
-    settings.updateModelPreferences({ defaultModel: "claude-sonnet", skillOverrides: {} });
-    settings.activateAiConnection("openai");
+    assert.equal((await settings.getSnapshot()).modelPreferences.defaultModel, aiModelPreferenceId("openai", "gpt-5.6"));
+    assert.deepEqual(records.get("application-model-preferences"), { defaultModel: aiModelPreferenceId("openai", "gpt-5.6"), skillOverrides: { talking_points: aiModelPreferenceId("openai", "gpt-5.6-mini") } });
+});
 
-    assert.equal((await settings.getSnapshot()).modelPreferences.defaultModel, "gpt-5.6");
-    settings.activateAiConnection("anthropic");
-    assert.equal((await settings.getSnapshot()).modelPreferences.defaultModel, "claude-sonnet");
+
+test("returns models from every active connection and preserves their route", async () => {
+    const records = new Map<string, unknown>([["application-ai-connections", { connections: [
+        { id: "openai", provider: "openai", label: "OpenAI", credentialSource: { kind: "environment-variable", environmentVariableName: "OPENAI_API_KEY" }, active: true, status: "connected" },
+        { id: "zen", provider: "opencode", label: "OpenCode Zen", credentialSource: { kind: "environment-variable", environmentVariableName: "OPENCODE_API_KEY" }, active: true, status: "connected" },
+        { id: "paused", provider: "anthropic", label: "Anthropic", credentialSource: { kind: "environment-variable", environmentVariableName: "ANTHROPIC_API_KEY" }, active: false, status: "connected" },
+    ] }]]);
+    const settings = service(records, async (connection: AiConnection) => connection.id === "openai" ? ["gpt-5.6"] : ["claude-sonnet"]);
+
+    assert.deepEqual(await settings.listAiModels(), [
+        { id: aiModelPreferenceId("openai", "gpt-5.6"), model: "gpt-5.6", connectionId: "openai", provider: "openai" },
+        { id: aiModelPreferenceId("zen", "claude-sonnet"), model: "claude-sonnet", connectionId: "zen", provider: "opencode" },
+    ]);
 });

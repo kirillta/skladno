@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { DesktopSettingsClient } from "@skladno/shared";
+import { aiModelPreferenceId, type DesktopSettingsClient } from "@skladno/shared";
 
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { messages } from "../i18n/messages.js";
@@ -109,7 +109,9 @@ describe("ApplicationSettings AI", () => {
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
         expect(screen.queryByPlaceholderText("Paste your API key")).toBeNull();
         expect(screen.queryByPlaceholderText("For example, AI_API_KEY")).toBeNull();
+        expect(screen.queryByRole("combobox", { name: message("settings.provider") })).toBeNull();
         await user.click(screen.getByRole("button", { name: message("settings.apiKey") }));
+        expect(screen.getByRole("combobox", { name: message("settings.provider") })).toBeTruthy();
         await user.type(screen.getByPlaceholderText("For example, Personal AI"), "Personal AI");
         await user.type(screen.getByPlaceholderText("Paste your API key"), "<REDACTED>");
         await user.click(screen.getByRole("button", { name: message("settings.addApiKeyButton") }));
@@ -290,7 +292,7 @@ describe("ApplicationSettings AI", () => {
         await user.type(search, "mini");
         await user.click(within(listbox).getByRole("button", { name: message("settings.addFavoriteModel", { model: "GPT-5 mini" }) }));
 
-        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ favoriteModels: ["gpt-5-mini"] })));
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ favoriteModels: [aiModelPreferenceId("connection-1", "gpt-5-mini")] })));
         const favoritesTab = within(modelPicker).getByRole("tab", { name: message("settings.favoriteModels") });
         await user.click(favoritesTab);
         expect(favoritesTab.getAttribute("aria-selected")).toBe("true");

@@ -6,7 +6,7 @@ import type { ArticleRevision, SaveArticleRevisionInput } from "../articles/revi
 import type { HealthResponse } from "./health.js";
 import type { ApplicationErrorPayload } from "../cross-cutting/errors.js";
 import type { EditorialEvent, FactCheck, FactCheckFinding, StartEditorialRequest } from "../editorial/editorial.js";
-import type { AiConnection, AiProvider, ApplicationSettingsSnapshot, BackupPolicy, GeneralSettings, ModelPreferences } from "../settings/settings.js";
+import type { AiConnection, AiProvider, ApplicationSettingsSnapshot, AvailableAiModel, BackupPolicy, GeneralSettings, ModelPreferences } from "../settings/settings.js";
 import type { KeyBindingOverrides } from "../cross-cutting/key-bindings.js";
 import type { CreateStyleCorpusItemInput, StyleCorpus } from "../style/style.js";
 import type { PublishingSettings } from "../publishing/publishing.js";
@@ -30,9 +30,9 @@ export interface ElectronApplicationOperationMap {
     addAiConnection: { args: [{ provider: AiProvider; label: string; environmentVariableName: string }]; result: AiConnection };
     updateAiConnection: { args: [string, { label: string; environmentVariableName: string }]; result: AiConnection };
     removeAiConnection: { args: [string]; result: void };
-    setActiveAiConnection: { args: [string]; result: void };
+    setAiConnectionActive: { args: [string, boolean]; result: AiConnection };
     testAiConnection: { args: [string]; result: AiConnection };
-    refreshAiModels: { args: []; result: string[] };
+    refreshAiModels: { args: []; result: AvailableAiModel[] };
     updateModelPreferences: { args: [ModelPreferences]; result: ModelPreferences };
     listArticles: { args: []; result: Article[] };
     createArticle: { args: [CreateArticleInput]; result: Article };
@@ -73,7 +73,7 @@ export const ELECTRON_APPLICATION_METHOD = {
     addAiConnection: "addAiConnection",
     updateAiConnection: "updateAiConnection",
     removeAiConnection: "removeAiConnection",
-    setActiveAiConnection: "setActiveAiConnection",
+    setAiConnectionActive: "setAiConnectionActive",
     testAiConnection: "testAiConnection",
     refreshAiModels: "refreshAiModels",
     updateModelPreferences: "updateModelPreferences",

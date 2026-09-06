@@ -1,4 +1,4 @@
-import { AI_PROVIDER, resolveBuiltInSkillId, type AiConnection, type AiProvider, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
+import { AI_PROVIDER, parseAiModelPreferenceId, resolveBuiltInSkillId, type AiConnection, type AiProvider, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
 
 import type { EditorialEngineResolver } from "../../application/ports/editorial-engine-resolver.js";
 import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
@@ -44,12 +44,13 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     resolve(operation: EditorialOperation, assistantSkillId?: BuiltInSkillId): EditorialEngine | undefined {
-        const connection = this.resolveConnection();
+        const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
+        const preferences = this.resolvePreferences();
+        const connection = this.resolveModel((skillId ? preferences.skillOverrides[skillId] : undefined) || preferences.defaultModel || this.config.aiModel);
         if (!connection)
             return undefined;
 
-        const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
-        const model = (skillId ? connection.preferences.skillOverrides[skillId] : undefined) || connection.preferences.defaultModel || this.config.aiModel;
+        const model = connection.model;
         const reasoningEffort = skillId ? connection.preferences.skillReasoningEfforts?.[skillId] : connection.preferences.reasoningEffort;
         if (!supportsEditorialOperation(connection.provider, model, operation))
             return undefined;
@@ -83,35 +84,53 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     private resolveTextGenerationConnection(): (ResolvedConnection & { model: string; reasoningEffort?: ReasoningEffort }) | undefined {
-        const connection = this.resolveConnection();
+        const preferences = this.resolvePreferences();
+        const connection = this.resolveModel(resolveTextGenerationModel(preferences, this.config.aiModel));
         if (!connection)
             return undefined;
 
-        return { ...connection, ...resolveTextGenerationConfiguration(connection.preferences, this.config.aiModel) };
+        return { ...connection, model: connection.model, ...(preferences.textGenerationReasoningEffort ? { reasoningEffort: preferences.textGenerationReasoningEffort } : {}) };
     }
 
 
-    private resolveConnection(): ResolvedConnection | undefined {
+    private resolvePreferences(): ModelPreferences {
         const saved = this.settings.get("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
-        const active = saved?.connections?.find((connection) => connection.id === saved.activeConnectionId);
-        const apiKey = active ? this.connectionApiKey(active) : this.config.aiApiKey;
-        if (!apiKey)
-            return undefined;
-
         const rawPreferences = this.settings.get("application-model-preferences")?.value;
         const byConnection = rawPreferences && typeof rawPreferences === "object" && !Array.isArray(rawPreferences)
             ? (rawPreferences as { byConnection?: unknown }).byConnection
             : undefined;
-        const preferences = active && byConnection && typeof byConnection === "object" && !Array.isArray(byConnection)
-            ? (byConnection as Record<string, ModelPreferences>)[active.id] ?? { defaultModel: "", skillOverrides: {} }
+        const preferences = saved?.activeConnectionId && byConnection && typeof byConnection === "object" && !Array.isArray(byConnection)
+            ? (byConnection as Record<string, ModelPreferences>)[saved.activeConnectionId] ?? { defaultModel: "", skillOverrides: {} }
             : rawPreferences as Partial<ModelPreferences> | undefined;
 
-        return {
-            apiKey,
-            provider: active?.provider ?? AI_PROVIDER.OPENAI,
-            connectionId: active?.id ?? "environment",
-            preferences: { defaultModel: "", skillOverrides: {}, ...preferences },
-        };
+        return { defaultModel: "", skillOverrides: {}, ...preferences };
+    }
+
+
+    private resolveModel(preference: string): (ResolvedConnection & { model: string }) | undefined {
+        const saved = this.settings.get("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
+        const selected = parseAiModelPreferenceId(preference);
+        if (!selected) {
+            const legacyConnection = saved?.connections?.find((item) => item.id === saved.activeConnectionId && item.active !== false);
+            const apiKey = legacyConnection ? this.connectionApiKey(legacyConnection) : this.config.aiApiKey;
+            if (!apiKey)
+                return undefined;
+
+            return {
+                apiKey,
+                provider: legacyConnection?.provider ?? AI_PROVIDER.OPENAI,
+                connectionId: legacyConnection?.id ?? "environment",
+                preferences: this.resolvePreferences(),
+                model: preference || this.config.aiModel
+            };
+        }
+
+        const connection = saved?.connections?.find((item) => item.id === selected.connectionId && item.active !== false);
+        const apiKey = connection ? this.connectionApiKey(connection) : undefined;
+        if (!connection || !apiKey)
+            return undefined;
+
+        return { apiKey, provider: connection.provider, connectionId: connection.id, preferences: this.resolvePreferences(), model: selected.model };
     }
 
 

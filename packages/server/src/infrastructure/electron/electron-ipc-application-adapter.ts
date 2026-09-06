@@ -106,8 +106,8 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
             return services.settings.updateAiConnection(String(args[0]), args[1] as { label?: unknown; environmentVariableName?: unknown });
         case ELECTRON_APPLICATION_METHOD.removeAiConnection:
             return services.settings.deleteAiConnection(String(args[0]));
-        case ELECTRON_APPLICATION_METHOD.setActiveAiConnection:
-            return services.settings.activateAiConnection(String(args[0]));
+        case ELECTRON_APPLICATION_METHOD.setAiConnectionActive:
+            return services.settings.setAiConnectionActive(String(args[0]), args[1] === true);
         case ELECTRON_APPLICATION_METHOD.testAiConnection:
             return services.settings.testAiConnection(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.refreshAiModels:

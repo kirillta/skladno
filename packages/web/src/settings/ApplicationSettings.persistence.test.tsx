@@ -148,13 +148,13 @@ describe("ApplicationSettings persistence", () => {
         const firstConnection = { id: "connection-1", provider: "openai" as const, label: "Personal AI", environmentVariableName: "AI_API_KEY", status: "unchecked" as const };
         const secondConnection = { id: "connection-2", provider: "openai" as const, label: "Work AI", environmentVariableName: "WORK_AI_API_KEY", status: "unchecked" as const };
         const thirdConnection = { id: "connection-3", provider: "openai" as const, label: "Another AI", credentialSource: { kind: "environment-variable" as const, environmentVariableName: "AI_API_KEY" }, status: "unchecked" as const };
-        const setActiveAiConnection = vi.fn().mockResolvedValue(undefined);
+        const setAiConnectionActive = vi.fn().mockResolvedValue({ ...secondConnection, active: false });
         const removeAiConnection = vi.fn().mockResolvedValue(undefined);
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [firstConnection, secondConnection], activeConnectionId: firstConnection.id }),
             getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
             addAiConnection: vi.fn().mockResolvedValue(thirdConnection),
-            setActiveAiConnection,
+            setAiConnectionActive,
             removeAiConnection,
             refreshAiModels: vi.fn().mockResolvedValue([]),
         } as unknown as EditorialWorkspaceClient;
@@ -169,11 +169,10 @@ describe("ApplicationSettings persistence", () => {
 
         await waitFor(() => expect(client.addAiConnection).toHaveBeenCalledWith({ provider: "openai", label: thirdConnection.label, environmentVariableName: "AI_API_KEY" }));
         expect(screen.queryByRole("alert")).toBeNull();
-        expect(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })).toHaveLength(2);
+        expect(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })).toHaveLength(3);
 
-        await user.click(screen.getAllByRole("button", { name: message("settings.useConnectionShort") })[0]!);
-        await waitFor(() => expect(setActiveAiConnection).toHaveBeenCalledWith(secondConnection.id));
-        await waitFor(() => expect(client.refreshAiModels).toHaveBeenCalledTimes(2));
+        await user.click(screen.getAllByRole("button", { name: message("settings.deactivateConnectionShort") })[1]!);
+        await waitFor(() => expect(setAiConnectionActive).toHaveBeenCalledWith(secondConnection.id, false));
 
         await user.click(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })[0]!);
         const dialog = screen.getByRole("dialog");

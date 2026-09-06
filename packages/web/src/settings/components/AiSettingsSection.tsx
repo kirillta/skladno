@@ -1,4 +1,4 @@
-import { AI_PROVIDER, builtInSkills, isAiProvider, type AiConnection, type AiProvider, type ApplicationSettingsSnapshot, type BuiltInSkillId, type ModelPreferences } from "@skladno/shared";
+import { AI_PROVIDER, builtInSkills, isAiProvider, type AiConnection, type AiProvider, type ApplicationSettingsSnapshot, type AvailableAiModel, type BuiltInSkillId, type ModelPreferences } from "@skladno/shared";
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Banner, Button, Field, IconButton, Select } from "../../ui/primitives.js";
@@ -151,20 +151,23 @@ function ProviderIcon({ provider, viaProvider, className = "text-muted" }: { pro
 }
 
 
-function ModelSelect({ value, models, favorites, sourceProvider, placeholder, allowEmpty = false, disabled, label, "aria-describedby": describedBy, onChange, onFavoritesChange }: { value: string; models: string[]; favorites: string[]; sourceProvider: AiProvider; placeholder: string; allowEmpty?: boolean; disabled?: boolean; label: string; "aria-describedby"?: string; onChange: (value: string) => void; onFavoritesChange: (favorites: string[]) => void }) {
+function ModelSelect({ value, models, favorites, placeholder, allowEmpty = false, disabled, label, "aria-describedby": describedBy, onChange, onFavoritesChange }: { value: string; models: AvailableAiModel[]; favorites: string[]; placeholder: string; allowEmpty?: boolean; disabled?: boolean; label: string; "aria-describedby"?: string; onChange: (value: string) => void; onFavoritesChange: (favorites: string[]) => void }) {
     const intl = useIntl();
     const [query, setQuery] = useState("");
-    const sourceVendor: ModelVendor = sourceProvider === AI_PROVIDER.OPENAI ? "openai" : "other";
-    const [vendor, setVendor] = useState<ModelVendor | "favorites">(sourceVendor);
+    const [vendor, setVendor] = useState<ModelVendor | "favorites">("openai");
     const [open, setOpen] = useState(false);
     const [opensUpward, setOpensUpward] = useState(false);
     const select = useRef<HTMLDetailsElement>(null);
     const search = useRef<HTMLInputElement>(null);
-    const selectedLabel = value ? modelLabel(value) : placeholder;
+    const selectedModel = models.find((model) => model.id === value || model.model === value);
+    const sourceVendor: ModelVendor = !selectedModel || modelProvider(selectedModel.model, selectedModel.provider) === AI_PROVIDER.OPENAI ? "openai" : "other";
+    const selectedLabel = selectedModel ? modelLabel(selectedModel.model) : placeholder;
     const tabs: (ModelVendor | "favorites")[] = ["favorites", "openai", "other"];
     const normalizedQuery = query.toLocaleLowerCase();
-    const matchesSelectedVendor = vendor === "favorites" ? (model: string) => favorites.includes(model) : () => vendor === sourceVendor;
-    const visibleModels = models.filter((model) => modelLabel(model).toLocaleLowerCase().includes(normalizedQuery) && (normalizedQuery.length > 0 || matchesSelectedVendor(model)));
+    const matchesSelectedVendor = vendor === "favorites"
+        ? (model: AvailableAiModel) => favorites.includes(model.id) || favorites.includes(model.model)
+        : (model: AvailableAiModel) => (modelProvider(model.model, model.provider) === AI_PROVIDER.OPENAI ? "openai" : "other") === vendor;
+    const visibleModels = models.filter((model) => modelLabel(model.model).toLocaleLowerCase().includes(normalizedQuery) && (normalizedQuery.length > 0 || (vendor === "openai" && !selectedModel) || matchesSelectedVendor(model)));
     const vendorLabel = (item: ModelVendor | "favorites") => intl.formatMessage({ id: item === "favorites" ? "settings.favoriteModels" : `settings.modelVendor.${item}` });
 
 
@@ -191,7 +194,7 @@ function ModelSelect({ value, models, favorites, sourceProvider, placeholder, al
     }, [sourceVendor]);
 
     if (disabled)
-        return <div aria-label={label} aria-describedby={describedBy} aria-disabled="true" className="flex min-h-10 w-full items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink opacity-55"><ProviderIcon provider={modelProvider(value, sourceProvider)} viaProvider={sourceProvider} /><span className="truncate">{selectedLabel}</span><ChevronDownIcon className="absolute right-3 size-4 text-muted" /></div>;
+        return <div aria-label={label} aria-describedby={describedBy} aria-disabled="true" className="flex min-h-10 w-full items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink opacity-55">{selectedModel && <ProviderIcon provider={modelProvider(selectedModel.model, selectedModel.provider)} viaProvider={selectedModel.provider} />}<span className="truncate">{selectedLabel}</span><ChevronDownIcon className="absolute right-3 size-4 text-muted" /></div>;
 
     return <details ref={select} open={open} className="group relative" onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -204,7 +207,7 @@ function ModelSelect({ value, models, favorites, sourceProvider, placeholder, al
             setOpensUpward(window.innerHeight - event.currentTarget.getBoundingClientRect().bottom < 272);
             setOpen(!open);
         }}>
-            <ProviderIcon provider={modelProvider(value, sourceProvider)} viaProvider={sourceProvider} />
+            {selectedModel && <ProviderIcon provider={modelProvider(selectedModel.model, selectedModel.provider)} viaProvider={selectedModel.provider} />}
             <span className="truncate">{selectedLabel}</span>
             <ChevronDownIcon className="absolute right-3 size-4 text-muted transition-transform group-open:rotate-180" />
         </summary>
@@ -226,10 +229,10 @@ function ModelSelect({ value, models, favorites, sourceProvider, placeholder, al
                         onChange("");
                         close();
                     }}>{placeholder}</button>}
-                    {visibleModels.map((model) => <div key={model} className="flex items-center gap-1"><button type="button" role="option" aria-selected={model === value} className="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-control px-2 text-left text-sm hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={() => {
-                        onChange(model);
+                    {visibleModels.map((model) => <div key={model.id} className="flex items-center gap-1"><button type="button" role="option" aria-selected={model.id === value || model.model === value} className="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-control px-2 text-left text-sm hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={() => {
+                        onChange(model.id);
                         close();
-                    }}><ProviderIcon provider={modelProvider(model, sourceProvider)} viaProvider={sourceProvider} /><span className="truncate">{modelLabel(model)}</span></button><IconButton label={intl.formatMessage({ id: favorites.includes(model) ? "settings.removeFavoriteModel" : "settings.addFavoriteModel" }, { model: modelLabel(model) })} aria-pressed={favorites.includes(model)} className={favorites.includes(model) ? "text-brand" : undefined} onClick={() => onFavoritesChange(favorites.includes(model) ? favorites.filter((favorite) => favorite !== model) : [...favorites, model])}><StarIcon className={favorites.includes(model) ? "size-4 fill-current" : "size-4"} /></IconButton></div>)}
+                    }}><ProviderIcon provider={modelProvider(model.model, model.provider)} viaProvider={model.provider} /><span className="truncate">{modelLabel(model.model)}</span></button><IconButton label={intl.formatMessage({ id: (favorites.includes(model.id) || favorites.includes(model.model)) ? "settings.removeFavoriteModel" : "settings.addFavoriteModel" }, { model: modelLabel(model.model) })} aria-pressed={favorites.includes(model.id) || favorites.includes(model.model)} className={favorites.includes(model.id) || favorites.includes(model.model) ? "text-brand" : undefined} onClick={() => onFavoritesChange((favorites.includes(model.id) || favorites.includes(model.model)) ? favorites.filter((favorite) => favorite !== model.id && favorite !== model.model) : [...favorites, model.id])}><StarIcon className={favorites.includes(model.id) || favorites.includes(model.model) ? "size-4 fill-current" : "size-4"} /></IconButton></div>)}
                     {visibleModels.length === 0 && <p className="px-2 py-3 text-sm text-muted" role="status">{intl.formatMessage({ id: "settings.noMatchingModels" })}</p>}
                 </div>
             </div>
@@ -238,10 +241,10 @@ function ModelSelect({ value, models, favorites, sourceProvider, placeholder, al
 }
 
 
-export function AiSettingsSection({ settings, preferences, models, connectionProvider, connectionName, environmentName, managedConnectionName, apiKey, connectionError, setConnectionProvider, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, onAddConnection, onAddManagedConnection, onSetActiveConnection, onRequestConnectionRename, canRenameManagedConnection, onRequestConnectionRemoval, onRefreshModels, savePreferences }: {
+export function AiSettingsSection({ settings, preferences, models, connectionProvider, connectionName, environmentName, managedConnectionName, apiKey, connectionError, setConnectionProvider, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, onAddConnection, onAddManagedConnection, onSetConnectionActive, onRequestConnectionRename, canRenameManagedConnection, onRequestConnectionRemoval, onRefreshModels, savePreferences }: {
     settings: ApplicationSettingsSnapshot;
     preferences: ModelPreferences;
-    models: string[];
+    models: AvailableAiModel[];
     connectionProvider: AiProvider;
     connectionName: string;
     environmentName: string;
@@ -255,7 +258,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
     setApiKey: (value: string) => void;
     onAddConnection: () => void;
     onAddManagedConnection?: () => void;
-    onSetActiveConnection: (connectionId: string) => void;
+    onSetConnectionActive: (connectionId: string, active: boolean) => void;
     onRequestConnectionRename?: (connection: AiConnection) => void;
     canRenameManagedConnection: boolean;
     onRequestConnectionRemoval: (connection: AiConnection) => void;
@@ -266,9 +269,19 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
     const [specificModelsOpen, setSpecificModelsOpen] = useState(false);
     const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod | undefined>(onAddManagedConnection ? undefined : "environment-variable");
     const specificModelsContent = useRef<HTMLDivElement>(null);
-    const activeConnection = settings.connections.find((connection) => connection.id === settings.activeConnectionId);
-    const sourceProvider = activeConnection?.provider ?? AI_PROVIDER.OPENCODE;
     const providerLabel = (provider: AiProvider) => intl.formatMessage({ id: providerMessages[provider] });
+    const selectedProvider = (model: string) => model ? models.find((item) => item.id === model || item.model === model)?.provider ?? settings.connections.find((connection) => connection.active !== false)?.provider : undefined;
+    const providerControl = <>
+        <Control label={intl.formatMessage({ id: "settings.provider" })} hint={intl.formatMessage({ id: "settings.providerHint" })}>
+            <Select aria-label={intl.formatMessage({ id: "settings.provider" })} value={connectionProvider} onChange={(event) => {
+                if (isAiProvider(event.target.value))
+                    setConnectionProvider(event.target.value);
+            }}>
+                {Object.values(AI_PROVIDER).map((provider) => <option key={provider} value={provider}>{providerLabel(provider)}</option>)}
+            </Select>
+        </Control>
+        <p className="mt-3 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.providerLimitations" })}</p>
+    </>;
 
 
     function toggleSpecificModels() {
@@ -293,14 +306,14 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                             <p className="text-sm font-medium">{connection.label}</p>
-                            {connection.id === settings.activeConnectionId && <p className="inline-flex min-h-8 items-center rounded-control border border-brand bg-brand-soft px-2 py-1 text-xs font-semibold text-brand" role="status">{intl.formatMessage({ id: "settings.activeConnectionShort" })}</p>}
+                            {connection.active !== false && <p className="inline-flex min-h-8 items-center rounded-control border border-brand bg-brand-soft px-2 py-1 text-xs font-semibold text-brand" role="status">{intl.formatMessage({ id: "settings.activeConnectionShort" })}</p>}
                         </div>
                         <p className="mt-1 truncate text-xs text-muted">{providerLabel(connection.provider)}</p>
                         <p className="truncate text-xs text-muted">{credentialSourceLabel(connection, intl.formatMessage({ id: "settings.managedCredential" }))}</p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
                         {onRequestConnectionRename && (credentialSource(connection).kind !== "managed" || canRenameManagedConnection) && <Button className="!px-2" variant="quiet" onClick={() => onRequestConnectionRename(connection)}>{intl.formatMessage({ id: "settings.renameConnectionShort" })}</Button>}
-                        {connection.id !== settings.activeConnectionId && <><Button className="!px-2" variant="quiet" onClick={() => onSetActiveConnection(connection.id)}>{intl.formatMessage({ id: "settings.useConnectionShort" })}</Button><Button className="!px-2" variant="danger" onClick={() => onRequestConnectionRemoval(connection)}>{intl.formatMessage({ id: "settings.removeConnectionShort" })}</Button></>}
+                        <Button className="!px-2" variant="quiet" onClick={() => onSetConnectionActive(connection.id, connection.active === false)}>{intl.formatMessage({ id: connection.active === false ? "settings.activateConnectionShort" : "settings.deactivateConnectionShort" })}</Button><Button className="!px-2" variant="danger" onClick={() => onRequestConnectionRemoval(connection)}>{intl.formatMessage({ id: "settings.removeConnectionShort" })}</Button>
                     </div>
                 </div>)}</div>
             </div>}
@@ -312,23 +325,13 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
                     <Button variant={connectionMethod === "environment-variable" ? "secondary" : "quiet"} aria-pressed={connectionMethod === "environment-variable"} onClick={() => setConnectionMethod("environment-variable")}>{intl.formatMessage({ id: "settings.environmentVariable" })}</Button>
                 </div>
             </div>}
-            <div className="mt-6">
-                <Control label={intl.formatMessage({ id: "settings.provider" })} hint={intl.formatMessage({ id: "settings.providerHint" })}>
-                    <Select aria-label={intl.formatMessage({ id: "settings.provider" })} value={connectionProvider} onChange={(event) => {
-                        if (isAiProvider(event.target.value))
-                            setConnectionProvider(event.target.value);
-                    }}>
-                        {Object.values(AI_PROVIDER).map((provider) => <option key={provider} value={provider}>{providerLabel(provider)}</option>)}
-                    </Select>
-                </Control>
-                <p className="mt-3 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.providerLimitations" })}</p>
-            </div>
             {connectionMethod === "managed" && <div className="mt-6 mb-8">
                 <div>
                     <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "settings.addApiKey" })}</h3>
                     <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.addApiKeyHint" })}</p>
                 </div>
                 <div className="mt-4 border-l border-border-strong pl-4">
+                    <div className="mb-4">{providerControl}</div>
                     <div className="grid gap-4">
                         <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
                             <Field type="text" value={managedConnectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setManagedConnectionName(event.target.value)} />
@@ -348,6 +351,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
                     <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.connectionHint" })}</p>
                 </div>
                 <div className="mt-4 border-l border-border-strong pl-4">
+                    <div className="mb-4">{providerControl}</div>
                     <div className="grid gap-4">
                         <Control label={intl.formatMessage({ id: "settings.connectionName" })} hint={intl.formatMessage({ id: "settings.connectionNameHint" })}>
                             <Field type="text" readOnly={false} value={connectionName} placeholder={intl.formatMessage({ id: "settings.connectionNamePlaceholder" })} onChange={(event) => setConnectionName(event.target.value)} onPaste={(event) => {
@@ -380,11 +384,11 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
         <div className="pt-8">
             <SettingsGroup label={intl.formatMessage({ id: "settings.models" })}>
                 <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}>
-                    <ModelAndReasoning model={{ value: preferences.defaultModel, models, favorites: preferences.favoriteModels ?? [], sourceProvider, disabled: models.length === 0, label: intl.formatMessage({ id: "settings.model" }), placeholder: models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" }), onChange: (defaultModel) => void savePreferences({ ...preferences, defaultModel }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.reasoningEffort} onEffortChange={sourceProvider === AI_PROVIDER.OPENAI && preferences.defaultModel ? (reasoningEffort) => void savePreferences({ ...preferences, reasoningEffort }) : undefined} />
+                    <ModelAndReasoning model={{ value: preferences.defaultModel, models, favorites: preferences.favoriteModels ?? [], disabled: models.length === 0, label: intl.formatMessage({ id: "settings.model" }), placeholder: models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" }), onChange: (defaultModel) => void savePreferences({ ...preferences, defaultModel }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.reasoningEffort} onEffortChange={selectedProvider(preferences.defaultModel) === AI_PROVIDER.OPENAI ? (reasoningEffort) => void savePreferences({ ...preferences, reasoningEffort }) : undefined} />
                     <Button className="mt-3 w-fit" variant="secondary" onClick={onRefreshModels}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button>
                 </SettingRow>
                 <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.textGenerationModel" })} hint={intl.formatMessage({ id: "settings.textGenerationModelHint" })}>
-                    <ModelAndReasoning model={{ value: preferences.textGenerationModel ?? "", models, favorites: preferences.favoriteModels ?? [], sourceProvider, allowEmpty: true, disabled: models.length === 0, label: intl.formatMessage({ id: "settings.textGenerationModel" }), placeholder: intl.formatMessage({ id: "settings.useDefaultModel" }), onChange: (textGenerationModel) => void savePreferences({ ...preferences, textGenerationModel: textGenerationModel || undefined }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.textGenerationReasoningEffort} onEffortChange={sourceProvider === AI_PROVIDER.OPENAI && preferences.textGenerationModel ? (textGenerationReasoningEffort) => void savePreferences({ ...preferences, textGenerationReasoningEffort }) : undefined} />
+                    <ModelAndReasoning model={{ value: preferences.textGenerationModel ?? "", models, favorites: preferences.favoriteModels ?? [], allowEmpty: true, disabled: models.length === 0, label: intl.formatMessage({ id: "settings.textGenerationModel" }), placeholder: intl.formatMessage({ id: "settings.useDefaultModel" }), onChange: (textGenerationModel) => void savePreferences({ ...preferences, textGenerationModel: textGenerationModel || undefined }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.textGenerationReasoningEffort} onEffortChange={selectedProvider(preferences.textGenerationModel ?? "") === AI_PROVIDER.OPENAI ? (textGenerationReasoningEffort) => void savePreferences({ ...preferences, textGenerationReasoningEffort }) : undefined} />
                 </SettingRow>
                 <div className="mt-8">
                     <button type="button" aria-expanded={specificModelsOpen} aria-controls="specific-model-overrides" className="group flex min-h-9 w-full items-center gap-2 text-left text-sm font-semibold hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={toggleSpecificModels}>
@@ -395,7 +399,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
                     <div ref={specificModelsContent} id="specific-model-overrides" aria-hidden={!specificModelsOpen} className={`grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${specificModelsOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                         <div className={`min-h-0 ${specificModelsOpen ? "overflow-visible" : "overflow-hidden"} pt-2`}>
                             {builtInSkills.map((skill) => <SettingRow key={skill} headingLevel={3} label={intl.formatMessage({ id: skillMessages[skill].label })} hint={intl.formatMessage({ id: skillMessages[skill].hint })}>
-                                <ModelAndReasoning model={{ value: preferences.skillOverrides[skill] ?? "", models, favorites: preferences.favoriteModels ?? [], sourceProvider, allowEmpty: true, label: intl.formatMessage({ id: skillMessages[skill].label }), placeholder: intl.formatMessage({ id: "settings.useDefaultModel" }), onChange: (model) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: model } }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.skillReasoningEfforts?.[skill]} onEffortChange={sourceProvider === AI_PROVIDER.OPENAI && preferences.skillOverrides[skill] ? (reasoningEffort) => void savePreferences({ ...preferences, skillReasoningEfforts: { ...preferences.skillReasoningEfforts, [skill]: reasoningEffort } }) : undefined} />
+                                <ModelAndReasoning model={{ value: preferences.skillOverrides[skill] ?? "", models, favorites: preferences.favoriteModels ?? [], allowEmpty: true, label: intl.formatMessage({ id: skillMessages[skill].label }), placeholder: intl.formatMessage({ id: "settings.useDefaultModel" }), onChange: (model) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: model } }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.skillReasoningEfforts?.[skill]} onEffortChange={selectedProvider(preferences.skillOverrides[skill] ?? "") === AI_PROVIDER.OPENAI ? (reasoningEffort) => void savePreferences({ ...preferences, skillReasoningEfforts: { ...preferences.skillReasoningEfforts, [skill]: reasoningEffort } }) : undefined} />
                             </SettingRow>)}
                         </div>
                     </div>

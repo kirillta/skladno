@@ -109,9 +109,35 @@ export interface AiConnection {
     provider: AiProvider;
     label: string;
     credentialSource: CredentialSource;
+    active?: boolean;
     status: "unchecked" | "connected" | "unavailable";
     lastCheckedAt?: string;
     diagnostic?: string;
+}
+
+
+export interface AvailableAiModel {
+    id: string;
+    model: string;
+    connectionId: string;
+    provider: AiProvider;
+}
+
+
+export function aiModelPreferenceId(connectionId: string, model: string): string {
+    return JSON.stringify([connectionId, model]);
+}
+
+
+export function parseAiModelPreferenceId(value: string): { connectionId: string; model: string } | undefined {
+    try {
+        const parsed: unknown = JSON.parse(value);
+        return Array.isArray(parsed) && parsed.length === 2 && typeof parsed[0] === "string" && typeof parsed[1] === "string"
+            ? { connectionId: parsed[0], model: parsed[1] }
+            : undefined;
+    } catch {
+        return undefined;
+    }
 }
 
 
@@ -139,7 +165,6 @@ export interface ApplicationSettingsSnapshot {
     general: GeneralSettings;
     systemDateTimeFormat?: SystemDateTimeFormat;
     connections: AiConnection[];
-    activeConnectionId?: string;
     modelPreferences: ModelPreferences;
     backupPolicy: BackupPolicy;
     keyBindingOverrides: KeyBindingOverrides;
@@ -173,9 +198,9 @@ export interface ApplicationSettingsClient {
     addAiConnection(input: { provider: AiProvider; label: string; environmentVariableName: string }): Promise<AiConnection>;
     updateAiConnection(connectionId: string, input: { label: string; environmentVariableName: string }): Promise<AiConnection>;
     removeAiConnection(connectionId: string): Promise<void>;
-    setActiveAiConnection(connectionId: string): Promise<void>;
+    setAiConnectionActive(connectionId: string, active: boolean): Promise<AiConnection>;
     testAiConnection(connectionId: string): Promise<AiConnection>;
-    refreshAiModels(): Promise<string[]>;
+    refreshAiModels(): Promise<AvailableAiModel[]>;
     updateModelPreferences(input: ModelPreferences): Promise<ModelPreferences>;
 }
 
