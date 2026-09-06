@@ -17,35 +17,35 @@ export interface ProviderModelConfiguration {
 }
 
 
-// TODO: why do we use Zen for all models? We should use the provider's base URL for each provider instead of hardcoding Zen's base URL.
-const zenBaseUrl = "https://opencode.ai/zen/v1";
+// OpenCode Zen is a gateway: its selected model family determines the SDK protocol, but every Zen request uses its gateway URL.
+const openCodeZenBaseUrl = "https://opencode.ai/zen/v1";
 
 
-function zenModelId(model: string): string {
+function openCodeZenModelId(model: string): string {
     return model.startsWith("opencode/") ? model.slice("opencode/".length) : model;
 }
 
 
-function unsupportedZenModel(): never {
+function unsupportedOpenCodeZenModel(): never {
     throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_OPERATION_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
 }
 
 
-function createZenModel(config: ProviderModelConfiguration): LanguageModel {
-    const model = zenModelId(config.model);
+function createOpenCodeZenModel(config: ProviderModelConfiguration): LanguageModel {
+    const model = openCodeZenModelId(config.model);
     if (model.startsWith("gpt-") || model.startsWith("grok-") || model.startsWith("muse-spark"))
-        return createOpenAI({ apiKey: config.apiKey, baseURL: zenBaseUrl }).responses(model);
+        return createOpenAI({ apiKey: config.apiKey, baseURL: openCodeZenBaseUrl }).responses(model);
 
     if (model.startsWith("claude-") || model.startsWith("qwen"))
-        return createAnthropic({ apiKey: config.apiKey, baseURL: zenBaseUrl }).messages(model);
+        return createAnthropic({ apiKey: config.apiKey, baseURL: openCodeZenBaseUrl }).messages(model);
 
     if (model.startsWith("gemini-"))
-        return createGoogle({ apiKey: config.apiKey, baseURL: zenBaseUrl })(model);
+        return createGoogle({ apiKey: config.apiKey, baseURL: openCodeZenBaseUrl })(model);
 
     if (["deepseek", "minimax", "glm", "kimi", "big-pickle", "mimo", "ling", "nemotron"].some((prefix) => model.startsWith(prefix)))
-        return createOpenAICompatible({ apiKey: config.apiKey, baseURL: zenBaseUrl, name: "opencode" })(model);
+        return createOpenAICompatible({ apiKey: config.apiKey, baseURL: openCodeZenBaseUrl, name: "opencode" })(model);
 
-    return unsupportedZenModel();
+    return unsupportedOpenCodeZenModel();
 }
 
 
@@ -54,7 +54,7 @@ export function createProviderModel(config: ProviderModelConfiguration): Languag
         case AI_PROVIDER.OPENAI:
             return createOpenAI({ apiKey: config.apiKey }).responses(config.model);
         case AI_PROVIDER.OPENCODE:
-            return createZenModel(config);
+            return createOpenCodeZenModel(config);
         case AI_PROVIDER.ANTHROPIC:
             return createAnthropic({ apiKey: config.apiKey })(config.model);
         case AI_PROVIDER.GOOGLE:
