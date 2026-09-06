@@ -147,9 +147,14 @@ function ModelSelect({ value, models, favorites, placeholder, allowEmpty = false
         if (event.key === "Escape") {
             close(); select.current?.querySelector("summary")?.focus();
         }
-    }}><summary role="button" aria-label={label} aria-describedby={describedBy} className="flex min-h-10 w-full cursor-pointer list-none items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink transition-colors hover:border-brand/45 hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden" onClick={(event) => {
-        event.preventDefault(); setOpensUpward(window.innerHeight - event.currentTarget.getBoundingClientRect().bottom < 272); setOpen(!open);
-    }}>{selectedModel && <ProviderIcon provider={modelProvider(selectedModel.model, selectedModel.provider)} viaProvider={selectedModel.provider} />}
+    }}>
+        <summary role="button" aria-label={label} aria-describedby={describedBy} className="flex min-h-10 w-full cursor-pointer list-none items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink transition-colors hover:border-brand/45 hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden"
+            onClick={(event) => {
+                event.preventDefault();
+                setOpensUpward(window.innerHeight - event.currentTarget.getBoundingClientRect().bottom < 272);
+                setOpen(!open);
+            }}
+        >{selectedModel && <ProviderIcon provider={modelProvider(selectedModel.model, selectedModel.provider)} viaProvider={selectedModel.provider} />}
             <span className="truncate">{selectedLabel}</span>
             <ChevronDownIcon className="absolute right-3 size-4 text-muted transition-transform group-open:rotate-180" />
         </summary>
