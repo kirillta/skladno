@@ -27,9 +27,11 @@ describe("ApplicationSettings general", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.selectOptions(await screen.findByRole("combobox", { name: message("settings.navigation") }), "ai");
+        await user.selectOptions(await screen.findByRole("combobox", { name: message("settings.navigation") }), "about");
 
-        expect(screen.getByRole("heading", { name: message("settings.ai") })).toBeTruthy();
+        expect(screen.getByRole("heading", { name: message("settings.about") })).toBeTruthy();
+        expect(screen.getByText(message("settings.aboutDescription"))).toBeTruthy();
+        expect(screen.getByRole("link", { name: message("settings.sourceCode") }).getAttribute("href")).toBe("https://github.com/kirillta/skladno");
     });
 
 
@@ -47,6 +49,8 @@ describe("ApplicationSettings general", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
+        await userEvent.setup().click(await screen.findByRole("button", { name: message("settings.about") }));
+
         expect(await screen.findByRole("heading", { name: message("settings.updates") })).toBeTruthy();
         expect(screen.getAllByText(message("settings.updatesUnavailable"))).toHaveLength(1);
         await userEvent.setup().click(screen.getByRole("switch", { name: message("settings.updateNetworkAccess") }));
@@ -58,8 +62,21 @@ describe("ApplicationSettings general", () => {
     });
 
 
+    it("opens About and focuses Updates when requested", async () => {
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} focusUpdates /></NotificationProvider></IntlProvider>);
+
+        await screen.findByRole("heading", { name: message("settings.about") });
+        await waitFor(() => expect(document.activeElement).toBe(document.getElementById("settings-updates")));
+    });
+
+
     // Product scenarios: settings.preview-update-controls
-    it("keeps preview update download explicit in General Settings", async () => {
+    it("keeps preview update download explicit in About", async () => {
         const user = userEvent.setup();
         const checkNow = vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1.security", title: "Security preview", summary: "Unsigned Windows preview", releaseNotesUrl: "https://example.test/release", security: true, automaticChecks: true, includePrereleases: true, networkAccess: true });
         const setNetworkAccess = vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, includePrereleases: true, networkAccess: true });

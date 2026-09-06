@@ -1,6 +1,7 @@
 import type { AiConnection, AiProvider, ApplicationSettingsSnapshot, AvailableAiModel, BackupPolicy, GeneralSettings, KeyBindingOverrides, ModelPreferences, PublishingSettings } from "@skladno/shared";
 
 import type { EditorialWorkspaceClient } from "../../application-client.js";
+import { AboutSettingsSection } from "./AboutSettingsSection.js";
 import { AiSettingsSection } from "./AiSettingsSection.js";
 import { DataBackupsSettingsSection } from "./DataBackupsSettingsSection.js";
 import { GeneralSettingsSection } from "./GeneralSettingsSection.js";
@@ -56,6 +57,8 @@ export function SettingsContent({ client, section, settings, general, preference
         content = <AiSettingsSection settings={settings} preferences={preferences} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={setEnvironmentName} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} onAddConnection={addConnection} onAddManagedConnection={addManagedConnection} onSetConnectionActive={setConnectionActive} onRequestConnectionRename={requestConnectionRename} canRenameManagedConnection={desktopAvailable} onRequestConnectionRemoval={requestConnectionRemoval} onRefreshModels={refreshModels} savePreferences={savePreferences} />;
     else if (settings && section === "publishing")
         content = <PublishingSettingsSection publishing={publishingSettings} save={savePublishingSettings} general={general} saveGeneral={saveGeneral} />;
+    else if (settings && section === "about")
+        content = <AboutSettingsSection />;
 
     return <section className="min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
         <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8">

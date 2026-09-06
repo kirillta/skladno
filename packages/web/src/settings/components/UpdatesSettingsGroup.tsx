@@ -38,7 +38,6 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
                         : intl.formatMessage({ id: "settings.updatesCurrent" });
 
     return <SettingsGroup label={intl.formatMessage({ id: "settings.updates" })}>
-        <div id="settings-updates" tabIndex={-1} />
         <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.updateNetworkAccess" })} hint={intl.formatMessage({ id: "settings.updateNetworkAccessHint" })}>
             <button type="button" role="switch" aria-checked={state.networkAccess} aria-label={intl.formatMessage({ id: "settings.updateNetworkAccess" })} className="group inline-flex min-h-9 appearance-none items-center gap-2 border-0 bg-transparent px-0 py-1 text-xs font-semibold text-ink hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={() => state.networkAccess ? void client.setNetworkAccess(false).then(setState) : setNetworkPermissionOpen(true)}>
                 <span aria-hidden="true" className={`relative inline-flex h-5 w-9 items-center rounded-full border p-0.5 transition-colors group-hover:border-brand ${state.networkAccess ? "border-brand bg-brand" : "border-border-strong bg-surface-raised"}`}>

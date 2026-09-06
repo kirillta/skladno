@@ -45,7 +45,7 @@ Skladno is currently available for **Windows 11 x64**.
 
 **Releases are not digitally signed.** Windows may show a SmartScreen warning when you run the installer. Check that you downloaded it from this repository's release page before choosing to continue.
 
-You control update checks, downloads, and when to restart for an update in **Settings > General**. If an update causes trouble, follow the [update recovery guide](docs/user/update-recovery.md).
+You control update checks, downloads, and when to restart for an update in **Settings > About**. If an update causes trouble, follow the [update recovery guide](docs/user/update-recovery.md).
 
 ## Help
 
