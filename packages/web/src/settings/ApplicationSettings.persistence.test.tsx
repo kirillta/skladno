@@ -143,16 +143,17 @@ describe("ApplicationSettings persistence", () => {
         await waitFor(() => expect(setPublishingSettings).toHaveBeenLastCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Long read", characterLimit: 5000 })] })));
     });
 
-    it("prevents duplicate environment-variable names and manages saved connections", async () => {
+    it("allows shared environment-variable names and manages saved connections", async () => {
         const user = userEvent.setup();
         const firstConnection = { id: "connection-1", provider: "openai" as const, label: "Personal AI", environmentVariableName: "AI_API_KEY", status: "unchecked" as const };
         const secondConnection = { id: "connection-2", provider: "openai" as const, label: "Work AI", environmentVariableName: "WORK_AI_API_KEY", status: "unchecked" as const };
+        const thirdConnection = { id: "connection-3", provider: "openai" as const, label: "Another AI", credentialSource: { kind: "environment-variable" as const, environmentVariableName: "AI_API_KEY" }, status: "unchecked" as const };
         const setActiveAiConnection = vi.fn().mockResolvedValue(undefined);
         const removeAiConnection = vi.fn().mockResolvedValue(undefined);
         const client = {
             getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [firstConnection, secondConnection], activeConnectionId: firstConnection.id }),
             getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
-            addAiConnection: vi.fn(),
+            addAiConnection: vi.fn().mockResolvedValue(thirdConnection),
             setActiveAiConnection,
             removeAiConnection,
             refreshAiModels: vi.fn().mockResolvedValue([]),
@@ -162,14 +163,15 @@ describe("ApplicationSettings persistence", () => {
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
         await waitFor(() => expect(client.refreshAiModels).toHaveBeenCalledOnce());
+        await user.type(screen.getByPlaceholderText("For example, Personal AI"), thirdConnection.label);
         await user.type(screen.getByPlaceholderText("For example, AI_API_KEY"), "AI_API_KEY");
         await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
 
-        expect(screen.getByRole("alert").textContent).toContain("already saved");
-        expect(client.addAiConnection).not.toHaveBeenCalled();
-        expect(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })).toHaveLength(1);
+        await waitFor(() => expect(client.addAiConnection).toHaveBeenCalledWith({ provider: "openai", label: thirdConnection.label, environmentVariableName: "AI_API_KEY" }));
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(screen.getAllByRole("button", { name: message("settings.removeConnectionShort") })).toHaveLength(2);
 
-        await user.click(screen.getByRole("button", { name: message("settings.useConnectionShort") }));
+        await user.click(screen.getAllByRole("button", { name: message("settings.useConnectionShort") })[0]!);
         await waitFor(() => expect(setActiveAiConnection).toHaveBeenCalledWith(secondConnection.id));
         await waitFor(() => expect(client.refreshAiModels).toHaveBeenCalledTimes(2));
 

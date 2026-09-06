@@ -122,7 +122,7 @@
             "capabilityIds": ["settings.ai-connections"],
             "preconditions": ["The author is in the AI Settings section."],
             "event": "The author adds, selects, or confirms removal of a connection.",
-            "expected": ["Authors choose one of the six supported providers and an environment-variable or, in Electron, managed-credential method. Environment-variable names remain duplicate-blocked, and an API key can be verified and stored without being displayed or persisted in Skladno data."],
+            "expected": ["Authors choose one of the six supported providers and an environment-variable or, in Electron, managed-credential method. Connections may share an environment-variable name, and an API key can be verified and stored without being displayed or persisted in Skladno data."],
             "forbidden": ["Displaying or persisting API key values."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.ai.test.tsx" }
         },

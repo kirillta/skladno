@@ -62,6 +62,27 @@ describe("ApplicationSettings AI", () => {
         expect(screen.getByText("AI_API_KEY")).toBeTruthy();
     });
 
+    it("allows another provider to use an existing environment-variable key", async () => {
+        const user = userEvent.setup();
+        const addAiConnection = vi.fn().mockResolvedValue({ id: "connection-2", provider: "opencode", label: "OpenCode Zen", credentialSource: { kind: "environment-variable" as const, environmentVariableName: "AI_API_KEY" }, status: "unchecked" as const });
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [{ id: "connection-1", provider: "openai" as const, label: "OpenAI", credentialSource: { kind: "environment-variable" as const, environmentVariableName: "AI_API_KEY" }, status: "connected" as const }] }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            addAiConnection,
+            refreshAiModels: vi.fn().mockResolvedValue([]),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.provider") }), "opencode");
+        await user.type(screen.getByPlaceholderText("For example, Personal AI"), "OpenCode Zen");
+        await user.type(screen.getByPlaceholderText("For example, AI_API_KEY"), "AI_API_KEY");
+        await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
+
+        await waitFor(() => expect(addAiConnection).toHaveBeenCalledWith({ provider: "opencode", label: "OpenCode Zen", environmentVariableName: "AI_API_KEY" }));
+    });
+
     it("adds an API key through the desktop credential client without rendering it again", async () => {
         const user = userEvent.setup();
         const addManagedAiConnection = vi.fn().mockResolvedValue({ id: "connection-1", provider: "openai", label: "Personal AI", credentialSource: { kind: "managed" as const }, status: "connected" as const });
@@ -276,6 +297,32 @@ describe("ApplicationSettings AI", () => {
         expect(within(listbox).getByRole("option", { name: "GPT-5 mini" })).toBeTruthy();
         fireEvent.mouseDown(document.body);
         await waitFor(() => expect(listbox.closest("details")?.open).toBe(false));
+    });
+
+    it("marks models from a multi-provider connection with their actual provider", async () => {
+        const user = userEvent.setup();
+        const connection = { id: "connection-1", provider: "opencode" as const, label: "OpenCode Zen", credentialSource: { kind: "environment-variable" as const, environmentVariableName: "OPENCODE_API_KEY" }, status: "connected" as const };
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id }),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+            refreshAiModels: vi.fn().mockResolvedValue(["gpt-5", "claude-fable-5", "gemini-3-flash", "grok-4", "deepseek-v4", "big-pickle"]),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: message("settings.model") }));
+        const listbox = screen.getAllByRole("listbox", { name: message("settings.model") })[0]!;
+
+        expect(within(listbox).getByRole("option", { name: "GPT-5" }).querySelector('[data-provider="openai"]')?.tagName).toBe("svg");
+        expect(within(listbox).getByRole("option", { name: "GPT-5" }).querySelector('[data-provider="opencode"][data-via-provider="opencode"]')?.tagName).toBe("svg");
+        expect(within(listbox).getByRole("option", { name: "claude-fable-5" }).querySelector('[data-provider="anthropic"]')?.tagName).toBe("svg");
+        expect(within(listbox).getByRole("option", { name: "claude-fable-5" }).querySelector('[data-provider="opencode"][data-via-provider="opencode"]')?.tagName).toBe("svg");
+        expect(within(listbox).getByRole("option", { name: "gemini-3-flash" }).querySelector('[data-provider="google"]')?.tagName).toBe("svg");
+        expect(within(listbox).getByRole("option", { name: "grok-4" }).querySelector('[data-provider="xai"]')?.tagName).toBe("svg");
+        expect(within(listbox).getByRole("option", { name: "deepseek-v4" }).querySelector('[data-provider="deepseek"]')?.tagName).toBe("svg");
+        expect(within(listbox).getByRole("option", { name: "big-pickle" }).querySelector('[data-provider="opencode"]')?.tagName).toBe("svg");
+        expect(within(listbox).getByRole("option", { name: "big-pickle" }).querySelector("[data-via-provider]")).toBeNull();
     });
 
 });

@@ -2,7 +2,7 @@ import { AI_PROVIDER, builtInSkills, isAiProvider, type AiConnection, type AiPro
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Banner, Button, Field, IconButton, Select } from "../../ui/primitives.js";
-import { ChevronDownIcon, CloseIcon, OpenAiIcon, SearchIcon, SettingsIcon, StarIcon } from "../../ui/icons.js";
+import { AnthropicIcon, ChevronDownIcon, CloseIcon, DeepSeekIcon, GoogleIcon, OpenAiIcon, OpenCodeIcon, SearchIcon, SettingsIcon, StarIcon, XaiIcon } from "../../ui/icons.js";
 import { Control, SettingRow, SettingsGroup } from "./SettingRow.js";
 
 
@@ -96,9 +96,65 @@ function ModelVendorIcon({ vendor }: { vendor: ModelVendor }) {
 }
 
 
-function ModelSelect({ value, models, favorites, sourceVendor, placeholder, allowEmpty = false, disabled, label, "aria-describedby": describedBy, onChange, onFavoritesChange }: { value: string; models: string[]; favorites: string[]; sourceVendor: ModelVendor; placeholder: string; allowEmpty?: boolean; disabled?: boolean; label: string; "aria-describedby"?: string; onChange: (value: string) => void; onFavoritesChange: (favorites: string[]) => void }) {
+function modelProvider(model: string, connectionProvider: AiProvider): AiProvider {
+    if (connectionProvider !== AI_PROVIDER.OPENCODE)
+        return connectionProvider;
+
+    const id = model.replace(/^opencode\//, "");
+    if (id.startsWith("gpt-"))
+        return AI_PROVIDER.OPENAI;
+
+    if (id.startsWith("claude-"))
+        return AI_PROVIDER.ANTHROPIC;
+
+    if (id.startsWith("gemini-"))
+        return AI_PROVIDER.GOOGLE;
+
+    if (id.startsWith("grok-"))
+        return AI_PROVIDER.XAI;
+
+    if (id.startsWith("deepseek-"))
+        return AI_PROVIDER.DEEPSEEK;
+
+    return AI_PROVIDER.OPENCODE;
+}
+
+
+function ProviderMark({ provider, className, viaProvider }: { provider: AiProvider; className: string; viaProvider?: AiProvider }) {
+    const props = { "data-provider": provider, ...(viaProvider ? { "data-via-provider": viaProvider } : {}), className };
+    switch (provider) {
+        case AI_PROVIDER.OPENAI:
+            return <OpenAiIcon {...props} />;
+        case AI_PROVIDER.OPENCODE:
+            return <OpenCodeIcon {...props} />;
+        case AI_PROVIDER.ANTHROPIC:
+            return <AnthropicIcon {...props} />;
+        case AI_PROVIDER.GOOGLE:
+            return <GoogleIcon {...props} />;
+        case AI_PROVIDER.XAI:
+            return <XaiIcon {...props} />;
+        case AI_PROVIDER.DEEPSEEK:
+            return <DeepSeekIcon {...props} />;
+        default: {
+            const _exhaustive: never = provider;
+            return _exhaustive;
+        }
+    }
+}
+
+
+function ProviderIcon({ provider, viaProvider, className = "text-muted" }: { provider: AiProvider; viaProvider?: AiProvider; className?: string }) {
+    if (viaProvider === AI_PROVIDER.OPENCODE && provider !== AI_PROVIDER.OPENCODE)
+        return <span aria-hidden="true" className={`relative inline-grid size-5 shrink-0 place-items-center ${className}`}><ProviderMark provider={provider} className="size-4" /><ProviderMark provider={AI_PROVIDER.OPENCODE} viaProvider={viaProvider} className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-surface-raised p-px" /></span>;
+
+    return <ProviderMark provider={provider} className={`size-4 shrink-0 ${className}`} />;
+}
+
+
+function ModelSelect({ value, models, favorites, sourceProvider, placeholder, allowEmpty = false, disabled, label, "aria-describedby": describedBy, onChange, onFavoritesChange }: { value: string; models: string[]; favorites: string[]; sourceProvider: AiProvider; placeholder: string; allowEmpty?: boolean; disabled?: boolean; label: string; "aria-describedby"?: string; onChange: (value: string) => void; onFavoritesChange: (favorites: string[]) => void }) {
     const intl = useIntl();
     const [query, setQuery] = useState("");
+    const sourceVendor: ModelVendor = sourceProvider === AI_PROVIDER.OPENAI ? "openai" : "other";
     const [vendor, setVendor] = useState<ModelVendor | "favorites">(sourceVendor);
     const [open, setOpen] = useState(false);
     const [opensUpward, setOpensUpward] = useState(false);
@@ -135,7 +191,7 @@ function ModelSelect({ value, models, favorites, sourceVendor, placeholder, allo
     }, [sourceVendor]);
 
     if (disabled)
-        return <div aria-label={label} aria-describedby={describedBy} aria-disabled="true" className="flex min-h-10 w-full items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink opacity-55"><OpenAiIcon className="size-4 shrink-0 text-muted" /><span className="truncate">{selectedLabel}</span><ChevronDownIcon className="absolute right-3 size-4 text-muted" /></div>;
+        return <div aria-label={label} aria-describedby={describedBy} aria-disabled="true" className="flex min-h-10 w-full items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink opacity-55"><ProviderIcon provider={modelProvider(value, sourceProvider)} viaProvider={sourceProvider} /><span className="truncate">{selectedLabel}</span><ChevronDownIcon className="absolute right-3 size-4 text-muted" /></div>;
 
     return <details ref={select} open={open} className="group relative" onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -148,7 +204,7 @@ function ModelSelect({ value, models, favorites, sourceVendor, placeholder, allo
             setOpensUpward(window.innerHeight - event.currentTarget.getBoundingClientRect().bottom < 272);
             setOpen(!open);
         }}>
-            <OpenAiIcon className="size-4 shrink-0 text-muted" />
+            <ProviderIcon provider={modelProvider(value, sourceProvider)} viaProvider={sourceProvider} />
             <span className="truncate">{selectedLabel}</span>
             <ChevronDownIcon className="absolute right-3 size-4 text-muted transition-transform group-open:rotate-180" />
         </summary>
@@ -173,7 +229,7 @@ function ModelSelect({ value, models, favorites, sourceVendor, placeholder, allo
                     {visibleModels.map((model) => <div key={model} className="flex items-center gap-1"><button type="button" role="option" aria-selected={model === value} className="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-control px-2 text-left text-sm hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={() => {
                         onChange(model);
                         close();
-                    }}><OpenAiIcon className="size-4 shrink-0 text-muted" /><span className="truncate">{modelLabel(model)}</span></button><IconButton label={intl.formatMessage({ id: favorites.includes(model) ? "settings.removeFavoriteModel" : "settings.addFavoriteModel" }, { model: modelLabel(model) })} aria-pressed={favorites.includes(model)} className={favorites.includes(model) ? "text-brand" : undefined} onClick={() => onFavoritesChange(favorites.includes(model) ? favorites.filter((favorite) => favorite !== model) : [...favorites, model])}><StarIcon className={favorites.includes(model) ? "size-4 fill-current" : "size-4"} /></IconButton></div>)}
+                    }}><ProviderIcon provider={modelProvider(model, sourceProvider)} viaProvider={sourceProvider} /><span className="truncate">{modelLabel(model)}</span></button><IconButton label={intl.formatMessage({ id: favorites.includes(model) ? "settings.removeFavoriteModel" : "settings.addFavoriteModel" }, { model: modelLabel(model) })} aria-pressed={favorites.includes(model)} className={favorites.includes(model) ? "text-brand" : undefined} onClick={() => onFavoritesChange(favorites.includes(model) ? favorites.filter((favorite) => favorite !== model) : [...favorites, model])}><StarIcon className={favorites.includes(model) ? "size-4 fill-current" : "size-4"} /></IconButton></div>)}
                     {visibleModels.length === 0 && <p className="px-2 py-3 text-sm text-muted" role="status">{intl.formatMessage({ id: "settings.noMatchingModels" })}</p>}
                 </div>
             </div>
@@ -211,7 +267,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
     const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod | undefined>(onAddManagedConnection ? undefined : "environment-variable");
     const specificModelsContent = useRef<HTMLDivElement>(null);
     const activeConnection = settings.connections.find((connection) => connection.id === settings.activeConnectionId);
-    const sourceVendor: ModelVendor = activeConnection && activeConnection.provider !== "openai" ? "other" : "openai";
+    const sourceProvider = activeConnection?.provider ?? AI_PROVIDER.OPENCODE;
     const providerLabel = (provider: AiProvider) => intl.formatMessage({ id: providerMessages[provider] });
 
 
@@ -324,11 +380,11 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
         <div className="pt-8">
             <SettingsGroup label={intl.formatMessage({ id: "settings.models" })}>
                 <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.defaultModel" })} hint={intl.formatMessage({ id: "settings.defaultModelHint" })}>
-                    <ModelAndReasoning model={{ value: preferences.defaultModel, models, favorites: preferences.favoriteModels ?? [], sourceVendor, disabled: models.length === 0, label: intl.formatMessage({ id: "settings.model" }), placeholder: models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" }), onChange: (defaultModel) => void savePreferences({ ...preferences, defaultModel }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.reasoningEffort} onEffortChange={sourceVendor === "openai" && preferences.defaultModel ? (reasoningEffort) => void savePreferences({ ...preferences, reasoningEffort }) : undefined} />
+                    <ModelAndReasoning model={{ value: preferences.defaultModel, models, favorites: preferences.favoriteModels ?? [], sourceProvider, disabled: models.length === 0, label: intl.formatMessage({ id: "settings.model" }), placeholder: models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : intl.formatMessage({ id: "settings.chooseModel" }), onChange: (defaultModel) => void savePreferences({ ...preferences, defaultModel }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.reasoningEffort} onEffortChange={sourceProvider === AI_PROVIDER.OPENAI && preferences.defaultModel ? (reasoningEffort) => void savePreferences({ ...preferences, reasoningEffort }) : undefined} />
                     <Button className="mt-3 w-fit" variant="secondary" onClick={onRefreshModels}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button>
                 </SettingRow>
                 <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.textGenerationModel" })} hint={intl.formatMessage({ id: "settings.textGenerationModelHint" })}>
-                    <ModelAndReasoning model={{ value: preferences.textGenerationModel ?? "", models, favorites: preferences.favoriteModels ?? [], sourceVendor, allowEmpty: true, disabled: models.length === 0, label: intl.formatMessage({ id: "settings.textGenerationModel" }), placeholder: intl.formatMessage({ id: "settings.useDefaultModel" }), onChange: (textGenerationModel) => void savePreferences({ ...preferences, textGenerationModel: textGenerationModel || undefined }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.textGenerationReasoningEffort} onEffortChange={sourceVendor === "openai" && preferences.textGenerationModel ? (textGenerationReasoningEffort) => void savePreferences({ ...preferences, textGenerationReasoningEffort }) : undefined} />
+                    <ModelAndReasoning model={{ value: preferences.textGenerationModel ?? "", models, favorites: preferences.favoriteModels ?? [], sourceProvider, allowEmpty: true, disabled: models.length === 0, label: intl.formatMessage({ id: "settings.textGenerationModel" }), placeholder: intl.formatMessage({ id: "settings.useDefaultModel" }), onChange: (textGenerationModel) => void savePreferences({ ...preferences, textGenerationModel: textGenerationModel || undefined }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.textGenerationReasoningEffort} onEffortChange={sourceProvider === AI_PROVIDER.OPENAI && preferences.textGenerationModel ? (textGenerationReasoningEffort) => void savePreferences({ ...preferences, textGenerationReasoningEffort }) : undefined} />
                 </SettingRow>
                 <div className="mt-8">
                     <button type="button" aria-expanded={specificModelsOpen} aria-controls="specific-model-overrides" className="group flex min-h-9 w-full items-center gap-2 text-left text-sm font-semibold hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={toggleSpecificModels}>
@@ -339,7 +395,7 @@ export function AiSettingsSection({ settings, preferences, models, connectionPro
                     <div ref={specificModelsContent} id="specific-model-overrides" aria-hidden={!specificModelsOpen} className={`grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${specificModelsOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                         <div className={`min-h-0 ${specificModelsOpen ? "overflow-visible" : "overflow-hidden"} pt-2`}>
                             {builtInSkills.map((skill) => <SettingRow key={skill} headingLevel={3} label={intl.formatMessage({ id: skillMessages[skill].label })} hint={intl.formatMessage({ id: skillMessages[skill].hint })}>
-                                <ModelAndReasoning model={{ value: preferences.skillOverrides[skill] ?? "", models, favorites: preferences.favoriteModels ?? [], sourceVendor, allowEmpty: true, label: intl.formatMessage({ id: skillMessages[skill].label }), placeholder: intl.formatMessage({ id: "settings.useDefaultModel" }), onChange: (model) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: model } }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.skillReasoningEfforts?.[skill]} onEffortChange={sourceVendor === "openai" && preferences.skillOverrides[skill] ? (reasoningEffort) => void savePreferences({ ...preferences, skillReasoningEfforts: { ...preferences.skillReasoningEfforts, [skill]: reasoningEffort } }) : undefined} />
+                                <ModelAndReasoning model={{ value: preferences.skillOverrides[skill] ?? "", models, favorites: preferences.favoriteModels ?? [], sourceProvider, allowEmpty: true, label: intl.formatMessage({ id: skillMessages[skill].label }), placeholder: intl.formatMessage({ id: "settings.useDefaultModel" }), onChange: (model) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: model } }), onFavoritesChange: (favoriteModels) => void savePreferences({ ...preferences, favoriteModels }) }} effort={preferences.skillReasoningEfforts?.[skill]} onEffortChange={sourceProvider === AI_PROVIDER.OPENAI && preferences.skillOverrides[skill] ? (reasoningEffort) => void savePreferences({ ...preferences, skillReasoningEfforts: { ...preferences.skillReasoningEfforts, [skill]: reasoningEffort } }) : undefined} />
                             </SettingRow>)}
                         </div>
                     </div>

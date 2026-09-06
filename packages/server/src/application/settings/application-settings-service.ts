@@ -280,8 +280,6 @@ export class ApplicationSettingsService {
     createAiConnection(value: { provider?: unknown; label?: unknown; environmentVariableName?: unknown }): AiConnection {
         const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
         const requestedName = environmentVariableName(value.environmentVariableName);
-        if (saved.connections.some((connection) => connection.credentialSource.kind === "environment-variable" && connection.credentialSource.environmentVariableName === requestedName))
-            throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_AI_CONNECTION, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: requestedName });
 
         const connection: AiConnection = {
             id: this.createConnectionId(),

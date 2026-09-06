@@ -20,6 +20,18 @@ function service(records: Map<string, unknown>) {
 }
 
 
+test("allows more than one connection to use the same environment-variable key", () => {
+    const records = new Map<string, unknown>();
+    const settings = service(records);
+
+    settings.createAiConnection({ provider: "openai", label: "OpenAI", environmentVariableName: "AI_API_KEY" });
+    settings.createAiConnection({ provider: "opencode", label: "OpenCode Zen", environmentVariableName: "AI_API_KEY" });
+
+    const connections = records.get("application-ai-connections") as { connections: { provider: string; credentialSource: { environmentVariableName: string } }[] };
+    assert.deepEqual(connections.connections.map((connection) => [connection.provider, connection.credentialSource.environmentVariableName]), [["openai", "AI_API_KEY"], ["opencode", "AI_API_KEY"]]);
+});
+
+
 test("migrates legacy model preferences to the active connection and keeps later connections isolated", async () => {
     const records = new Map<string, unknown>([
         ["application-ai-connections", {

@@ -237,7 +237,7 @@ test("General settings preserve valid formatting preferences and reject invalid 
 });
 
 
-test("AI connections reject duplicate environment-variable names and persist active selection and deletion", async () => {
+test("AI connections share environment-variable names and persist active selection and deletion", async () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-ai-connections-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = createTestPersistence(database);
@@ -268,13 +268,13 @@ test("AI connections reject duplicate environment-variable names and persist act
         assert.equal(firstResponse.status, HTTP_STATUS.CREATED);
         const first = await firstResponse.json() as { id: string };
 
-        const duplicate = await fetch(connectionsUrl, {
+        const sameKeyResponse = await fetch(connectionsUrl, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ label: "Duplicate", environmentVariableName: "OPENAI_API_KEY" }),
+            body: JSON.stringify({ label: "OpenCode Zen", provider: "opencode", environmentVariableName: "OPENAI_API_KEY" }),
         });
-        assert.equal(duplicate.status, HTTP_STATUS.BAD_REQUEST);
-        assert.equal((await duplicate.json() as { error: { code: string } }).error.code, "duplicate_ai_connection");
+        assert.equal(sameKeyResponse.status, HTTP_STATUS.CREATED);
+        const sameKey = await sameKeyResponse.json() as { id: string };
 
         const secondResponse = await fetch(connectionsUrl, {
             method: HTTP_METHOD.POST,
@@ -294,8 +294,11 @@ test("AI connections reject duplicate environment-variable names and persist act
         assert.equal(removed.status, HTTP_STATUS.NO_CONTENT);
 
         const settings = await fetch(`http://127.0.0.1:${address.port}${applicationSettingsPath}`);
-        assert.deepEqual((await settings.json() as { connections: { id: string }[]; activeConnectionId?: string }).connections, [{ id: second.id, provider: "openai", label: "Work OpenAI", credentialSource: { kind: "environment-variable", environmentVariableName: "WORK_OPENAI_API_KEY" }, status: "unchecked" }]);
-        assert.equal((await (await fetch(`http://127.0.0.1:${address.port}${applicationSettingsPath}`)).json() as { activeConnectionId?: string }).activeConnectionId, second.id);
+        assert.deepEqual((await settings.json() as { connections: { id: string }[]; activeConnectionId?: string }).connections, [
+            { id: sameKey.id, provider: "opencode", label: "OpenCode Zen", credentialSource: { kind: "environment-variable", environmentVariableName: "OPENAI_API_KEY" }, status: "unchecked" },
+            { id: second.id, provider: "openai", label: "Work OpenAI", credentialSource: { kind: "environment-variable", environmentVariableName: "WORK_OPENAI_API_KEY" }, status: "unchecked" },
+        ]);
+        assert.equal((await (await fetch(`http://127.0.0.1:${address.port}${applicationSettingsPath}`)).json() as { activeConnectionId?: string }).activeConnectionId, sameKey.id);
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));
         database.close();

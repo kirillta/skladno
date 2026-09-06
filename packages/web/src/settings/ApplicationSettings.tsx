@@ -125,11 +125,6 @@ export function ApplicationSettings({ client, back, onKeyBindingsUpdated, onThem
 
 
     async function addConnection() {
-        if (settings?.connections.some((connection) => (connection.credentialSource?.kind === "environment-variable" ? connection.credentialSource.environmentVariableName : (connection as unknown as { environmentVariableName?: string }).environmentVariableName) === environmentName)) {
-            setConnectionError(intl.formatMessage({ id: "settings.duplicateEnvironmentName" }));
-            return;
-        }
-
         setConnectionError(undefined);
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
