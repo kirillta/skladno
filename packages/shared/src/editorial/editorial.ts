@@ -25,7 +25,10 @@ export interface StartEditorialRequest {
 
 export interface EditorialSession {
     articleId: string;
-    previousResponseId?: string;
+    continuationToken?: string;
+    connectionId?: string;
+    provider?: import("../settings/settings.js").AiProvider;
+    model?: string;
     updatedAt: string;
 }
 

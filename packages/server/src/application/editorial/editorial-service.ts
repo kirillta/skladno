@@ -27,6 +27,7 @@ interface EditorialStreamContext {
     styleProfile?: StyleProfile;
     articleStyleRules?: string;
     previousResponseId?: string;
+    continuationScope?: { connectionId: string; provider: import("@skladno/shared").AiProvider; model: string };
 }
 
 
@@ -36,8 +37,8 @@ interface EditorialArticleStore {
 
 
 interface EditorialSessionStore {
-    get(articleId: string): { previousResponseId?: string } | undefined;
-    save(articleId: string, responseId: string): void;
+    get(articleId: string): import("@skladno/shared").EditorialSession | undefined;
+    save(articleId: string, session: Pick<import("@skladno/shared").EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): void;
     remove(articleId: string): void;
 }
 
@@ -64,13 +65,6 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
 
     const factCheck = request.operation === EDITORIAL_OPERATION.FACT_CHECK;
     const translation = request.operation === EDITORIAL_OPERATION.TRANSLATION;
-    const session = !factCheck && !translation && sessionContinuationEnabled
-        ? sessions.get(request.articleId)
-        : undefined;
-
-    if (!sessionContinuationEnabled)
-        sessions.remove(request.articleId);
-
     const corpus = request.operation === EDITORIAL_OPERATION.STYLE_REVIEW ? styleCorpus.get() : undefined;
     const styleProfile = corpus?.profile;
     if (request.operation === EDITORIAL_OPERATION.STYLE_REVIEW && (corpus?.status !== "ready" || !styleProfile))
@@ -80,6 +74,19 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
     if (!engine)
         throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 
+    const continuationScope = engine.continuationScope;
+    const session = !factCheck && !translation && sessionContinuationEnabled ? sessions.get(request.articleId) : undefined;
+    const previousResponseId = session?.continuationToken
+        && continuationScope
+        && session.connectionId === continuationScope.connectionId
+        && session.provider === continuationScope.provider
+        && session.model === continuationScope.model
+        ? session.continuationToken
+        : undefined;
+
+    if (!sessionContinuationEnabled || (session && !previousResponseId))
+        sessions.remove(request.articleId);
+
     return {
         article,
         engine,
@@ -87,7 +94,8 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
         translation,
         ...(styleProfile ? { styleProfile } : {}),
         ...(styleProfile ? { articleStyleRules: styleCorpus.getArticleRules(request.articleId) } : {}),
-        ...(session?.previousResponseId ? { previousResponseId: session.previousResponseId } : {}),
+        ...(continuationScope ? { continuationScope } : {}),
+        ...(previousResponseId ? { previousResponseId } : {}),
     };
 }
 
@@ -149,22 +157,24 @@ function citationsFor(event: Extract<EditorialEngineEvent, { type: typeof EDITOR
 
 
 function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifacts: EditorialArtifactsStore, factChecks: FactChecksStore, request: EditorialServiceRequest, context: EditorialStreamContext, sessionContinuationEnabled: boolean, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): string {
-    if (!context.factCheck && !context.translation && sessionContinuationEnabled)
-        sessions.save(request.articleId, event.responseId);
+    if (!context.factCheck && !context.translation && sessionContinuationEnabled && event.continuationToken && context.continuationScope)
+        sessions.save(request.articleId, { continuationToken: event.continuationToken, ...context.continuationScope });
 
     if (!context.factCheck)
         return artifacts.create(artifactInput(request, context, event)).id;
 
     const factCheck = event.factCheck!;
-    const enriched = { ...event, factCheck: {
-        ...factCheck,
-        reviewedRevisionId: context.article.currentRevisionId,
-        createdAt: new Date().toISOString(),
-        findings: factCheck.findings.map((finding) => {
-            const factId = createHash("sha256").update(finding.claim.trim().toLowerCase().replace(/\s+/g, " ")).digest("hex").slice(0, 16);
-            return { ...finding, factId, occurrenceId: `${context.article.currentRevisionId}:${factId}`, checkedAt: new Date().toISOString() };
-        }),
-    } };
+    const enriched = {
+        ...event, factCheck: {
+            ...factCheck,
+            reviewedRevisionId: context.article.currentRevisionId,
+            createdAt: new Date().toISOString(),
+            findings: factCheck.findings.map((finding) => {
+                const factId = createHash("sha256").update(finding.claim.trim().toLowerCase().replace(/\s+/g, " ")).digest("hex").slice(0, 16);
+                return { ...finding, factId, occurrenceId: `${context.article.currentRevisionId}:${factId}`, checkedAt: new Date().toISOString() };
+            }),
+        }
+    };
 
     const artifact = artifacts.createWithCitations(artifactInput(request, context, enriched), citationsFor(enriched));
     factChecks.save(artifact.id, request.articleId, context.article.currentRevisionId);

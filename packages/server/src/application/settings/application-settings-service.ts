@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isAssistantSendMode, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, KEY_BINDING_COMMAND, normalizeKeyBinding, resolveBuiltInSkillId, resolveKeyBindings, type AiConnection, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
+import { APPLICATION_ERROR, aiModelPreferenceId, AI_PROVIDER, HTTP_STATUS, isAiProvider, parseAiModelPreferenceId, type AiConnection, type AiProvider, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { AvailableModelsProvider } from "../ports/available-models-provider.js";
@@ -6,179 +6,7 @@ import type { BackupManager } from "../ports/backup-manager.js";
 import type { SettingsStore } from "../ports/settings-store.js";
 import type { SystemDateTimeFormatProvider } from "../ports/system-date-time-format-provider.js";
 import type { ManagedCredentials } from "../ports/managed-credentials.js";
-
-
-function generalSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
-    const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
-    if (rejectInvalidPreferences
-        && ((candidate.theme !== undefined && !isThemePreference(candidate.theme))
-            || (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
-            || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
-            || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
-            || (candidate.assistantSendMode !== undefined && !isAssistantSendMode(candidate.assistantSendMode))
-        ))
-        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
-
-    return {
-        ...defaultGeneralSettings,
-        ...candidate,
-        theme: isThemePreference(candidate.theme) ? candidate.theme : defaultGeneralSettings.theme,
-        interfaceLocale: candidate.interfaceLocale === INTERFACE_LOCALE.EN ? candidate.interfaceLocale : defaultInterfaceLocale,
-        dateFormat: isDateFormatPreference(candidate.dateFormat) ? candidate.dateFormat : defaultGeneralSettings.dateFormat,
-        timeFormat: isTimeFormatPreference(candidate.timeFormat) ? candidate.timeFormat : defaultGeneralSettings.timeFormat,
-        timeZone: isTimeZonePreference(candidate.timeZone) ? candidate.timeZone : defaultGeneralSettings.timeZone,
-        assistantSendMode: isAssistantSendMode(candidate.assistantSendMode) ? candidate.assistantSendMode : defaultGeneralSettings.assistantSendMode,
-        defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages)
-            ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))]
-            : [],
-    };
-}
-
-
-function backupPolicy(value: unknown): BackupPolicy {
-    const candidate = value && typeof value === "object" ? value as Partial<BackupPolicy> : {};
-    return {
-        schedule: candidate.schedule === "daily" ? "daily" : "off",
-        retention: candidate.retention?.mode === "unlimited"
-            ? { mode: "unlimited" }
-            : { mode: "count", count: Math.min(365, Math.max(1, candidate.retention?.mode === "count" ? candidate.retention.count : 7)) },
-    };
-}
-
-
-function normalizeAiConnection(value: unknown): AiConnection | undefined {
-    if (!value || typeof value !== "object" || Array.isArray(value))
-        return undefined;
-
-    const candidate = value as Record<string, unknown>;
-    if (typeof candidate.provider !== "string" || !candidate.provider || typeof candidate.id !== "string" || typeof candidate.label !== "string")
-        return undefined;
-
-    const source = candidate.credentialSource;
-    if (source && typeof source === "object" && !Array.isArray(source)) {
-        const credentialSource = source as Record<string, unknown>;
-        if (credentialSource.kind === "managed")
-            return { id: candidate.id, provider: candidate.provider, label: candidate.label, credentialSource: { kind: "managed" }, status: candidate.status === "connected" || candidate.status === "unavailable" ? candidate.status : "unchecked" };
-
-        if (credentialSource.kind === "environment-variable" && typeof credentialSource.environmentVariableName === "string")
-            return { id: candidate.id, provider: candidate.provider, label: candidate.label, credentialSource: { kind: "environment-variable", environmentVariableName: credentialSource.environmentVariableName }, status: candidate.status === "connected" || candidate.status === "unavailable" ? candidate.status : "unchecked" };
-    }
-
-    return typeof candidate.environmentVariableName === "string"
-        ? { id: candidate.id, provider: candidate.provider, label: candidate.label, credentialSource: { kind: "environment-variable", environmentVariableName: candidate.environmentVariableName }, status: candidate.status === "connected" || candidate.status === "unavailable" ? candidate.status : "unchecked" }
-        : undefined;
-}
-
-
-function aiConnections(value: unknown): { connections: AiConnection[]; activeConnectionId?: string } {
-    const candidate = value && typeof value === "object" ? value as { connections?: unknown; activeConnectionId?: unknown } : {};
-    const connections = Array.isArray(candidate.connections) ? candidate.connections.flatMap((connection) => {
-        const normalized = normalizeAiConnection(connection);
-        return normalized ? [normalized] : [];
-    }) : [];
-    const activeConnectionId = typeof candidate.activeConnectionId === "string"
-        && connections.some((connection) => connection.id === candidate.activeConnectionId) ? candidate.activeConnectionId : connections[0]?.id;
-
-    return { connections, ...(activeConnectionId ? { activeConnectionId } : {}) };
-}
-
-
-function environmentVariableName(value: unknown): string {
-    if (typeof value !== "string" || !/^[A-Z_][A-Z0-9_]*$/.test(value))
-        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_ENVIRONMENT_VARIABLE_NAME, HTTP_STATUS.BAD_REQUEST);
-
-    return value;
-}
-
-
-function modelPreferences(value: unknown): ModelPreferences {
-    const candidate = value && typeof value === "object" ? value as Partial<ModelPreferences> & { operationOverrides?: unknown } : {};
-    const values = candidate.skillOverrides && typeof candidate.skillOverrides === "object" ? candidate.skillOverrides : candidate.operationOverrides;
-    const skillOverrides = Object.fromEntries(Object.entries(values ?? {}).flatMap(([skill, model]) => {
-        const normalized = resolveBuiltInSkillId(skill);
-        return normalized && typeof model === "string" ? [[normalized, model.trim()]] : [];
-    })) as ModelPreferences["skillOverrides"];
-
-    const textGenerationModel = typeof candidate.textGenerationModel === "string" ? candidate.textGenerationModel.trim() : "";
-    const reasoningEffort = candidate.reasoningEffort === "low" || candidate.reasoningEffort === "medium" || candidate.reasoningEffort === "high"
-        ? candidate.reasoningEffort
-        : undefined;
-    const textGenerationReasoningEffort = candidate.textGenerationReasoningEffort === "low" || candidate.textGenerationReasoningEffort === "medium" || candidate.textGenerationReasoningEffort === "high"
-        ? candidate.textGenerationReasoningEffort
-        : undefined;
-    const skillReasoningEfforts = Object.fromEntries(Object.entries(candidate.skillReasoningEfforts ?? {}).flatMap(([skill, effort]) => {
-        const normalized = resolveBuiltInSkillId(skill);
-        return normalized && (effort === "low" || effort === "medium" || effort === "high") ? [[normalized, effort]] : [];
-    })) as NonNullable<ModelPreferences["skillReasoningEfforts"]>;
-    const favoriteModels = Array.isArray(candidate.favoriteModels)
-        ? [...new Set(candidate.favoriteModels.filter((model): model is string => typeof model === "string").map((model) => model.trim()).filter(Boolean))]
-        : [];
-
-    return {
-        defaultModel: typeof candidate.defaultModel === "string" ? candidate.defaultModel.trim() : "",
-        ...(textGenerationModel ? { textGenerationModel } : {}),
-        ...(reasoningEffort ? { reasoningEffort } : {}),
-        ...(textGenerationReasoningEffort ? { textGenerationReasoningEffort } : {}),
-        skillOverrides,
-        ...(Object.keys(skillReasoningEfforts).length > 0 ? { skillReasoningEfforts } : {}),
-        ...(favoriteModels.length > 0 ? { favoriteModels } : {}),
-    };
-}
-
-
-function normalizeKeyBindingOverrides(value: unknown, rejectInvalid: boolean): KeyBindingOverrides {
-    if (!value || typeof value !== "object" || Array.isArray(value))
-        if (rejectInvalid)
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-        else
-            return {};
-
-    const overrides: KeyBindingOverrides = {};
-    for (const [commandId, binding] of Object.entries(value)) {
-        if (commandId === KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST)
-            continue;
-
-        if (!isKeyBindingCommandId(commandId)) {
-            if (rejectInvalid)
-                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-            continue;
-        }
-
-        if (binding === null) {
-            overrides[commandId] = null;
-            continue;
-        }
-
-        const normalized = normalizeKeyBinding(binding);
-        if (!normalized) {
-            if (rejectInvalid)
-                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-            continue;
-        }
-
-        overrides[commandId] = normalized;
-    }
-
-    if (rejectInvalid) {
-        const conflict = findKeyBindingConflict(resolveKeyBindings(overrides));
-        if (conflict)
-            throw new ApplicationServiceError(APPLICATION_ERROR.KEY_BINDING_CONFLICT, HTTP_STATUS.BAD_REQUEST, { firstCommandId: conflict[0], secondCommandId: conflict[1] });
-    }
-
-    return overrides;
-}
-
-
-function keyBindingOverrides(value: unknown): KeyBindingOverrides {
-    return normalizeKeyBindingOverrides(value, false);
-}
-
-
-function requestedKeyBindingOverrides(value: unknown): KeyBindingOverrides {
-    return normalizeKeyBindingOverrides(value, true);
-}
+import { aiConnections, backupPolicy, environmentVariableName, generalSettings, keyBindingOverrides, modelPreferences, requestedKeyBindingOverrides } from "./application-settings-normalizers.js";
 
 
 export class ApplicationSettingsService {
@@ -193,11 +21,25 @@ export class ApplicationSettingsService {
 
 
     async getSnapshot(): Promise<ApplicationSettingsSnapshot> {
+        const connections = aiConnections(this.settings.get("application-ai-connections")?.value);
+        const rawPreferences = this.settings.get("application-model-preferences")?.value;
+        const legacyPreferences = rawPreferences && typeof rawPreferences === "object" && !Array.isArray(rawPreferences)
+            ? (rawPreferences as { byConnection?: unknown }).byConnection
+            : undefined;
+        const preferences = legacyPreferences && typeof legacyPreferences === "object" && !Array.isArray(legacyPreferences)
+            ? modelPreferences((legacyPreferences as Record<string, unknown>)[connections.activeConnectionId ?? ""], connections.activeConnectionId)
+            : modelPreferences(rawPreferences, connections.activeConnectionId);
+        const hasLegacyModelIds = rawPreferences && typeof rawPreferences === "object" && !Array.isArray(rawPreferences)
+            && !legacyPreferences && typeof (rawPreferences as { defaultModel?: unknown }).defaultModel === "string"
+            && !parseAiModelPreferenceId((rawPreferences as { defaultModel: string }).defaultModel);
+        if (legacyPreferences || hasLegacyModelIds)
+            this.settings.set("application-model-preferences", preferences);
+
         return {
             general: generalSettings(this.settings.get("application-general")?.value),
             systemDateTimeFormat: await this.dateTimeFormat.read(),
-            ...aiConnections(this.settings.get("application-ai-connections")?.value),
-            modelPreferences: modelPreferences(this.settings.get("application-model-preferences")?.value),
+            connections: connections.connections,
+            modelPreferences: preferences,
             backupPolicy: backupPolicy(this.settings.get("application-backup-policy")?.value),
             keyBindingOverrides: keyBindingOverrides(this.settings.get("application-key-bindings")?.value),
         };
@@ -244,30 +86,29 @@ export class ApplicationSettingsService {
     }
 
 
-    createAiConnection(value: { label?: unknown; environmentVariableName?: unknown }): AiConnection {
+    createAiConnection(value: { provider?: unknown; label?: unknown; environmentVariableName?: unknown }): AiConnection {
         const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
         const requestedName = environmentVariableName(value.environmentVariableName);
-        if (saved.connections.some((connection) => connection.credentialSource.kind === "environment-variable" && connection.credentialSource.environmentVariableName === requestedName))
-            throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_AI_CONNECTION, HTTP_STATUS.BAD_REQUEST, { environmentVariableName: requestedName });
 
         const connection: AiConnection = {
             id: this.createConnectionId(),
-            provider: "openai",
-            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : "OpenAI",
-            credentialSource: { kind: "environment-variable", environmentVariableName: requestedName }, status: "unchecked"
+            provider: this.provider(value.provider),
+            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.providerLabel(this.provider(value.provider)),
+            credentialSource: { kind: "environment-variable", environmentVariableName: requestedName }, active: true, status: "unchecked"
         };
         saved.connections.push(connection);
-        this.settings.set("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
+        this.settings.set("application-ai-connections", { connections: saved.connections });
 
         return connection;
     }
 
 
-    async createManagedAiConnection(value: { label?: unknown; apiKey?: unknown }): Promise<AiConnection> {
+    async createManagedAiConnection(value: { provider?: unknown; label?: unknown; apiKey?: unknown }): Promise<AiConnection> {
         if (!this.credentials?.available() || typeof value.apiKey !== "string" || !value.apiKey.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        const connection: AiConnection = { id: this.createConnectionId(), provider: "openai", label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : "OpenAI", credentialSource: { kind: "managed" }, status: "unchecked" };
+        const provider = this.provider(value.provider);
+        const connection: AiConnection = { id: this.createConnectionId(), provider, label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.providerLabel(provider), credentialSource: { kind: "managed" }, active: true, status: "unchecked" };
         try {
             await this.models.list(connection, value.apiKey);
         } catch {
@@ -278,7 +119,7 @@ export class ApplicationSettingsService {
         try {
             const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
             saved.connections.push({ ...connection, status: "connected", lastCheckedAt: new Date().toISOString() });
-            this.settings.set("application-ai-connections", { ...saved, activeConnectionId: saved.activeConnectionId ?? connection.id });
+            this.settings.set("application-ai-connections", { connections: saved.connections });
 
             return saved.connections.at(-1)!;
         } catch (error) {
@@ -288,9 +129,13 @@ export class ApplicationSettingsService {
     }
 
 
-    activateAiConnection(connectionId: string): void {
-        const { saved } = this.connectionState(connectionId);
-        this.settings.set("application-ai-connections", { ...saved, activeConnectionId: connectionId });
+    setAiConnectionActive(connectionId: string, active: boolean): AiConnection {
+        const { saved, index, connection } = this.connectionState(connectionId);
+        const updated = { ...connection, active };
+        saved.connections[index] = updated;
+        this.settings.set("application-ai-connections", { connections: saved.connections });
+
+        return updated;
     }
 
 
@@ -345,24 +190,20 @@ export class ApplicationSettingsService {
 
     deleteAiConnection(connectionId: string): void {
         const { saved, index, connection } = this.connectionState(connectionId);
-        if (saved.activeConnectionId === connectionId)
-            throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REMOVAL_BLOCKED, HTTP_STATUS.BAD_REQUEST);
-
         if (connection.credentialSource.kind === "managed")
             this.credentials?.delete(connection.id);
 
         saved.connections.splice(index, 1);
-        this.settings.set("application-ai-connections", { connections: saved.connections, ...(saved.connections[0] ? { activeConnectionId: saved.connections[0].id } : {}) });
+        this.settings.set("application-ai-connections", { connections: saved.connections });
     }
 
 
-    async listAiModels(): Promise<string[]> {
+    async listAiModels(): Promise<AvailableAiModel[]> {
         const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
-        const active = saved.connections.find((connection) => connection.id === saved.activeConnectionId);
-        if (!active)
-            throw new ApplicationServiceError(APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED, HTTP_STATUS.BAD_REQUEST);
+        const lists = await Promise.allSettled(saved.connections.filter((connection) => connection.active).map(async (connection) =>
+            (await this.models.list(connection)).map((model) => ({ id: aiModelPreferenceId(connection.id, model), model, connectionId: connection.id, provider: connection.provider }))));
 
-        return this.models.list(active);
+        return lists.flatMap((result) => result.status === "fulfilled" ? result.value : []);
     }
 
 
@@ -373,5 +214,28 @@ export class ApplicationSettingsService {
             throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
         return { saved, index, connection: saved.connections[index]! };
+    }
+
+
+    private provider(value: unknown): AiProvider {
+        if (value === undefined)
+            return AI_PROVIDER.OPENAI;
+
+        if (!isAiProvider(value))
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+        return value;
+    }
+
+
+    private providerLabel(provider: AiProvider): string {
+        return {
+            [AI_PROVIDER.OPENAI]: "OpenAI",
+            [AI_PROVIDER.OPENCODE]: "OpenCode Zen",
+            [AI_PROVIDER.ANTHROPIC]: "Anthropic",
+            [AI_PROVIDER.GOOGLE]: "Google Gemini",
+            [AI_PROVIDER.XAI]: "xAI Grok",
+            [AI_PROVIDER.DEEPSEEK]: "DeepSeek",
+        }[provider];
     }
 }

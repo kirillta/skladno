@@ -88,7 +88,7 @@
         {
             "id": "cross-cutting.deferred-mvp-boundary",
             "area": "Deferred MVP",
-            "title": "Accounts, sync, teams, analytics, direct publishing, imports, exports, additional providers, and remaining alternate clients",
+            "title": "Accounts, sync, teams, analytics, direct publishing, imports, exports, and remaining alternate clients",
             "status": "deferred",
             "owners": ["AGENTS.md"],
             "contract": "These capabilities remain outside the validated MVP editorial loop. The Windows Electron updater is tracked as an implemented Application capability; signed releases remain deferred to #168, and macOS, Linux, mobile, and browser-offline clients remain separate work.",

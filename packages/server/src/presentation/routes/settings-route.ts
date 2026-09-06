@@ -55,10 +55,9 @@ export async function handleCreateAiConnectionRoute(request: IncomingMessage, re
 }
 
 
-export function handleActivateAiConnectionRoute(response: ServerResponse, connectionId: string, settings: ApplicationSettingsService): void {
-    settings.activateAiConnection(connectionId);
-    response.writeHead(HTTP_STATUS.NO_CONTENT);
-    response.end();
+export async function handleSetAiConnectionActiveRoute(request: IncomingMessage, response: ServerResponse, connectionId: string, settings: ApplicationSettingsService): Promise<void> {
+    const value = object(await readJson(request));
+    writeJson(response, HTTP_STATUS.OK, settings.setAiConnectionActive(connectionId, value.active === true));
 }
 
 

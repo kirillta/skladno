@@ -219,4 +219,13 @@ export const migrations = [
         ALTER TABLE assistant_requests ADD COLUMN target_language TEXT;
         `,
     },
+    {
+        version: 17,
+        name: "editorial_session_continuation_scope",
+        sql: `
+        ALTER TABLE editorial_sessions ADD COLUMN connection_id TEXT;
+        ALTER TABLE editorial_sessions ADD COLUMN provider TEXT;
+        ALTER TABLE editorial_sessions ADD COLUMN model TEXT;
+        `,
+    },
 ] as const;

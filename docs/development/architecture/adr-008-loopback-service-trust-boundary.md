@@ -12,13 +12,13 @@ The browser renderer handles private Article content but cannot safely own API c
 
 ## Decision
 
-The local service listens on loopback by default and accepts browser requests only from the configured origin. It owns credentials, persistence, provider calls, web search, filesystem operations, and backup creation.
+The local service listens on loopback by default and accepts browser requests only from the configured origin. It owns credentials, persistence, provider calls, web search, filesystem operations, and backup creation. The approved first-release provider destinations are `api.openai.com`, `opencode.ai`, `api.anthropic.com`, `generativelanguage.googleapis.com`, `api.x.ai`, and `api.deepseek.com`; each receives only the request for the explicitly selected connection. Sourced fact-check research runs only when the selected model has a supported research adapter.
 
 The renderer uses the shared `EditorialWorkspaceClient`. The browser implementation adapts that client to HTTP. The Electron main process composes the same local application services without opening an HTTP listener, and its sandboxed, context-isolated preload exposes the allowlisted client through IPC. Neither renderer receives credential values, database or filesystem handles, raw server errors, or unrestricted IPC.
 
 The Electron window denies renderer-created windows and in-renderer navigation. It opens validated HTTP and HTTPS links in the system browser and rejects other schemes. Desktop close coordinates the active Draft checkpoint before cancelling streams and closing SQLite.
 
-Browser directory handles used for author-selected backup destinations remain browser capabilities and do not grant general local-service filesystem access. Expanding hosts, origins, IPC operations, network destinations, persistence, permissions, or provider-side storage requires an explicit security review.
+Browser directory handles used for author-selected backup destinations remain browser capabilities and do not grant general local-service filesystem access. Expanding hosts, origins, IPC operations, network destinations, persistence, permissions, or provider-side storage requires an explicit security review. Provider selection never transfers a credential to another provider, and model discovery sends credentials only to its selected provider's documented models endpoint.
 
 Windows-native Settings operations are exposed through their own finite, context-isolated desktop client; dialogs, Explorer reveal, credential storage, and native snapshots remain in Electron main as specified by ADR-009.
 

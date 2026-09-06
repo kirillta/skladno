@@ -3,6 +3,7 @@ import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, HTTP_
 
 import { EditorialService } from "../../application/editorial/editorial-service.js";
 import type { EditorialServiceRequest } from "../../application/editorial/editorial-request.js";
+import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
 import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
@@ -67,6 +68,9 @@ function rejectMissingTargetLanguage(response: ServerResponse, request: Editoria
 
 
 function editorialError(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
+    if (error instanceof ApplicationServiceError && error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING)
+        return { category: EDITORIAL_ERROR_CATEGORY.CONFIGURATION, errorCode: error.code };
+
     const category = error instanceof EditorialEngineError
         ? ({
             [EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT]: EDITORIAL_ERROR_CATEGORY.INVALID_OUTPUT,

@@ -29,6 +29,9 @@ async function* noConversation(): AsyncIterable<EditorialEngineEvent> {
 
 
 class FixtureEngine implements EditorialEngine {
+    readonly continuationScope = { connectionId: "connection-1", provider: "openai" as const, model: "gpt-5" };
+
+
     requests: EditorialEngineRequest[] = [];
 
 
@@ -65,7 +68,7 @@ class CapabilityFixtureEngine extends FixtureEngine {
 }
 
 
-async function withService(engine: EditorialEngine, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier): Promise<void> {
+async function withService(engine: EditorialEngine | undefined, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
@@ -103,7 +106,7 @@ test("editorial endpoint streams a typed proposal and saves context only after c
         { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "A " },
         { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "web_search", status: "started" },
         { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "proposal" },
-        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "resp-1", text: "A proposal" },
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "local-1", continuationToken: "resp-1", text: "A proposal" },
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
@@ -116,8 +119,8 @@ test("editorial endpoint streams a typed proposal and saves context only after c
         const body = await response.text();
 
         assert.match(body, /"type":"text_delta","delta":"A "/);
-        assert.match(body, /"type":"completed","responseId":"resp-1","text":"A proposal"/);
-        assert.equal(repositories.editorialSessions.get(article.id)?.previousResponseId, "resp-1");
+        assert.match(body, /"type":"completed","responseId":"local-1","continuationToken":"resp-1","text":"A proposal"/);
+        assert.equal(repositories.editorialSessions.get(article.id)?.continuationToken, "resp-1");
         assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
         assert.equal(engine.requests[0]?.article, "Original article");
         assert.equal(engine.requests[0]?.operation, EDITORIAL_OPERATION.FLOW_REVISION);
@@ -126,7 +129,7 @@ test("editorial endpoint streams a typed proposal and saves context only after c
             requestId: "request-1",
             operation: EDITORIAL_OPERATION.FLOW_REVISION,
             authorContext: "Keep the direct tone.",
-            responseId: "resp-1",
+            responseId: "local-1",
             proposal: "A proposal",
         });
     });
@@ -154,6 +157,21 @@ test("failed or incomplete editorial streams leave the Article and session uncha
 });
 
 
+test("an unavailable model capability is a configuration error before Article content is sent", async () => {
+    await withService(undefined, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Private article content" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "unavailable-capability", operation: EDITORIAL_OPERATION.FACT_CHECK }),
+        });
+
+        assert.match(await response.text(), /"code":"configuration","errorCode":"editorial_configuration_missing","retryable":true/);
+        assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
+    });
+});
+
+
 test("storage-disabled editorial requests clear hidden session continuation", async () => {
     const engine = new FixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "resp-stateless", text: "A proposal" },
@@ -161,7 +179,7 @@ test("storage-disabled editorial requests clear hidden session continuation", as
 
     await withService(engine, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
-        repositories.editorialSessions.save(article.id, "resp-old");
+        repositories.editorialSessions.save(article.id, { continuationToken: "resp-old", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
 
         await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
@@ -176,12 +194,12 @@ test("storage-disabled editorial requests clear hidden session continuation", as
 
 
 test("editorial continuation stays within its Article", async () => {
-    const engine = new FixtureEngine([{ type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "resp-new", text: "A proposal" }]);
+    const engine = new FixtureEngine([{ type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "local-new", continuationToken: "resp-new", text: "A proposal" }]);
 
     await withService(engine, async (baseUrl, repositories) => {
         const firstArticle = repositories.articleService.createArticle({ title: "First", content: "First Article" });
         const secondArticle = repositories.articleService.createArticle({ title: "Second", content: "Second Article" });
-        repositories.editorialSessions.save(firstArticle.id, "resp-first");
+        repositories.editorialSessions.save(firstArticle.id, { continuationToken: "resp-first", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
 
         for (const [article, requestId] of [[firstArticle, "request-first"], [secondArticle, "request-second"]] as const) {
             await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
@@ -207,7 +225,7 @@ test("expired provider session is cleared and can be retried as a fresh session"
 
     await withService(engine, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
-        repositories.editorialSessions.save(article.id, "resp-expired");
+        repositories.editorialSessions.save(article.id, { continuationToken: "resp-expired", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },

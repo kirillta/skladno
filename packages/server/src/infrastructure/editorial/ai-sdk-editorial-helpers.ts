@@ -1,4 +1,5 @@
 import type { ModelMessage } from "ai";
+import { AI_PROVIDER, type AiProvider, type ReasoningEffort } from "@skladno/shared";
 
 import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
@@ -63,4 +64,14 @@ export function responsesProviderOptions(storeResponses: boolean, previousRespon
             ...(reasoningEffort ? { reasoningEffort } : {}),
         },
     };
+}
+
+
+export type SupportingTextProviderOptions = ReturnType<typeof responsesProviderOptions> | undefined;
+
+
+export function supportingTextProviderOptions(provider: AiProvider, reasoningEffort?: ReasoningEffort): SupportingTextProviderOptions {
+    return provider === AI_PROVIDER.OPENAI
+        ? responsesProviderOptions(false, undefined, reasoningEffort)
+        : undefined;
 }

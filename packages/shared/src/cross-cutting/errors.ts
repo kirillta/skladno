@@ -12,7 +12,6 @@ export const APPLICATION_ERROR = {
     INVALID_ENVIRONMENT_VARIABLE_NAME: "invalid_environment_variable_name",
     ENVIRONMENT_VARIABLE_UNAVAILABLE: "environment_variable_unavailable",
     AI_CONNECTION_NOT_FOUND: "ai_connection_not_found",
-    DUPLICATE_AI_CONNECTION: "duplicate_ai_connection",
     DUPLICATE_STYLE_CORPUS_ITEM: "duplicate_style_corpus_item",
     ACTIVE_CONNECTION_REQUIRED: "active_connection_required",
     ACTIVE_CONNECTION_REMOVAL_BLOCKED: "active_connection_removal_blocked",

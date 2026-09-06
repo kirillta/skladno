@@ -49,6 +49,7 @@ import {
     type KeyBindingOverrides,
     type ModelPreferences,
     type AiConnection,
+    type AvailableAiModel,
     proposalSummariesPath,
     type ProposalChangeSummary,
     type SummarizeProposalInput,
@@ -171,8 +172,8 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     }
 
 
-    async setActiveAiConnection(connectionId: string): Promise<void> {
-        await this.request<void>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}/active`, { method: HTTP_METHOD.PUT });
+    async setAiConnectionActive(connectionId: string, active: boolean): Promise<AiConnection> {
+        return this.request<AiConnection>(`${aiConnectionsPath}/${encodeURIComponent(connectionId)}/active`, { method: HTTP_METHOD.PUT, body: JSON.stringify({ active }) });
     }
 
 
@@ -181,8 +182,8 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     }
 
 
-    async refreshAiModels(): Promise<string[]> {
-        return this.request<string[]>(aiModelsPath, { method: HTTP_METHOD.POST });
+    async refreshAiModels(): Promise<AvailableAiModel[]> {
+        return this.request<AvailableAiModel[]>(aiModelsPath, { method: HTTP_METHOD.POST });
     }
 
 
