@@ -27,16 +27,15 @@ export class EditorialSessionsRepository {
     }
 
 
-    save(articleId: string, session: string | Pick<EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): EditorialSession {
+    save(articleId: string, session: Pick<EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): EditorialSession {
         if (!this.articleExists(articleId))
             throw new Error("Article not found.");
 
-        const scoped: Pick<EditorialSession, "previousResponseId" | "continuationToken" | "connectionId" | "provider" | "model"> = typeof session === "string" ? { previousResponseId: session } : session;
         const updatedAt = now();
         this.database.prepare("INSERT INTO editorial_sessions (article_id, previous_response_id, connection_id, provider, model, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(article_id) DO UPDATE SET previous_response_id = excluded.previous_response_id, connection_id = excluded.connection_id, provider = excluded.provider, model = excluded.model, updated_at = excluded.updated_at")
-            .run(articleId, scoped.continuationToken ?? scoped.previousResponseId ?? "", scoped.connectionId ?? null, scoped.provider ?? null, scoped.model ?? null, updatedAt);
+            .run(articleId, session.continuationToken ?? "", session.connectionId ?? null, session.provider ?? null, session.model ?? null, updatedAt);
 
-        return { articleId, ...scoped, updatedAt };
+        return { articleId, ...session, updatedAt };
     }
 
 

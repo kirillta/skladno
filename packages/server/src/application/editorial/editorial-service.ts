@@ -38,7 +38,7 @@ interface EditorialArticleStore {
 
 interface EditorialSessionStore {
     get(articleId: string): import("@skladno/shared").EditorialSession | undefined;
-    save(articleId: string, session: string | Pick<import("@skladno/shared").EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): void;
+    save(articleId: string, session: Pick<import("@skladno/shared").EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): void;
     remove(articleId: string): void;
 }
 

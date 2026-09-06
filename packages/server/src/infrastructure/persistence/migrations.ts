@@ -220,7 +220,6 @@ export const migrations = [
         `,
     },
     {
-        // TODO: do we need to save the effort level as well?
         version: 17,
         name: "editorial_session_continuation_scope",
         sql: `

@@ -179,7 +179,7 @@ test("storage-disabled editorial requests clear hidden session continuation", as
 
     await withService(engine, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
-        repositories.editorialSessions.save(article.id, "resp-old");
+        repositories.editorialSessions.save(article.id, { continuationToken: "resp-old", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
 
         await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
@@ -225,7 +225,7 @@ test("expired provider session is cleared and can be retried as a fresh session"
 
     await withService(engine, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
-        repositories.editorialSessions.save(article.id, "resp-expired");
+        repositories.editorialSessions.save(article.id, { continuationToken: "resp-expired", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
