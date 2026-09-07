@@ -23,13 +23,22 @@ export interface PendingRestore {
 }
 
 
+export class PendingRestoreError extends Error {
+    constructor(cause: unknown) {
+        super("Could not apply the pending backup restore.", { cause });
+    }
+}
+
+
 function applyReadyRestore({ runtimePath, databasePath, runtime, pending }: { runtimePath: string; databasePath: string; runtime: ReturnType<typeof readRuntimeSettings>; pending: NonNullable<ReturnType<typeof readRuntimeSettings>["pendingRestore"]> }): void {
     const originalPath = `${databasePath}.before-restore`;
+    const temporary = `${databasePath}.restore`;
+    let originalMoved = false;
+    let restored = false;
     try {
         validateDatabaseSnapshot(pending.stagedSnapshotPath);
         validateDatabaseSnapshot(pending.recoverySnapshotPath);
 
-        const temporary = `${databasePath}.restore`;
         copyFileSync(pending.stagedSnapshotPath, temporary);
         validateDatabaseSnapshot(temporary);
         removeDatabase(originalPath);
@@ -37,18 +46,23 @@ function applyReadyRestore({ runtimePath, databasePath, runtime, pending }: { ru
         for (const path of sidecars(databasePath))
             rmSync(path, { force: true });
 
-        if (existsSync(databasePath))
+        originalMoved = existsSync(databasePath);
+        if (originalMoved)
             renameSync(databasePath, originalPath);
 
         renameSync(temporary, databasePath);
+        restored = true;
         writeRuntimeSettings(runtimePath, { ...runtime, pendingRestore: { ...pending, phase: "applied" } });
     } catch (error) {
-        removeDatabase(databasePath);
-        if (existsSync(originalPath))
+        if (restored)
+            removeDatabase(databasePath);
+
+        const canRestoreOriginal = originalMoved && existsSync(originalPath);
+        if (canRestoreOriginal)
             renameSync(originalPath, databasePath);
 
         writeRuntimeSettings(runtimePath, { ...runtime, pendingRestore: undefined });
-        throw error;
+        throw new PendingRestoreError(error);
     }
 }
 

@@ -4,7 +4,7 @@ import squirrelStartup from "electron-squirrel-startup";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter, validateDatabaseSnapshot } from "@skladno/server/electron";
 import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
 import { requestDraftCheckpoint } from "../application/close-coordinator.js";
-import { applyPendingRestore } from "../application/pending-restore.js";
+import { applyPendingRestore, PendingRestoreError } from "../application/pending-restore.js";
 import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window-policy.js";
 import { readWindowBounds, writeWindowBounds } from "../infrastructure/window-state.js";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
@@ -205,8 +205,17 @@ if (squirrelStartup) {
 
         await createMainWindow();
         updates?.schedule();
-    }).catch(() => {
-        dialog.showErrorBox(nativeMessages["electron.startFailed.title"], nativeMessages["electron.startFailed.message"]);
+    }).catch((error: unknown) => {
+        if (!app.isPackaged)
+            console.error("Skladno startup failed.", error);
+
+        const message = error instanceof PendingRestoreError
+            ? nativeMessages["electron.restoreFailed.message"]
+            : nativeMessages["electron.startFailed.message"];
+        const title = error instanceof PendingRestoreError
+            ? nativeMessages["electron.restoreFailed.title"]
+            : nativeMessages["electron.startFailed.title"];
+        dialog.showErrorBox(title, message);
         closeApplication?.();
         app.quit();
     });

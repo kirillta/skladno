@@ -7,7 +7,7 @@
     ],
     "scripts": {
         "dev": "concurrently --kill-others -n server,web -c blue,green \"npm run dev --workspace @skladno/server\" \"npm run dev --workspace @skladno/web\"",
-        "dev:electron": "npm run build --workspace @skladno/electron && concurrently --kill-others -n web,electron -c green,blue \"npm run dev --workspace @skladno/web\" \"npm run start --workspace @skladno/electron\"",
+        "dev:electron": "npm run build --workspace @skladno/electron && concurrently --kill-others-on-fail -n web,electron -c green,blue \"node scripts/start-electron-web.mjs\" \"npm run start --workspace @skladno/electron\"",
         "package:electron": "npm run package --workspace @skladno/electron",
         "make:electron": "npm run make --workspace @skladno/electron",
         "lint": "npm run check:imports && eslint . --max-warnings 0",

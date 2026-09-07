@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { openDatabase } from "@skladno/server/electron";
 
-import { writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
-import { applyPendingRestore } from "./pending-restore.js";
+import { readRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
+import { applyPendingRestore, PendingRestoreError } from "./pending-restore.js";
 
 
 function writeSetting(path: string, value: string): void {
@@ -69,6 +69,27 @@ test("successful restoration removes only the staged backup", () => {
         assert.ok(restore);
         restore.complete();
         assert.equal(readSetting(databasePath), "restored");
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("leaves active data unchanged when a pending restore cannot be applied", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-restore-"));
+    const databasePath = join(root, "skladno.sqlite");
+    const stagedSnapshotPath = join(root, "selected.sqlite");
+    const recoverySnapshotPath = join(root, "recovery.sqlite");
+    const runtimePath = join(root, "runtime-settings.json");
+    writeSetting(databasePath, "active");
+    copyFileSync(databasePath, recoverySnapshotPath);
+    writeFileSync(stagedSnapshotPath, "not a SQLite database");
+    writeRuntimeSettings(runtimePath, { pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } });
+
+    try {
+        assert.throws(() => applyPendingRestore({ runtimePath, databasePath }), PendingRestoreError);
+        assert.equal(readSetting(databasePath), "active");
+        assert.equal(readRuntimeSettings(runtimePath).pendingRestore, undefined);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

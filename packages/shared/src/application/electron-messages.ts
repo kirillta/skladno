@@ -22,6 +22,8 @@ const englishElectronMessages = {
     "electron.restoreBackup.detail": "Skladno will save the latest Draft checkpoints, keep a recovery copy of the active data, then restart. This cannot be undone from Settings.",
     "electron.restoreBackup.restore": "Restore and restart",
     "electron.restoreBackup.cancel": "Cancel",
+    "electron.restoreFailed.title": "Couldn’t restore the backup",
+    "electron.restoreFailed.message": "Close any other Skladno windows or local development servers using this data, then try again. Your active data is unchanged.",
 } as const;
 
 
