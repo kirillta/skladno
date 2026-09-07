@@ -161,6 +161,11 @@ export interface AssistantRequest {
 }
 
 
+export type ProposalAcceptance =
+    | { kind: "whole"; revisionId: string }
+    | { kind: "changes"; revisionId: string; acceptedChangeIds: string[] };
+
+
 export interface AssistantMessage {
     id: string;
     articleId: string;
@@ -179,6 +184,7 @@ export interface AssistantMessage {
     baseRevisionId?: string;
     baseRevisionContent?: string;
     proposalContent?: string;
+    proposalAcceptance?: ProposalAcceptance;
     translation?: AssistantEditorialResult["translation"];
     proposalSummaries?: import("../articles/revision/revisions.js").ProposalChangeSummary[];
     proposalSummaryLocale?: string;

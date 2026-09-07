@@ -6,8 +6,9 @@ import { presentProposalReview, type ProposalDecision } from "./proposal-review-
 import { AssistantIcon, ChevronRightIcon, CloseIcon } from "../../ui/icons.js";
 
 
-export function ProposalReviewView({ review, stale, decisions, summaries, summaryState, setDecision, acceptAll, applyAccepted, rejectAll, dismissProposal, warningsDismissed, dismissWarnings, openWrite, openAssistant }: {
+export function ProposalReviewView({ review, accepted = false, stale, decisions, summaries, summaryState, setDecision, acceptAll, applyAccepted, rejectAll, dismissProposal, warningsDismissed, dismissWarnings, openWrite, openAssistant }: {
     review: TextProposal | undefined;
+    accepted?: boolean;
     stale: boolean;
     decisions: Record<string, ProposalDecision>;
     summaries?: Record<string, string>;
@@ -39,10 +40,11 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
 
     const presentation = presentProposalReview(review);
     const counts = presentation.changes.reduce((result, change) => ({ ...result, [decisions[change.id] ?? "pending"]: result[decisions[change.id] ?? "pending"] + 1 }), { pending: 0, accepted: 0, rejected: 0 });
-    const acceptanceBlocked = stale || !presentation.reliable;
+    const acceptanceBlocked = accepted || stale || !presentation.reliable;
     const allResolved = counts.pending === 0 && presentation.changes.length > 0;
 
     return <div className="mx-auto w-full max-w-6xl pb-6">
+        {accepted && <Status className="mb-4" label={intl.formatMessage({ id: "views.proposalAccepted" })} tone="success" />}
         {stale && <Banner className="mb-4" tone="warning">
             <div>
                 <p>{intl.formatMessage({ id: "views.proposalStale" })}</p>
@@ -77,8 +79,8 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
                         <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "views.previousChange" })} title={intl.formatMessage({ id: "views.previousChange" })} onClick={() => moveChange(-1)}><ChevronRightIcon className="size-4 rotate-180" /></Button>
                         <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "views.nextChange" })} title={intl.formatMessage({ id: "views.nextChange" })} onClick={() => moveChange(1)}><ChevronRightIcon className="size-4" /></Button>
                     </nav>}
-                    <Button variant="secondary" disabled={stale || presentation.changes.length === 0} onClick={rejectAll}>{intl.formatMessage({ id: "views.rejectAll" })}</Button>
-                    <Button variant="secondary" disabled={stale || presentation.changes.length === 0} onClick={() => void acceptAll()}>{intl.formatMessage({ id: "views.acceptAll" })}</Button>
+                    <Button variant="secondary" disabled={accepted || stale || presentation.changes.length === 0} onClick={rejectAll}>{intl.formatMessage({ id: "views.rejectAll" })}</Button>
+                    <Button variant="secondary" disabled={accepted || stale || presentation.changes.length === 0} onClick={() => void acceptAll()}>{intl.formatMessage({ id: "views.acceptAll" })}</Button>
                     <Button disabled={acceptanceBlocked || !allResolved || counts.accepted === 0} onClick={() => void applyAccepted()}>{intl.formatMessage({ id: "views.applyAccepted" })}</Button>
                 </div>
             </div>
@@ -104,8 +106,8 @@ export function ProposalReviewView({ review, stale, decisions, summaries, summar
                             <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: `views.decision.${decision}` as never })}</p>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="secondary" state={decision === "rejected" ? "error" : "default"} disabled={stale} onClick={() => setDecision(change.id, "rejected")}>{intl.formatMessage({ id: "views.rejectChange" })}</Button>
-                            <Button state={decision === "accepted" ? "success" : "default"} disabled={stale} onClick={() => setDecision(change.id, "accepted")}>{intl.formatMessage({ id: "views.acceptChange" })}</Button>
+                            <Button variant="secondary" state={decision === "rejected" ? "error" : "default"} disabled={accepted || stale} onClick={() => setDecision(change.id, "rejected")}>{intl.formatMessage({ id: "views.rejectChange" })}</Button>
+                            <Button state={decision === "accepted" ? "success" : "default"} disabled={accepted || stale} onClick={() => setDecision(change.id, "accepted")}>{intl.formatMessage({ id: "views.acceptChange" })}</Button>
                         </div>
                     </div>
                     <div className="mt-4 flex min-h-9 items-start gap-2 border-y border-border py-3 text-sm" aria-live="polite">

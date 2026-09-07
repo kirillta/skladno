@@ -1,7 +1,7 @@
-import { resolveBuiltInSkillId, type AssistantCapabilityExecution, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId } from "@skladno/shared";
+import { REVISION_PROVENANCE_KIND, resolveBuiltInSkillId, type AssistantCapabilityExecution, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId, type ProposalAcceptance } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { createId, now, type Row } from "./repository-utils.js";
+import { createId, now, parseObject, type Row } from "./repository-utils.js";
 
 const roles: readonly AssistantMessageRole[] = ["assistant", "author", "system"];
 const kinds: readonly AssistantMessageKind[] = ["greeting", "message", "response", "status"];
@@ -47,7 +47,12 @@ export class AssistantRepository {
             ORDER BY assistant_messages.created_at, assistant_messages.id
         `).all(articleId) as Row[];
 
-        return rows.map((row) => this.toMessage(row));
+        const acceptances = this.proposalAcceptances(articleId);
+        return rows.map((row) => {
+            const message = this.toMessage(row);
+            const acceptance = message.editorialArtifactId ? acceptances.get(message.editorialArtifactId) : undefined;
+            return acceptance ? { ...message, proposalAcceptance: acceptance } : message;
+        });
     }
 
 
@@ -241,6 +246,28 @@ export class AssistantRepository {
             ...(artifactContent?.proposalSummaryLocale ? { proposalSummaryLocale: artifactContent.proposalSummaryLocale } : {}),
             createdAt: String(row.created_at), updatedAt: String(row.updated_at),
         };
+    }
+
+
+    private proposalAcceptances(articleId: string): Map<string, ProposalAcceptance> {
+        const rows = this.database.prepare("SELECT id, provenance_json FROM article_revisions WHERE article_id = ? ORDER BY created_at, id").all(articleId) as Row[];
+        const acceptances = new Map<string, ProposalAcceptance>();
+        for (const row of rows) {
+            const provenance = parseObject(row.provenance_json);
+            if (provenance.kind !== REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL || typeof provenance.editorialArtifactId !== "string")
+                continue;
+
+            const revisionId = String(row.id);
+            if (provenance.wholeProposal === true) {
+                acceptances.set(provenance.editorialArtifactId, { kind: "whole", revisionId });
+                continue;
+            }
+
+            if (Array.isArray(provenance.acceptedChangeIds) && provenance.acceptedChangeIds.every((id) => typeof id === "string"))
+                acceptances.set(provenance.editorialArtifactId, { kind: "changes", revisionId, acceptedChangeIds: provenance.acceptedChangeIds });
+        }
+
+        return acceptances;
     }
 
 

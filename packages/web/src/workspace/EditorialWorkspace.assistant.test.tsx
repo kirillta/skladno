@@ -66,6 +66,14 @@ describe("Editorial Workspace assistant", () => {
 
     it("restores the latest completed Proposal Review from local Assistant records", async () => {
         const client = fakeClient();
+        const user = userEvent.setup();
+        client.acceptProposal = vi.fn().mockResolvedValue({
+            id: "accepted-revision",
+            articleId: "one",
+            content: "Improved Draft",
+            createdAt: "2026-01-01T00:01:00.000Z",
+            provenance: {},
+        });
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "proposal", selectedArticleId: "one" }));
         client.listAssistantMessages = vi.fn().mockResolvedValue([{
             id: "proposal-message",
@@ -75,6 +83,7 @@ describe("Editorial Workspace assistant", () => {
             kind: "response",
             status: "completed",
             responseKind: "proposal_prepared",
+            editorialArtifactId: "proposal-artifact",
             baseRevisionId: "one-revision",
             baseRevisionContent: "Draft",
             proposalContent: "Improved Draft",
@@ -86,6 +95,91 @@ describe("Editorial Workspace assistant", () => {
 
         expect(await screen.findByText("Replacement · Change 1 of 1")).toBeTruthy();
         expect(screen.getByText("Improved Draft")).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: message("views.acceptAll") }));
+
+        await waitFor(() => expect(client.acceptProposal).toHaveBeenCalledWith("one", {
+            baseRevisionId: "one-revision",
+            content: "Improved Draft",
+            provenance: { kind: "accepted-proposal", baseRevisionId: "one-revision", editorialArtifactId: "proposal-artifact", wholeProposal: true },
+        }));
+        expect(await screen.findByText("This proposal was accepted. Its decisions are read-only.")).toBeTruthy();
+    });
+
+
+    // Product scenarios: workspace.proposal.accepted-restart
+    it("restores an accepted Proposal as accepted after restart", async () => {
+        const client = fakeClient();
+        const accepted = article("one", "First Article");
+        accepted.currentRevisionId = "accepted-revision";
+        accepted.currentRevision = {
+            id: accepted.currentRevisionId,
+            articleId: accepted.id,
+            content: "Improved first\nAnchor\nSecond",
+            createdAt: "2026-01-01T00:01:00.000Z",
+            provenance: { kind: "accepted-proposal", baseRevisionId: "one-revision", acceptedChangeIds: ["change-1"] },
+        };
+        client.listArticles = vi.fn().mockResolvedValue([accepted]);
+        client.listAssistantMessages = vi.fn().mockResolvedValue([{
+            id: "proposal-message",
+            articleId: accepted.id,
+            requestId: "proposal-request",
+            role: "assistant",
+            kind: "response",
+            status: "completed",
+            responseKind: "proposal_prepared",
+            editorialArtifactId: "proposal-artifact",
+            baseRevisionId: "one-revision",
+            baseRevisionContent: "First\nAnchor\nSecond",
+            proposalContent: "Improved first\nAnchor\nImproved second",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+        }]);
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "proposal", selectedArticleId: accepted.id }));
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText("This proposal was accepted. Its decisions are read-only.")).toBeTruthy();
+        expect(screen.queryByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.")).toBeNull();
+        expect(screen.getByText("Accepted")).toBeTruthy();
+        expect(screen.getByText("Rejected")).toBeTruthy();
+        expect(screen.getByRole("button", { name: message("views.acceptAll") }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("tab", { name: message("workspace.tabs.proposal") })).toBeTruthy();
+    });
+
+
+    it("keeps an unaccepted Proposal stale when a different Proposal changed the Revision", async () => {
+        const client = fakeClient();
+        const articleWithDifferentAcceptance = article("one", "First Article");
+        articleWithDifferentAcceptance.currentRevisionId = "accepted-revision";
+        articleWithDifferentAcceptance.currentRevision = {
+            id: articleWithDifferentAcceptance.currentRevisionId,
+            articleId: articleWithDifferentAcceptance.id,
+            content: "Different accepted Proposal",
+            createdAt: "2026-01-01T00:01:00.000Z",
+            provenance: { kind: "accepted-proposal", baseRevisionId: "one-revision", editorialArtifactId: "other-proposal-artifact", wholeProposal: true },
+        };
+        client.listArticles = vi.fn().mockResolvedValue([articleWithDifferentAcceptance]);
+        client.listAssistantMessages = vi.fn().mockResolvedValue([{
+            id: "proposal-message",
+            articleId: articleWithDifferentAcceptance.id,
+            requestId: "proposal-request",
+            role: "assistant",
+            kind: "response",
+            status: "completed",
+            responseKind: "proposal_prepared",
+            editorialArtifactId: "proposal-artifact",
+            baseRevisionId: "one-revision",
+            baseRevisionContent: "Draft",
+            proposalContent: "Improved Draft",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+        }]);
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "proposal", selectedArticleId: articleWithDifferentAcceptance.id }));
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.")).toBeTruthy();
+        expect(screen.queryByText("This proposal was accepted. Its decisions are read-only.")).toBeNull();
     });
 
 

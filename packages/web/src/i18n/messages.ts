@@ -314,6 +314,7 @@ export const messages = {
     "views.proposalEmptyTitle": "No proposal to review",
     "views.proposalEmpty": "Use the Editorial Assistant to generate a proposal. It will never change your article automatically.",
     "views.proposalStale": "This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.",
+    "views.proposalAccepted": "This proposal was accepted. Its decisions are read-only.",
     "views.proposalCounts": "{total, plural, =0 {No suggestions} one {# suggestion} other {# suggestions}} · {pending, plural, =0 {No pending} one {# pending} other {# pending}} · {accepted, plural, =0 {No accepted} one {# accepted} other {# accepted}} · {rejected, plural, =0 {No rejected} one {# rejected} other {# rejected}}",
     "views.proposalWhole": "Complete proposal · {changes, plural, one {# change} other {# changes}}",
     "views.acceptAll": "Accept all",
