@@ -7,6 +7,7 @@ export const aiModelsPath = `${applicationSettingsPath}/ai/models`;
 export const aiModelPreferencesPath = `${applicationSettingsPath}/ai/model-preferences`;
 export const keyBindingsPath = `${applicationSettingsPath}/key-bindings`;
 export const backupsPath = `${applicationSettingsPath}/backups`;
+export const restoreBackupPath = `${backupsPath}/restore`;
 
 export type ApplicationScreen = "editorial-workspace" | "application-settings";
 export const INTERFACE_LOCALE = {
@@ -194,6 +195,7 @@ export interface ApplicationSettingsClient {
     updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy>;
     /** Available only in the web client, where the browser writes to the author-selected folder. */
     createBackup?(): Promise<Blob>;
+    restoreBackup?(backup: Blob): Promise<void>;
     updateKeyBindingOverrides(input: KeyBindingOverrides): Promise<KeyBindingOverrides>;
     addAiConnection(input: { provider: AiProvider; label: string; environmentVariableName: string }): Promise<AiConnection>;
     updateAiConnection(connectionId: string, input: { label: string; environmentVariableName: string }): Promise<AiConnection>;
@@ -224,6 +226,7 @@ export interface DesktopSettingsClient {
     revealBackupDirectory(): Promise<void>;
     revealDataDirectory(): Promise<void>;
     createNativeBackup(): Promise<{ path: string; createdAt: string }>;
+    restoreNativeBackup(): Promise<void>;
     deleteLocalData(): Promise<void>;
     addManagedAiConnection(input: { provider: AiProvider; label: string; apiKey: string }): Promise<AiConnection>;
     renameManagedAiConnection(connectionId: string, label: string): Promise<AiConnection>;

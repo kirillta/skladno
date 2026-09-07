@@ -17,6 +17,11 @@ const englishElectronMessages = {
     "electron.deleteData.backup": "Create a backup before deletion",
     "electron.deleteData.delete": "Delete all local data",
     "electron.deleteData.cancel": "Cancel",
+    "electron.restoreBackup.title": "Restore this backup?",
+    "electron.restoreBackup.message": "This replaces your active local Skladno data with the selected backup.",
+    "electron.restoreBackup.detail": "Skladno will save the latest Draft checkpoints, keep a recovery copy of the active data, then restart. This cannot be undone from Settings.",
+    "electron.restoreBackup.restore": "Restore and restart",
+    "electron.restoreBackup.cancel": "Cancel",
 } as const;
 
 

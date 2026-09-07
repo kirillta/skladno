@@ -4,6 +4,48 @@ import { chmodSync, existsSync, unlinkSync } from "node:fs";
 
 
 export type SqliteDatabase = DatabaseSync;
+export type DatabaseSnapshotErrorCode = "integrity" | "foreign-keys" | "schema";
+
+
+export class DatabaseSnapshotError extends Error {
+    constructor(readonly code: DatabaseSnapshotErrorCode) {
+        super(code);
+    }
+}
+
+
+function snapshotRows(database: DatabaseSync, statement: string): Record<string, unknown>[] {
+    return database.prepare(statement).all() as Record<string, unknown>[];
+}
+
+
+/** Checks an unopened backup without running migrations or changing its contents. */
+
+
+export function validateDatabaseSnapshot(filename: string): void {
+    let database: DatabaseSync | undefined;
+    try {
+        database = new DatabaseSync(filename, { readOnly: true });
+        const integrity = snapshotRows(database, "PRAGMA integrity_check");
+        if (integrity.length !== 1 || integrity[0]?.integrity_check !== "ok")
+            throw new DatabaseSnapshotError("integrity");
+
+        if (snapshotRows(database, "PRAGMA foreign_key_check").length > 0)
+            throw new DatabaseSnapshotError("foreign-keys");
+
+        const known = new Map<number, string>(migrations.map((migration) => [migration.version, migration.name]));
+        const applied = snapshotRows(database, "SELECT version, name FROM schema_migrations ORDER BY version");
+        if (applied.length === 0 || applied.some((migration) => typeof migration.version !== "number" || known.get(migration.version) !== migration.name))
+            throw new DatabaseSnapshotError("schema");
+    } catch (error) {
+        if (error instanceof DatabaseSnapshotError)
+            throw error;
+
+        throw new DatabaseSnapshotError("integrity");
+    } finally {
+        database?.close();
+    }
+}
 
 
 function restrictFilePermissions(path: string): void {

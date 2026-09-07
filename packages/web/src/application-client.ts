@@ -2,7 +2,6 @@ import {
     ArticleRevisionConflictError,
     ArticleDraftConflictError,
     ApplicationClientError,
-    type ApplicationErrorPayload,
     acceptProposalPath,
     articlesPath,
     assistantMessagesPath,
@@ -14,7 +13,6 @@ import {
     factChecksPath,
     healthPath,
     HTTP_METHOD,
-    isAssistantEvent,
     HTTP_STATUS,
     parseHealthResponse,
     type CreateArticleInput,
@@ -36,12 +34,7 @@ import {
     type StyleCorpus,
     publishSettingsPath,
     type PublishingSettings,
-    applicationSettingsPath,
-    backupsPath,
     type EditorialWorkspaceClient,
-    type ApplicationSettingsSnapshot,
-    type BackupPolicy,
-    type GeneralSettings,
     aiConnectionsPath,
     aiModelsPath,
     aiModelPreferencesPath,
@@ -56,99 +49,20 @@ import {
     type FactCheck,
     type FactCheckFinding,
 } from "@skladno/shared";
-import { configureSystemDateTimeFormat } from "./i18n/formatting.js";
+import { applicationClientError, parseAssistantEvent, streamEvents } from "./http-client-transport.js";
+import { HttpSettingsClient } from "./http-settings-client.js";
 
 export type { EditorialWorkspaceClient } from "@skladno/shared";
 
 
 /** HTTP implementation of the UI's transport-neutral application boundary. */
-
-
-function applicationClientError(payload: unknown, status: number): ApplicationClientError {
-    if (payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string") {
-        const error = payload as ApplicationErrorPayload;
-        return new ApplicationClientError(error.code, error.parameters, status);
-    }
-
-    return new ApplicationClientError("editorial_request_failed", { status }, status);
-}
-
-
-function streamData(message: string): string | undefined {
-    return message.split("\n").find((line) => line.startsWith("data:"))?.slice(5).trim();
-}
-
-
-function parseAssistantEvent(data: string): AssistantEvent {
-    const event: unknown = JSON.parse(data);
-    if (!isAssistantEvent(event))
-        throw new ApplicationClientError("editorial_request_failed", undefined, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-
-    return event;
-}
-
-
-async function streamEvents<Event>(body: ReadableStream<Uint8Array>, parse: (data: string) => Event, onEvent: (event: Event) => void): Promise<void> {
-    const reader = body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-        const { done, value } = await reader.read();
-        buffer += decoder.decode(value, { stream: !done });
-
-        const messages = buffer.split("\n\n");
-        buffer = messages.pop() ?? "";
-
-        for (const message of messages) {
-            const data = streamData(message);
-            if (data)
-                onEvent(parse(data));
-        }
-
-        if (done)
-            return;
-    }
-}
-
-
-export class HttpApplicationClient implements EditorialWorkspaceClient {
-    constructor(private readonly serviceUrl = "http://127.0.0.1:8787") { }
-
-
+export class HttpApplicationClient extends HttpSettingsClient implements EditorialWorkspaceClient {
     async getHealth(): Promise<HealthResponse> {
         const response = await fetch(`${this.serviceUrl}${healthPath}`);
         if (!response.ok)
             throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
 
         return parseHealthResponse(await response.json());
-    }
-
-
-    async getApplicationSettings(): Promise<ApplicationSettingsSnapshot> {
-        const settings = await this.request<ApplicationSettingsSnapshot>(applicationSettingsPath);
-        configureSystemDateTimeFormat(settings.systemDateTimeFormat);
-
-        return settings;
-    }
-
-
-    async updateGeneralSettings(input: GeneralSettings): Promise<GeneralSettings> {
-        return this.request<GeneralSettings>(`${applicationSettingsPath}/general`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
-    }
-
-
-    async updateBackupPolicy(input: BackupPolicy): Promise<BackupPolicy> {
-        return this.request<BackupPolicy>(`${applicationSettingsPath}/backup-policy`, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
-    }
-
-
-    async createBackup(): Promise<Blob> {
-        const response = await fetch(`${this.serviceUrl}${backupsPath}`, { method: HTTP_METHOD.POST });
-        if (!response.ok)
-            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
-
-        return response.blob();
     }
 
 
@@ -360,7 +274,7 @@ export class HttpApplicationClient implements EditorialWorkspaceClient {
     }
 
 
-    private async request<T>(path: string, init?: RequestInit): Promise<T> {
+    protected async request<T>(path: string, init?: RequestInit): Promise<T> {
         const response = await fetch(`${this.serviceUrl}${path}`, { ...init, headers: { "content-type": "application/json", ...init?.headers } });
         if (response.status === HTTP_STATUS.NO_CONTENT)
             return undefined as T;

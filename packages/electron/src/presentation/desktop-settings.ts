@@ -1,7 +1,9 @@
-import { mkdirSync, renameSync, rmSync, statSync } from "node:fs";
-import { join, parse, relative, resolve } from "node:path";
+import { copyFileSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { basename, join, parse, relative, resolve } from "node:path";
 import type { Dialog, IpcMain, IpcRenderer, Shell } from "electron";
 import type { ApplicationServices } from "@skladno/server/electron";
+import { validateDatabaseSnapshot } from "@skladno/server/electron";
 import { ApplicationClientError, type ApplicationErrorCode, type DesktopSettingsClient, type DesktopSettingsLocations, type ElectronMessages } from "@skladno/shared";
 import { readRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
 
@@ -47,8 +49,10 @@ interface DesktopSettingsAdapterOptions {
     services: ApplicationServices;
     messages: ElectronMessages;
     chooseDirectory(): Promise<string | undefined>;
+    chooseBackupSnapshot(directory: string): Promise<string | undefined>;
+    requestCheckpoint(): Promise<boolean>;
     closeApplication(): void;
-    quit(): void;
+    restart(): void;
 }
 
 
@@ -99,7 +103,7 @@ function createBackup({ runtime, database }: Pick<DesktopSettingsContext, "runti
 }
 
 
-async function deleteLocalData({ runtime, dataDirectory, database, dialog, messages, closeApplication, quit }: Pick<DesktopSettingsContext, "runtime" | "dataDirectory" | "database" | "dialog" | "messages" | "closeApplication" | "quit">): Promise<unknown> {
+async function deleteLocalData({ runtime, dataDirectory, database, dialog, messages, closeApplication, restart }: Pick<DesktopSettingsContext, "runtime" | "dataDirectory" | "database" | "dialog" | "messages" | "closeApplication" | "restart">): Promise<unknown> {
     const backupAvailable = Boolean(runtime.backupDirectory && !overlaps(runtime.backupDirectory, dataDirectory) && !overlaps(dataDirectory, runtime.backupDirectory));
     const confirmation = await dialog.showMessageBox({
         type: "warning",
@@ -128,7 +132,53 @@ async function deleteLocalData({ runtime, dataDirectory, database, dialog, messa
 
     closeApplication();
     rmSync(resolve(dataDirectory), { recursive: true, maxRetries: 3, retryDelay: 100 });
-    quit();
+    restart();
+
+    return { ok: true, value: undefined };
+}
+
+
+async function restoreNativeBackup({ runtimePath, runtime, database, dialog, messages, chooseBackupSnapshot, requestCheckpoint, closeApplication, restart }: Pick<DesktopSettingsContext, "runtimePath" | "runtime" | "database" | "dialog" | "messages" | "chooseBackupSnapshot" | "requestCheckpoint" | "closeApplication" | "restart">): Promise<unknown> {
+    if (!runtime.backupDirectory)
+        return { ok: false, error: "editorial_request_failed" };
+
+    const selected = await chooseBackupSnapshot(runtime.backupDirectory);
+    if (!selected)
+        return { ok: true, value: undefined };
+
+    if (!overlaps(runtime.backupDirectory, selected))
+        return { ok: false, error: "invalid_request" };
+
+    validateDatabaseSnapshot(selected);
+    const confirmation = await dialog.showMessageBox({
+        type: "warning",
+        title: messages["electron.restoreBackup.title"],
+        message: messages["electron.restoreBackup.message"],
+        detail: `${messages["electron.restoreBackup.detail"]}\n\n${basename(selected)}`,
+        buttons: [messages["electron.restoreBackup.restore"], messages["electron.restoreBackup.cancel"]],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+    });
+
+    if (confirmation.response !== 0)
+        return { ok: true, value: undefined };
+
+    if (!await requestCheckpoint())
+        return { ok: false, error: "editorial_request_failed" };
+
+    const stagingDirectory = join(parse(runtimePath).dir, "restore-staging");
+    mkdirSync(stagingDirectory, { recursive: true });
+
+    const stagedSnapshotPath = join(stagingDirectory, `${randomUUID()}.sqlite`);
+    copyFileSync(selected, stagedSnapshotPath);
+    validateDatabaseSnapshot(stagedSnapshotPath);
+
+    const recoverySnapshotPath = createNativeBackup(database, stagingDirectory).path;
+    writeRuntimeSettings(runtimePath, { ...runtime, pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } });
+    closeApplication();
+    restart();
+
     return { ok: true, value: undefined };
 }
 
@@ -169,6 +219,8 @@ export function registerDesktopSettingsAdapter({ ipcMain, userDataPath, ...optio
                     return await revealDataDirectory(context);
                 case "createNativeBackup":
                     return createBackup(context);
+                case "restoreNativeBackup":
+                    return await restoreNativeBackup(context);
                 case "deleteLocalData":
                     return await deleteLocalData(context);
                 case "addManagedAiConnection":
@@ -203,6 +255,7 @@ export function createDesktopSettingsClient(ipcRenderer: Pick<IpcRenderer, "invo
         revealBackupDirectory: () => invoke("revealBackupDirectory"),
         revealDataDirectory: () => invoke("revealDataDirectory"),
         createNativeBackup: () => invoke("createNativeBackup"),
+        restoreNativeBackup: () => invoke("restoreNativeBackup"),
         deleteLocalData: () => invoke("deleteLocalData"),
         addManagedAiConnection: ({ provider, label, apiKey }) => invoke("addManagedAiConnection", provider, label, apiKey),
         renameManagedAiConnection: (connectionId, label) => invoke("renameManagedAiConnection", connectionId, label),

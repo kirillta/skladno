@@ -92,6 +92,7 @@ describe("ApplicationSettings AI", () => {
             revealBackupDirectory: vi.fn(),
             revealDataDirectory: vi.fn(),
             createNativeBackup: vi.fn(),
+            restoreNativeBackup: vi.fn(),
             deleteLocalData: vi.fn(),
             addManagedAiConnection,
             renameManagedAiConnection: vi.fn(),
@@ -149,7 +150,7 @@ describe("ApplicationSettings AI", () => {
         const renameManagedAiConnection = vi.fn().mockResolvedValue({ ...connection, label: "Work AI" });
         const desktop: DesktopSettingsClient = {
             getLocations: vi.fn().mockResolvedValue({ dataDirectory: "", dataDirectoryExternallyControlled: false }),
-            chooseBackupDirectory: vi.fn(), revealBackupDirectory: vi.fn(), revealDataDirectory: vi.fn(), createNativeBackup: vi.fn(), deleteLocalData: vi.fn(), addManagedAiConnection: vi.fn(), renameManagedAiConnection, removeManagedAiConnection: vi.fn(),
+            chooseBackupDirectory: vi.fn(), revealBackupDirectory: vi.fn(), revealDataDirectory: vi.fn(), createNativeBackup: vi.fn(), restoreNativeBackup: vi.fn(), deleteLocalData: vi.fn(), addManagedAiConnection: vi.fn(), renameManagedAiConnection, removeManagedAiConnection: vi.fn(),
         };
         window.skladnoDesktop = desktop;
         const client = {

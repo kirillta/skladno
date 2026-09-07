@@ -48,11 +48,13 @@ function setup(response: number, backupChecked = false, backupFails = false, con
         services: {} as never,
         messages: electronMessagesFor("en"),
         chooseDirectory: async () => undefined,
+        chooseBackupSnapshot: async () => undefined,
+        requestCheckpoint: async () => true,
         closeApplication: () => {
             assert.equal(existsSync(dataDirectory), true);
             closed = true;
         },
-        quit: () => {
+        restart: () => {
             quit = true;
         },
     });
@@ -64,6 +66,7 @@ function setup(response: number, backupChecked = false, backupFails = false, con
         checkboxLabel: () => checkboxLabel,
         checkboxInitiallyChecked: () => checkboxInitiallyChecked,
         invoke: async () => handler?.({}, { method: "deleteLocalData", args: [] }),
+        invokeRestore: async () => handler?.({}, { method: "restoreNativeBackup", args: [] }),
         closed: () => closed,
         quit: () => quit,
         cleanup: () => rmSync(root, { recursive: true, force: true }),
@@ -80,6 +83,19 @@ test("deleting local data closes first, preserves other files, and exits", async
         assert.equal(fixture.quit(), true);
         assert.equal(existsSync(fixture.dataDirectory), false);
         assert.equal(readFileSync(join(fixture.root, "unrelated.txt"), "utf8"), "keep");
+    } finally {
+        fixture.cleanup();
+    }
+});
+
+
+test("cancelling backup restoration leaves local data unchanged", async () => {
+    const fixture = setup(1);
+    try {
+        assert.deepEqual(await fixture.invokeRestore(), { ok: true, value: undefined });
+        assert.equal(fixture.closed(), false);
+        assert.equal(fixture.quit(), false);
+        assert.equal(readFileSync(join(fixture.dataDirectory, "skladno.sqlite"), "utf8"), "author data");
     } finally {
         fixture.cleanup();
     }

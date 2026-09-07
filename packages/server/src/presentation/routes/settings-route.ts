@@ -4,7 +4,7 @@ import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
 
 import { ApplicationSettingsService } from "../../application/settings/application-settings-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
-import { object, readJson, writeJson } from "../transport/json.js";
+import { object, readBinary, readJson, writeJson } from "../transport/json.js";
 
 
 export async function handleSettingsSnapshotRoute(response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
@@ -37,6 +37,13 @@ export function handleCreateBackupRoute(response: ServerResponse, settings: Appl
     } finally {
         backup?.cleanup();
     }
+}
+
+
+export async function handleRestoreBackupRoute(request: IncomingMessage, response: ServerResponse, restore: (snapshot: Uint8Array) => Promise<void>): Promise<void> {
+    await restore(await readBinary(request));
+    response.writeHead(HTTP_STATUS.NO_CONTENT);
+    response.end();
 }
 
 

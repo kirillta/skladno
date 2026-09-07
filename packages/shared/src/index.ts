@@ -37,6 +37,7 @@ export {
     aiModelPreferencesPath,
     AI_PROVIDER,
     backupsPath,
+    restoreBackupPath,
     keyBindingsPath,
     defaultGeneralSettings,
     defaultInterfaceLocale,

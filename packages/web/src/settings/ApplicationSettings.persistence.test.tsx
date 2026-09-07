@@ -16,6 +16,9 @@ import { saveWebBackup } from "./web-backups.js";
 vi.mock("./web-backups.js", () => ({
     chooseBackupFolder: vi.fn().mockResolvedValue("Skladno backups"),
     saveWebBackup: vi.fn().mockResolvedValue("skladno-manual.sqlite"),
+    listWebBackups: vi.fn().mockResolvedValue(["skladno-manual.sqlite"]),
+    restoreWebBackup: vi.fn().mockResolvedValue(undefined),
+    webBackupErrorMessageId: vi.fn((_error, fallback) => fallback),
     saveScheduledWebBackup: vi.fn(),
     selectedBackupFolderName: vi.fn().mockResolvedValue(undefined),
 }));
@@ -88,6 +91,22 @@ describe("ApplicationSettings persistence", () => {
         await screen.findByText("Couldn’t create a backup. Your editing session is still safe.");
         expect(screen.getByRole("button", { name: message("settings.createBackup") }).hasAttribute("disabled")).toBe(false);
         expect(screen.getByRole("button", { name: message("settings.publishing") }).hasAttribute("disabled")).toBe(false);
+    });
+
+
+    it("offers snapshots from the selected browser backup folder", async () => {
+        const user = userEvent.setup();
+        const client = {
+            getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()),
+            getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
+        } as unknown as EditorialWorkspaceClient;
+
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+
+        await user.click(await screen.findByRole("button", { name: message("settings.dataBackups") }));
+        await user.click(screen.getByRole("button", { name: message("settings.chooseBackupFolder") }));
+        const restore = await screen.findByRole("combobox", { name: message("settings.restoreBackup") });
+        expect(within(restore).getByRole("option", { name: "skladno-manual.sqlite" })).toBeTruthy();
     });
 
     it("toggles automatic backups", async () => {
