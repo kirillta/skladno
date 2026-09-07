@@ -6,7 +6,7 @@ import {
     type ElectronPrepareCloseRequest,
 } from "@skladno/shared";
 import { exposeElectronApplicationClient } from "./preload-bridge.js";
-import { createDesktopSettingsClient } from "./desktop-settings.js";
+import { createDesktopSettingsClient } from "./desktop-settings-client.js";
 import { createDesktopShellClient } from "./desktop-shell.js";
 import { createDesktopUpdateClient } from "./desktop-updates.js";
 

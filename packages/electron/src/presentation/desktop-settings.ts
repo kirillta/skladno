@@ -1,14 +1,12 @@
 import { copyFileSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { basename, join, parse, relative, resolve } from "node:path";
-import type { Dialog, IpcMain, IpcRenderer, Shell } from "electron";
+import type { Dialog, IpcMain, Shell } from "electron";
 import type { ApplicationServices } from "@skladno/server/electron";
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
-import { ApplicationClientError, type ApplicationErrorCode, type DesktopSettingsClient, type DesktopSettingsLocations, type ElectronMessages } from "@skladno/shared";
+import { type DesktopSettingsLocations, type ElectronMessages } from "@skladno/shared";
 import { readRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
-
-
-export const desktopSettingsChannel = "skladno:desktop-settings";
+import { desktopSettingsChannel } from "./desktop-settings-client.js";
 
 
 function overlaps(first: string, second: string): boolean {
@@ -236,29 +234,4 @@ export function registerDesktopSettingsAdapter({ ipcMain, userDataPath, ...optio
             return { ok: false, error: "editorial_request_failed" };
         }
     });
-}
-
-
-export function createDesktopSettingsClient(ipcRenderer: Pick<IpcRenderer, "invoke">): DesktopSettingsClient {
-    async function invoke<T>(method: string, ...args: unknown[]): Promise<T> {
-        const result = await ipcRenderer.invoke(desktopSettingsChannel, { method, args }) as { ok: boolean; value?: T; error?: ApplicationErrorCode };
-        if (!result.ok)
-            throw new ApplicationClientError(result.error ?? "editorial_request_failed", undefined, 500);
-
-        return result.value as T;
-    }
-
-
-    return {
-        getLocations: () => invoke("getLocations"),
-        chooseBackupDirectory: () => invoke("chooseBackupDirectory"),
-        revealBackupDirectory: () => invoke("revealBackupDirectory"),
-        revealDataDirectory: () => invoke("revealDataDirectory"),
-        createNativeBackup: () => invoke("createNativeBackup"),
-        restoreNativeBackup: () => invoke("restoreNativeBackup"),
-        deleteLocalData: () => invoke("deleteLocalData"),
-        addManagedAiConnection: ({ provider, label, apiKey }) => invoke("addManagedAiConnection", provider, label, apiKey),
-        renameManagedAiConnection: (connectionId, label) => invoke("renameManagedAiConnection", connectionId, label),
-        removeManagedAiConnection: (connectionId) => invoke("removeManagedAiConnection", connectionId),
-    };
 }

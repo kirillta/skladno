@@ -50,12 +50,12 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
                     ? <Button variant="secondary" disabled={!folderName} onClick={() => void desktop.restoreNativeBackup().catch(() => setRestoreStatus(intl.formatMessage({ id: "settings.restoreBackupFailed" })))}>
                         {intl.formatMessage({ id: "settings.restoreBackup" })}
                     </Button>
-                    : <div className="flex gap-2">
+                    : <div>
                         <Select aria-label={intl.formatMessage({ id: "settings.restoreBackup" })} value={restoreName ?? ""} onChange={(event) => setRestoreName(event.target.value)} disabled={restoreNames.length === 0}>
                             <option value="">{intl.formatMessage({ id: "settings.chooseBackup" })}</option>
                             {restoreNames.map((name) => <option key={name} value={name}>{name}</option>)}
                         </Select>
-                        <Button variant="secondary" disabled={!restoreName} onClick={() => {
+                        <Button className="mt-3 w-fit" variant="secondary" disabled={!restoreName} onClick={() => {
                             if (!restoreName || !window.confirm(intl.formatMessage({ id: "settings.restoreBackupConfirm" }, { name: restoreName })))
                                 return;
 
