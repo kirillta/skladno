@@ -10,6 +10,8 @@ const releasesUrl = "https://api.github.com/repos/kirillta/skladno/releases";
 const releasesDownloadUrl = "https://github.com/kirillta/skladno/releases/download";
 const recoveryGuideUrl = "https://github.com/kirillta/skladno/blob/main/docs/user/update-recovery.md";
 const releaseVersion = /^v?(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+)(\.security)?)?$/;
+const automaticUpdateCheckInitialDelay = 5_000;
+const automaticUpdateCheckInterval = 86_400_000;
 
 
 interface Release {
@@ -112,7 +114,7 @@ function createUpdateSnapshot(database: { exec(sql: string): void }, directory: 
 }
 
 
-export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, database, dataDirectory, updater, fetchReleases = () => fetch(releasesUrl), notify, requestCheckpoint, closeApplication, openExternal, supported = true }: {
+export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, database, dataDirectory, updater, fetchReleases = () => fetch(releasesUrl), notify, requestCheckpoint, closeApplication, openExternal, supported = true, scheduleTimeout = setTimeout }: {
     runtimePath: string;
     currentVersion: string;
     database: { exec(sql: string): void };
@@ -124,6 +126,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
     closeApplication(): void;
     openExternal(url: string): Promise<void>;
     supported?: boolean;
+    scheduleTimeout?: (callback: () => void | Promise<void>, delay: number) => unknown;
 }) {
     let release: Release | undefined;
     let state: DesktopUpdateState = initialState();
@@ -282,11 +285,16 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
         openReleaseNotes: () => state.kind === "available" || state.kind === "downloading" || state.kind === "ready" ? openExternal(state.releaseNotesUrl) : Promise.resolve(),
         openRecoveryGuide: () => openExternal(recoveryGuideUrl),
         schedule() {
-            const runtime = settings();
-            if (state.kind === "unsupported" || runtime.updateNetworkAccess !== true || runtime.automaticUpdateChecks === false || (runtime.lastUpdateCheckAt && Date.now() - Date.parse(runtime.lastUpdateCheckAt) < 86_400_000))
-                return;
+            async function automaticCheck(): Promise<void> {
+                const runtime = settings();
+                if (state.kind === "unsupported" || runtime.updateNetworkAccess !== true || runtime.automaticUpdateChecks === false)
+                    return;
 
-            setTimeout(() => void checkNow(), 5_000);
+                await checkNow();
+                scheduleTimeout(automaticCheck, automaticUpdateCheckInterval);
+            }
+
+            scheduleTimeout(automaticCheck, automaticUpdateCheckInitialDelay);
         },
         markStartupSuccessful() {
             const runtime = settings();

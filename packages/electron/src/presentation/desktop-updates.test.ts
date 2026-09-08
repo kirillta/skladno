@@ -60,3 +60,34 @@ test("update discovery requires persisted network access", async () => {
         rmSync(root, { recursive: true, force: true });
     }
 });
+
+
+test("automatic update discovery runs at startup and daily while Skladno remains open", async () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
+    const runtimePath = join(root, "runtime-settings.json");
+    writeFileSync(runtimePath, JSON.stringify({ updateNetworkAccess: true, lastUpdateCheckAt: new Date().toISOString() }));
+    const scheduled: { callback: () => void | Promise<void>; delay: number }[] = [];
+    let requests = 0;
+    const coordinator = createDesktopUpdateCoordinator({
+        runtimePath, currentVersion: "0.1.0", database: { exec: () => undefined }, dataDirectory: root,
+        updater: { setFeedURL: () => undefined, checkForUpdates: () => undefined, quitAndInstall: () => undefined, on: () => undefined },
+        fetchReleases: async () => {
+            requests += 1;
+            return new Response(JSON.stringify([]));
+        },
+        notify: () => undefined, requestCheckpoint: async () => true, closeApplication: () => undefined, openExternal: async () => undefined,
+        scheduleTimeout: (callback, delay) => void scheduled.push({ callback, delay }),
+    });
+    try {
+        coordinator.schedule();
+        assert.equal(scheduled.length, 1);
+        assert.equal(scheduled[0]!.delay, 5_000);
+        await scheduled.shift()!.callback();
+        assert.equal(requests, 1);
+        assert.equal(scheduled[0]!.delay, 86_400_000);
+        await scheduled.shift()!.callback();
+        assert.equal(requests, 2);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
