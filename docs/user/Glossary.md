@@ -52,10 +52,51 @@ These terms describe concepts visible to authors and the domain language used th
 
 ## Interface
 
+### Workspace map
+
+Desktop layout with both side panels expanded and the Article Editor selected. Boxes show location and containment, not exact sizes.
+
+```text
+Editorial Workspace
+┌──────────────────────────┬──────────────────────────────┬──────────────────────────┐
+│ Article Library Panel    │ Article Workspace            │ Editorial Assistant Panel│
+├──────────────────────────┼──────────────────────────────┼──────────────────────────┤
+│ Skladno · New Article    │ Article Header               │ Assistant header         │
+│ Collapse control         │ Title and Article metadata   │ Collapse control         │
+├──────────────────────────┼──────────────────────────────┼──────────────────────────┤
+│ Article search           │ Workspace Tab Bar            │ Conversation             │
+├──────────────────────────┼──────────────────────────────┤ Request status           │
+│ Article list             │ Workspace View               │ and activity             │
+│                          │                              │                          │
+│                          │ Article Editor               │                          │
+│                          │ ┌──────────────────────────┐ │                          │
+│                          │ │ Writing surface          │ │                          │
+│                          │ │                          │ │                          │
+│                          │ └──────────────────────────┘ │                          │
+├──────────────────────────┤                              ├──────────────────────────┤
+│ Article Library          │                              │ Quick actions            │
+│ utility area             │                              │ Composer                 │
+│ Style Profile · Settings ├──────────────────────────────┤ Editorial guidance       │
+│ Update, when relevant    │ Article Status Bar           │ and Send                 │
+│ Language/local · Save    │ Article metadata · Copy      │                          │
+└──────────────────────────┴──────────────────────────────┴──────────────────────────┘
+```
+
+The footer at the bottom of the Library panel is the **Article Library utility area**. Its bottom row contains the language/local label and **save-state indicator**. The **Article Status Bar** sits beneath the central Article view.
+
+### Interface terms
+
 - **Editorial Workspace**: the main authoring screen containing the Article Library Panel, Article Workspace, and Editorial Assistant Panel.
 - **Article Library Panel**: Article search, the Article list, and workspace-level entry points. Its collapsed form is the **Navigation Rail**; its temporary small-screen form is the **Navigation Drawer**.
+- **Article Library utility area**: the footer of the Article Library Panel containing Style Profile, Settings, an update control when relevant, and language/local and save-state indicators.
+- **Save-state indicator**: the save status at the bottom of the Article Library Panel. In the Navigation Rail, it appears as a status dot.
 - **Article Workspace**: the Article Header, Workspace Tab Bar, selected Workspace View, and Article Status Bar.
+- **Article Header**: the title and metadata controls above the Workspace Tab Bar.
+- **Workspace Tab Bar**: the tabs used to select a Workspace View.
 - **Workspace View**: the selected Article Editor or supporting view: Proposal Review, Revision History, Fact Check, Style Profile, or Translations.
 - **Article Editor**: the writing view. Its main editing area is the **writing surface**.
+- **Article Status Bar**: the bar beneath the selected Workspace View with Article status and metadata, language selection, publishing-profile guidance, and Copy controls.
 - **Editorial Assistant Panel**: Editorial guidance, actions, request status, and activity. Its temporary small-screen form is the **Assistant Drawer**.
+- **Quick actions**: the dropdown above the Assistant composer for inserting a built-in Skill into a request.
+- **Composer**: the message input at the bottom of the Editorial Assistant Panel where the author enters Editorial guidance and sends a request.
 - **Application Settings Navigation**: navigation among the General, AI, Publishing profiles, and Data & backups Settings sections.
