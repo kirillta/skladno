@@ -79,5 +79,4 @@ jobs:
                   $releases = $assets | Where-Object Name -eq 'RELEASES'
                   $package = $assets | Where-Object Name -match '-full\.nupkg$'
                   if ($setup.Count -ne 1 -or $releases.Count -ne 1 -or $package.Count -ne 1) { throw 'Expected exactly one setup executable, RELEASES manifest, and full nupkg.' }
-                  $prerelease = if ($env:RELEASE_TAG -match '-preview\.') { @('--prerelease') } else { @() }
-                  gh release create $env:RELEASE_TAG $setup.FullName $releases.FullName $package.FullName @prerelease --title "Skladno $env:RELEASE_TAG" --notes "Unsigned Windows 11 x64 release. Windows may show a SmartScreen warning. Signing remains tracked in issue #168."
+                  gh release create $env:RELEASE_TAG $setup.FullName $releases.FullName $package.FullName --prerelease=$($env:RELEASE_TAG -match '-preview\.') --title "Skladno $env:RELEASE_TAG" --notes "Unsigned Windows 11 x64 release. Windows may show a SmartScreen warning. Signing remains tracked in issue #168."
