@@ -1,7 +1,6 @@
-import { generateText, isStepCount, Output, streamText, ToolLoopAgent, type LanguageModel, type ModelMessage, type ToolSet } from "ai";
+import { generateText, Output, streamText, type LanguageModel, type ModelMessage } from "ai";
 import { randomUUID } from "node:crypto";
-import { createOpenAI } from "@ai-sdk/openai";
-import { AI_PROVIDER, EDITORIAL_OPERATION, type AiProvider } from "@skladno/shared";
+import { EDITORIAL_OPERATION, type AiProvider } from "@skladno/shared";
 
 import type { EditorialConversationRequest } from "../../application/ports/editorial-conversation-request.js";
 import type { EditorialAssistantRequest } from "../../application/ports/editorial-assistant-request.js";
@@ -13,55 +12,50 @@ import { EditorialEngineError } from "../../application/ports/editorial-engine-e
 import type { EditorialEngineRequest } from "../../application/ports/editorial-engine-request.js";
 import { protectArticleSpans, restoreProtectedSpans } from "../../application/editorial/translation.js";
 import { authorControlInstruction, createEditorialMessages } from "../../application/editorial/workflow-prompt.js";
-import { streamFactCheck } from "./fact-check-workflow.js";
-import { boundedArticleContext, isAcceptedFinish, providerError, responseId, responsesProviderOptions } from "./ai-sdk-editorial-helpers.js";
-import { createOpenAiFactCheckProvider } from "./openai-fact-check-provider.js";
-import { assistantConversationPrompt, assistantStepOptions, createAssistantTools } from "./ai-sdk-assistant.js";
+import { streamFactCheck, type FactCheckProvider } from "./fact-check-workflow.js";
+import { boundedArticleContext } from "./editorial-context.js";
+import { continuationToken, editorialProviderOptions, isAcceptedFinish, providerError } from "./ai-sdk-provider.js";
+import { AiSdkAssistantExecutor } from "./ai-sdk-assistant-executor.js";
 import { styleReview, styleReviewSchema, translationSchema } from "./ai-sdk-editorial-output.js";
 
-export { responsesPrompt, responsesProviderOptions } from "./ai-sdk-editorial-helpers.js";
+export { responsesPrompt, responsesProviderOptions } from "./ai-sdk-provider.js";
 export { assistantConversationPrompt, assistantStepOptions } from "./ai-sdk-assistant.js";
 
 
 interface AiSdkEditorialEngineOptions {
-    apiKey: string;
-    model: string;
     provider: AiProvider;
     languageModel: LanguageModel;
+    factCheckProvider?: FactCheckProvider;
     continuationScope?: { connectionId: string; provider: AiProvider; model: string };
     storeResponses: boolean;
-    sourcedResearch: boolean;
     reasoningEffort?: "low" | "medium" | "high";
 }
 
 
 export class AiSdkEditorialEngine implements EditorialEngine {
-    private readonly openai;
-
-
     readonly continuationScope;
 
 
+    private readonly assistant;
+
+
     constructor(private readonly options: AiSdkEditorialEngineOptions) {
-        this.openai = createOpenAI({ apiKey: options.apiKey });
         this.continuationScope = options.continuationScope;
+        this.assistant = new AiSdkAssistantExecutor(options);
     }
 
 
     async *stream(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
         try {
             if (request.operation === EDITORIAL_OPERATION.FACT_CHECK) {
-                if (!this.options.sourcedResearch)
+                const provider = this.options.factCheckProvider;
+                if (!provider)
                     throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
                 yield* streamFactCheck({
                     request: { article: boundedArticleContext(request.article), reusableFactFindings: request.reusableFactFindings },
                     signal,
-                    provider: createOpenAiFactCheckProvider({
-                        openai: this.openai,
-                        model: this.options.model,
-                        providerOptions: (previousResponseId) => responsesProviderOptions(this.options.storeResponses, previousResponseId, this.options.reasoningEffort),
-                    }),
+                    provider,
                 });
 
                 return;
@@ -120,69 +114,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
 
     async *streamAssistant(request: EditorialAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const state = { activeCapabilities: request.initialActiveCapabilities };
-        const execute = (capability: string, input: Readonly<Record<string, string>>) => this.executeAssistantCapability(request, signal, state, capability, input);
-        const agent = this.createAssistantAgent(request, createAssistantTools(request, execute), state);
-        const result = await agent.stream({ prompt: assistantConversationPrompt(request), abortSignal: signal });
-        let text = "";
-        for await (const delta of result.textStream) {
-            text += delta;
-            yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta };
-        }
-
-        const steps = await result.steps;
-        const finalStep = await result.finalStep;
-        if (!text.trim() || signal.aborted || (steps.length >= 6 && finalStep.finishReason === "tool-calls"))
-            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
-
-        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), ...(this.continuationToken(finalStep.providerMetadata) ? { continuationToken: this.continuationToken(finalStep.providerMetadata) } : {}), text };
-    }
-
-
-    private async executeAssistantCapability(request: EditorialAssistantRequest, signal: AbortSignal, state: { activeCapabilities?: readonly string[] }, capability: string, input: Readonly<Record<string, string>>): Promise<unknown> {
-        const candidate = request.tools.find((toolCandidate) => toolCandidate.capability === capability);
-        if (!candidate)
-            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
-
-        const result = await candidate.execute(input, signal);
-        if (capability === "find_capabilities" && Array.isArray(result))
-            state.activeCapabilities = result.flatMap((item) => item && typeof item === "object" && "capability" in item && typeof item.capability === "string" ? [item.capability] : []);
-
-        return result;
-    }
-
-
-    private createAssistantAgent(request: EditorialAssistantRequest, tools: ToolSet, state: { activeCapabilities?: readonly string[] }) {
-        const activeTools = () => state.activeCapabilities ? [...state.activeCapabilities, "load_skill"] : ["find_capabilities", "load_skill"];
-        const providerOptions = this.providerOptions();
-
-        return new ToolLoopAgent<never, ToolSet>({
-            model: this.options.languageModel,
-            instructions: [
-                "You are Skladno's editorial assistant. Use only the supplied tools when an editorial result is needed.",
-                "Never claim that a tool ran when it did not. Preserve author control. Finish with a concise response after the necessary work.",
-                `Available Skills:\n${request.skills.map((skill) => `${skill.id}: ${skill.name}. ${skill.description}`).join("\n")}`,
-                ...request.instructions,
-            ].join("\n\n"),
-            tools,
-            activeTools: activeTools(),
-            prepareStep: ({ stepNumber }) => assistantStepOptions(stepNumber, state.activeCapabilities),
-            stopWhen: isStepCount(6),
-            telemetry: { isEnabled: false },
-            ...(providerOptions ? { providerOptions } : {}),
-        });
-    }
-
-
-    private providerOptions(previousResponseId?: string) {
-        return this.options.provider === AI_PROVIDER.OPENAI
-            ? responsesProviderOptions(this.options.storeResponses, previousResponseId, this.options.reasoningEffort)
-            : undefined;
-    }
-
-
-    private continuationToken(metadata: unknown): string | undefined {
-        return this.options.provider === AI_PROVIDER.OPENAI && this.options.storeResponses ? responseId(metadata) : undefined;
+        yield* this.assistant.stream(request, signal);
     }
 
 
@@ -192,7 +124,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             messages,
             abortSignal: signal,
             telemetry: { isEnabled: false },
-            providerOptions: this.providerOptions(previousResponseId),
+            providerOptions: editorialProviderOptions({ provider: this.options.provider, storeResponses: this.options.storeResponses, previousResponseId, reasoningEffort: this.options.reasoningEffort }),
         });
         let text = "";
         let finished = false;
@@ -213,11 +145,11 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
         }
 
-        const continuationToken = this.continuationToken((await result.finalStep).providerMetadata);
+        const token = continuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: (await result.finalStep).providerMetadata });
         if (!finished || !text.trim())
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
 
-        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), ...(continuationToken ? { continuationToken } : {}), text };
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), ...(token ? { continuationToken: token } : {}), text };
     }
 
 
@@ -237,15 +169,21 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             output: Output.object({ schema: styleReviewSchema }),
             abortSignal: signal,
             telemetry: { isEnabled: false },
-            providerOptions: this.providerOptions(request.previousResponseId),
+            providerOptions: editorialProviderOptions({
+                provider: this.options.provider,
+                storeResponses: this.options.storeResponses,
+                previousResponseId: request.previousResponseId,
+                reasoningEffort: this.options.reasoningEffort
+            }),
         });
         if (!result.output || !isAcceptedFinish(result.finishReason))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
+        const token = continuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: result.providerMetadata });
         yield {
             type: EDITORIAL_ENGINE_EVENT.COMPLETED,
             responseId: randomUUID(),
-            ...(this.continuationToken(result.providerMetadata) ? { continuationToken: this.continuationToken(result.providerMetadata) } : {}),
+            ...(token ? { continuationToken: token } : {}),
             text: result.output.proposal,
             styleReview: styleReview(result.output, request.styleProfile, request.articleStyleRules),
         };
@@ -261,11 +199,21 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         const protectedTitle = protectArticleSpans(request.articleTitle ?? "");
         const result = await generateText({
             model: this.options.languageModel,
-            messages: createEditorialMessages({ operation: request.operation, article: protectedArticle.protectedText, articleTitle: protectedTitle.protectedText, authorContext: request.authorContext, targetLanguage }),
+            messages: createEditorialMessages({
+                operation: request.operation,
+                article: protectedArticle.protectedText,
+                articleTitle: protectedTitle.protectedText,
+                authorContext: request.authorContext,
+                targetLanguage
+            }),
             output: Output.object({ schema: translationSchema }),
             abortSignal: signal,
             telemetry: { isEnabled: false },
-            providerOptions: this.providerOptions(),
+            providerOptions: editorialProviderOptions({
+                provider: this.options.provider,
+                storeResponses: this.options.storeResponses,
+                reasoningEffort: this.options.reasoningEffort
+            }),
         });
         if (!result.output || !isAcceptedFinish(result.finishReason) || result.output.targetLanguage.trim() !== targetLanguage)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
@@ -275,6 +223,11 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         if (!text || title === undefined)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), ...(this.continuationToken(result.providerMetadata) ? { continuationToken: this.continuationToken(result.providerMetadata) } : {}), text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans, title } };
+        const token = continuationToken({
+            provider: this.options.provider,
+            storeResponses: this.options.storeResponses,
+            metadata: result.providerMetadata
+        });
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), ...(token ? { continuationToken: token } : {}), text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans, title } };
     }
 }

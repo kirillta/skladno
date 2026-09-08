@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { assistantConversationPrompt, assistantStepOptions, responsesPrompt, responsesProviderOptions } from "./ai-sdk-editorial-engine.js";
-import { supportingTextProviderOptions } from "./ai-sdk-editorial-helpers.js";
+import { supportingTextProviderOptions } from "./ai-sdk-provider.js";
 import { AI_PROVIDER } from "@skladno/shared";
 
 

@@ -5,17 +5,6 @@ import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
 
 
-export function boundedArticleContext(content: string): string {
-    const maximumCharacters = 24_000;
-    if (content.length <= maximumCharacters)
-        return content;
-
-    const half = Math.floor(maximumCharacters / 2);
-
-    return `${content.slice(0, half)}\n\n[Middle of article omitted to bound editorial context.]\n\n${content.slice(-half)}`;
-}
-
-
 export function responseId(metadata: unknown): string | undefined {
     if (!metadata || typeof metadata !== "object" || !("openai" in metadata))
         return undefined;
@@ -24,7 +13,7 @@ export function responseId(metadata: unknown): string | undefined {
     if (!openai || typeof openai !== "object" || !("responseId" in openai))
         return undefined;
 
-    return typeof openai?.responseId === "string" ? openai.responseId : undefined;
+    return typeof openai.responseId === "string" ? openai.responseId : undefined;
 }
 
 
@@ -56,7 +45,7 @@ export function responsesPrompt(messages: ModelMessage[]) {
 }
 
 
-export function responsesProviderOptions(storeResponses: boolean, previousResponseId?: string, reasoningEffort?: "low" | "medium" | "high") {
+export function responsesProviderOptions(storeResponses: boolean, previousResponseId?: string, reasoningEffort?: ReasoningEffort) {
     return {
         openai: {
             store: storeResponses,
@@ -73,5 +62,19 @@ export type SupportingTextProviderOptions = ReturnType<typeof responsesProviderO
 export function supportingTextProviderOptions(provider: AiProvider, reasoningEffort?: ReasoningEffort): SupportingTextProviderOptions {
     return provider === AI_PROVIDER.OPENAI
         ? responsesProviderOptions(false, undefined, reasoningEffort)
+        : undefined;
+}
+
+
+export function editorialProviderOptions({ provider, storeResponses, previousResponseId, reasoningEffort }: { provider: AiProvider; storeResponses: boolean; previousResponseId?: string; reasoningEffort?: ReasoningEffort }): SupportingTextProviderOptions {
+    return provider === AI_PROVIDER.OPENAI
+        ? responsesProviderOptions(storeResponses, previousResponseId, reasoningEffort)
+        : undefined;
+}
+
+
+export function continuationToken({ provider, storeResponses, metadata }: { provider: AiProvider; storeResponses: boolean; metadata: unknown }): string | undefined {
+    return provider === AI_PROVIDER.OPENAI && storeResponses
+        ? responseId(metadata)
         : undefined;
 }

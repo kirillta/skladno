@@ -2,7 +2,7 @@ import { tool, type ModelMessage, type ToolSet } from "ai";
 import { z } from "zod";
 
 import type { EditorialAssistantRequest } from "../../application/ports/editorial-assistant-request.js";
-import { boundedArticleContext } from "./ai-sdk-editorial-helpers.js";
+import { boundedArticleContext } from "./editorial-context.js";
 
 type AssistantToolExecutor = (capability: string, input: Readonly<Record<string, string>>) => Promise<unknown>;
 type AssistantTool = EditorialAssistantRequest["tools"][number];

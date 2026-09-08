@@ -11,7 +11,7 @@ import { AiSdkAssistantActionIntentVerifier } from "./ai-sdk-assistant-action-in
 import type { ManagedCredentials } from "../../application/ports/managed-credentials.js";
 import { createProviderModel } from "./provider-model.js";
 import { editorialModelCapabilities, supportsEditorialOperation } from "./provider-capabilities.js";
-import { supportingTextProviderOptions } from "./ai-sdk-editorial-helpers.js";
+import { supportingTextProviderOptions } from "./ai-sdk-provider.js";
 
 
 interface ResolvedConnection {

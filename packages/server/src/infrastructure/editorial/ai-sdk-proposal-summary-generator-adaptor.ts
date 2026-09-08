@@ -3,7 +3,9 @@ import { z } from "zod";
 import type { ProposalChange, ProposalChangeSummary } from "@skladno/shared";
 
 import type { ProposalSummaryGenerator } from "../../application/ports/proposal-summary-generator.js";
-import type { SupportingTextProviderOptions } from "./ai-sdk-editorial-helpers.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
+import { isAcceptedFinish, type SupportingTextProviderOptions } from "./ai-sdk-provider.js";
 
 
 const summariesSchema = z.object({
@@ -31,6 +33,10 @@ export class AiSdkProposalSummaryGeneratorAdapter implements ProposalSummaryGene
             telemetry: { isEnabled: false },
             ...(this.providerOptions ? { providerOptions: this.providerOptions } : {}),
         });
+
+        if (!isAcceptedFinish(result.finishReason))
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
         const requestedIds = new Set(changes.map((change) => change.id));
 
         return (result.output?.summaries ?? []).filter((summary) => requestedIds.has(summary.changeId));
