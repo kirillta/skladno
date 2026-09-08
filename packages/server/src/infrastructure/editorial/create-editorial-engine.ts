@@ -4,7 +4,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
 import { AiSdkEditorialEngine } from "./ai-sdk-editorial-engine.js";
 import type { FactCheckProvider } from "./fact-check-workflow.js";
-import { createOpenAiFactCheckProvider } from "./openai-fact-check-provider.js";
+import { createOpenAIFactCheckProvider } from "./openai-fact-check-provider.js";
 import { createProviderModel } from "./provider-model.js";
 import { responsesProviderOptions } from "./ai-sdk-provider.js";
 
@@ -27,9 +27,8 @@ function createFactCheckProvider(options: Parameters<typeof createEditorialEngin
     if (options.provider !== AI_PROVIDER.OPENAI || !options.sourcedResearch)
         return undefined;
 
-    const openai = createOpenAI({ apiKey: options.apiKey });
-    return createOpenAiFactCheckProvider({
-        openai,
+    return createOpenAIFactCheckProvider({
+        client: createOpenAI({ apiKey: options.apiKey }),
         model: options.model,
         providerOptions: (previousResponseId) => responsesProviderOptions(options.storeResponses, previousResponseId, options.reasoningEffort),
     });
