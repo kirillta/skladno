@@ -190,7 +190,7 @@
             "capabilityIds": ["settings.preview-updates"],
             "preconditions": ["A packaged Windows release exposes an available update."],
             "event": "The author opens About Settings, allows update network access, and checks for updates.",
-            "expected": ["The network-permission, automatic-check, and prerelease-channel switches are accessible, a confirmation dialog precedes the persisted network permission, no discovery request occurs before consent, and Download appears only after explicit discovery."],
+            "expected": ["The network-permission, automatic-check, and prerelease-channel switches are accessible, a confirmation dialog precedes the persisted network permission, no discovery request occurs before consent, Download appears only after explicit discovery, and the status shows while the update downloads."],
             "forbidden": ["A browser or development build exposes update controls, an update-discovery request occurs without consent, or a download starts automatically."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.general.test.tsx" }
         },

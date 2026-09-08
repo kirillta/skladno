@@ -104,6 +104,18 @@ describe("ApplicationSettings general", () => {
     });
 
 
+    it("shows when an update is downloading", async () => {
+        const updates: DesktopUpdateClient = {
+            getState: vi.fn().mockResolvedValue({ kind: "downloading", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true }),
+            setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
+        };
+
+        render(<IntlProvider locale="en" messages={messages}><UpdatesSettingsGroup client={updates} desktop /></IntlProvider>);
+
+        expect(await screen.findByText(message("status.updateDownloading"))).toBeTruthy();
+    });
+
+
     it("persists the Editorial Assistant send-key preference", async () => {
         const user = userEvent.setup();
         const updateGeneralSettings = vi.fn().mockResolvedValue(defaultGeneralSettings);
