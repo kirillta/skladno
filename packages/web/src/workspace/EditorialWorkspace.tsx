@@ -110,7 +110,7 @@ export function EditorialWorkspaceProvider({ client, screen, settingsSection, op
                 publishingProfileId: isPublishLimitProfileId(defaultProfileId) ? defaultProfileId : defaultPublishLimitProfileId,
             });
         } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.createArticleFailed" }) });
         }
     }, [client, intl, notifyError, workspace]);
 

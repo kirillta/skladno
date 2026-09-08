@@ -30,12 +30,12 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     editorial_request_failed: "errors.editorialRequestFailed",
     invalid_key_binding: "errors.invalidKeyBinding",
     key_binding_conflict: "errors.keyBindingConflict",
-    assistant_skill_unsupported: "errors.generic",
-    assistant_skill_scope_incompatible: "errors.generic",
-    assistant_selection_invalid: "errors.generic",
-    assistant_request_conflict: "errors.generic",
-    assistant_retry_invalid: "errors.generic",
-    assistant_coordinator_failed: "errors.generic",
+    assistant_skill_unsupported: "errors.assistantSkillUnsupported",
+    assistant_skill_scope_incompatible: "errors.assistantSkillScopeIncompatible",
+    assistant_selection_invalid: "errors.assistantSelectionInvalid",
+    assistant_request_conflict: "errors.assistantRequestConflict",
+    assistant_retry_invalid: "errors.assistantRetryInvalid",
+    assistant_coordinator_failed: "errors.assistantCoordinatorFailed",
 };
 
 

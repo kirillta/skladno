@@ -58,7 +58,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
         void updateArticle(article.id, { title: nextTitle })
             .catch((error) => {
                 setTitle(article.title);
-                reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                reportError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.renameArticleFailed" }) });
             })
             .finally(() => {
                 if (pendingTitle.current === nextTitle)
@@ -81,7 +81,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             await remove(article.id);
             setDeleteConfirmationOpen(false);
         } catch (error) {
-            reportError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            reportError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.deleteArticleFailed" }) });
         }
     }
 

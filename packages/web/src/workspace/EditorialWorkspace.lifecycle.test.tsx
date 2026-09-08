@@ -213,7 +213,7 @@ describe("Editorial Workspace lifecycle", () => {
         const appearance = screen.getByText("Preferred appearance").closest("section")?.querySelector("select");
         await user.selectOptions(appearance!, "dark");
 
-        expect((await screen.findByRole("alert")).textContent).toContain("Couldn’t save your changes.");
+        expect((await screen.findByRole("alert")).textContent).toContain("Couldn't save your Settings. Your previous Settings are unchanged. Try again.");
         expect(screen.queryByText("private settings detail")).toBeNull();
     });
 

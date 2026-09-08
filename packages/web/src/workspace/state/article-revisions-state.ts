@@ -39,7 +39,7 @@ export function useArticleRevisions(client: EditorialWorkspaceClient, article: A
             setRevisions((items) => [...items, revision]);
             setCandidate(undefined);
         } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.restoreRevisionFailed" }) });
         }
     }
 

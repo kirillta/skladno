@@ -230,7 +230,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
                 return;
             }
 
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.acceptProposalFailed" }) });
         }
     }
 

@@ -88,7 +88,7 @@ export function useEditorialResults(client: EditorialWorkspaceClient, workspace:
             await Promise.all(findingIds.map((findingId) => client.resolveFactCheckFinding!(articleId, findingId, "corrected_or_removed")));
             setFactCheckResult((current) => current?.articleId === articleId ? { ...current, value: { ...current.value, findings: current.value.findings.map((finding) => findingIds.includes(finding.occurrenceId ?? "") ? { ...finding, resolution: "corrected_or_removed" } : finding) } } : current);
         } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.resolveFindingFailed" }) });
         }
     }, [client, intl, notifyError]);
 
@@ -124,7 +124,7 @@ export function useEditorialResults(client: EditorialWorkspaceClient, workspace:
                 sourceRevisionId: translationResult.baseRevisionId
             });
         } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.createTranslationFailed" }) });
             throw error;
         }
     }, [client, intl, notifyError, translations, workspace]);
