@@ -5,7 +5,7 @@ interface BackupDirectoryHandle {
     name: string;
     queryPermission(options: { mode: "readwrite" }): Promise<PermissionState>;
     requestPermission(options: { mode: "readwrite" }): Promise<PermissionState>;
-    getFileHandle(name: string, options: { create: true }): Promise<{ createWritable(): Promise<{ write(data: Blob): Promise<void>; close(): Promise<void> }> }>;
+    getFileHandle(name: string, options?: { create?: boolean }): Promise<{ getFile(): Promise<Blob>; createWritable(): Promise<{ write(data: Blob): Promise<void>; close(): Promise<void> }> }>;
     values(): AsyncIterable<{ kind: string; name: string }>;
     removeEntry(name: string): Promise<void>;
 }
@@ -13,16 +13,41 @@ interface BackupDirectoryHandle {
 
 interface BackupClient {
     createBackup?: () => Promise<Blob>;
+    restoreBackup?: (backup: Blob) => Promise<void>;
 }
 
 
 type BackupKind = "manual" | "automatic";
+type WebBackupFailure = "folder-required" | "folder-permission" | "folder-picker-unsupported" | "backup-unavailable" | "restore-unavailable";
+type WebBackupMessageId = "settings.backupFolderFailed" | "settings.backupFolderRequired" | "settings.backupFolderPermissionDenied" | "settings.backupFolderUnsupported" | "settings.backupCreateFailed" | "settings.backupCreateUnavailable" | "settings.restoreBackupFailed" | "settings.restoreBackupUnavailable";
+const webBackupMessages: Record<WebBackupFailure, WebBackupMessageId> = {
+    "folder-required": "settings.backupFolderRequired",
+    "folder-permission": "settings.backupFolderPermissionDenied",
+    "folder-picker-unsupported": "settings.backupFolderUnsupported",
+    "backup-unavailable": "settings.backupCreateUnavailable",
+    "restore-unavailable": "settings.restoreBackupUnavailable",
+};
 const databaseName = "skladno-web-backups";
 const storeName = "settings";
 const folderKey = "folder";
 const automaticBackupKey = "last-automatic-backup";
 let automaticBackupInProgressFor: string | undefined;
 let selectedFolder: BackupDirectoryHandle | undefined;
+
+
+class WebBackupError extends Error {
+    constructor(readonly code: WebBackupFailure) {
+        super(code);
+    }
+}
+
+
+export function webBackupErrorMessageId(error: unknown, fallback: WebBackupMessageId): WebBackupMessageId {
+    if (!(error instanceof WebBackupError))
+        return fallback;
+
+    return webBackupMessages[error.code];
+}
 
 
 function filename(kind: BackupKind): string {
@@ -72,11 +97,11 @@ async function saveFolder(folder: BackupDirectoryHandle): Promise<void> {
 async function writableFolder(requestPermission: boolean): Promise<BackupDirectoryHandle> {
     const folder = await readFolder();
     if (!folder)
-        throw new Error("Choose a backup folder first.");
+        throw new WebBackupError("folder-required");
 
     const permission = requestPermission ? await folder.requestPermission({ mode: "readwrite" }) : await folder.queryPermission({ mode: "readwrite" });
     if (permission !== "granted")
-        throw new Error("Backup folder permission is not available.");
+        throw new WebBackupError("folder-permission");
 
     return folder;
 }
@@ -100,7 +125,7 @@ async function retainAutomaticBackups(folder: BackupDirectoryHandle, policy: Bac
 export async function chooseBackupFolder(): Promise<string> {
     const choose = picker();
     if (!choose)
-        throw new Error("This browser cannot choose a backup folder.");
+        throw new WebBackupError("folder-picker-unsupported");
 
     const folder = await choose();
     selectedFolder = folder;
@@ -119,9 +144,31 @@ export async function selectedBackupFolderName(): Promise<string | undefined> {
 }
 
 
+export async function listWebBackups(): Promise<string[]> {
+    const folder = await writableFolder(false);
+    const names: string[] = [];
+    for await (const entry of folder.values()) {
+        if (entry.kind === "file" && entry.name.endsWith(".sqlite"))
+            names.push(entry.name);
+    }
+
+    return names.sort().reverse();
+}
+
+
+export async function restoreWebBackup(client: BackupClient, name: string): Promise<void> {
+    if (!client.restoreBackup || !name.endsWith(".sqlite") || name.includes("/") || name.includes("\\"))
+        throw new WebBackupError("restore-unavailable");
+
+    const folder = await writableFolder(false);
+    const backup = await (await folder.getFileHandle(name)).getFile();
+    await client.restoreBackup(backup);
+}
+
+
 export async function saveWebBackup(client: BackupClient, kind: BackupKind, policy: BackupPolicy, requestPermission = true): Promise<string> {
     if (!client.createBackup)
-        throw new Error("Web backups are unavailable in this client.");
+        throw new WebBackupError("backup-unavailable");
 
     const folder = await writableFolder(requestPermission);
     const name = filename(kind);

@@ -51,7 +51,7 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             : intl.formatMessage({ id: publishingProfileMessageId(publishing.profile.id) }));
     const badges: Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>> = {};
 
-    if (editorial.review)
+    if (editorial.review && !editorial.accepted)
         badges.proposal = editorial.proposalStale
             ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
             : { label: intl.formatMessage({ id: "workspace.badges.review" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.review" }), tone: "default" };

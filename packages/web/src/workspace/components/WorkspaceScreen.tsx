@@ -1,5 +1,6 @@
 import type { GeneralSettings, KeyBindingOverrides } from "@skladno/shared";
 import type { ReactNode } from "react";
+import { useIntl } from "react-intl";
 
 import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
 import type { AssistantSelectionSnapshot } from "../editor/ArticleEditorPlugins.js";
@@ -14,9 +15,10 @@ import { ArticleLibraryPanel } from "./ArticleLibraryPanel.js";
 import { ArticleWorkspace } from "./ArticleWorkspace.js";
 import { EditorialAssistantPanel } from "./EditorialAssistantPanel.js";
 import { WorkspaceShell } from "./WorkspaceShell.js";
+import { Banner, Button } from "../../ui/primitives.js";
 
 
-export function WorkspaceScreen({ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, runTranslation, dispatcher, shortcutOverrides, openSettings, assistantSelection, onSelectionChange, clearAssistantSelection, overlays }: {
+export function WorkspaceScreen({ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, runTranslation, dispatcher, shortcutOverrides, openSettings, hasUsableAiConnection, openModelSettings, assistantSelection, onSelectionChange, clearAssistantSelection, overlays }: {
     layout: WorkspaceLayoutState;
     workspace: ArticleWorkspaceState;
     assistant: AssistantMessagesState;
@@ -31,6 +33,8 @@ export function WorkspaceScreen({ layout, workspace, assistant, editorial, revis
     dispatcher: KeyBindingDispatcher;
     shortcutOverrides: KeyBindingOverrides;
     openSettings: () => void;
+    hasUsableAiConnection: boolean | undefined;
+    openModelSettings: () => void;
     assistantSelection: AssistantSelectionScope | undefined;
     onSelectionChange: (snapshot: AssistantSelectionSnapshot | undefined) => void;
     clearAssistantSelection: () => void;
@@ -82,7 +86,20 @@ export function WorkspaceScreen({ layout, workspace, assistant, editorial, revis
             openSettings={openSettings}
             clearSelection={clearAssistantSelection} />}
     >
+        {hasUsableAiConnection === false && <AiConnectionWarning openModelSettings={openModelSettings} />}
         <ArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} runFactCheck={runFactCheck} runTranslation={runTranslation} shortcutOverrides={shortcutOverrides} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection?.preview} />
         {overlays}
     </WorkspaceShell>;
+}
+
+
+function AiConnectionWarning({ openModelSettings }: { openModelSettings: () => void }) {
+    const intl = useIntl();
+
+    return <Banner className="m-3 shrink-0" tone="warning" role="status">
+        <span className="min-w-0">
+            <strong className="block">{intl.formatMessage({ id: "workspace.aiConnectionRequired" })}</strong>
+            {intl.formatMessage({ id: "workspace.aiConnectionCapabilities" })}</span>
+        <Button className="ml-auto shrink-0" variant="secondary" onClick={openModelSettings}>{intl.formatMessage({ id: "workspace.addModelKey" })}</Button>
+    </Banner>;
 }

@@ -39,10 +39,10 @@ Mark a step failed if it silently changes the Article, loses Revision history, e
 
 This drill proves recovery from a backup snapshot; it intentionally replaces the active database. Use the clean-profile data folder, not a maintainer's working data.
 
-1. Stop Skladno completely.
-2. Make a separate copy of the current `skladno.sqlite` from the configured `SKLADNO_DATA_DIR`.
-3. Copy the selected manual backup `.sqlite` over that folder's `skladno.sqlite`.
-4. Restart Skladno and verify the Article, its Revision history, and Settings state from before the backup are present.
+1. In Electron or the web app, choose **Restore a backup** in Data & backups and select a manual backup from the configured folder.
+2. Confirm the selected filename and replacement warning. Electron restarts; the web app reloads after the loopback service reopens the restored database.
+3. Verify the Article, Revision history, Draft checkpoint, Assistant history, style data, and Settings state from before the backup are present.
+4. Repeat with an incompatible snapshot and confirm the active data remains available after the failure.
 5. Record pass/fail, the application revision, OS and browser version, and the backup filename. Do not record the data-folder path if it identifies an author or shared location.
 
 If backup creation fails, leave the active database alone, check the folder permission, and retry. Browser backups require a browser with directory-picker support and retained folder permission. Manual backups are never removed by automatic-backup retention.

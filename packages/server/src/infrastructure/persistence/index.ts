@@ -1,4 +1,4 @@
-export { openDatabase, type SqliteDatabase } from "./database.js";
+export { openDatabase, validateDatabaseSnapshot, type SqliteDatabase } from "./database.js";
 export { ArticlesRepository } from "./repositories/articles-repository.js";
 export { EditorialSessionsRepository } from "./repositories/editorial-sessions-repository.js";
 export { MaterialsRepository } from "./repositories/materials-repository.js";

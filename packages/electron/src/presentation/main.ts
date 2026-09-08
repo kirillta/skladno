@@ -1,9 +1,10 @@
 import { dirname, join } from "node:path";
 import { app, autoUpdater, BrowserWindow, dialog, ipcMain, Menu, net, screen, shell } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
-import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter } from "@skladno/server/electron";
+import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter, validateDatabaseSnapshot } from "@skladno/server/electron";
 import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
 import { requestDraftCheckpoint } from "../application/close-coordinator.js";
+import { applyPendingRestore, PendingRestoreError } from "../application/pending-restore.js";
 import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window-policy.js";
 import { readWindowBounds, writeWindowBounds } from "../infrastructure/window-state.js";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
@@ -143,7 +144,20 @@ if (squirrelStartup) {
         app.setAppUserModelId("io.github.kirillta.skladno");
         loadServerEnvironment();
         const config = loadServerConfig();
-        const application = createLocalApplication(config);
+        const runtimePath = join(app.getPath("userData"), "runtime-settings.json");
+        const pendingRestore = applyPendingRestore({ runtimePath, databasePath: config.databasePath });
+        let application;
+        try {
+            application = createLocalApplication(config);
+            if (pendingRestore) {
+                validateDatabaseSnapshot(config.databasePath);
+                pendingRestore.complete();
+            }
+        } catch (error) {
+            pendingRestore?.rollback();
+            throw error;
+        }
+
         nativeMessages = electronMessagesFor((await application.services.settings.getSnapshot()).general.interfaceLocale);
         const cancelStreams = registerElectronIpcApplicationAdapter(ipcMain, application.services, application.editorial);
         registerDesktopSettingsAdapter({
@@ -156,12 +170,17 @@ if (squirrelStartup) {
             services: application.services,
             messages: nativeMessages,
             chooseDirectory: async () => (await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] })).filePaths[0],
+            chooseBackupSnapshot: async (directory) => (await dialog.showOpenDialog({ defaultPath: directory, filters: [{ name: "Skladno backups", extensions: ["sqlite"] }], properties: ["openFile"] })).filePaths[0],
+            requestCheckpoint: () => mainWindow ? requestDraftCheckpoint(ipcMain, mainWindow.webContents) : Promise.resolve(false),
             closeApplication: () => {
                 cancelStreams();
                 application.database.close();
                 closeApplication = undefined;
             },
-            quit: () => app.exit(0),
+            restart: () => {
+                app.relaunch();
+                app.exit(0);
+            },
         });
         closeApplication = () => {
             cancelStreams();
@@ -169,7 +188,7 @@ if (squirrelStartup) {
         };
 
         updates = createDesktopUpdateCoordinator({
-            runtimePath: join(app.getPath("userData"), "runtime-settings.json"),
+            runtimePath,
             currentVersion: app.getVersion(),
             database: application.database,
             dataDirectory: dirname(config.databasePath),
@@ -186,8 +205,17 @@ if (squirrelStartup) {
 
         await createMainWindow();
         updates?.schedule();
-    }).catch(() => {
-        dialog.showErrorBox(nativeMessages["electron.startFailed.title"], nativeMessages["electron.startFailed.message"]);
+    }).catch((error: unknown) => {
+        if (!app.isPackaged)
+            console.error("Skladno startup failed.", error);
+
+        const message = error instanceof PendingRestoreError
+            ? nativeMessages["electron.restoreFailed.message"]
+            : nativeMessages["electron.startFailed.message"];
+        const title = error instanceof PendingRestoreError
+            ? nativeMessages["electron.restoreFailed.title"]
+            : nativeMessages["electron.startFailed.title"];
+        dialog.showErrorBox(title, message);
         closeApplication?.();
         app.quit();
     });

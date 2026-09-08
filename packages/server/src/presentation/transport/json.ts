@@ -25,6 +25,22 @@ export async function readJson(request: IncomingMessage): Promise<unknown> {
 }
 
 
+export async function readBinary(request: IncomingMessage): Promise<Uint8Array> {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for await (const chunk of request) {
+        const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        size += bytes.length;
+        if (size > 100_000_000)
+            throw new ApplicationServiceError(APPLICATION_ERROR.REQUEST_TOO_LARGE, HTTP_STATUS.BAD_REQUEST);
+
+        chunks.push(bytes);
+    }
+
+    return Buffer.concat(chunks);
+}
+
+
 export function object(value: unknown): Record<string, unknown> {
     if (!value || typeof value !== "object" || Array.isArray(value))
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);

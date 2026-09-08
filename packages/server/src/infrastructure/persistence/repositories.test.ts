@@ -148,6 +148,16 @@ test("Proposal summaries remain recoverable with their Assistant Proposal", () =
 
     assert.deepEqual(proposal?.proposalSummaries, [{ changeId: "change-1", summary: "Improves the transition." }]);
     assert.equal(proposal?.proposalSummaryLocale, "en");
+
+    const accepted = repositories.articleService.acceptProposal(article.id, {
+        baseRevisionId: article.currentRevisionId,
+        content: "After",
+        provenance: { kind: "accepted-proposal", baseRevisionId: article.currentRevisionId, editorialArtifactId: artifact.id, wholeProposal: true },
+    });
+    repositories.articleService.acceptChange(article.id, { content: "Later author edit", provenance: { kind: "author-draft", baseRevisionId: accepted.id } });
+
+    const acceptedProposal = repositories.assistant.listMessages(article.id).find((message) => message.editorialArtifactId === artifact.id);
+    assert.deepEqual(acceptedProposal?.proposalAcceptance, { kind: "whole", revisionId: accepted.id });
 }));
 
 

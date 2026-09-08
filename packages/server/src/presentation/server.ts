@@ -17,8 +17,7 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 }
 
 
-export function createLocalService(config: ServerConfig, editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics) {
-    const router = createPresentationRouter(editorial, services, diagnostics);
+export function createLocalService(config: ServerConfig, editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics, current = () => ({ editorial, services }), restoreBackup?: (snapshot: Uint8Array) => Promise<void>) {
 
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {
@@ -42,6 +41,8 @@ export function createLocalService(config: ServerConfig, editorial: EditorialSer
 
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         try {
+            const application = current();
+            const router = createPresentationRouter(application.editorial, application.services, diagnostics, restoreBackup);
             if (await router.handle(request, response, pathname))
                 return;
         } catch (error) {

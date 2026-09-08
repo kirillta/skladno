@@ -12,6 +12,11 @@ export interface RuntimeSettings {
     priorVersion?: string;
     recoverySnapshotPath?: string;
     startupSuccess?: boolean;
+    pendingRestore?: {
+        stagedSnapshotPath: string;
+        recoverySnapshotPath: string;
+        phase: "ready" | "applied";
+    };
 }
 
 
@@ -32,10 +37,23 @@ export function readRuntimeSettings(path: string): RuntimeSettings {
             ...(typeof record.priorVersion === "string" ? { priorVersion: record.priorVersion } : {}),
             ...(typeof record.recoverySnapshotPath === "string" ? { recoverySnapshotPath: record.recoverySnapshotPath } : {}),
             ...(typeof record.startupSuccess === "boolean" ? { startupSuccess: record.startupSuccess } : {}),
+            ...(pendingRestore(record.pendingRestore) ? { pendingRestore: pendingRestore(record.pendingRestore) } : {}),
         };
     } catch {
         return {};
     }
+}
+
+
+function pendingRestore(value: unknown): RuntimeSettings["pendingRestore"] | undefined {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return undefined;
+
+    const record = value as Record<string, unknown>;
+    if (typeof record.stagedSnapshotPath !== "string" || typeof record.recoverySnapshotPath !== "string" || (record.phase !== "ready" && record.phase !== "applied"))
+        return undefined;
+
+    return { stagedSnapshotPath: record.stagedSnapshotPath, recoverySnapshotPath: record.recoverySnapshotPath, phase: record.phase };
 }
 
 

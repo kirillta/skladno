@@ -37,6 +37,7 @@ export {
     aiModelPreferencesPath,
     AI_PROVIDER,
     backupsPath,
+    restoreBackupPath,
     keyBindingsPath,
     defaultGeneralSettings,
     defaultInterfaceLocale,
@@ -205,6 +206,7 @@ export {
     type BuiltInSkillId,
     type FactCheckClaimPreview,
     type NewAssistantRequest,
+    type ProposalAcceptance,
     type RetryAssistantRequest,
     type StartAssistantRequest
 } from "./assistant/assistant.js";

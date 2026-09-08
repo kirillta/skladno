@@ -63,7 +63,7 @@
             "title": "Browser-selected backup folder, schedule, and retention",
             "status": "implemented",
             "owners": ["packages/web/src/App.tsx", "packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/web/src/settings/web-backups.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/backup-manager.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/sqlite-backup-manager.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "In supported web browsers, authors explicitly choose a local backup folder. The browser writes consistent SQLite snapshots there; daily startup writes at most one automatic snapshot when the previously selected folder remains permitted, and retention removes only automatic snapshots.",
+            "contract": "In supported web browsers, authors explicitly choose a local backup folder. The browser writes consistent SQLite snapshots there, lists compatible snapshots for explicit restore, and reloads after the loopback service safely replaces active data. Daily startup writes at most one automatic snapshot when the previously selected folder remains permitted, and retention removes only automatic snapshots.",
             "persistence": "app_settings.application-backup-policy plus the browser's local folder permission handle; snapshots exclude environment variables and API keys."
         },
         {
@@ -74,6 +74,15 @@
             "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/shared/src/settings/settings.ts", "packages/electron/src/presentation/desktop-settings.ts", "packages/electron/src/presentation/main.ts"],
             "contract": "In Electron, an author can request deletion of the active resolved Skladno data directory through a no-argument native operation. The native confirmation explains the irreversible scope and always shows a Create a backup before deletion checkbox, checked only when a separate backup directory is configured. A requested backup must succeed before deletion continues. It cancels without changes, closes SQLite and background work before deletion, then exits only after successful removal. The renderer cannot supply a filesystem path.",
             "persistence": "The confirmed active local data directory is removed. Installer and uninstaller behavior remains data-preserving."
+        },
+        {
+            "id": "settings.restore-local-backup",
+            "area": "Data & backups",
+            "title": "Explicit local-backup restoration",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/web/src/settings/web-backups.ts", "packages/shared/src/settings/settings.ts", "packages/server/src/index.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/electron/src/presentation/desktop-settings.ts", "packages/electron/src/application/pending-restore.ts", "packages/electron/src/presentation/main.ts", "packages/server/src/infrastructure/persistence/database.ts"],
+            "contract": "An author chooses a SQLite snapshot from the configured backup folder and explicitly confirms replacement. Browser restore uploads the selected snapshot only to the loopback service, which closes and reopens the local application before the browser reloads. Electron uses a staged native restart. The renderer cannot provide an active-data path. Skladno retains a recovery snapshot, validates the snapshot before and after replacement, and rolls back once when restored data cannot open.",
+            "persistence": "The selected snapshot replaces the active SQLite database only during restart. A private recovery snapshot remains outside the active database."
         },
         {
             "id": "settings.preview-updates",
@@ -194,6 +203,16 @@
             "expected": ["Cancellation leaves the data unchanged.", "A requested backup must complete and be non-empty before deletion proceeds.", "Only the active resolved Skladno data directory is deleted after background work and SQLite close, and Skladno exits after success."],
             "forbidden": ["Deleting an unresolved or broad path.", "Continuing to deletion after backup failure.", "Deleting local author data during ordinary uninstall."],
             "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-settings.test.ts" }
+        },
+        {
+            "id": "settings.restore-local-backup",
+            "title": "Backup restoration is staged and recoverable",
+            "capabilityIds": ["settings.restore-local-backup"],
+            "preconditions": ["The author has configured a backup folder containing a Skladno SQLite snapshot."],
+            "event": "The author selects a backup and confirms restoration.",
+            "expected": ["Cancellation leaves active data unchanged.", "Skladno validates the selected snapshot, retains a recovery snapshot, and opens the restored Articles, Revisions, Draft checkpoints, Assistant history, style data, and Settings after restart or browser reload.", "If restored startup fails, Skladno rolls back to the recovery snapshot once."],
+            "forbidden": ["The renderer supplies an active-data path.", "An invalid or incompatible snapshot replaces active data.", "Skladno claims success after a failed replacement or rollback."],
+            "evidence": { "kind": "automated", "path": "packages/electron/src/application/pending-restore.test.ts" }
         }
     ]
 }

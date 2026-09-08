@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { copyFileSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
-import { openDatabase } from "./database.js";
+import { DatabaseSnapshotError, openDatabase, validateDatabaseSnapshot } from "./database.js";
 import { SqliteBackupManager } from "./sqlite-backup-manager.js";
 
 
@@ -58,6 +59,24 @@ test("a snapshot restores the active local database", () => {
             restored.close();
             backup.cleanup();
         }
+    } finally {
+        rmSync(directory, { recursive: true, force: true });
+    }
+});
+
+
+test("rejects an incompatible snapshot with an internal error code", () => {
+    const directory = mkdtempSync(join(tmpdir(), "skladno-backup-"));
+    const snapshotPath = join(directory, "incompatible.sqlite");
+    const database = new DatabaseSync(snapshotPath);
+    database.exec("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)");
+    database.close();
+
+    try {
+        assert.throws(
+            () => validateDatabaseSnapshot(snapshotPath),
+            (error: unknown) => error instanceof DatabaseSnapshotError && error.code === "schema",
+        );
     } finally {
         rmSync(directory, { recursive: true, force: true });
     }

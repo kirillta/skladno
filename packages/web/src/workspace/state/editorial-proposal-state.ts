@@ -7,10 +7,12 @@ import {
     REVISION_PROVENANCE_KIND,
     type AssistantEditorialResult,
     type AssistantMessage,
+    type Article,
     type EditorialEvent,
     type EditorialOperation,
     type FactCheck,
     type ProposalChangeSummary,
+    type TextProposal,
 } from "@skladno/shared";
 import { ApplicationClientError } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
@@ -25,8 +27,48 @@ type ProposalState = "idle" | "streaming" | "error";
 type ProposalDecision = "pending" | "accepted" | "rejected";
 
 
+interface ProposalBase { articleId: string; content: string; revisionId: string; editorialArtifactId?: string; correctedFindingIds?: string[]; accepted?: true }
+
+
 function isProposalOperation(operation: EditorialOperation): boolean {
     return operation === "thesis_to_narrative" || operation === "flow_revision" || operation === "style_review";
+}
+
+
+function restoredAcceptance(article: Article, message: AssistantMessage, review: TextProposal): Record<string, ProposalDecision> | undefined {
+    if (message.proposalAcceptance?.kind === "whole")
+        return Object.fromEntries(review.changes.map((change) => [change.id, "accepted"]));
+
+    if (message.proposalAcceptance?.kind === "changes") {
+        const acceptedChangeIds = new Set(message.proposalAcceptance.acceptedChangeIds);
+        return Object.fromEntries(review.changes.map((change) => [change.id, acceptedChangeIds.has(change.id) ? "accepted" : "rejected"]));
+    }
+
+    const provenance = article.currentRevision.provenance;
+    if (provenance.kind !== REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL || provenance.baseRevisionId !== message.baseRevisionId)
+        return undefined;
+
+    const wholeProposal = provenance.wholeProposal === true;
+    const acceptedChangeIds = Array.isArray(provenance.acceptedChangeIds) && provenance.acceptedChangeIds.every((id) => typeof id === "string")
+        ? new Set(provenance.acceptedChangeIds)
+        : undefined;
+    const artifactMatches = typeof provenance.editorialArtifactId === "string" && provenance.editorialArtifactId === message.editorialArtifactId;
+    if (wholeProposal) {
+        if (!artifactMatches && article.currentRevision.content !== review.proposedContent)
+            return undefined;
+
+        return Object.fromEntries(review.changes.map((change) => [change.id, "accepted"]));
+    }
+
+    if (!acceptedChangeIds)
+        return undefined;
+
+    const acceptedContent = applyProposalChanges(review, acceptedChangeIds);
+    const acceptedContentWithBlankLines = applyProposalChanges(review, acceptedChangeIds, true);
+    if (!artifactMatches && article.currentRevision.content !== acceptedContent && article.currentRevision.content !== acceptedContentWithBlankLines)
+        return undefined;
+
+    return Object.fromEntries(review.changes.map((change) => [change.id, acceptedChangeIds.has(change.id) ? "accepted" : "rejected"]));
 }
 
 
@@ -34,7 +76,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [proposal, setProposal] = useState("");
-    const [base, setBase] = useState<{ articleId: string; content: string; revisionId: string; editorialArtifactId?: string; correctedFindingIds?: string[] }>();
+    const [base, setBase] = useState<ProposalBase>();
     const [decisions, setDecisions] = useState<Record<string, ProposalDecision>>({});
     const [state, setState] = useState<ProposalState>("idle");
     const [message, setMessage] = useState("");
@@ -61,7 +103,8 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         retainTranslation,
     } = useEditorialResults(client, workspace);
     const review = useMemo(() => base && base.articleId === workspace.selectedArticle?.id ? createTextProposal(base.content, proposal) : undefined, [base, proposal, workspace.selectedArticle?.id]);
-    const stale = Boolean(workspace.selectedArticle && base?.articleId === workspace.selectedArticle.id && base.revisionId !== workspace.selectedArticle.currentRevisionId);
+    const accepted = base?.accepted === true;
+    const stale = Boolean(workspace.selectedArticle && base?.articleId === workspace.selectedArticle.id && base.revisionId !== workspace.selectedArticle.currentRevisionId && !accepted);
     const selectedArticleId = workspace.selectedArticle?.id;
 
 
@@ -165,23 +208,22 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
     async function accept(acceptedChangeIds: ReadonlySet<string>, wholeProposal = false) {
         const article = workspace.selectedArticle;
-        if (!article || !base || !review || stale)
+        if (!article || !base || !review || stale || accepted)
             return;
 
         const content = base.correctedFindingIds?.length
             ? applyProposalChanges(review, wholeProposal ? new Set(review.changes.map((change) => change.id)) : acceptedChangeIds, true)
             : wholeProposal ? review.proposedContent : applyProposalChanges(review, acceptedChangeIds);
         try {
-            const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL, baseRevisionId: base.revisionId, ...(wholeProposal ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] }) } });
+            const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL, baseRevisionId: base.revisionId, ...(base.editorialArtifactId ? { editorialArtifactId: base.editorialArtifactId } : {}), ...(wholeProposal ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] }) } });
 
             workspace.updateRevision(article.id, revision);
             workspace.setContent(content);
             if (base.correctedFindingIds?.length)
                 await markCorrectedFindings(article.id, base.correctedFindingIds);
 
-            setProposal("");
-            setBase(undefined);
-            setDecisions({});
+            setBase({ ...base, accepted: true });
+            setDecisions(Object.fromEntries(review.changes.map((change) => [change.id, wholeProposal || acceptedChangeIds.has(change.id) ? "accepted" : "rejected"])));
         } catch (error) {
             if (error instanceof ArticleRevisionConflictError) {
                 workspace.updateRevision(article.id, error.article.currentRevision);
@@ -222,11 +264,13 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
         restoredArticleIds.current.add(article.id);
         if (message) {
-            setBase({ articleId: article.id, content: message.baseRevisionContent!, revisionId: message.baseRevisionId!, ...(message.editorialArtifactId ? { editorialArtifactId: message.editorialArtifactId } : {}) });
+            const restoredReview = createTextProposal(message.baseRevisionContent!, message.proposalContent!);
+            const acceptance = restoredAcceptance(article, message, restoredReview);
+            setBase({ articleId: article.id, content: message.baseRevisionContent!, revisionId: message.baseRevisionId!, ...(message.editorialArtifactId ? { editorialArtifactId: message.editorialArtifactId } : {}), ...(acceptance ? { accepted: true } : {}) });
             setProposal(message.proposalContent!);
             setProposalSummaries(Object.fromEntries((message.proposalSummaries ?? []).map((summary) => [summary.changeId, summary.summary])));
             setProposalSummaryLocale(message.proposalSummaryLocale);
-            setDecisions({});
+            setDecisions(acceptance ?? {});
         }
 
         for (const translationMessage of translationMessages)
@@ -237,6 +281,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         proposal,
         review,
         base,
+        accepted,
         stale,
         proposalStale: stale,
         decisions,

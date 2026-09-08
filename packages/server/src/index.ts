@@ -1,8 +1,11 @@
 import { loadServerConfig, loadServerEnvironment } from "./infrastructure/configuration/config.js";
+import { copyFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { createLocalDiagnostics } from "./infrastructure/diagnostics/local-diagnostics.js";
 import { closeLocalService, listenForLocalService } from "./infrastructure/lifecycle/service-lifecycle.js";
 import { createLocalApplication } from "./local-application.js";
 import { createLocalService } from "./presentation/server.js";
+import { validateDatabaseSnapshot } from "./infrastructure/persistence/database.js";
 
 const diagnostics = createLocalDiagnostics();
 
@@ -12,8 +15,41 @@ async function start(): Promise<void> {
         loadServerEnvironment();
 
         const config = loadServerConfig();
-        const { database, services, editorial } = createLocalApplication(config);
-        const service = createLocalService(config, editorial, services, diagnostics);
+        let application = createLocalApplication(config);
+
+
+        async function restoreBackup(snapshot: Uint8Array): Promise<void> {
+            const staged = join(dirname(config.databasePath), "skladno.restore.sqlite");
+            const recovery = application.services.settings.createBackup();
+            try {
+                writeFileSync(staged, snapshot, { mode: 0o600 });
+                validateDatabaseSnapshot(staged);
+                application.database.close();
+
+                rmSync(config.databasePath, { force: true });
+                rmSync(`${config.databasePath}-wal`, { force: true });
+                rmSync(`${config.databasePath}-shm`, { force: true });
+
+                copyFileSync(staged, config.databasePath);
+                application = createLocalApplication(config);
+                validateDatabaseSnapshot(config.databasePath);
+            } catch (error) {
+                rmSync(config.databasePath, { force: true });
+                rmSync(`${config.databasePath}-wal`, { force: true });
+                rmSync(`${config.databasePath}-shm`, { force: true });
+
+                copyFileSync(recovery.path, config.databasePath);
+                application = createLocalApplication(config);
+
+                throw error;
+            } finally {
+                rmSync(staged, { force: true });
+                recovery.cleanup();
+            }
+        }
+
+
+        const service = createLocalService(config, application.editorial, application.services, diagnostics, () => application, restoreBackup);
         let shuttingDown = false;
 
 
@@ -28,7 +64,7 @@ async function start(): Promise<void> {
                 if (!(typeof error === "object" && error !== null && "code" in error && error.code === "ERR_SERVER_NOT_RUNNING"))
                     diagnostics.write("service.shutdown_failed", {}, error);
             } finally {
-                database.close();
+                application.database.close();
                 process.exit(exitCode);
             }
         }
