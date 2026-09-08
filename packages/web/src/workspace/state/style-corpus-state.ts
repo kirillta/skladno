@@ -11,7 +11,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
     const [corpus, setCorpus] = useState<StyleCorpus>();
 
     useEffect(() => {
-        client.getStyleCorpus().then(setCorpus).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) }));
+        client.getStyleCorpus().then(setCorpus).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleCorpusLoadFailed" }) }));
     }, [client, intl, notifyError]);
 
     return {
@@ -20,7 +20,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
             try {
                 setCorpus(await client.addStyleCorpusItem({ name, content, origin }));
             } catch (error) {
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleCorpusAddFailed" }) });
                 throw error;
             }
         },
@@ -29,7 +29,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
                 await client.removeStyleCorpusItem(id);
                 setCorpus(await client.getStyleCorpus());
             } catch (error) {
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleCorpusRemoveFailed" }) });
                 throw error;
             }
         },
@@ -37,7 +37,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
             try {
                 setCorpus(await client.setStyleCorpusItemIncluded(id, included));
             } catch (error) {
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleCorpusUpdateFailed" }) });
                 throw error;
             }
         },
@@ -45,7 +45,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
             try {
                 setCorpus(await client.setStyleCorpusRules(rules));
             } catch (error) {
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleCorpusUpdateFailed" }) });
                 throw error;
             }
         },
@@ -55,7 +55,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
                 setCorpus(next);
                 onRebuilt?.(next.items.filter((item) => item.included).length);
             } catch (error) {
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleCorpusRebuildFailed" }) });
                 throw error;
             }
         },
@@ -63,7 +63,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
             try {
                 return await client.getArticleStyleRules(articleId);
             } catch (error) {
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleRulesLoadFailed" }) });
                 throw error;
             }
         },
@@ -71,7 +71,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
             try {
                 return await client.setArticleStyleRules(articleId, rules);
             } catch (error) {
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleRulesSaveFailed" }) });
                 throw error;
             }
         },
@@ -82,7 +82,7 @@ export function useStyleCorpus(client: EditorialWorkspaceClient, onRebuilt?: (ac
             try {
                 setCorpus(await client.addArticleRevisionStyleCorpusItem(articleId, revisionId));
             } catch (error) {
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.styleCorpusSnapshotFailed" }) });
                 throw error;
             }
         },

@@ -34,8 +34,9 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
         : !state.networkAccess ? intl.formatMessage({ id: "settings.updatesNetworkAccessRequired" })
             : state.kind === "checking" ? intl.formatMessage({ id: "settings.updatesChecking" })
                 : state.kind === "failed" ? intl.formatMessage({ id: `settings.updatesError.${state.error}` })
-                    : details ? intl.formatMessage({ id: "settings.updatesAvailable" }, { version: details.version })
-                        : intl.formatMessage({ id: "settings.updatesCurrent" });
+                    : state.kind === "downloading" ? intl.formatMessage({ id: "status.updateDownloading" })
+                        : details ? intl.formatMessage({ id: "settings.updatesAvailable" }, { version: details.version })
+                            : intl.formatMessage({ id: "settings.updatesCurrent" });
 
     return <SettingsGroup label={intl.formatMessage({ id: "settings.updates" })}>
         <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.updateNetworkAccess" })} hint={intl.formatMessage({ id: "settings.updateNetworkAccessHint" })}>

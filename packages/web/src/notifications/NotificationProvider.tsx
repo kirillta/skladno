@@ -38,7 +38,10 @@ function useNotificationState(intl: IntlShape) {
     const [pauseReasons, setPauseReasons] = useState<Record<string, PauseReason[]>>({});
     const pauseReasonsRef = useRef<Record<string, PauseReason[]>>({});
     const timerStartedAt = useRef(new Map<string, number>());
+    const errorNotificationIds = useRef(new Map<string, string>());
+    const actionIds = useRef(new WeakMap<() => void, number>());
     const nextId = useRef(0);
+    const nextActionId = useRef(0);
 
     useEffect(() => {
         pauseReasonsRef.current = pauseReasons;
@@ -46,6 +49,10 @@ function useNotificationState(intl: IntlShape) {
 
     const dismiss = useCallback((id: string) => {
         timerStartedAt.current.delete(id);
+        for (const [key, notificationId] of errorNotificationIds.current)
+            if (notificationId === id)
+                errorNotificationIds.current.delete(key);
+
         setNotifications((current) => current.filter((notification) => notification.id !== id));
         setPauseReasons((current) => {
             if (!(id in current))
@@ -60,6 +67,7 @@ function useNotificationState(intl: IntlShape) {
 
     const dismissAll = useCallback(() => {
         timerStartedAt.current.clear();
+        errorNotificationIds.current.clear();
         setNotifications([]);
         setPauseReasons({});
     }, []);
@@ -83,14 +91,29 @@ function useNotificationState(intl: IntlShape) {
         return { id, dismiss: () => dismiss(id) };
     }, [dismiss]);
 
-    const notifyError = useCallback((error: unknown, options: NotifyErrorOptions = {}) => notify({
-        tone: "error",
-        title: options.title ?? intl.formatMessage({ id: "notifications.errorTitle" }),
-        message: error instanceof ApplicationClientError
+    const notifyError = useCallback((error: unknown, options: NotifyErrorOptions = {}) => {
+        const title = options.title ?? intl.formatMessage({ id: "notifications.errorTitle" });
+        const message = error instanceof ApplicationClientError
             ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
-            : options.fallbackMessage ?? intl.formatMessage({ id: "errors.generic" }),
-        action: options.action,
-    }), [intl, notify]);
+            : options.fallbackMessage ?? intl.formatMessage({ id: "errors.generic" });
+        let actionId = "";
+        if (options.action) {
+            const existingActionId = actionIds.current.get(options.action.onAction);
+            const resolvedActionId = existingActionId ?? nextActionId.current++;
+            actionIds.current.set(options.action.onAction, resolvedActionId);
+            actionId = `${options.action.label}\u0000${resolvedActionId}`;
+        }
+
+        const key = `${title}\u0000${message}\u0000${actionId}`;
+        const existingId = errorNotificationIds.current.get(key);
+
+        if (existingId)
+            return { id: existingId, dismiss: () => dismiss(existingId) };
+
+        const notification = notify({ tone: "error", title, message, action: options.action });
+        errorNotificationIds.current.set(key, notification.id);
+        return notification;
+    }, [dismiss, intl, notify]);
 
     const setPaused = useCallback((id: string, reason: PauseReason, paused: boolean) => {
         const currentReasons = pauseReasonsRef.current[id] ?? [];

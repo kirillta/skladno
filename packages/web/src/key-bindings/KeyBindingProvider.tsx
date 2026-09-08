@@ -3,7 +3,7 @@ import type { KeyBindingOverrides } from "@skladno/shared";
 import { KeyBindingDispatcher } from "./dispatcher.js";
 
 
-const reservedDesktopKeys = new Set(["a", "c", "m", "q", "u", "v", "w", "x", "y", "z", "+", "=", "-", "0"]);
+const reservedDesktopKeys = new Set(["a", "c", "m", "q", "s", "u", "v", "w", "x", "y", "z", "+", "=", "-", "0"]);
 const clipboardKeys = new Set(["c", "v", "x"]);
 
 

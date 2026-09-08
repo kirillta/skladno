@@ -36,7 +36,7 @@
             "title": "Shared success and error provider with viewport",
             "status": "implemented",
             "owners": ["packages/web/src/notifications"],
-            "contract": "Recoverable failures are presented through a shared notification API without exposing sensitive values.",
+            "contract": "Recoverable failures are presented through a shared notification API with localized action-specific recovery guidance, without exposing sensitive values or repeating an identical active error notification.",
             "persistence": "Notifications are transient renderer state."
         },
         {
@@ -143,8 +143,8 @@
             "capabilityIds": ["cross-cutting.notifications"],
             "preconditions": ["An application client error or unknown exception occurs."],
             "event": "The notification provider presents the failure.",
-            "expected": ["A useful localized failure notification is shown."],
-            "forbidden": ["Private diagnostic detail displayed to the author."],
+            "expected": ["A useful localized failure notification names the failed action or condition and a safe next step.", "Repeated reports of the same active failure produce one notification."],
+            "forbidden": ["Private diagnostic detail displayed to the author.", "Implementation, transport, provider, credential, or Article-body details displayed to the author."],
             "evidence": { "kind": "automated", "path": "packages/web/src/notifications/NotificationProvider.test.tsx" }
         },
         {

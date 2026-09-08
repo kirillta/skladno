@@ -3,8 +3,8 @@ import { z } from "zod";
 import type { AssistantAuthorizedAction } from "@skladno/shared";
 
 import type { AssistantActionIntentVerifier } from "../../application/ports/assistant-action-intent-verifier.js";
-import { isAcceptedFinish } from "./ai-sdk-editorial-helpers.js";
-import type { SupportingTextProviderOptions } from "./ai-sdk-editorial-helpers.js";
+import { isAcceptedFinish } from "./ai-sdk-provider.js";
+import type { SupportingTextProviderOptions } from "./ai-sdk-provider.js";
 
 
 const resultSchema = z.object({ authorized: z.boolean() });

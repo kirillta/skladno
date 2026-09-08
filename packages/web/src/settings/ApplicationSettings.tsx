@@ -84,7 +84,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
             return;
 
         void client.refreshAiModels().then((loaded) => setModels(availableModels(loaded, settings.connections))).catch((error) => {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.modelsLoadFailed" }) });
         });
     }, [client, intl, notifyError, section, settings?.connections]);
 
@@ -157,7 +157,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
             setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionAddFailed" }) });
         }
     }
 
@@ -179,7 +179,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
             setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionAddFailed" }) });
         }
     }
 
@@ -193,7 +193,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
             setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionUpdateFailed" }) });
         }
     }
 
@@ -220,7 +220,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
             setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionUpdateFailed" }) });
         }
     }
 
@@ -247,7 +247,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
             setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionRemoveFailed" }) });
         }
     }
 
@@ -256,7 +256,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
         try {
             setModels(availableModels(await client.refreshAiModels(), settings?.connections ?? []));
         } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.generic" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.modelsLoadFailed" }) });
         }
     }
 
@@ -268,7 +268,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
             await client.setPublishingSettings(next);
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.saveFailed" }) });
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.publishingSaveFailed" }) });
         }
     }
 

@@ -299,7 +299,7 @@ describe("Editorial Workspace assistant", () => {
         expect(errorDetails?.open).toBe(false);
         await user.click(screen.getByText("Error details"));
         expect(errorDetails?.open).toBe(true);
-        expect(screen.getByText("The editorial request failed. Retry it in a moment.")).toBeTruthy();
+        expect(screen.getByText("Couldn't start that AI-assisted action. Your Article was not changed. Try again, or check your AI connection in Settings.")).toBeTruthy();
         await user.click(screen.getByRole("button", { name: /Second Article/ }));
 
         await screen.findByRole("heading", { name: "Second Article" });
