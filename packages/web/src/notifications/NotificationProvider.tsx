@@ -39,7 +39,9 @@ function useNotificationState(intl: IntlShape) {
     const pauseReasonsRef = useRef<Record<string, PauseReason[]>>({});
     const timerStartedAt = useRef(new Map<string, number>());
     const errorNotificationIds = useRef(new Map<string, string>());
+    const actionIds = useRef(new WeakMap<() => void, number>());
     const nextId = useRef(0);
+    const nextActionId = useRef(0);
 
     useEffect(() => {
         pauseReasonsRef.current = pauseReasons;
@@ -94,7 +96,15 @@ function useNotificationState(intl: IntlShape) {
         const message = error instanceof ApplicationClientError
             ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
             : options.fallbackMessage ?? intl.formatMessage({ id: "errors.generic" });
-        const key = `${title}\u0000${message}`;
+        let actionId = "";
+        if (options.action) {
+            const existingActionId = actionIds.current.get(options.action.onAction);
+            const resolvedActionId = existingActionId ?? nextActionId.current++;
+            actionIds.current.set(options.action.onAction, resolvedActionId);
+            actionId = `${options.action.label}\u0000${resolvedActionId}`;
+        }
+
+        const key = `${title}\u0000${message}\u0000${actionId}`;
         const existingId = errorNotificationIds.current.get(key);
 
         if (existingId)

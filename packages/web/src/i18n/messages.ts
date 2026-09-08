@@ -716,7 +716,7 @@ export const messages = {
     "errors.activeConnectionRequired": "Add and select an AI connection first.",
     "errors.activeConnectionRemovalBlocked": "Choose another active AI connection before removing this one.",
     "errors.aiConnectionVerificationFailed": "The AI provider could not verify this connection. Check the variable and its key, then try again.",
-    "errors.managedCredentialsUnavailable": "Secure credential storage is unavailable on this device.",
+    "errors.managedCredentialsUnavailable": "Secure credential storage is unavailable on this device. Choose Environment variable instead.",
     "errors.styleCorpusRequired": "Add at least one style corpus item before checking style.",
     "errors.targetLanguageRequired": "Choose a target language before requesting a translation.",
     "errors.editorialOperationUnsupported": "That AI-assisted action isn't available. Choose another action.",

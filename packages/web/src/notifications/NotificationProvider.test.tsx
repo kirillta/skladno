@@ -163,6 +163,16 @@ describe("NotificationProvider", () => {
     });
 
 
+    it("keeps notifications with different actions separate", () => {
+        const notifications = renderNotifications();
+        const error = new ApplicationClientError("article_not_found", undefined, 404);
+        notifications.notifyError(error, { action: { label: "Retry", onAction: vi.fn() } });
+        notifications.notifyError(error, { action: { label: "Retry", onAction: vi.fn() } });
+
+        expect(screen.getAllByRole("alert")).toHaveLength(2);
+    });
+
+
     it("uses the appropriate live-region roles and accessible dismiss labels", () => {
         const notifications = renderNotifications();
         notifications.notify({ tone: "info", title: "Information" });
