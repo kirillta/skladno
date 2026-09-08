@@ -8,7 +8,7 @@ import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine
 import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
 import { assistantConversationPrompt, assistantStepOptions, createAssistantTools } from "./ai-sdk-assistant.js";
-import { continuationToken, editorialProviderOptions } from "./ai-sdk-provider.js";
+import { continuationToken, editorialProviderOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
 
 
 interface AiSdkAssistantExecutorOptions {
@@ -36,7 +36,7 @@ export class AiSdkAssistantExecutor {
 
         const steps = await result.steps;
         const finalStep = await result.finalStep;
-        if (!text.trim() || signal.aborted || (steps.length >= 6 && finalStep.finishReason === "tool-calls"))
+        if (!text.trim() || signal.aborted || !isAcceptedFinish(finalStep.finishReason) || (steps.length >= 6 && finalStep.finishReason === "tool-calls"))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
 
         const token = continuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: finalStep.providerMetadata });
