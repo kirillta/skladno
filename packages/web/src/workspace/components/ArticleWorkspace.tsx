@@ -116,6 +116,6 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             } catch (error) {
                 notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.updateArticleFailed" }) });
             }
-        }} length={publishing.length} profile={publishing.profile} customProfiles={publishing.settings.customProfiles} setProfile={publishing.setProfile} copyMarkdown={publishing.copyMarkdown} copyPlainText={publishing.copyPlainText} />
+        }} saveState={workspace.saveState} length={publishing.length} profile={publishing.profile} customProfiles={publishing.settings.customProfiles} setProfile={publishing.setProfile} copyMarkdown={publishing.copyMarkdown} copyPlainText={publishing.copyPlainText} />
     </div>;
 }

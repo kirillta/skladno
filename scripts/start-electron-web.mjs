@@ -15,7 +15,7 @@ async function isPortAvailable(port) {
 
 if (await isPortAvailable(5173)) {
     const command = process.platform === "win32" ? "npm.cmd" : "npm";
-    const vite = spawn(command, ["run", "dev", "--workspace", "@skladno/web"], { stdio: "inherit" });
+    const vite = spawn(command, ["run", "dev", "--workspace", "@skladno/web"], { stdio: "inherit", shell: process.platform === "win32" });
     vite.once("exit", (code) => process.exit(code ?? 1));
 } else {
     console.log("Reusing the Vite development server on port 5173.");

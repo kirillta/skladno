@@ -3,15 +3,15 @@ import { useIntl } from "react-intl";
 import { articleLanguages, PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type CustomPublishLimitProfile, type PublishLimitProfile, type PublishLimitProfileId, type PublishingLength } from "@skladno/shared";
 import { ChevronDownIcon, CopyIcon, StatusIcon, SuccessIcon } from "../../ui/icons.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
-import { UpdateController } from "./UpdateController.js";
+import type { DraftPresentationState as SaveState } from "../drafts/draft-lifecycle.js";
 
 
-export function ArticleStatusBar(props: { revisionNumber: number; language: string; setLanguage: (language: string) => Promise<void>; length: PublishingLength; profile: PublishLimitProfile; customProfiles: readonly CustomPublishLimitProfile[]; setProfile: (id: PublishLimitProfileId) => Promise<void>; copyMarkdown: () => Promise<boolean>; copyPlainText: () => Promise<boolean> }) {
+export function ArticleStatusBar(props: { revisionNumber: number; language: string; setLanguage: (language: string) => Promise<void>; saveState: SaveState; length: PublishingLength; profile: PublishLimitProfile; customProfiles: readonly CustomPublishLimitProfile[]; setProfile: (id: PublishLimitProfileId) => Promise<void>; copyMarkdown: () => Promise<boolean>; copyPlainText: () => Promise<boolean> }) {
     return <LocalizedArticleStatusBar {...props} />;
 }
 
 
-function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, length, profile, customProfiles, setProfile, copyMarkdown, copyPlainText }: Parameters<typeof ArticleStatusBar>[0]) {
+function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, saveState, length, profile, customProfiles, setProfile, copyMarkdown, copyPlainText }: Parameters<typeof ArticleStatusBar>[0]) {
     const intl = useIntl();
     const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -26,6 +26,16 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, leng
     const copyMenuId = useId();
     const tone = length.state === "over-limit" ? "error" : length.state === "near-limit" ? "warning" : "info";
     const profileOptions = [...publishLimitProfiles, ...customProfiles];
+    const saveLabels: Record<SaveState, string> = {
+        saved: intl.formatMessage({ id: "navigation.saved" }),
+        unsaved: intl.formatMessage({ id: "navigation.unsaved" }),
+        saving: intl.formatMessage({ id: "navigation.savingDraft" }),
+        "draft-saved": intl.formatMessage({ id: "navigation.draftSaved" }),
+        error: intl.formatMessage({ id: "navigation.saveFailed" }),
+        conflict: intl.formatMessage({ id: "navigation.saveConflict" }),
+    };
+    const saveLabel = saveLabels[saveState];
+    const saveTone = saveState === "saved" || saveState === "draft-saved" ? "text-success" : saveState === "unsaved" || saveState === "saving" ? "text-warning" : "text-danger";
 
 
     async function selectProfile(profileId: PublishLimitProfileId) {
@@ -111,7 +121,10 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, leng
                 {articleLanguages.map((option) => <button key={option} className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitemradio" aria-checked={option === language} onClick={() => void selectLanguage(option)}>{intl.formatMessage({ id: languageMessageId(option) })}</button>)}
             </div>}
         </div>
-        <UpdateController />
+        <span aria-label={saveLabel} className={`ml-2 inline-flex items-center gap-1 text-xs ${saveTone}`} role="status" title={saveLabel}>
+            <span aria-hidden="true">&#9679;</span>
+            {saveLabel}
+        </span>
         <div className="relative ml-auto">
             <button ref={profileTrigger} className={`inline-flex h-6 items-center gap-1 rounded-control px-1.5 hover:bg-brand-soft hover:text-brand focus:outline-none ${tone === "error" ? "font-semibold text-danger" : tone === "warning" ? "font-semibold text-warning" : "text-muted"}`} type="button" aria-controls={profileMenuOpen ? profileMenuId : undefined} aria-expanded={profileMenuOpen} aria-haspopup="menu" aria-label={intl.formatMessage({ id: "status.characterCount.ariaLabel" }, { characterCount: intl.formatNumber(length.count), characterLimit: intl.formatNumber(profile.characterLimit ?? 0) })} title={length.remaining === undefined ? undefined : length.state === "over-limit" ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(length.remaining)) }) : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(length.remaining) })} onClick={() => {
                 setProfileMenuOpen((open) => !open);
