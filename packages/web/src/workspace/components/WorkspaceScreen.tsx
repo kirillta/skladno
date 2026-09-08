@@ -60,7 +60,6 @@ export function WorkspaceScreen({ layout, workspace, assistant, editorial, revis
             openStyleProfile={() => layout.setView("style-profile")}
             openSettings={openSettings}
             language={workspace.selectedArticle?.language}
-            saveState={workspace.saveState}
             dispatcher={dispatcher}
             shortcutOverrides={shortcutOverrides} />}
         assistant={<EditorialAssistantPanel

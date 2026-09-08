@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { KEY_BINDING_COMMAND, type Article, type KeyBindingOverrides } from "@skladno/shared";
-import type { DraftPresentationState as SaveState } from "../drafts/draft-lifecycle.js";
 import { Button, Field, IconButton } from "../../ui/primitives.js";
 import { ArticleIcon, ChevronRightIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";
@@ -40,7 +39,7 @@ function languageCode(language: string | undefined): string {
 }
 
 
-export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, openSettings, language, saveState, dispatcher, shortcutOverrides }: {
+export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, openSettings, language, dispatcher, shortcutOverrides }: {
     articles: Article[];
     selectedArticleId: string | undefined;
     selectArticle: (articleId: string) => void;
@@ -50,7 +49,6 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     openStyleProfile: () => void;
     openSettings: () => void;
     language: string | undefined;
-    saveState: SaveState;
     dispatcher?: KeyBindingDispatcher;
     shortcutOverrides?: KeyBindingOverrides;
 }) {
@@ -66,16 +64,6 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
     const visibleRoots = rootArticles.filter((article) => !query || matchesQuery(article) || children(article.id).some(matchesQuery));
     const selectedArticle = articles.find((article) => article.id === selectedArticleId);
     const expandedRootId = selectedArticle?.sourceArticleId ?? selectedArticle?.id;
-    const saveLabels: Record<SaveState, string> = {
-        saved: intl.formatMessage({ id: "navigation.saved" }),
-        unsaved: intl.formatMessage({ id: "navigation.unsaved" }),
-        saving: intl.formatMessage({ id: "navigation.savingDraft" }),
-        "draft-saved": intl.formatMessage({ id: "navigation.draftSaved" }),
-        error: intl.formatMessage({ id: "navigation.saveFailed" }),
-        conflict: intl.formatMessage({ id: "navigation.saveConflict" }),
-    };
-    const saveLabel = saveLabels[saveState];
-    const saveTone = saveState === "saved" || saveState === "draft-saved" ? "text-success" : saveState === "unsaved" || saveState === "saving" ? "text-warning" : "text-danger";
     const articleRow = ({ article, isChild = false, childCount = 0, isExpanded = false, isHidden = false }: { article: Article; isChild?: boolean; childCount?: number; isExpanded?: boolean; isHidden?: boolean }) => {
         const isSelected = article.id === selectedArticleId;
         const detail = [article.language, formatUpdatedAt(article.updatedAt, intl.formatMessage)].filter(Boolean).join(" · ");
@@ -113,9 +101,6 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     <SettingsIcon className="size-4" />
                 </IconButton>
                 <UpdateController />
-                <span aria-label={saveLabel} className={`mt-1 inline-flex h-4 items-center text-xs ${saveTone}`} role="status" title={saveLabel}>
-                    <span aria-hidden="true">&#9679;</span>
-                </span>
             </footer>
         </> : <>
             <header className="flex min-h-18 items-center justify-between border-b border-border px-4">
@@ -168,13 +153,9 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     <SettingsIcon className="size-4 shrink-0" />
                     <span className="ml-2">{intl.formatMessage({ id: "navigation.settings" })}</span>
                 </Button>
-                <UpdateController expanded />
+                <UpdateController />
                 <div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted">
                     <span>{languageCode(language)} &middot; {intl.formatMessage({ id: "navigation.local" })}</span>
-                    <span className={`inline-flex items-center gap-1 ${saveTone}`} role="status">
-                        <span aria-hidden="true">&#9679;</span>
-                        {saveLabel}
-                    </span>
                 </div>
             </footer>
         </>}

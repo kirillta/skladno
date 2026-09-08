@@ -620,7 +620,7 @@ export const messages = {
     "settings.updateNetworkPermissionDescription": "Skladno will contact api.github.com for public release metadata. It will not send Article content, account information, device identifiers, or analytics.",
     "settings.allowNetworkAccess": "Allow",
     "settings.automaticUpdates": "Automatically check for updates",
-    "settings.automaticUpdatesHint": "Checks GitHub no more than once a day. Downloads and restart always need your approval.",
+    "settings.automaticUpdatesHint": "Checks GitHub when Skladno starts and then daily while it stays open. Downloads and restart always need your approval.",
     "settings.includePrereleaseUpdates": "Include prerelease updates",
     "settings.includePrereleaseUpdatesHint": "When off, Skladno offers only stable releases.",
     "settings.updateStatus": "Update status",

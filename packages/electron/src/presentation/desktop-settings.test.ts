@@ -7,7 +7,7 @@ import { electronMessagesFor } from "@skladno/shared";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
 
 
-function setup(response: number, backupChecked = false, backupFails = false, configuredDataDirectory?: string, backupConfigured = true) {
+function setup(response: number, backupChecked = false, backupFails = false, configuredDataDirectory?: string, backupConfigured = true, chooseDirectory?: (paths: { root: string; dataDirectory: string }) => string | undefined) {
     const root = mkdtempSync(join(tmpdir(), "skladno-delete-test-"));
     const dataDirectory = join(root, "data");
     const backupDirectory = join(root, "backups");
@@ -47,7 +47,7 @@ function setup(response: number, backupChecked = false, backupFails = false, con
         } },
         services: {} as never,
         messages: electronMessagesFor("en"),
-        chooseDirectory: async () => undefined,
+        chooseDirectory: async () => chooseDirectory?.({ root, dataDirectory }),
         chooseBackupSnapshot: async () => undefined,
         requestCheckpoint: async () => true,
         closeApplication: () => {
@@ -67,11 +67,60 @@ function setup(response: number, backupChecked = false, backupFails = false, con
         checkboxInitiallyChecked: () => checkboxInitiallyChecked,
         invoke: async () => handler?.({}, { method: "deleteLocalData", args: [] }),
         invokeRestore: async () => handler?.({}, { method: "restoreNativeBackup", args: [] }),
+        invokeChooseBackupDirectory: async () => handler?.({}, { method: "chooseBackupDirectory", args: [] }),
+        invokeCreateBackup: async () => handler?.({}, { method: "createNativeBackup", args: [] }),
         closed: () => closed,
         quit: () => quit,
         cleanup: () => rmSync(root, { recursive: true, force: true }),
     };
 }
+
+
+test("a separate backup folder with snapshots and unrelated files can be reused", async () => {
+    const fixture = setup(0, false, false, undefined, true, ({ root }) => join(root, "existing-backups"));
+    const selectedDirectory = join(fixture.root, "existing-backups");
+    mkdirSync(selectedDirectory);
+    writeFileSync(join(selectedDirectory, "skladno-backup-2026-01-01.sqlite"), "existing backup");
+    writeFileSync(join(selectedDirectory, "keep.txt"), "unrelated");
+    try {
+        assert.deepEqual(await fixture.invokeChooseBackupDirectory(), { ok: true, value: selectedDirectory });
+        await fixture.invokeCreateBackup();
+        assert.deepEqual(readdirSync(selectedDirectory).filter((file) => file.endsWith(".sqlite")).length, 2);
+        assert.equal(readFileSync(join(selectedDirectory, "keep.txt"), "utf8"), "unrelated");
+        assert.equal(JSON.parse(readFileSync(join(fixture.root, "user-data", "runtime-settings.json"), "utf8")).backupDirectory, selectedDirectory);
+    } finally {
+        fixture.cleanup();
+    }
+});
+
+
+test("cancelling backup-folder selection keeps the backup folder", async () => {
+    const cancelled = setup(0);
+    try {
+        assert.deepEqual(await cancelled.invokeChooseBackupDirectory(), { ok: true, value: undefined });
+        assert.equal(JSON.parse(readFileSync(join(cancelled.root, "user-data", "runtime-settings.json"), "utf8")).backupDirectory, cancelled.backupDirectory);
+    } finally {
+        cancelled.cleanup();
+    }
+});
+
+
+test("data-directory overlap is rejected without changing the backup folder", async () => {
+    const selections = [
+        ({ dataDirectory }: { dataDirectory: string }) => dataDirectory,
+        ({ root }: { root: string }) => root,
+        ({ dataDirectory }: { dataDirectory: string }) => join(dataDirectory, "backups"),
+    ];
+    for (const chooseDirectory of selections) {
+        const fixture = setup(0, false, false, undefined, true, chooseDirectory);
+        try {
+            assert.deepEqual(await fixture.invokeChooseBackupDirectory(), { ok: false, error: "invalid_request" });
+            assert.equal(JSON.parse(readFileSync(join(fixture.root, "user-data", "runtime-settings.json"), "utf8")).backupDirectory, fixture.backupDirectory);
+        } finally {
+            fixture.cleanup();
+        }
+    }
+});
 
 
 // product: settings.delete-local-data

@@ -32,7 +32,7 @@ describe("ArticleLibraryPanel", () => {
         const other: Article = { ...source, id: "other", title: "Other Article" };
         const otherTranslation: Article = { ...translation, id: "other-translation", title: "Other Spanish edition", sourceArticleId: other.id };
         render(<IntlProvider locale="en" messages={messages}>
-            <ArticleLibraryPanel articles={[translation, source, otherTranslation, other]} selectedArticleId={source.id} selectArticle={selectArticle} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" saveState="saved" />
+            <ArticleLibraryPanel articles={[translation, source, otherTranslation, other]} selectedArticleId={source.id} selectArticle={selectArticle} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" />
         </IntlProvider>);
 
         const sourceButton = screen.getByRole("button", { name: /Mother Article/ });
@@ -56,15 +56,15 @@ describe("ArticleLibraryPanel", () => {
     });
 
 
-    it("shows the update control beside Settings when an update is available", async () => {
+    it("shows the icon-only update control beside Settings when an update is available", async () => {
         window.skladnoUpdates = {
             getState: vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true }),
             setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
         } satisfies DesktopUpdateClient;
         render(<IntlProvider locale="en" messages={messages}>
-            <ArticleLibraryPanel articles={[]} selectedArticleId={undefined} selectArticle={vi.fn()} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" saveState="saved" />
+            <ArticleLibraryPanel articles={[]} selectedArticleId={undefined} selectArticle={vi.fn()} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" />
         </IntlProvider>);
 
-        expect((await screen.findByRole("button", { name: "Update 0.1.1-preview.1 is available" })).textContent).toContain(message("settings.updates"));
+        expect((await screen.findByRole("button", { name: "Update 0.1.1-preview.1 is available" })).textContent).not.toContain(message("settings.updates"));
     });
 });
