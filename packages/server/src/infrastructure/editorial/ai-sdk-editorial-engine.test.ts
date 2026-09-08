@@ -1,21 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { assistantConversationPrompt, assistantStepOptions, responsesPrompt, responsesProviderOptions } from "./ai-sdk-editorial-engine.js";
+import { assistantConversationPrompt, assistantStepOptions } from "./ai-sdk-editorial-engine.js";
 import { supportingTextProviderOptions } from "./ai-sdk-provider.js";
+import { openAiResponsesProviderOptions } from "./openai-responses.js";
 import { AI_PROVIDER } from "@skladno/shared";
-
-
-test("moves system messages into Responses API instructions", () => {
-    assert.deepEqual(responsesPrompt([
-        { role: "system", content: "Assistant guidance" },
-        { role: "system", content: "Article context" },
-        { role: "user", content: "ping" },
-    ]), {
-        instructions: "Assistant guidance\n\nArticle context",
-        messages: [{ role: "user", content: "ping" }],
-    });
-});
 
 
 test("keeps previous Assistant output separate from the next Author request", () => {
@@ -36,10 +25,10 @@ test("keeps previous Assistant output separate from the next Author request", ()
 
 
 test("Responses storage is opt-in and continuation stays scoped to it", () => {
-    assert.deepEqual(responsesProviderOptions(false, "resp-earlier"), { openai: { store: false } });
-    assert.deepEqual(responsesProviderOptions(true), { openai: { store: true } });
-    assert.deepEqual(responsesProviderOptions(true, "resp-earlier"), { openai: { store: true, previousResponseId: "resp-earlier" } });
-    assert.deepEqual(responsesProviderOptions(false, undefined, "high"), { openai: { store: false, reasoningEffort: "high" } });
+    assert.deepEqual(openAiResponsesProviderOptions(false, "resp-earlier"), { openai: { store: false } });
+    assert.deepEqual(openAiResponsesProviderOptions(true), { openai: { store: true } });
+    assert.deepEqual(openAiResponsesProviderOptions(true, "resp-earlier"), { openai: { store: true, previousResponseId: "resp-earlier" } });
+    assert.deepEqual(openAiResponsesProviderOptions(false, undefined, "high"), { openai: { store: false, reasoningEffort: "high" } });
 });
 
 

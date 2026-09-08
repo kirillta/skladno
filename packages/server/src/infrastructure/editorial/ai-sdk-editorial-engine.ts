@@ -18,7 +18,6 @@ import { continuationToken, editorialProviderOptions, isAcceptedFinish, provider
 import { AiSdkAssistantExecutor } from "./ai-sdk-assistant-executor.js";
 import { styleReview, styleReviewSchema, translationSchema } from "./ai-sdk-editorial-output.js";
 
-export { responsesPrompt, responsesProviderOptions } from "./ai-sdk-provider.js";
 export { assistantConversationPrompt, assistantStepOptions } from "./ai-sdk-assistant.js";
 
 
@@ -228,6 +227,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             storeResponses: this.options.storeResponses,
             metadata: result.providerMetadata
         });
+
         yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), ...(token ? { continuationToken: token } : {}), text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans, title } };
     }
 }

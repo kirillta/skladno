@@ -5,7 +5,8 @@ import { FACT_CHECK_STATUS } from "@skladno/shared";
 
 import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
-import { isAcceptedFinish, responseId, responsesProviderOptions } from "./ai-sdk-provider.js";
+import { isAcceptedFinish } from "./ai-sdk-provider.js";
+import { openAiResponseId, openAiResponsesProviderOptions } from "./openai-responses.js";
 import type { FactCheckFindingDraft, FactCheckProvider, FactCheckResearch } from "./fact-check-workflow.js";
 
 
@@ -33,7 +34,7 @@ const findingSchema = z.object({
 interface OpenAIFactCheckProviderOptions {
     client: ReturnType<typeof createOpenAI>;
     model: string;
-    providerOptions: (previousResponseId?: string) => ReturnType<typeof responsesProviderOptions>;
+    providerOptions: (previousResponseId?: string) => ReturnType<typeof openAiResponsesProviderOptions>;
 }
 
 
@@ -56,7 +57,7 @@ async function extractClaims(article: string, signal: AbortSignal, client: OpenA
         telemetry: { isEnabled: false },
         providerOptions: providerOptions(),
     });
-    const completedResponseId = responseId(result.providerMetadata);
+    const completedResponseId = openAiResponseId(result.providerMetadata);
     if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
@@ -93,7 +94,7 @@ async function evaluateClaims(research: FactCheckResearch[], signal: AbortSignal
         telemetry: { isEnabled: false },
         providerOptions: providerOptions(),
     });
-    const completedResponseId = responseId(result.providerMetadata);
+    const completedResponseId = openAiResponseId(result.providerMetadata);
     if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
