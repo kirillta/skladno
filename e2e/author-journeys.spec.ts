@@ -103,6 +103,21 @@ test("a provider failure does not change the Article", async ({ page }) => {
 });
 
 
+test("Ctrl+S saves while the Article Editor has focus", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+
+    const editor = page.getByRole("textbox", { name: "Article draft" });
+    await editor.pressSequentially(" Saved with shortcut.");
+    const saved = page.waitForResponse((response) => response.url().includes("/revisions") && response.request().method() === "POST");
+    await editor.press("Control+S");
+
+    await saved;
+    await expect(editor).toContainText("Saved with shortcut.");
+    await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+});
+
+
 test("the Assistant Lexical composer supports skill tags and slash invocation", async ({ page }) => {
     await page.goto("/");
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:5173" });
