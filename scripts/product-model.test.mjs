@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,6 +54,8 @@ test("product checker accepts linked scenarios and rejects unknown markers", asy
     const validRoot = await fixture("example.scenario");
     const invalidRoot = await fixture("example.scenario, example.unknown");
     context.after(() => Promise.all([validRoot, invalidRoot].map((root) => rm(root, { recursive: true, force: true }))));
+    const inventory = resolve(validRoot, "docs", "development", "product", "example-inventory.md");
+    await writeFile(inventory, (await readFile(inventory, "utf8")).replaceAll("\n", "\r\n"));
 
     const valid = spawnSync(process.execPath, [checker, "check"], { cwd: validRoot, encoding: "utf8" });
     assert.equal(valid.status, 0, valid.stderr);
