@@ -15,7 +15,7 @@ function isTelemetryConsent(value: unknown): value is TelemetryConsent {
 }
 
 
-function request(value: unknown): { method: "getConsent" } | { method: "setConsent"; enabled: boolean } | { method: "capture"; event: TelemetryEvent } | undefined {
+function request(value: unknown): { method: "getConsent" } | { method: "setConsent"; enabled: boolean } | { method: "beginCapture" } | { method: "capture"; event: TelemetryEvent; generation?: number } | undefined {
     if (!value || typeof value !== "object" || Array.isArray(value))
         return undefined;
 
@@ -26,8 +26,12 @@ function request(value: unknown): { method: "getConsent" } | { method: "setConse
     if (candidate.method === "setConsent" && typeof candidate.enabled === "boolean" && Object.keys(candidate).every((key) => key === "method" || key === "enabled"))
         return { method: "setConsent", enabled: candidate.enabled };
 
-    if (candidate.method === "capture" && isTelemetryEvent(candidate.event) && Object.keys(candidate).every((key) => key === "method" || key === "event"))
-        return { method: "capture", event: candidate.event };
+    if (candidate.method === "beginCapture" && Object.keys(candidate).every((key) => key === "method"))
+        return { method: "beginCapture" };
+
+    const generation = candidate.generation;
+    if (candidate.method === "capture" && isTelemetryEvent(candidate.event) && (generation === undefined || typeof generation === "number" && Number.isSafeInteger(generation) && generation >= 0) && Object.keys(candidate).every((key) => key === "method" || key === "event" || key === "generation"))
+        return { method: "capture", event: candidate.event, ...(generation === undefined ? {} : { generation }) };
 
     return undefined;
 }
@@ -52,8 +56,10 @@ export function registerDesktopTelemetryAdapter({ ipcMain, isAuthorizedSender, t
                     return { ok: true, value: telemetry.getConsent() };
                 case "setConsent":
                     return { ok: true, value: telemetry.setConsent(parsed.enabled) };
+                case "beginCapture":
+                    return { ok: true, value: telemetry.beginCaptureGeneration() };
                 case "capture":
-                    telemetry.capture(parsed.event);
+                    telemetry.captureAtGeneration(parsed.event, parsed.generation);
                     return { ok: true, value: undefined };
                 default: {
                     const _exhaustive: never = parsed;
@@ -92,6 +98,13 @@ export function createDesktopTelemetryClient(ipcRenderer: Pick<IpcRenderer, "inv
 
             return value;
         },
-        captureTelemetry: (event) => invoke<void>({ method: "capture", event }),
+        beginTelemetryCapture: async () => {
+            const value = await invoke<number | undefined>({ method: "beginCapture" });
+            if (value !== undefined && (!Number.isSafeInteger(value) || value < 0))
+                throw new ApplicationClientError("editorial_request_failed", undefined, 500);
+
+            return value;
+        },
+        captureTelemetry: (event, generation) => invoke<void>({ method: "capture", event, ...(generation === undefined ? {} : { generation }) }),
     };
 }

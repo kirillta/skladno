@@ -167,9 +167,22 @@ export function createTelemetryOwner({ runtimePath, packaged, appVersion, delive
     }
 
 
+    function beginCaptureGeneration(): number | undefined {
+        return consent().enabled ? generation : undefined;
+    }
+
+
+    function captureAtGeneration(event: TelemetryEvent, currentGeneration: number | undefined): void {
+        if (currentGeneration === undefined || currentGeneration === generation)
+            capture(event);
+    }
+
+
     return {
         getConsent: consent,
         beginCapture,
+        beginCaptureGeneration,
+        captureAtGeneration,
         setConsent(enabled: boolean): TelemetryConsent {
             const current = consent();
             if (!enabled) {

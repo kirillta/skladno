@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { ArticleDraftConflictError, ArticleRevisionConflictError, type Article, type ArticleRevision } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
+import { getDesktopTelemetryClient } from "../../desktop-client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
+import { createDraftCheckpointTelemetry } from "../drafts/draft-checkpoint-telemetry.js";
 import { draftPresentationState, hasUncommittedDraftChanges, hydrateDraftLifecycle, type DraftPresentationState } from "../drafts/draft-lifecycle.js";
 import { useDraftLifecycle } from "../drafts/useDraftLifecycle.js";
 import { createArticleWorkspaceActions } from "./article-workspace-actions.js";
@@ -24,6 +26,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
     const articlesRef = useRef<Article[]>([]);
     const queues = useRef(new Map<string, Promise<void>>());
     const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+    const checkpointTelemetry = useRef(createDraftCheckpointTelemetry(getDesktopTelemetryClient()));
     const checkpointRef = useRef<(articleId: string) => Promise<void>>(() => Promise.resolve());
     const preferredSelectedArticleIdRef = useRef(preferredSelectedArticleId);
     const setPersistedSelectedArticleIdRef = useRef(setPersistedSelectedArticleId);
@@ -63,6 +66,20 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
     }
 
 
+    async function persistCheckpoint<T>(operation: () => Promise<T>): Promise<T> {
+        const generation = await checkpointTelemetry.current.begin();
+        const startedAt = performance.now();
+        try {
+            const result = await operation();
+            checkpointTelemetry.current.record(generation, true, performance.now() - startedAt);
+            return result;
+        } catch (error) {
+            checkpointTelemetry.current.record(generation, false, performance.now() - startedAt);
+            throw error;
+        }
+    }
+
+
     function checkpoint(articleId: string, content = draftLifecycle.sessionsRef.current[articleId]?.content ?? ""): Promise<void> {
         clearTimeout(timers.current.get(articleId));
         const session = draftLifecycle.sessionsRef.current[articleId];
@@ -81,7 +98,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
             const expectedDraftVersion = latest.draftVersion;
             if (content === current.currentRevision.content) {
                 if (expectedDraftVersion !== undefined) {
-                    await client.discardArticleDraft(articleId, expectedDraftVersion);
+                    await persistCheckpoint(() => client.discardArticleDraft(articleId, expectedDraftVersion));
                     replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
                 }
 
@@ -89,7 +106,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
                 return;
             }
 
-            const savedDraft = await client.saveArticleDraft(articleId, { content, baseRevisionId: latest.baseRevisionId, ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion }) });
+            const savedDraft = await persistCheckpoint(() => client.saveArticleDraft(articleId, { content, baseRevisionId: latest.baseRevisionId, ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion }) }));
             replaceArticles((items) => items.map((article) => article.id === articleId ? { ...article, draft: savedDraft } : article));
             draftLifecycle.send({ articleId, event: { type: "checkpointed", generation, draftVersion: savedDraft.version } });
         }).catch((error: unknown) => {
@@ -123,7 +140,10 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
         document.addEventListener("visibilitychange", saveWhenHidden);
         return () => document.removeEventListener("visibilitychange", saveWhenHidden);
     }, [selectedArticleId]);
-    useEffect(() => () => timers.current.forEach(clearTimeout), []);
+    useEffect(() => () => {
+        timers.current.forEach(clearTimeout);
+        checkpointTelemetry.current.dispose();
+    }, []);
 
 
     function updateRevision(articleId: string, revision: ArticleRevision) {

@@ -109,7 +109,7 @@ describe("ApplicationSettings general", () => {
     it("renders telemetry as an accessible switch and confirms its saved state", async () => {
         const user = userEvent.setup();
         const setTelemetryConsent = vi.fn().mockResolvedValue({ enabled: false, supported: true });
-        window.skladnoTelemetry = { getTelemetryConsent: vi.fn().mockResolvedValue({ enabled: true, supported: true, installationId: "123e4567-e89b-42d3-a456-426614174000" }), setTelemetryConsent, captureTelemetry: vi.fn() };
+        window.skladnoTelemetry = { getTelemetryConsent: vi.fn().mockResolvedValue({ enabled: true, supported: true, installationId: "123e4567-e89b-42d3-a456-426614174000" }), setTelemetryConsent, beginTelemetryCapture: vi.fn(), captureTelemetry: vi.fn() };
         const client = { getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()), getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }) } as unknown as EditorialWorkspaceClient;
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
         const toggle = await screen.findByRole("switch", { name: message("settings.telemetry") });

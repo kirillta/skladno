@@ -23,7 +23,8 @@ export interface TelemetryConsent {
 export interface DesktopTelemetryClient {
     getTelemetryConsent(): Promise<TelemetryConsent>;
     setTelemetryConsent(enabled: boolean): Promise<TelemetryConsent>;
-    captureTelemetry(event: TelemetryEvent): Promise<void>;
+    beginTelemetryCapture(): Promise<number | undefined>;
+    captureTelemetry(event: TelemetryEvent, generation?: number): Promise<void>;
 }
 
 
