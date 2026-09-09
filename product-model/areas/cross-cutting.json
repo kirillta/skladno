@@ -145,7 +145,7 @@
             "event": "The notification provider presents the failure.",
             "expected": ["A useful localized failure notification names the failed action or condition and a safe next step.", "Repeated reports of the same active failure produce one notification."],
             "forbidden": ["Private diagnostic detail displayed to the author.", "Implementation, transport, provider, credential, or Article-body details displayed to the author."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/notifications/NotificationProvider.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/notifications/NotificationProvider.errors.test.tsx" }
         },
         {
             "id": "cross-cutting.malformed-health-rejected",

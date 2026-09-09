@@ -182,7 +182,7 @@
             "event": "The author chooses a backup folder, creates a manual backup, or the daily schedule runs at application startup.",
             "expected": ["A consistent local SQLite snapshot is written through the browser permission handle and automatic retention leaves manual snapshots untouched."],
             "forbidden": ["A backup failure interrupts Article editing or exposes environment-variable secrets."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.persistence.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.backups.test.tsx" }
         },
         {
             "id": "settings.preview-update-controls",
@@ -192,7 +192,7 @@
             "event": "The author opens About Settings, allows update network access, and checks for updates.",
             "expected": ["The network-permission, automatic-check, and prerelease-channel switches are accessible, a confirmation dialog precedes the persisted network permission, no discovery request occurs before consent, Download appears only after explicit discovery, and the status shows while the update downloads."],
             "forbidden": ["A browser or development build exposes update controls, an update-discovery request occurs without consent, or a download starts automatically."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.general.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.updates.test.tsx" }
         },
         {
             "id": "settings.delete-local-data",
@@ -202,7 +202,7 @@
             "event": "The author cancels deletion, deletes after a native confirmation, or selects backup and deletion.",
             "expected": ["Cancellation leaves the data unchanged.", "A requested backup must complete and be non-empty before deletion proceeds.", "Only the active resolved Skladno data directory is deleted after background work and SQLite close, and Skladno exits after success."],
             "forbidden": ["Deleting an unresolved or broad path.", "Continuing to deletion after backup failure.", "Deleting local author data during ordinary uninstall."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-settings.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-settings.delete.test.ts" }
         },
         {
             "id": "settings.restore-local-backup",

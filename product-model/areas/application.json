@@ -164,7 +164,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.settings.test.tsx"
             }
         },
         {
@@ -327,7 +327,7 @@
             "forbidden": ["Preventing Article editing or showing the warning for a usable active connection."],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.settings.test.tsx"
             }
         }
     ]

@@ -35,9 +35,10 @@ Paths below are relative to `packages/web/src/workspace`. Use this map as a star
 
 | Concern | Owner | Focused tests |
 | --- | --- | --- |
-| Composition and shortcuts | `EditorialWorkspace.tsx`, `components/WorkspaceScreen.tsx` | `EditorialWorkspace.lifecycle.test.tsx`, `EditorialWorkspace.layout.test.tsx` |
-| Article loading, Drafts, Revisions, and persistence | `state/article-workspace-state.ts`, `state/article-revisions-state.ts` | `drafts/draft-lifecycle.test.ts`, `EditorialWorkspace.lifecycle.test.tsx` |
-| Assistant requests and stored responses | `state/assistant-messages-state.ts`, `state/editorial-proposal-state.ts` | `EditorialWorkspace.assistant-proposals.test.tsx`, `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx`, `components/assistant/AssistantTimeline.test.tsx` |
+| Composition and shortcuts | `EditorialWorkspace.tsx`, `components/WorkspaceScreen.tsx` | `EditorialWorkspace.settings.test.tsx`, `EditorialWorkspace.layout.test.tsx` |
+| Article loading, Drafts, Revisions, and persistence | `state/article-workspace-state.ts`, `state/article-revisions-state.ts` | `drafts/draft-lifecycle.test.ts`, `EditorialWorkspace.persistence.test.tsx` |
+| Article creation and Settings entry | `components/ArticleWorkspace.tsx`, `EditorialWorkspace.tsx` | `EditorialWorkspace.creation.test.tsx`, `EditorialWorkspace.settings.test.tsx` |
+| Assistant requests, composer, and stored responses | `state/assistant-messages-state.ts`, `state/editorial-proposal-state.ts`, `components/assistant/AssistantComposer.tsx` | `EditorialWorkspace.assistant-proposals.test.tsx`, `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-composer.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx`, `components/assistant/AssistantTimeline.test.tsx` |
 
 ### Focused-suite context snapshot
 
@@ -46,9 +47,14 @@ Issue #192 split the largest test suites by behavior. Counts are source lines be
 | Former suite | Before | Focused suites | After | Representative context |
 | --- | ---: | --- | --- | --- |
 | `server/editorial-integration.test.ts` | 720 | `editorial-integration.requests.test.ts`, `editorial-integration.style-translation.test.ts`, `editorial-integration.findings.test.ts`, `editorial-integration.assistant.test.ts` | 204 / 97 / 92 / 258 | focused suite + `editorial-integration.test-utils.ts` |
-| `web/workspace/EditorialWorkspace.assistant.test.tsx` | 660 | `EditorialWorkspace.assistant-proposals.test.tsx`, `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx` | 200 / 307 / 179 | focused suite + `EditorialWorkspace.test-utils.tsx` |
+| `web/workspace/EditorialWorkspace.assistant.test.tsx` | 660 | `EditorialWorkspace.assistant-proposals.test.tsx`, `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-composer.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx` | 200 / 153 / 135 / 179 | focused suite + `EditorialWorkspace.test-utils.tsx` |
 | `server/infrastructure/persistence/repositories.test.ts` | 437 | `repositories.assistant-records.test.ts`, `repositories.article-lifecycle.test.ts`, `repositories.storage-and-style.test.ts` | 176 / 145 / 111 | focused suite + `repositories.test-utils.ts` |
-| `web/settings/ApplicationSettings.ai.test.tsx` | 344 | `ApplicationSettings.ai-connections.test.tsx`, `ApplicationSettings.ai-models.test.tsx` | 197 / 163 | focused suite + `ApplicationSettings.test-utils.ts` |
+| `web/settings/ApplicationSettings.ai.test.tsx` | 344 | `ApplicationSettings.ai-connections.test.tsx`, `ApplicationSettings.ai-connection-management.test.tsx`, `ApplicationSettings.ai-models.test.tsx` | 197 / 49 / 163 | focused suite + `ApplicationSettings.test-utils.ts` |
+| `web/settings/ApplicationSettings.persistence.test.tsx` | 203 | `ApplicationSettings.backups.test.tsx`, `ApplicationSettings.publishing.test.tsx`, `ApplicationSettings.ai-connection-management.test.tsx` | 95 / 63 / 49 | focused settings behavior + `ApplicationSettings.test-utils.tsx` |
+| `electron/presentation/desktop-settings.test.ts` | 229 | `desktop-settings.backups.test.ts`, `desktop-settings.delete.test.ts` | 49 / 104 | focused suite + `desktop-settings.test-utils.ts` |
+| `web/notifications/NotificationProvider.test.tsx` | 191 | `NotificationProvider.behavior.test.tsx`, `NotificationProvider.errors.test.tsx` | 72 / 45 | focused suite + `NotificationProvider.test-utils.tsx` |
+| `web/settings/ApplicationSettings.general.test.tsx` | 268 | `ApplicationSettings.general.test.tsx`, `ApplicationSettings.updates.test.tsx` | 108 / 75 | focused suite + `ApplicationSettings.test-utils.tsx` |
+| `web/workspace/EditorialWorkspace.lifecycle.test.tsx` | 221 | `EditorialWorkspace.persistence.test.tsx`, `EditorialWorkspace.creation.test.tsx`, `EditorialWorkspace.settings.test.tsx` | 61 / 31 / 58 | focused suite + `EditorialWorkspace.test-utils.tsx` |
 | `server/presentation/server.test.ts` | 306 | `server.article-and-publishing.test.ts`, `server.general-settings.test.ts`, `server.ai-connections.test.ts` | 158 / 95 / 87 | focused suite and its local service setup |
 | Article header, editor, views, and status bar | `components/ArticleWorkspace.tsx`, `components/WorkspaceViewRouter.tsx` | `EditorialWorkspace.article-controls.test.tsx`, `views/*.test.tsx` |
 | Shell, library, tabs, and panel layout | `components/WorkspaceShell.tsx`, `components/ArticleLibraryPanel.tsx`, `components/WorkspaceTabBar.tsx` | matching `components/*.test.tsx`, `EditorialWorkspace.layout.test.tsx` |

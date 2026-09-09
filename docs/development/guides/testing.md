@@ -22,7 +22,7 @@ The workspace runners differ. Appending a file to a script that already includes
 
 | Target | Command | Working directory |
 | --- | --- | --- |
-| Web | `npm test --workspace @skladno/web -- src/workspace/EditorialWorkspace.lifecycle.test.tsx` | Repository root |
+| Web | `npm test --workspace @skladno/web -- src/workspace/EditorialWorkspace.persistence.test.tsx` | Repository root |
 | Server or Electron | `npx tsx --test <relative-test-file.test.ts>` | `packages/server` or `packages/electron` |
 | Shared | `node --test <relative-built-test-file.test.js>` | `packages/shared` |
 | Repository scripts | `node --test scripts/<name>.test.mjs` | Repository root |

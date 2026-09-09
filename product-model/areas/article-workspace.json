@@ -277,7 +277,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.creation.test.tsx"
             }
         },
         {
@@ -324,7 +324,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.assistant-requests.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.assistant-composer.test.tsx"
             }
         },
         {
@@ -367,7 +367,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.creation.test.tsx"
             }
         },
         {
@@ -431,7 +431,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.persistence.test.tsx"
             }
         },
         {
