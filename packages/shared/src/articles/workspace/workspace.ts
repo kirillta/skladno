@@ -5,6 +5,9 @@ import type { RevisionClient } from "../revision/revisions.js";
 import type { AssistantClient, AssistantMessage } from "../../assistant/assistant.js";
 
 export const articlesPath = "/api/articles";
+export const articleArchivePath = (articleId: string) => `${articlesPath}/${encodeURIComponent(articleId)}/archive`;
+export const articlePinPath = (articleId: string) => `${articlesPath}/${encodeURIComponent(articleId)}/pin`;
+export const pinnedArticleOrderPath = `${articlesPath}/pinned-order`;
 
 
 /** The transport-neutral operations required by the author workspace. */
@@ -13,6 +16,9 @@ export interface ArticleLibraryClient extends RevisionClient, AssistantClient {
     createArticle(input: CreateArticleInput): Promise<Article>;
     updateArticle(articleId: string, input: UpdateArticleInput): Promise<Article>;
     deleteArticle(articleId: string): Promise<void>;
+    setArticleArchived(articleId: string, archived: boolean): Promise<Article[]>;
+    setArticlePinned(articleId: string, pinned: boolean): Promise<Article>;
+    reorderPinnedArticles(articleIds: string[]): Promise<Article[]>;
     saveArticleDraft(articleId: string, input: SaveArticleDraftInput): Promise<ArticleDraft>;
     discardArticleDraft(articleId: string, expectedDraftVersion: number): Promise<void>;
     saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): Promise<ArticleRevision>;

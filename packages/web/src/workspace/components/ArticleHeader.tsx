@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { type Article, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Button, Dialog, Field, IconButton } from "../../ui/primitives.js";
-import { DeleteIcon, FocusIcon, LeaveFocusIcon, SaveIcon } from "../../ui/icons.js";
+import { ArchiveIcon, DeleteIcon, FocusIcon, LeaveFocusIcon, SaveIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";
 import type { Notifications } from "../../notifications/notifications.js";
 import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
@@ -13,6 +13,8 @@ export function ArticleHeader(props: {
     updateArticle: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
     save: () => Promise<unknown>;
     remove: (articleId: string) => Promise<void>;
+    setArchived?: (articleId: string, archived: boolean) => Promise<void>;
+    groupCount?: number;
     focusMode: boolean;
     setFocusMode: (value: boolean) => void;
     notifyError?: Notifications["notifyError"];
@@ -22,7 +24,7 @@ export function ArticleHeader(props: {
 }
 
 
-function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMode, setFocusMode, notifyError, shortcutOverrides = {} }: Parameters<typeof ArticleHeader>[0]) {
+function LocalizedArticleHeader({ article, updateArticle, save, remove, setArchived = async () => undefined, groupCount = 1, focusMode, setFocusMode, notifyError, shortcutOverrides = {} }: Parameters<typeof ArticleHeader>[0]) {
     const intl = useIntl();
     const reportError = notifyError ?? (() => undefined);
     const [title, setTitle] = useState(article.title);
@@ -86,6 +88,15 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
     }
 
 
+    async function archive() {
+        try {
+            await setArchived(article.id, !article.archived);
+        } catch (error) {
+            reportError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.updateArticleFailed" }) });
+        }
+    }
+
+
     return <header className="border-b border-border bg-surface">
         <div className="flex min-h-12 items-center gap-2 overflow-x-auto px-5 py-1.5">
             <h1 className={editingTitle ? "min-w-0 flex-1 text-xl font-semibold tracking-tight" : "min-w-0 flex-1 text-xl font-semibold tracking-tight"}>
@@ -110,6 +121,9 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
                 <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: "articleHeader.saveRevision" })} title={shortcutHint(intl.formatMessage({ id: "articleHeader.saveRevision" }), KEY_BINDING_COMMAND.SAVE_REVISION, shortcutOverrides)} onClick={() => void save().catch(() => undefined)}>
                     <SaveIcon className="size-4" />
                 </IconButton>
+                <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: article.archived ? "articleHeader.unarchiveArticle" : "articleHeader.archiveArticle" })} title={intl.formatMessage({ id: article.archived ? "articleHeader.unarchiveArticle" : "articleHeader.archiveArticle" })} onClick={() => void archive()}>
+                    <ArchiveIcon className="size-4" />
+                </IconButton>
                 <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "articleHeader.deleteArticle" })} title={intl.formatMessage({ id: "articleHeader.deleteArticle" })} onClick={() => setDeleteConfirmationOpen(true)}>
                     <DeleteIcon className="size-4" />
                 </IconButton>
@@ -124,7 +138,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, focusMod
             setDeleteConfirmationOpen(false);
         }}>
             <h2 id="delete-article-title" className="text-lg font-semibold">{intl.formatMessage({ id: "articleHeader.deleteConfirmationTitle" })}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">{intl.formatMessage({ id: "articleHeader.deleteConfirmationDescription" }, { articleTitle: article.title })}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{intl.formatMessage({ id: "articleHeader.deleteGroupConfirmationDescription" }, { articleTitle: article.title, count: groupCount })}</p>
             <div className="mt-5 flex justify-end gap-2">
                 <Button variant="secondary" autoFocus onClick={() => setDeleteConfirmationOpen(false)}>{intl.formatMessage({ id: "editor.cancel" })}</Button>
                 <Button variant="danger" onClick={() => void confirmDelete()}>{intl.formatMessage({ id: "articleHeader.confirmDeleteArticle" })}</Button>

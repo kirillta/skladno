@@ -16,6 +16,9 @@ export interface Article {
     sourceArticleId?: string;
     sourceRevisionId?: string;
     sourceRevisionNumber?: number;
+    archived?: boolean;
+    /** Only original Articles have a group pin position. */
+    pinOrder?: number;
 }
 
 

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,8 @@ import type { Article, DesktopUpdateClient } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
 import { ArticleLibraryPanel } from "./ArticleLibraryPanel.js";
+
+// Product scenarios: workspace.library-management
 
 
 const source: Article = {
@@ -66,5 +68,31 @@ describe("ArticleLibraryPanel", () => {
         </IntlProvider>);
 
         expect((await screen.findByRole("button", { name: "Update 0.1.1-preview.1 is available" })).textContent).not.toContain(message("settings.updates"));
+    });
+
+
+    it("opens a row context menu without selecting the row and offers group actions", () => {
+        const selectArticle = vi.fn();
+        const setArchived = vi.fn().mockResolvedValue(undefined);
+        render(<IntlProvider locale="en" messages={messages}>
+            <ArticleLibraryPanel articles={[source]} selectedArticleId={undefined} selectArticle={selectArticle} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" setArchived={setArchived} />
+        </IntlProvider>);
+
+        fireEvent.contextMenu(screen.getByRole("button", { name: /Mother Article/ }));
+        expect(selectArticle).not.toHaveBeenCalled();
+        expect(screen.getByRole("menuitem", { name: "Pin" })).toBeTruthy();
+        fireEvent.click(screen.getByRole("menuitem", { name: "Archive" }));
+        expect(setArchived).toHaveBeenCalledWith("source", true);
+    });
+
+
+    it("offers only Delete for a translation row", () => {
+        const translation: Article = { ...source, id: "translation", title: "Spanish edition", sourceArticleId: source.id, sourceRevisionId: source.currentRevisionId };
+        render(<IntlProvider locale="en" messages={messages}>
+            <ArticleLibraryPanel articles={[source, translation]} selectedArticleId="translation" selectArticle={vi.fn()} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" />
+        </IntlProvider>);
+
+        fireEvent.contextMenu(screen.getByRole("button", { name: /Spanish edition/ }));
+        expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Delete"]);
     });
 });

@@ -1,10 +1,10 @@
-import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleDraftPath, articleRevisionsPath, articlesPath, articleStyleCorpusSnapshotPath, articleStyleRulesPath, assistantMessagesPath, assistantRequestsPath, backupsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, proposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
+import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleArchivePath, articleDraftPath, articlePinPath, articleRevisionsPath, articlesPath, articleStyleCorpusSnapshotPath, articleStyleRulesPath, assistantMessagesPath, assistantRequestsPath, backupsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, proposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
 import { Router } from "../router.js";
-import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, updateArticleRoute } from "./articles-route.js";
+import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, reorderPinnedArticlesRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, setArticleArchivedRoute, setArticlePinnedRoute, updateArticleRoute } from "./articles-route.js";
 import { createAssistantRequestRoute, listAssistantMessagesRoute } from "./assistant-route.js";
 import { handleEditorialRoute } from "./editorial-route.js";
 import { handleHealthRoute } from "./health-route.js";
@@ -24,6 +24,8 @@ function routePattern(path: string): RegExp {
 
 
 const ARTICLE_PATH = routePattern(`${articlesPath}/${ROUTE_PARAMETER}`);
+const ARTICLE_ARCHIVE_PATH = routePattern(articleArchivePath(ROUTE_PARAMETER));
+const ARTICLE_PIN_PATH = routePattern(articlePinPath(ROUTE_PARAMETER));
 const ARTICLE_DRAFT_PATH = routePattern(articleDraftPath(ROUTE_PARAMETER));
 const ARTICLE_REVISIONS_PATH = routePattern(articleRevisionsPath(ROUTE_PARAMETER));
 const ARTICLE_PROPOSAL_ACCEPTANCES_PATH = routePattern(acceptProposalPath(ROUTE_PARAMETER));
@@ -80,6 +82,9 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.PUT, publishSettingsPath, (request, response) => updatePublishSettingsRoute(request, response, publishing));
     router.register(HTTP_METHOD.GET, articlesPath, (_request, response) => listArticlesRoute(response, articles));
     router.register(HTTP_METHOD.POST, articlesPath, (request, response) => createArticleRoute(request, response, articles));
+    router.register(HTTP_METHOD.PUT, pinnedArticleOrderPath, (request, response) => reorderPinnedArticlesRoute(request, response, articles));
+    router.register(HTTP_METHOD.PUT, ARTICLE_ARCHIVE_PATH, (request, response, parameters) => setArticleArchivedRoute(request, response, parameters[0]!, articles));
+    router.register(HTTP_METHOD.PUT, ARTICLE_PIN_PATH, (request, response, parameters) => setArticlePinnedRoute(request, response, parameters[0]!, articles));
     router.register(HTTP_METHOD.PATCH, ARTICLE_PATH, (request, response, parameters) => updateArticleRoute(request, response, parameters[0]!, articles));
     router.register(HTTP_METHOD.DELETE, ARTICLE_PATH, (_request, response, parameters) => deleteArticleRoute(response, parameters[0]!, articles));
     router.register(HTTP_METHOD.PUT, ARTICLE_DRAFT_PATH, (request, response, parameters) => saveDraftRoute(request, response, parameters[0]!, articles));

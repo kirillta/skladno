@@ -157,6 +157,11 @@ function generatedInventoryPath(area) {
 }
 
 
+function normalizeLineEndings(source) {
+    return source.replaceAll("\r\n", "\n");
+}
+
+
 function renderInventory(area) {
     const rows = area.capabilities.map((capability) => [
         capability.id,
@@ -215,7 +220,7 @@ async function check() {
         const generated = renderInventory(area);
         const inventoryPath = generatedInventoryPath(area);
         const existing = await exists(inventoryPath) ? await readFile(inventoryPath, "utf8") : "";
-        if (existing !== generated)
+        if (normalizeLineEndings(existing) !== generated)
             failures.push(`${relativePath(inventoryPath)} is out of date; run npm run product:docs -- ${area.area}`);
     }
 

@@ -16,6 +16,7 @@ import { ArticleWorkspace } from "./ArticleWorkspace.js";
 import { EditorialAssistantPanel } from "./EditorialAssistantPanel.js";
 import { WorkspaceShell } from "./WorkspaceShell.js";
 import { Banner, Button } from "../../ui/primitives.js";
+import { useNotifications } from "../../notifications/NotificationProvider.js";
 
 
 export function WorkspaceScreen({ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, runTranslation, dispatcher, shortcutOverrides, openSettings, hasUsableAiConnection, openModelSettings, assistantSelection, onSelectionChange, clearAssistantSelection, overlays }: {
@@ -40,6 +41,7 @@ export function WorkspaceScreen({ layout, workspace, assistant, editorial, revis
     clearAssistantSelection: () => void;
     overlays: ReactNode;
 }) {
+    const { notifyError } = useNotifications();
     return <WorkspaceShell
         focusMode={layout.focusMode}
         libraryCollapsed={layout.libraryCollapsed}
@@ -61,7 +63,12 @@ export function WorkspaceScreen({ layout, workspace, assistant, editorial, revis
             openSettings={openSettings}
             language={workspace.selectedArticle?.language}
             dispatcher={dispatcher}
-            shortcutOverrides={shortcutOverrides} />}
+            shortcutOverrides={shortcutOverrides}
+            remove={workspace.remove}
+            setArchived={workspace.setArchived}
+            setPinned={workspace.setPinned}
+            reorderPinned={workspace.reorderPinned}
+            notifyError={notifyError} />}
         assistant={<EditorialAssistantPanel
             state={assistant.state}
             message={assistant.message}

@@ -7,7 +7,7 @@ import test from "node:test";
 import { openDatabase } from "./database.js";
 import { createTestPersistence, type TestPersistence } from "../../test-support/test-persistence.js";
 import { StyleCorpusService } from "../../application/editorial/style-corpus-service.js";
-import { builtInSkills, legacyEditorialOperationSkillMap } from "@skladno/shared";
+import { APPLICATION_ERROR, builtInSkills, legacyEditorialOperationSkillMap } from "@skladno/shared";
 
 
 // Product scenarios: history-and-publishing.revision-restore-creates-new, history-and-publishing.style-corpus-local, cross-cutting.assistant-records-local
@@ -292,6 +292,32 @@ test("Article deletion cascades to its Draft", () => withRepository((repositorie
 }));
 
 
+test("Article Library archive, pins, and group deletion preserve translation boundaries", () => withRepository((repositories) => {
+    const original = repositories.articleService.createArticle({ title: "Original", content: "first" });
+    const translation = repositories.articleService.createArticle({ title: "Translation", content: "translated", sourceArticleId: original.id, sourceRevisionId: original.currentRevisionId });
+    const sibling = repositories.articleService.createArticle({ title: "Sibling", content: "sibling", sourceArticleId: original.id, sourceRevisionId: original.currentRevisionId });
+    const independent = repositories.articleService.createArticle({ title: "Independent", content: "safe" });
+
+    const archived = repositories.articleService.setArticleArchived(translation.id, true);
+    assert.deepEqual(new Set(archived.map((article) => article.id)), new Set([original.id, translation.id, sibling.id]));
+    assert.ok(archived.every((article) => article.archived));
+    assert.equal(repositories.articles.listRevisions(original.id).length, 1);
+
+    repositories.articleService.setArticleArchived(original.id, false);
+    const pinned = repositories.articleService.setArticlePinned(original.id, true);
+    assert.notEqual(pinned.pinOrder, undefined);
+    assert.throws(() => repositories.articleService.setArticlePinned(translation.id, true), { code: APPLICATION_ERROR.INVALID_REQUEST });
+
+    repositories.articleService.deleteArticle(translation.id);
+    assert.equal(repositories.articles.get(original.id)?.id, original.id);
+    assert.equal(repositories.articles.get(sibling.id)?.id, sibling.id);
+    repositories.articleService.deleteArticle(original.id);
+    assert.equal(repositories.articles.get(original.id), undefined);
+    assert.equal(repositories.articles.get(sibling.id), undefined);
+    assert.equal(repositories.articles.get(independent.id)?.id, independent.id);
+}));
+
+
 test("Article metadata updates preserve the current Revision", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Metadata", content: "Draft", language: "en" });
     const updated = repositories.articles.update(article.id, {
@@ -305,7 +331,7 @@ test("Article metadata updates preserve the current Revision", () => withReposit
     assert.equal(updated.publishingProfileId, "default");
     assert.equal(updated.currentRevisionId, article.currentRevisionId);
     assert.equal(repositories.articles.listRevisions(article.id).length, 1);
-    assert.throws(() => repositories.articles.update(article.id, { publishingProfileId: "unknown" }), /Unsupported publishing profile/);
+    assert.throws(() => repositories.articles.update(article.id, { publishingProfileId: "unknown" }), { code: APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE });
 }));
 
 
@@ -348,7 +374,7 @@ test("foreign keys and Article ownership reject invalid writes", () => withRepos
     const one = repositories.articleService.createArticle({ title: "One", content: "one" });
     const two = repositories.articleService.createArticle({ title: "Two", content: "two" });
 
-    assert.throws(() => repositories.articles.restoreRevision(one.id, two.currentRevisionId), /Revision not found/);
+    assert.throws(() => repositories.articles.restoreRevision(one.id, two.currentRevisionId), { code: APPLICATION_ERROR.REVISION_NOT_FOUND });
     assert.throws(() => repositories.materials.create({ name: " ", content: "x" }), /must not be empty/);
 }));
 

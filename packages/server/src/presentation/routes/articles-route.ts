@@ -85,6 +85,35 @@ export function deleteArticleRoute(response: ServerResponse, articleId: string, 
 }
 
 
+export async function setArticleArchivedRoute(request: IncomingMessage, response: ServerResponse, articleId: string, articles: ArticleService): Promise<void> {
+    requireArticle(articleId, articles);
+    const archived = object(await readJson(request)).archived;
+    if (typeof archived !== "boolean")
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    writeJson(response, HTTP_STATUS.OK, articles.setArticleArchived(articleId, archived));
+}
+
+
+export async function setArticlePinnedRoute(request: IncomingMessage, response: ServerResponse, articleId: string, articles: ArticleService): Promise<void> {
+    requireArticle(articleId, articles);
+    const pinned = object(await readJson(request)).pinned;
+    if (typeof pinned !== "boolean")
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    writeJson(response, HTTP_STATUS.OK, articles.setArticlePinned(articleId, pinned));
+}
+
+
+export async function reorderPinnedArticlesRoute(request: IncomingMessage, response: ServerResponse, articles: ArticleService): Promise<void> {
+    const articleIds = object(await readJson(request)).articleIds;
+    if (!Array.isArray(articleIds) || articleIds.some((articleId) => typeof articleId !== "string"))
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    writeJson(response, HTTP_STATUS.OK, articles.reorderPinnedArticles(articleIds));
+}
+
+
 export async function saveDraftRoute(request: IncomingMessage, response: ServerResponse, articleId: string, articles: ArticleService): Promise<void> {
     requireArticle(articleId, articles);
 

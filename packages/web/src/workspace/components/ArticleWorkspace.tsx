@@ -76,6 +76,8 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             updateArticle={workspace.updateArticle}
             save={workspace.save}
             remove={workspace.remove}
+            setArchived={workspace.setArchived}
+            groupCount={article.sourceArticleId ? 1 : workspace.articles.filter((item) => item.id === article.id || item.sourceArticleId === article.id).length}
             focusMode={layout.focusMode}
             setFocusMode={layout.setFocusMode}
             notifyError={notifyError}

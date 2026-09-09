@@ -52,6 +52,13 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
         case ELECTRON_APPLICATION_METHOD.createArticle: return services.articles.createArticle(args[0] as import("@skladno/shared").CreateArticleInput);
         case ELECTRON_APPLICATION_METHOD.updateArticle: return services.articles.updateArticle(String(args[0]), args[1] as import("@skladno/shared").UpdateArticleInput);
         case ELECTRON_APPLICATION_METHOD.deleteArticle: return services.articles.deleteArticle(String(args[0]));
+        case ELECTRON_APPLICATION_METHOD.setArticleArchived: return services.articles.setArticleArchived(String(args[0]), args[1] === true);
+        case ELECTRON_APPLICATION_METHOD.setArticlePinned: return services.articles.setArticlePinned(String(args[0]), args[1] === true);
+        case ELECTRON_APPLICATION_METHOD.reorderPinnedArticles:
+            if (!Array.isArray(args[0]) || args[0].some((id) => typeof id !== "string"))
+                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+            return services.articles.reorderPinnedArticles(args[0]);
         case ELECTRON_APPLICATION_METHOD.saveArticleDraft: return services.articles.saveDraft(String(args[0]), args[1] as import("@skladno/shared").SaveArticleDraftInput);
         case ELECTRON_APPLICATION_METHOD.discardArticleDraft: return services.articles.discardDraft(String(args[0]), Number(args[1]));
         case ELECTRON_APPLICATION_METHOD.saveArticleRevision: return services.articles.saveRevision(String(args[0]), args[1] as import("@skladno/shared").SaveArticleRevisionInput);

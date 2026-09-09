@@ -38,6 +38,9 @@ export interface ElectronApplicationOperationMap {
     createArticle: { args: [CreateArticleInput]; result: Article };
     updateArticle: { args: [string, UpdateArticleInput]; result: Article };
     deleteArticle: { args: [string]; result: void };
+    setArticleArchived: { args: [string, boolean]; result: Article[] };
+    setArticlePinned: { args: [string, boolean]; result: Article };
+    reorderPinnedArticles: { args: [string[]]; result: Article[] };
     saveArticleDraft: { args: [string, SaveArticleDraftInput]; result: ArticleDraft };
     discardArticleDraft: { args: [string, number]; result: void };
     saveArticleRevision: { args: [string, SaveArticleRevisionInput]; result: ArticleRevision };
@@ -81,6 +84,9 @@ export const ELECTRON_APPLICATION_METHOD = {
     createArticle: "createArticle",
     updateArticle: "updateArticle",
     deleteArticle: "deleteArticle",
+    setArticleArchived: "setArticleArchived",
+    setArticlePinned: "setArticlePinned",
+    reorderPinnedArticles: "reorderPinnedArticles",
     saveArticleDraft: "saveArticleDraft",
     discardArticleDraft: "discardArticleDraft",
     saveArticleRevision: "saveArticleRevision",

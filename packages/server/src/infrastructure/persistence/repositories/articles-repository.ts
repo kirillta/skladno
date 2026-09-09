@@ -3,56 +3,11 @@ import { REVISION_PROVENANCE_KIND, isArticleLanguage, isPublishLimitProfileId, t
 import type { SqliteDatabase } from "../database.js";
 import { ArticleDraftConflictError } from "../../../application/errors/article-draft-conflict-error.js";
 import { ArticleRevisionConflictError } from "../../../application/errors/article-revision-conflict-error.js";
-import { createId, now, parseObject, required, type Row } from "./repository-utils.js";
-
-
-function revision(row: Row): ArticleRevision {
-    return {
-        id: String(row.id),
-        articleId: String(row.article_id),
-        content: String(row.content),
-        createdAt: String(row.created_at),
-        provenance: parseObject(row.provenance_json),
-        ...(row.restored_from_revision_id ? { restoredFromRevisionId: String(row.restored_from_revision_id) } : {}),
-    };
-}
-
-
-function draft(row: Row): ArticleDraft | undefined {
-    if (!row.draft_article_id)
-        return undefined;
-
-    return {
-        articleId: String(row.draft_article_id),
-        content: String(row.draft_content),
-        baseRevisionId: String(row.draft_base_revision_id),
-        version: Number(row.draft_version),
-        updatedAt: String(row.draft_updated_at),
-    };
-}
-
-
-function article(row: Row): Article {
-    const currentRevision = revision(row);
-    return {
-        id: String(row.article_id),
-        title: String(row.title),
-        createdAt: String(row.article_created_at),
-        updatedAt: String(row.article_updated_at),
-        currentRevisionId: currentRevision.id,
-        currentRevision,
-        ...(draft(row) ? { draft: draft(row) } : {}),
-        ...(row.language ? { language: String(row.language) } : {}),
-        ...(row.audience ? { audience: String(row.audience) } : {}),
-        ...(row.publishing_profile_id ? { publishingProfileId: String(row.publishing_profile_id) } : {}),
-        ...(row.source_article_id ? { sourceArticleId: String(row.source_article_id) } : {}),
-        ...(row.source_revision_id ? { sourceRevisionId: String(row.source_revision_id) } : {}),
-        ...(row.source_revision_number ? { sourceRevisionNumber: Number(row.source_revision_number) } : {}),
-    };
-}
-
-
-const articleSelect = "SELECT a.id article_id, a.title, a.language, a.audience, a.publishing_profile_id, a.source_article_id, a.source_revision_id, (SELECT COUNT(*) FROM article_revisions numbered JOIN article_revisions linked ON linked.id = a.source_revision_id WHERE numbered.article_id = a.source_article_id AND (numbered.created_at < linked.created_at OR (numbered.created_at = linked.created_at AND numbered.id <= linked.id))) source_revision_number, a.created_at article_created_at, a.updated_at article_updated_at, r.*, d.article_id draft_article_id, d.content draft_content, d.base_revision_id draft_base_revision_id, d.version draft_version, d.updated_at draft_updated_at FROM articles a JOIN article_revisions r ON r.id = a.current_revision_id LEFT JOIN article_drafts d ON d.article_id = a.id";
+import { deleteArticle, reorderPinnedArticles, setArticleArchived, setArticlePinned } from "./article-library-repository.js";
+import { articleNotFound, invalidArticleRequest, requireArticleTitle, revisionNotFound, unsupportedPublishingProfile } from "./article-repository-errors.js";
+import { articleFromRow, articleSelect } from "./article-repository-records.js";
+import { getArticleRevision, insertArticleRevision, listArticleRevisions } from "./article-repository-revisions.js";
+import { createId, now, type Row } from "./repository-utils.js";
 
 
 export class ArticlesRepository {
@@ -60,25 +15,25 @@ export class ArticlesRepository {
 
 
     create(input: CreateArticleInput): Article {
-
         const language = input.language;
         if (language !== undefined && !isArticleLanguage(language))
-            throw new Error("Invalid Article language.");
+            invalidArticleRequest();
 
         if (input.publishingProfileId !== undefined && !isPublishLimitProfileId(input.publishingProfileId))
-            throw new Error("Unsupported publishing profile.");
+            unsupportedPublishingProfile();
 
         const timestamp = now();
         const articleId = input.id ?? createId();
         const revisionId = createId();
         const sourceArticleId = input.sourceArticleId;
         if (input.sourceRevisionId && (!sourceArticleId || !this.database.prepare("SELECT 1 FROM article_revisions WHERE id = ? AND article_id = ?").get(input.sourceRevisionId, sourceArticleId)))
-            throw new Error("Source Revision does not belong to the source Article.");
+            invalidArticleRequest();
 
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            this.database.prepare("INSERT INTO articles (id, title, language, audience, publishing_profile_id, source_article_id, source_revision_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .run(articleId, required(input.title, "Article title"), language ?? null, input.audience ?? null, input.publishingProfileId ?? null, sourceArticleId ?? null, input.sourceRevisionId ?? null, timestamp, timestamp);
+            const archived = sourceArticleId ? Number(this.database.prepare("SELECT archived FROM articles WHERE id = ?").get(sourceArticleId)?.archived ?? 0) : 0;
+            this.database.prepare("INSERT INTO articles (id, title, language, audience, publishing_profile_id, source_article_id, source_revision_id, archived, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(articleId, requireArticleTitle(input.title), language ?? null, input.audience ?? null, input.publishingProfileId ?? null, sourceArticleId ?? null, input.sourceRevisionId ?? null, archived, timestamp, timestamp);
             this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
                 .run(revisionId, articleId, input.content, JSON.stringify(input.provenance ?? { kind: REVISION_PROVENANCE_KIND.INITIAL }), timestamp);
             this.database.prepare("UPDATE articles SET current_revision_id = ? WHERE id = ?").run(revisionId, articleId);
@@ -93,36 +48,34 @@ export class ArticlesRepository {
 
 
     list(): Article[] {
-        return (this.database.prepare(`${articleSelect} ORDER BY CASE WHEN d.updated_at IS NOT NULL AND d.updated_at > a.updated_at THEN d.updated_at ELSE a.updated_at END DESC, a.id ASC`).all() as Row[]).map(article);
+        return (this.database.prepare(`${articleSelect} ORDER BY CASE WHEN d.updated_at IS NOT NULL AND d.updated_at > a.updated_at THEN d.updated_at ELSE a.updated_at END DESC, a.id ASC`).all() as Row[]).map(articleFromRow);
     }
 
 
     get(articleId: string): Article | undefined {
         const row = this.database.prepare(`${articleSelect} WHERE a.id = ?`).get(articleId) as Row | undefined;
-        return row && article(row);
+        return row && articleFromRow(row);
     }
 
 
     update(articleId: string, input: UpdateArticleInput): Article {
         if (!this.get(articleId))
-            throw new Error("Article not found.");
-
+            articleNotFound();
 
         const language = input.language;
         if (language !== undefined && !isArticleLanguage(language))
-            throw new Error("Invalid Article language.");
+            invalidArticleRequest();
 
         if (input.publishingProfileId !== undefined && !isPublishLimitProfileId(input.publishingProfileId))
-            throw new Error("Unsupported publishing profile.");
+            unsupportedPublishingProfile();
 
         const assignments: string[] = [];
         const values: string[] = [];
 
         if (input.title !== undefined) {
             assignments.push("title = ?");
-            values.push(required(input.title, "Article title"));
+            values.push(requireArticleTitle(input.title));
         }
-
 
         if (language !== undefined) {
             assignments.push("language = ?");
@@ -143,20 +96,32 @@ export class ArticlesRepository {
 
 
     delete(articleId: string): void {
-        if (this.database.prepare("DELETE FROM articles WHERE id = ?").run(articleId).changes === 0)
-            throw new Error("Article not found.");
+        deleteArticle(this.database, articleId, (id) => this.get(id));
+    }
+
+
+    setArchived(articleId: string, archived: boolean): Article[] {
+        return setArticleArchived(this.database, articleId, archived, (id) => this.get(id), () => this.list());
+    }
+
+
+    setPinned(articleId: string, pinned: boolean): Article {
+        return setArticlePinned(this.database, articleId, pinned, (id) => this.get(id));
+    }
+
+
+    reorderPinned(articleIds: string[]): Article[] {
+        return reorderPinnedArticles(this.database, articleIds, () => this.list());
     }
 
 
     listRevisions(articleId: string): ArticleRevision[] {
-        return (this.database.prepare("SELECT * FROM article_revisions WHERE article_id = ? ORDER BY created_at ASC, id ASC").all(articleId) as Row[]).map(revision);
+        return listArticleRevisions(this.database, articleId);
     }
 
 
     getRevision(articleId: string, revisionId: string): ArticleRevision | undefined {
-        const row = this.database.prepare("SELECT * FROM article_revisions WHERE id = ? AND article_id = ?").get(revisionId, articleId) as Row | undefined;
-
-        return row && revision(row);
+        return getArticleRevision(this.database, articleId, revisionId);
     }
 
 
@@ -165,7 +130,7 @@ export class ArticlesRepository {
         try {
             const current = this.get(articleId);
             if (!current)
-                throw new Error("Article not found.");
+                articleNotFound();
 
             if (current.currentRevisionId !== input.baseRevisionId)
                 throw new ArticleRevisionConflictError(current);
@@ -193,7 +158,7 @@ export class ArticlesRepository {
         try {
             const current = this.get(articleId);
             if (!current)
-                throw new Error("Article not found.");
+                articleNotFound();
 
             if (current.draft?.version !== expectedDraftVersion)
                 throw new ArticleDraftConflictError(current, current.draft);
@@ -220,12 +185,12 @@ export class ArticlesRepository {
         try {
             const current = this.get(articleId);
             if (!current)
-                throw new Error("Article not found.");
+                articleNotFound();
 
             if (current.currentRevisionId !== input.baseRevisionId)
                 throw new ArticleRevisionConflictError(current);
 
-            this.insertRevision({
+            insertArticleRevision(this.database, {
                 revisionId,
                 articleId,
                 content: input.content,
@@ -249,7 +214,7 @@ export class ArticlesRepository {
         try {
             const current = this.get(articleId);
             if (!current)
-                throw new Error("Article not found.");
+                articleNotFound();
 
             if (current.currentRevisionId !== input.baseRevisionId)
                 throw new ArticleRevisionConflictError(current);
@@ -287,9 +252,9 @@ export class ArticlesRepository {
         try {
             const historical = this.getRevision(articleId, historicalRevisionId);
             if (!historical)
-                throw new Error("Revision not found for this article.");
+                revisionNotFound();
 
-            this.insertRevision({
+            insertArticleRevision(this.database, {
                 revisionId,
                 articleId,
                 content: historical.content,
@@ -309,16 +274,15 @@ export class ArticlesRepository {
 
     appendRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision {
         if (!this.get(articleId))
-            throw new Error("Article not found.");
+            articleNotFound();
 
         const revisionId = createId();
         const timestamp = now();
 
-        required(JSON.stringify(provenance), "Change provenance");
         this.database.exec("BEGIN IMMEDIATE;");
 
         try {
-            this.insertRevision({ revisionId, articleId, content, provenance, restoredFromRevisionId, timestamp });
+            insertArticleRevision(this.database, { revisionId, articleId, content, provenance, restoredFromRevisionId, timestamp });
 
             this.database.exec("COMMIT;");
         } catch (error) {
@@ -329,18 +293,4 @@ export class ArticlesRepository {
         return this.listRevisions(articleId).find((item) => item.id === revisionId)!;
     }
 
-
-    private insertRevision({ revisionId, articleId, content, provenance, restoredFromRevisionId, timestamp }: {
-        revisionId: string;
-        articleId: string;
-        content: string;
-        provenance: Record<string, unknown>;
-        restoredFromRevisionId?: string;
-        timestamp: string;
-    }): void {
-        this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, restored_from_revision_id, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-            .run(revisionId, articleId, content, JSON.stringify(provenance), restoredFromRevisionId ?? null, timestamp);
-        this.database.prepare("UPDATE articles SET current_revision_id = ?, updated_at = ? WHERE id = ?")
-            .run(revisionId, timestamp, articleId);
-    }
 }
