@@ -1,9 +1,10 @@
-import { isDateFormatPreference, isThemePreference, isTimeFormatPreference, isTimeZonePreference, type GeneralSettings } from "@skladno/shared";
+import { isDateFormatPreference, isThemePreference, isTimeFormatPreference, isTimeZonePreference, type DesktopTelemetryClient, type GeneralSettings } from "@skladno/shared";
 import { useIntl } from "react-intl";
 import { catalogByLocale, installedLocaleCatalogs } from "../../i18n/catalogs.js";
 import { formatDate, formatDateTime, formatTime, formatTimeZoneLabel, systemTimeZone, timeZoneOptions } from "../../i18n/formatting.js";
 import { Select, Button } from "../../ui/primitives.js";
 import { SettingRow } from "./SettingRow.js";
+import { TelemetrySettingsGroup } from "./TelemetrySettingsGroup.js";
 
 
 function formatExample(general: GeneralSettings): string {
@@ -26,7 +27,7 @@ function isInterfaceLocale(value: string): value is GeneralSettings["interfaceLo
 }
 
 
-export function GeneralSettingsSection({ general, save, applyTheme }: { general: GeneralSettings; save: (next: GeneralSettings) => Promise<void>; applyTheme?: (theme: GeneralSettings["theme"]) => void }) {
+export function GeneralSettingsSection({ general, save, applyTheme, telemetry }: { general: GeneralSettings; save: (next: GeneralSettings) => Promise<void>; applyTheme?: (theme: GeneralSettings["theme"]) => void; telemetry?: DesktopTelemetryClient }) {
     const intl = useIntl();
 
     return <>
@@ -90,5 +91,6 @@ export function GeneralSettingsSection({ general, save, applyTheme }: { general:
                 </Select>
             </SettingRow>
         </section>
+        {telemetry && <TelemetrySettingsGroup client={telemetry} />}
     </>;
 }

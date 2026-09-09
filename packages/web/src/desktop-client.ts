@@ -1,4 +1,4 @@
-import type { DesktopSettingsClient, DesktopShellClient, DesktopUpdateClient, ElectronApplicationBridge, EditorialWorkspaceClient } from "@skladno/shared";
+import type { DesktopSettingsClient, DesktopShellClient, DesktopTelemetryClient, DesktopUpdateClient, ElectronApplicationBridge, EditorialWorkspaceClient } from "@skladno/shared";
 import { HttpApplicationClient } from "./application-client.js";
 
 
@@ -8,6 +8,7 @@ declare global {
         skladnoDesktop?: DesktopSettingsClient;
         skladnoShell?: DesktopShellClient;
         skladnoUpdates?: DesktopUpdateClient;
+        skladnoTelemetry?: DesktopTelemetryClient;
     }
 }
 
@@ -55,4 +56,9 @@ export function getDesktopShellClient(host: Pick<Window, "skladnoShell"> = windo
 
 export function getDesktopUpdateClient(host: Pick<Window, "skladnoUpdates"> = window): DesktopUpdateClient | undefined {
     return host.skladnoUpdates;
+}
+
+
+export function getDesktopTelemetryClient(host: Pick<Window, "skladnoTelemetry"> = window): DesktopTelemetryClient | undefined {
+    return host.skladnoTelemetry;
 }

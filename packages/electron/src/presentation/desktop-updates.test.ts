@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createDesktopUpdateCoordinator } from "./desktop-updates.js";
+import { createTelemetryOwner } from "../infrastructure/telemetry-owner.js";
 
 // Product scenarios: application.electron-preview-update-discovery, application.electron-preview-update-recovery
 test("update discovery selects the newest complete Windows release without downloading", async () => {
@@ -88,6 +89,32 @@ test("automatic update discovery runs at startup and daily while Skladno remains
         await scheduled.shift()!.callback();
         assert.equal(requests, 2);
     } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test("a late update response preserves a newer telemetry consent", async () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
+    const runtimePath = join(root, "runtime-settings.json");
+    let resolveResponse: ((response: Response) => void) | undefined;
+    const coordinator = createDesktopUpdateCoordinator({
+        runtimePath, currentVersion: "0.1.0", database: { exec: () => undefined }, dataDirectory: root,
+        updater: { setFeedURL: () => undefined, checkForUpdates: () => undefined, quitAndInstall: () => undefined, on: () => undefined },
+        fetchReleases: () => new Promise((resolve) => {
+            resolveResponse = resolve;
+        }),
+        notify: () => undefined, requestCheckpoint: async () => true, closeApplication: () => undefined, openExternal: async () => undefined,
+    });
+    const telemetry = createTelemetryOwner({ runtimePath, packaged: true, appVersion: "0.1.0", delivery: { endpoint: "https://us.i.posthog.com/batch", projectKey: "test" } });
+    try {
+        coordinator.setNetworkAccess(true);
+        const checking = coordinator.checkNow();
+        telemetry.setConsent(true);
+        resolveResponse?.(new Response(JSON.stringify([])));
+        await checking;
+        assert.equal(typeof JSON.parse(readFileSync(runtimePath, "utf8")).telemetry?.installationId, "string");
+    } finally {
+        telemetry.dispose();
         rmSync(root, { recursive: true, force: true });
     }
 });

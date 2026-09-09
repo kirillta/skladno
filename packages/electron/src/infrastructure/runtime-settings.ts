@@ -17,6 +17,9 @@ export interface RuntimeSettings {
         recoverySnapshotPath: string;
         phase: "ready" | "applied";
     };
+    telemetry?:
+        | { consent: "denied" }
+        | { consent: "granted"; installationId: string };
 }
 
 
@@ -38,10 +41,26 @@ export function readRuntimeSettings(path: string): RuntimeSettings {
             ...(typeof record.recoverySnapshotPath === "string" ? { recoverySnapshotPath: record.recoverySnapshotPath } : {}),
             ...(typeof record.startupSuccess === "boolean" ? { startupSuccess: record.startupSuccess } : {}),
             ...(pendingRestore(record.pendingRestore) ? { pendingRestore: pendingRestore(record.pendingRestore) } : {}),
+            ...(telemetry(record.telemetry) ? { telemetry: telemetry(record.telemetry) } : {}),
         };
     } catch {
         return {};
     }
+}
+
+
+function telemetry(value: unknown): RuntimeSettings["telemetry"] | undefined {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return undefined;
+
+    const record = value as Record<string, unknown>;
+    if (record.consent === "denied" && Object.keys(record).length === 1)
+        return { consent: "denied" };
+
+    if (record.consent !== "granted" || typeof record.installationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(record.installationId))
+        return undefined;
+
+    return { consent: "granted", installationId: record.installationId };
 }
 
 
@@ -62,4 +81,12 @@ export function writeRuntimeSettings(path: string, settings: RuntimeSettings): v
     const temporary = `${path}.tmp`;
     writeFileSync(temporary, JSON.stringify(settings), { mode: 0o600 });
     renameSync(temporary, path);
+}
+
+
+export function updateRuntimeSettings(path: string, update: (current: RuntimeSettings) => RuntimeSettings): RuntimeSettings {
+    const next = update(readRuntimeSettings(path));
+    writeRuntimeSettings(path, next);
+
+    return next;
 }

@@ -18,6 +18,7 @@ import { ApplicationClientError } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
+import { getDesktopTelemetryClient } from "../../desktop-client.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName } from "./editorial-language.js";
 import { useEditorialResults } from "./editorial-results-state.js";
@@ -75,6 +76,7 @@ function restoredAcceptance(article: Article, message: AssistantMessage, review:
 export function useEditorialProposal(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
+    const telemetry = getDesktopTelemetryClient();
     const [proposal, setProposal] = useState("");
     const [base, setBase] = useState<ProposalBase>();
     const [decisions, setDecisions] = useState<Record<string, ProposalDecision>>({});
@@ -224,6 +226,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
             setBase({ ...base, accepted: true });
             setDecisions(Object.fromEntries(review.changes.map((change) => [change.id, wholeProposal || acceptedChangeIds.has(change.id) ? "accepted" : "rejected"])));
+            void telemetry?.captureTelemetry({ kind: "proposal_reviewed", decision: "accepted" });
         } catch (error) {
             if (error instanceof ArticleRevisionConflictError) {
                 workspace.updateRevision(article.id, error.article.currentRevision);
@@ -300,7 +303,10 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         request,
         acceptAll: () => accept(new Set(review ? review.changes.map((change) => change.id) : []), true),
         applyAccepted: () => accept(new Set(Object.entries(decisions).filter(([, decision]) => decision === "accepted").map(([id]) => id)), false),
-        rejectAll: () => setDecisions(Object.fromEntries((review?.changes ?? []).map((change) => [change.id, "rejected"]))),
+        rejectAll: () => {
+            setDecisions(Object.fromEntries((review?.changes ?? []).map((change) => [change.id, "rejected"])));
+            void telemetry?.captureTelemetry({ kind: "proposal_reviewed", decision: "rejected" });
+        },
         dismissProposal: () => {
             if (base)
                 restoredArticleIds.current.add(base.articleId);

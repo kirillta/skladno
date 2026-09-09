@@ -1,7 +1,7 @@
 import { mkdirSync, renameSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { DesktopUpdateState } from "@skladno/shared";
-import { readRuntimeSettings, writeRuntimeSettings, type RuntimeSettings } from "../infrastructure/runtime-settings.js";
+import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings, type RuntimeSettings } from "../infrastructure/runtime-settings.js";
 import { availableUpdateState, newestCompatibleRelease, updatePreferences, type Release } from "./desktop-update-releases.js";
 
 const releasesUrl = "https://api.github.com/repos/kirillta/skladno/releases";
@@ -89,8 +89,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
                 throw new Error("Release discovery failed.");
 
             release = newestCompatibleRelease(payload, currentVersion, runtime);
-            const nextRuntime = { ...runtime, lastUpdateCheckAt: new Date().toISOString() };
-            writeRuntimeSettings(runtimePath, nextRuntime);
+            const nextRuntime = updateRuntimeSettings(runtimePath, (current) => ({ ...current, lastUpdateCheckAt: new Date().toISOString() }));
             return release
                 ? setState(availableUpdateState(release, currentVersion, nextRuntime))
                 : setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, ...updatePreferences(nextRuntime, currentVersion) });

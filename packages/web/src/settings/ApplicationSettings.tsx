@@ -3,7 +3,7 @@ import { aiModelPreferenceId, AI_PROVIDER, defaultGeneralSettings, defaultPublis
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
-import { getDesktopSettingsClient } from "../desktop-client.js";
+import { getDesktopSettingsClient, getDesktopTelemetryClient } from "../desktop-client.js";
 import { ConnectionRemovalDialog } from "./components/ConnectionRemovalDialog.js";
 import { ManagedConnectionRenameDialog } from "./components/ManagedConnectionRenameDialog.js";
 import { SettingsContent } from "./components/SettingsContent.js";
@@ -46,6 +46,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
     const [renamedConnectionLabel, setRenamedConnectionLabel] = useState("");
     const [status, setStatus] = useState(() => intl.formatMessage({ id: "settings.loading" }));
     const desktopSettings = getDesktopSettingsClient();
+    const telemetry = getDesktopTelemetryClient();
 
     useEffect(() => {
         void client.getApplicationSettings().then((loaded) => {
@@ -275,7 +276,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
 
     return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
-        <SettingsContent client={client} section={section} settings={settings} general={general} preferences={preferences} backupPolicy={backupPolicy} keyBindingOverrides={keyBindingOverrides} publishingSettings={publishingSettings} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} desktopAvailable={Boolean(desktopSettings)} onThemeApplied={onThemeApplied} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
+        <SettingsContent client={client} section={section} settings={settings} general={general} preferences={preferences} backupPolicy={backupPolicy} keyBindingOverrides={keyBindingOverrides} publishingSettings={publishingSettings} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} desktopAvailable={Boolean(desktopSettings)} telemetry={telemetry} onThemeApplied={onThemeApplied} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
             setEnvironmentName(value);
             setConnectionError(undefined);
         }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} saveGeneral={saveGeneral} savePreferences={savePreferences} saveBackupPolicy={saveBackupPolicy} saveKeyBindingOverrides={saveKeyBindingOverrides} savePublishingSettings={(next) => void savePublishingSettings(next)} addConnection={() => void addConnection()} addManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} setConnectionActive={(connectionId, active) => void setConnectionActive(connectionId, active)} requestConnectionRename={requestManagedConnectionRename} requestConnectionRemoval={setConnectionPendingRemoval} refreshModels={() => void refreshModels()} />

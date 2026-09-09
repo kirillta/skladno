@@ -31,6 +31,16 @@ export { desktopShellCommands, isDesktopShellCommand, type DesktopShellClient, t
 export { isDesktopUpdateState, type DesktopUpdateClient, type DesktopUpdateState } from "./application/desktop-updates.js";
 export { HTTP_METHOD, HTTP_STATUS } from "./transport/http.js";
 export {
+    isTelemetryEvent,
+    isTelemetryFailureCategory,
+    telemetrySchemaVersion,
+    type DesktopTelemetryClient,
+    type TelemetryConsent,
+    type TelemetryEvent,
+    type TelemetryFailureCategory,
+    type TelemetryOperation,
+} from "./telemetry/telemetry.js";
+export {
     applicationSettingsPath,
     aiConnectionsPath,
     aiModelsPath,

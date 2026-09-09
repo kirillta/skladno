@@ -5,7 +5,7 @@ import type { Dialog, IpcMain, Shell } from "electron";
 import type { ApplicationServices } from "@skladno/server/electron";
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
 import { type DesktopSettingsLocations, type ElectronMessages } from "@skladno/shared";
-import { readRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
+import { readRuntimeSettings, updateRuntimeSettings } from "../infrastructure/runtime-settings.js";
 import { desktopSettingsChannel } from "./desktop-settings-client.js";
 
 
@@ -65,7 +65,7 @@ function getLocations({ dataDirectory, runtime }: Pick<DesktopSettingsContext, "
 }
 
 
-async function chooseBackupDirectory({ runtimePath, runtime, dataDirectory, chooseDirectory }: Pick<DesktopSettingsContext, "runtimePath" | "runtime" | "dataDirectory" | "chooseDirectory">): Promise<unknown> {
+async function chooseBackupDirectory({ runtimePath, dataDirectory, chooseDirectory }: Pick<DesktopSettingsContext, "runtimePath" | "dataDirectory" | "chooseDirectory">): Promise<unknown> {
     const selected = await chooseDirectory();
     if (!selected)
         return { ok: true, value: undefined };
@@ -73,7 +73,7 @@ async function chooseBackupDirectory({ runtimePath, runtime, dataDirectory, choo
     if (overlaps(selected, dataDirectory) || overlaps(dataDirectory, selected))
         return { ok: false, error: "invalid_request" };
 
-    writeRuntimeSettings(runtimePath, { ...runtime, backupDirectory: selected });
+    updateRuntimeSettings(runtimePath, (current) => ({ ...current, backupDirectory: selected }));
     return { ok: true, value: selected };
 }
 
@@ -173,7 +173,7 @@ async function restoreNativeBackup({ runtimePath, runtime, database, dialog, mes
     validateDatabaseSnapshot(stagedSnapshotPath);
 
     const recoverySnapshotPath = createNativeBackup(database, stagingDirectory).path;
-    writeRuntimeSettings(runtimePath, { ...runtime, pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } });
+    updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } }));
     closeApplication();
     restart();
 

@@ -1,4 +1,5 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, EDITORIAL_OPERATION, type AssistantEvent, type AssistantMessage } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, EDITORIAL_OPERATION, type AssistantEvent, type AssistantMessage, type TelemetryEvent } from "@skladno/shared";
+import { performance } from "node:perf_hooks";
 
 import { AssistantCapabilityLoop } from "./assistant-capability-loop.js";
 import { AssistantCompletion, responseKind } from "./assistant-completion.js";
@@ -14,12 +15,18 @@ import { EditorialEngineError } from "../ports/editorial-engine-error.js";
 import type { EditorialEngineEvent } from "../ports/editorial-engine-event.js";
 import type { EditorialEngineResolver } from "../ports/editorial-engine-resolver.js";
 import type { StyleCorpusStore } from "../ports/style-corpus-store.js";
+import type { TelemetryObserver } from "../ports/telemetry-observer.js";
+
+const noTelemetry: TelemetryObserver = { beginCapture: () => () => undefined };
 
 
 export type { AssistantServiceRequest, PreparedAssistantRequest } from "./assistant-service-types.js";
 
 
 export class AssistantService {
+    private readonly startedAt = new Map<string, { capture: (event: TelemetryEvent) => void; startedAt: number }>();
+
+
     private readonly preparation: AssistantRequestPreparation;
 
 
@@ -37,6 +44,7 @@ export class AssistantService {
         engines: EditorialEngineResolver,
         factChecks: FactChecksStore = { list: () => [], save: () => undefined },
         capabilities?: EditorialCapabilityCatalog,
+        private readonly telemetry: TelemetryObserver = noTelemetry,
     ) {
         this.preparation = new AssistantRequestPreparation({ articles, assistant, styleCorpus, engines, factChecks, capabilities });
         this.capabilityLoop = new AssistantCapabilityLoop({ assistant, engines, capabilities, conversationHistory: (articleId, limit) => this.conversationHistory(articleId, limit) });
@@ -50,16 +58,29 @@ export class AssistantService {
 
 
     prepare(request: AssistantServiceRequest): PreparedAssistantRequest {
-        return this.preparation.prepare(request);
+        const capture = this.telemetry.beginCapture();
+        const startedAt = performance.now();
+        try {
+            const prepared = this.preparation.prepare(request);
+            this.startedAt.set(prepared.requestId, { capture, startedAt });
+            return prepared;
+        } catch (error) {
+            capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "failed", elapsedMs: Math.round(performance.now() - startedAt), failure: "unknown" });
+            throw error;
+        }
     }
 
 
     async *stream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<AssistantEvent> {
-        this.initializeRequest(request);
-        yield* this.initialEvents(request);
-
-        let completed = false;
+        const observed = this.startedAt.get(request.requestId) ?? { capture: this.telemetry.beginCapture(), startedAt: performance.now() };
+        this.startedAt.delete(request.requestId);
+        let initialized = false;
         try {
+            this.initializeRequest(request);
+            initialized = true;
+            yield* this.initialEvents(request);
+
+            let completed = false;
             for await (const event of this.editorialStream(request, signal)) {
                 completed ||= event.type === EDITORIAL_ENGINE_EVENT.COMPLETED;
                 yield* this.assistantEvents(request, event);
@@ -67,13 +88,21 @@ export class AssistantService {
 
             if (!completed && !signal.aborted)
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
+
+            if (signal.aborted) {
+                this.assistant.failRequest(request.requestId, "cancelled", "request_cancelled");
+                observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "cancelled", elapsedMs: Math.round(performance.now() - observed.startedAt), failure: "cancelled" });
+                return;
+            }
+
+            observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "completed", elapsedMs: Math.round(performance.now() - observed.startedAt) });
         } catch (error) {
-            this.assistant.failRequest(request.requestId, signal.aborted ? "cancelled" : "failed", signal.aborted ? "request_cancelled" : this.errorCode(error));
+            if (initialized)
+                this.assistant.failRequest(request.requestId, signal.aborted ? "cancelled" : "failed", signal.aborted ? "request_cancelled" : this.errorCode(error));
+
+            observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: signal.aborted ? "cancelled" : "failed", elapsedMs: Math.round(performance.now() - observed.startedAt), failure: signal.aborted ? "cancelled" : "unknown" });
             throw error;
         }
-
-        if (signal.aborted)
-            this.assistant.failRequest(request.requestId, "cancelled", "request_cancelled");
     }
 
 

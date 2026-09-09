@@ -10,6 +10,7 @@ import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/co
 import { SqliteBackupManager } from "./infrastructure/persistence/sqlite-backup-manager.js";
 import { WindowsManagedCredentials } from "./infrastructure/configuration/windows-managed-credentials.js";
 import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, SettingsRepository, StyleCorpusRepository, openDatabase } from "./infrastructure/persistence/index.js";
+import type { TelemetryObserver } from "./application/ports/telemetry-observer.js";
 
 
 export interface LocalApplication {
@@ -19,7 +20,7 @@ export interface LocalApplication {
 }
 
 
-export function createLocalApplication(config: ServerConfig = loadServerConfig()): LocalApplication {
+export function createLocalApplication(config: ServerConfig = loadServerConfig(), telemetry?: TelemetryObserver): LocalApplication {
     const database = openDatabase(config.databasePath);
     const articles = new ArticlesRepository(database);
     const editorialArtifacts = new EditorialArtifactsRepository(database);
@@ -33,9 +34,9 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
 
     assistant.seedGreetings();
 
-    const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled, factChecks);
+    const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled, factChecks, telemetry);
     return {
-        services: createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: (connection, apiKey) => listAvailableModels(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable" ? process.env[connection.credentialSource.environmentVariableName] : credentials.get(connection.id))) }, randomUUID, factChecks, new SqliteBackupManager(database), credentials, editorial),
+        services: createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: (connection, apiKey) => listAvailableModels(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable" ? process.env[connection.credentialSource.environmentVariableName] : credentials.get(connection.id))) }, randomUUID, factChecks, new SqliteBackupManager(database), credentials, editorial, telemetry),
         editorial,
         database,
     };

@@ -2,7 +2,7 @@ import { copyFileSync, existsSync, renameSync, rmSync } from "node:fs";
 
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
 
-import { readRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
+import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
 
 
 function sidecars(databasePath: string): string[] {
@@ -30,7 +30,7 @@ export class PendingRestoreError extends Error {
 }
 
 
-function applyReadyRestore({ runtimePath, databasePath, runtime, pending }: { runtimePath: string; databasePath: string; runtime: ReturnType<typeof readRuntimeSettings>; pending: NonNullable<ReturnType<typeof readRuntimeSettings>["pendingRestore"]> }): void {
+function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath: string; databasePath: string; pending: NonNullable<ReturnType<typeof readRuntimeSettings>["pendingRestore"]> }): void {
     const originalPath = `${databasePath}.before-restore`;
     const temporary = `${databasePath}.restore`;
     let originalMoved = false;
@@ -52,7 +52,7 @@ function applyReadyRestore({ runtimePath, databasePath, runtime, pending }: { ru
 
         renameSync(temporary, databasePath);
         restored = true;
-        writeRuntimeSettings(runtimePath, { ...runtime, pendingRestore: { ...pending, phase: "applied" } });
+        updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: { ...pending, phase: "applied" } }));
     } catch (error) {
         if (restored)
             removeDatabase(databasePath);
@@ -61,7 +61,7 @@ function applyReadyRestore({ runtimePath, databasePath, runtime, pending }: { ru
         if (canRestoreOriginal)
             renameSync(originalPath, databasePath);
 
-        writeRuntimeSettings(runtimePath, { ...runtime, pendingRestore: undefined });
+        updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: undefined }));
         throw new PendingRestoreError(error);
     }
 }
@@ -76,7 +76,7 @@ export function applyPendingRestore({ runtimePath, databasePath }: { runtimePath
 
     const originalPath = `${databasePath}.before-restore`;
     if (pending.phase === "ready")
-        applyReadyRestore({ runtimePath, databasePath, runtime, pending });
+        applyReadyRestore({ runtimePath, databasePath, pending });
 
     return {
         complete: () => {

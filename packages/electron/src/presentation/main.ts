@@ -7,7 +7,9 @@ import { requestDraftCheckpoint } from "../application/close-coordinator.js";
 import { applyPendingRestore, PendingRestoreError } from "../application/pending-restore.js";
 import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window-policy.js";
 import { readWindowBounds, writeWindowBounds } from "../infrastructure/window-state.js";
+import { createTelemetryOwner } from "../infrastructure/telemetry-owner.js";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
+import { registerDesktopTelemetryAdapter } from "./desktop-telemetry.js";
 import { registerDesktopShellAdapter } from "./desktop-shell.js";
 import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter } from "./desktop-updates.js";
 
@@ -18,6 +20,7 @@ let closeApplication: (() => void) | undefined;
 let closing = false;
 let nativeMessages = electronMessagesFor(defaultInterfaceLocale);
 let updates: ReturnType<typeof createDesktopUpdateCoordinator> | undefined;
+let telemetry: ReturnType<typeof createTelemetryOwner> | undefined;
 
 
 async function loadRenderer(window: BrowserWindow): Promise<void> {
@@ -129,7 +132,10 @@ async function createMainWindow(): Promise<void> {
             writeWindowBounds(statePath, window.getBounds());
     });
 
-    window.once("ready-to-show", () => window.show());
+    window.once("ready-to-show", () => {
+        window.show();
+        telemetry?.capture({ kind: "app_session_started" });
+    });
     await loadRenderer(window);
 }
 
@@ -145,10 +151,18 @@ if (squirrelStartup) {
         loadServerEnvironment();
         const config = loadServerConfig();
         const runtimePath = join(app.getPath("userData"), "runtime-settings.json");
+        telemetry = createTelemetryOwner({
+            runtimePath,
+            packaged: app.isPackaged,
+            appVersion: app.getVersion(),
+            delivery: app.isPackaged
+                ? { endpoint: process.env.SKLADNO_POSTHOG_ENDPOINT, projectKey: process.env.SKLADNO_POSTHOG_PROJECT_KEY }
+                : undefined,
+        });
         const pendingRestore = applyPendingRestore({ runtimePath, databasePath: config.databasePath });
         let application;
         try {
-            application = createLocalApplication(config);
+            application = createLocalApplication(config, telemetry);
             if (pendingRestore) {
                 validateDatabaseSnapshot(config.databasePath);
                 pendingRestore.complete();
@@ -174,6 +188,7 @@ if (squirrelStartup) {
             requestCheckpoint: () => mainWindow ? requestDraftCheckpoint(ipcMain, mainWindow.webContents) : Promise.resolve(false),
             closeApplication: () => {
                 cancelStreams();
+                telemetry?.dispose();
                 application.database.close();
                 closeApplication = undefined;
             },
@@ -182,8 +197,14 @@ if (squirrelStartup) {
                 app.exit(0);
             },
         });
+        registerDesktopTelemetryAdapter({
+            ipcMain,
+            isAuthorizedSender: (event) => event.sender === mainWindow?.webContents,
+            telemetry,
+        });
         closeApplication = () => {
             cancelStreams();
+            telemetry?.dispose();
             application.database.close();
         };
 

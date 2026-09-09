@@ -23,6 +23,8 @@ file, retain logs, or add a renderer-visible settings control.
 
 ## Consequences
 
+The packaged Electron runtime may separately emit only the versioned, allowlisted remote telemetry contract after explicit installation-local consent. It must not forward local diagnostic context or stdout/stderr, and missing delivery configuration remains a no-op.
+
 Host process and system logs can collect diagnostics without a second local
 data store. Operators who need retained or routed logs configure that outside
 Skladno.

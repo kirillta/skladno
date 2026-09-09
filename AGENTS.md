@@ -2,6 +2,8 @@
 
 Skladno is a local-first AI editorial workspace. It assists authors; it never edits or publishes their work autonomously.
 
+Skladno is currently in beta.
+
 The Electron app is the primary product. The web app exists mainly for development, so prioritize Electron behavior and compatibility.
 
 ## Before changing code
