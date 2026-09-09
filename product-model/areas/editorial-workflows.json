@@ -134,7 +134,7 @@
             "event": "The Assistant resolves an eligible skill and completes its request." ,
             "expected": ["The request, messages, and revision-bound Proposal artifact are retained locally."],
             "forbidden": ["Silent changes to the source Article text."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
         },
         {
             "id": "editorial-workflows.assistant-streaming-block-handoff",
@@ -144,7 +144,7 @@
             "event": "The provider sends partial Markdown text, then stages and completes a conversational or review response.",
             "expected": ["Incomplete text remains hidden, completed blocks retain their rendered identity, and a review response becomes one result card without its full artifact body.", "Streaming does not pull a reader who has scrolled upward; completion exposes its outcome control unless focus is within the Assistant."],
             "forbidden": ["An empty completion frame or duplicate Proposal content beside its review handoff."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.assistant.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/EditorialWorkspace.assistant-proposals.test.tsx" }
         },
         {
             "id": "editorial-workflows.assistant-stream-failure-safe",
@@ -154,7 +154,7 @@
             "event": "The stream fails, is incomplete, or is cancelled." ,
             "expected": ["A stable error can be shown and unfinished output is not persisted as valid work."],
             "forbidden": ["Modifying the Article with incomplete output."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.requests.test.ts" }
         },
         {
             "id": "editorial-workflows.proposal-operations-remain-separate",
@@ -164,7 +164,7 @@
             "event": "The server completes a composition or flow-revision operation." ,
             "expected": ["A reviewable Proposal is produced with the source Article unchanged."],
             "forbidden": ["Applying generated text without author approval."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
         },
         {
             "id": "editorial-workflows.finding-operations-preserve-article",
@@ -174,7 +174,7 @@
             "event": "The review operation completes." ,
             "expected": ["Revision-tied advisory findings and citations are retained."],
             "forbidden": ["Review output overwriting Article text or sending raw style corpus text."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.findings.test.ts" }
         },
         {
             "id": "editorial-workflows.translation-preserves-source",
@@ -184,7 +184,7 @@
             "event": "The translation operation completes and the author creates its linked Article." ,
             "expected": ["The linked translation retains source metadata and protected spans."],
             "forbidden": ["Overwriting the source Article."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.style-translation.test.ts" }
         },
         {
             "id": "editorial-workflows.paragraph-change-alignment",
@@ -214,7 +214,7 @@
             "event": "The author adds, selects, or removes a connection." ,
             "expected": ["Only environment-variable references and active connection metadata persist."],
             "forbidden": ["Storing or exposing secret values."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.ai-connections.test.ts" }
         },
         {
             "id": "editorial-workflows.ai-model-preferences",
@@ -224,7 +224,7 @@
             "event": "A new editorial request resolves its model." ,
             "expected": ["The applicable editorial override, supporting-text preference, or default model is selected."],
             "forbidden": ["Treating a refreshed provider list as persisted preference data."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.ai-connections.test.ts" }
         }
     ]
 }

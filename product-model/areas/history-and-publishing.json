@@ -86,7 +86,7 @@
             "event": "The author requests restoration.",
             "expected": ["The restore request identifies the selected Revision and the repository creates a new Revision."],
             "forbidden": ["Rewriting existing Revision records."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.article-lifecycle.test.ts" }
         },
         {
             "id": "history-and-publishing.style-corpus-local",
@@ -106,7 +106,7 @@
             "event": "The fact-check operation completes.",
             "expected": ["Findings retain source citations, uncertainty, and the reviewed Revision identifier."],
             "forbidden": ["Fact-check output modifies Article text."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.findings.test.ts" }
         },
         {
             "id": "history-and-publishing.translation-stale-source",
@@ -136,7 +136,7 @@
             "event": "The service saves and reloads that selection.",
             "expected": ["The selected default and valid custom profile configuration are returned after reload."],
             "forbidden": ["Accepting unknown profiles or invalid custom limits."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.article-and-publishing.test.ts" }
         }
     ]
 }

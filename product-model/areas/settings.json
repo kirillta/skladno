@@ -142,7 +142,7 @@
             "event": "The author adds, activates, deactivates, or confirms removal of a connection.",
             "expected": ["Authors choose one of the six supported providers and an environment-variable or, in Electron, managed-credential method. Connections are active by default, may share an environment-variable name, and an API key can be verified and stored without being displayed or persisted in Skladno data."],
             "forbidden": ["Displaying or persisting API key values."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.ai.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.ai-connections.test.tsx" }
         },
         {
             "id": "settings.model-preferences-human-reviewed",
@@ -162,7 +162,7 @@
             "event": "The author opens AI Settings, changes an activation state, or manually refreshes the list.",
             "expected": ["Every active connection's current model list is offered for selection with its supplying connection, without persisting the refreshed list as preference data."],
             "forbidden": ["Persisting the refreshed list as a model preference."],
-            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.ai.test.tsx" }
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.ai-models.test.tsx" }
         },
         {
             "id": "settings.publish-profile-default",
@@ -172,7 +172,7 @@
             "event": "The service saves and reloads the profile default.",
             "expected": ["The selected publishing profile, custom configuration, and language defaults are returned for new Articles and translation requests."],
             "forbidden": ["Accepting an unknown profile."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.article-and-publishing.test.ts" }
         },
         {
             "id": "settings.backup-policy-human-reviewed",

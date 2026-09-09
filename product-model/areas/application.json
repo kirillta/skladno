@@ -185,7 +185,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/server/src/infrastructure/persistence/repositories.test.ts"
+                "path": "packages/server/src/infrastructure/persistence/repositories.storage-and-style.test.ts"
             }
         },
         {
@@ -314,7 +314,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/workspace/EditorialWorkspace.assistant.test.tsx"
+                "path": "packages/web/src/workspace/EditorialWorkspace.assistant-selection.test.tsx"
             }
         },
         {

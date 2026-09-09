@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { aiConnectionsPath, applicationSettingsPath, backupsPath, defaultGeneralSettings, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article, type GeneralSettings } from "@skladno/shared";
+import { backupsPath, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article } from "@skladno/shared";
 import { createLocalService } from "./server.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createApplicationServices } from "../application/create-application-services.js";
@@ -14,8 +14,7 @@ import { openDatabase } from "../infrastructure/persistence/index.js";
 import { createLocalDiagnostics } from "../infrastructure/diagnostics/local-diagnostics.js";
 import { createTestPersistence } from "../test-support/test-persistence.js";
 
-// Product scenarios: editorial-workflows.ai-connection-management, editorial-workflows.ai-model-preferences, history-and-publishing.publishing-profile-persistence, settings.publish-profile-default
-
+// Product scenarios: history-and-publishing.publishing-profile-persistence, settings.publish-profile-default
 const testDateTimeFormat = { read: async () => ({ locale: "en" }) };
 const testModels = { list: async () => [] as string[] };
 const testConnectionId = () => randomUUID();
@@ -151,153 +150,6 @@ test("article API supports CRUD and revision-aware saves", async () => {
 
         const events = diagnosticLines.map((line) => JSON.parse(line) as { event: string; method?: string; status?: number });
         assert.ok(events.some((event) => event.event === "backup.failed" && event.status === HTTP_STATUS.INTERNAL_SERVER_ERROR));
-    } finally {
-        await new Promise<void>((resolve) => service.close(() => resolve()));
-        database.close();
-        rmSync(directory, { recursive: true, force: true });
-    }
-});
-
-
-test("General settings preserve valid formatting preferences and reject invalid updates", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "skladno-settings-"));
-    const database = openDatabase(join(directory, "skladno.sqlite"));
-    const repositories = createTestPersistence(database);
-    const engines = { resolve: () => undefined };
-    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, false);
-    repositories.settings.set("application-general", { ...defaultGeneralSettings, dateFormat: "day-first-dots", timeZone: "America/Argentina/Buenos_Aires" });
-    const service = createLocalService({
-        host: "127.0.0.1",
-        port: 0,
-        webOrigin: "http://localhost:5173",
-        databasePath: "unused",
-        aiModel: "gpt-5",
-        aiSessionContinuationEnabled: false,
-    }, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId));
-
-    service.listen(0, "127.0.0.1");
-    await once(service, "listening");
-
-    const address = service.address();
-    assert.ok(address && typeof address !== "string");
-    const settingsUrl = `http://127.0.0.1:${address.port}${applicationSettingsPath}`;
-
-    try {
-        const loaded = await fetch(settingsUrl);
-        assert.equal(loaded.status, HTTP_STATUS.OK);
-        assert.equal((await loaded.json() as { general: GeneralSettings }).general.dateFormat, "day-first-dots");
-
-        const loadedTimeZone = await fetch(settingsUrl);
-        assert.equal((await loadedTimeZone.json() as { general: GeneralSettings }).general.timeZone, "America/Argentina/Buenos_Aires");
-
-        repositories.settings.set("application-general", {});
-        const legacy = await fetch(settingsUrl);
-        assert.equal((await legacy.json() as { general: GeneralSettings }).general.timeZone, "system");
-
-        repositories.settings.set("application-general", { ...defaultGeneralSettings, timeZone: "America/Argentina/Buenos_Aires" });
-        const invalid = await fetch(`${settingsUrl}/general`, {
-            method: HTTP_METHOD.PUT,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ...defaultGeneralSettings, timeZone: "UTC-03:00" }),
-        });
-        assert.equal(invalid.status, HTTP_STATUS.BAD_REQUEST);
-        assert.equal((await invalid.json() as { error: { code: string } }).error.code, "invalid_request");
-        assert.equal((repositories.settings.get("application-general")?.value as GeneralSettings).timeZone, "America/Argentina/Buenos_Aires");
-
-        const invalidTheme = await fetch(`${settingsUrl}/general`, {
-            method: HTTP_METHOD.PUT,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ...defaultGeneralSettings, theme: "high-contrast" }),
-        });
-        assert.equal(invalidTheme.status, HTTP_STATUS.BAD_REQUEST);
-
-        const invalidDateFormat = await fetch(`${settingsUrl}/general`, {
-            method: HTTP_METHOD.PUT,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ...defaultGeneralSettings, dateFormat: "dashes" }),
-        });
-        assert.equal(invalidDateFormat.status, HTTP_STATUS.BAD_REQUEST);
-        assert.equal((repositories.settings.get("application-general")?.value as GeneralSettings).timeZone, "America/Argentina/Buenos_Aires");
-
-        const invalidTimeFormat = await fetch(`${settingsUrl}/general`, {
-            method: HTTP_METHOD.PUT,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ...defaultGeneralSettings, timeFormat: "military" }),
-        });
-        assert.equal(invalidTimeFormat.status, HTTP_STATUS.BAD_REQUEST);
-
-        repositories.settings.set("application-general", { ...defaultGeneralSettings, theme: "high-contrast", dateFormat: "dashes", timeFormat: "military", timeZone: "invalid-zone" });
-        const recovered = await fetch(settingsUrl);
-        assert.deepEqual((await recovered.json() as { general: GeneralSettings }).general, defaultGeneralSettings);
-    } finally {
-        await new Promise<void>((resolve) => service.close(() => resolve()));
-        database.close();
-        rmSync(directory, { recursive: true, force: true });
-    }
-});
-
-
-test("AI connections share environment-variable names, activate independently, and can be removed", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "skladno-ai-connections-"));
-    const database = openDatabase(join(directory, "skladno.sqlite"));
-    const repositories = createTestPersistence(database);
-    const engines = { resolve: () => undefined };
-    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, false);
-    const service = createLocalService({
-        host: "127.0.0.1",
-        port: 0,
-        webOrigin: "http://localhost:5173",
-        databasePath: "unused",
-        aiModel: "gpt-5",
-        aiSessionContinuationEnabled: false,
-    }, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId));
-
-    service.listen(0, "127.0.0.1");
-    await once(service, "listening");
-
-    const address = service.address();
-    assert.ok(address && typeof address !== "string");
-    const connectionsUrl = `http://127.0.0.1:${address.port}${aiConnectionsPath}`;
-
-    try {
-        const firstResponse = await fetch(connectionsUrl, {
-            method: HTTP_METHOD.POST,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY" }),
-        });
-        assert.equal(firstResponse.status, HTTP_STATUS.CREATED);
-        const first = await firstResponse.json() as { id: string };
-
-        const sameKeyResponse = await fetch(connectionsUrl, {
-            method: HTTP_METHOD.POST,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ label: "OpenCode Zen", provider: "opencode", environmentVariableName: "OPENAI_API_KEY" }),
-        });
-        assert.equal(sameKeyResponse.status, HTTP_STATUS.CREATED);
-        const sameKey = await sameKeyResponse.json() as { id: string };
-
-        const secondResponse = await fetch(connectionsUrl, {
-            method: HTTP_METHOD.POST,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ label: "Work OpenAI", environmentVariableName: "WORK_OPENAI_API_KEY" }),
-        });
-        assert.equal(secondResponse.status, HTTP_STATUS.CREATED);
-        const second = await secondResponse.json() as { id: string };
-
-        const deactivated = await fetch(`${connectionsUrl}/${second.id}/active`, {
-            method: HTTP_METHOD.PUT,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ active: false }),
-        });
-        assert.deepEqual(await deactivated.json(), { id: second.id, provider: "openai", label: "Work OpenAI", credentialSource: { kind: "environment-variable", environmentVariableName: "WORK_OPENAI_API_KEY" }, active: false, status: "unchecked" });
-        const removed = await fetch(`${connectionsUrl}/${first.id}`, { method: HTTP_METHOD.DELETE });
-        assert.equal(removed.status, HTTP_STATUS.NO_CONTENT);
-
-        const settings = await fetch(`http://127.0.0.1:${address.port}${applicationSettingsPath}`);
-        assert.deepEqual((await settings.json() as { connections: { id: string }[] }).connections, [
-            { id: sameKey.id, provider: "opencode", label: "OpenCode Zen", credentialSource: { kind: "environment-variable", environmentVariableName: "OPENAI_API_KEY" }, active: true, status: "unchecked" },
-            { id: second.id, provider: "openai", label: "Work OpenAI", credentialSource: { kind: "environment-variable", environmentVariableName: "WORK_OPENAI_API_KEY" }, active: false, status: "unchecked" },
-        ]);
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));
         database.close();

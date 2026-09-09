@@ -37,6 +37,18 @@ Paths below are relative to `packages/web/src/workspace`. Use this map as a star
 | --- | --- | --- |
 | Composition and shortcuts | `EditorialWorkspace.tsx`, `components/WorkspaceScreen.tsx` | `EditorialWorkspace.lifecycle.test.tsx`, `EditorialWorkspace.layout.test.tsx` |
 | Article loading, Drafts, Revisions, and persistence | `state/article-workspace-state.ts`, `state/article-revisions-state.ts` | `drafts/draft-lifecycle.test.ts`, `EditorialWorkspace.lifecycle.test.tsx` |
-| Assistant requests and stored responses | `state/assistant-messages-state.ts`, `state/editorial-proposal-state.ts` | `EditorialWorkspace.assistant.test.tsx`, `components/assistant/AssistantTimeline.test.tsx` |
+| Assistant requests and stored responses | `state/assistant-messages-state.ts`, `state/editorial-proposal-state.ts` | `EditorialWorkspace.assistant-proposals.test.tsx`, `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx`, `components/assistant/AssistantTimeline.test.tsx` |
+
+### Focused-suite context snapshot
+
+Issue #192 split the largest test suites by behavior. Counts are source lines before and after the split; the representative context column names the focused test and directly shared helper a reader needs.
+
+| Former suite | Before | Focused suites | After | Representative context |
+| --- | ---: | --- | --- | --- |
+| `server/editorial-integration.test.ts` | 720 | `editorial-integration.requests.test.ts`, `editorial-integration.style-translation.test.ts`, `editorial-integration.findings.test.ts`, `editorial-integration.assistant.test.ts` | 204 / 97 / 92 / 258 | focused suite + `editorial-integration.test-utils.ts` |
+| `web/workspace/EditorialWorkspace.assistant.test.tsx` | 660 | `EditorialWorkspace.assistant-proposals.test.tsx`, `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx` | 200 / 307 / 179 | focused suite + `EditorialWorkspace.test-utils.tsx` |
+| `server/infrastructure/persistence/repositories.test.ts` | 437 | `repositories.assistant-records.test.ts`, `repositories.article-lifecycle.test.ts`, `repositories.storage-and-style.test.ts` | 176 / 145 / 111 | focused suite + `repositories.test-utils.ts` |
+| `web/settings/ApplicationSettings.ai.test.tsx` | 344 | `ApplicationSettings.ai-connections.test.tsx`, `ApplicationSettings.ai-models.test.tsx` | 197 / 163 | focused suite + `ApplicationSettings.test-utils.ts` |
+| `server/presentation/server.test.ts` | 306 | `server.article-and-publishing.test.ts`, `server.general-settings.test.ts`, `server.ai-connections.test.ts` | 158 / 95 / 87 | focused suite and its local service setup |
 | Article header, editor, views, and status bar | `components/ArticleWorkspace.tsx`, `components/WorkspaceViewRouter.tsx` | `EditorialWorkspace.article-controls.test.tsx`, `views/*.test.tsx` |
 | Shell, library, tabs, and panel layout | `components/WorkspaceShell.tsx`, `components/ArticleLibraryPanel.tsx`, `components/WorkspaceTabBar.tsx` | matching `components/*.test.tsx`, `EditorialWorkspace.layout.test.tsx` |

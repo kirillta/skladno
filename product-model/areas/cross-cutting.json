@@ -195,7 +195,7 @@
             "event": "The repository persists assistant records.",
             "expected": ["Greeting templates and resolved author skill metadata remain available for the Article."],
             "forbidden": ["Conversation state crossing Article boundaries."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.assistant-records.test.ts" }
         },
         {
             "id": "cross-cutting.data-protection-activity-center-deferred",
