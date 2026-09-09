@@ -38,6 +38,21 @@ export class ArticleService {
     }
 
 
+    setArticleArchived(articleId: string, archived: boolean): Article[] {
+        return this.store.setArchived(articleId, archived);
+    }
+
+
+    setArticlePinned(articleId: string, pinned: boolean): Article {
+        return this.store.setPinned(articleId, pinned);
+    }
+
+
+    reorderPinnedArticles(articleIds: string[]): Article[] {
+        return this.store.reorderPinned(articleIds);
+    }
+
+
     saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft {
         return this.store.saveDraft(articleId, input);
     }

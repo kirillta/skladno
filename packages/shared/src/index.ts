@@ -171,7 +171,7 @@ export type {
     UpdateMaterialInput,
     EditorialArtifact,
 } from "./persistence/index.js";
-export { articlesPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./articles/workspace/workspace.js";
+export { articlesPath, articleArchivePath, articlePinPath, pinnedArticleOrderPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./articles/workspace/workspace.js";
 export {
     ASSISTANT_EVENT,
     BUILT_IN_SKILL,

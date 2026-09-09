@@ -228,4 +228,13 @@ export const migrations = [
         ALTER TABLE editorial_sessions ADD COLUMN model TEXT;
         `,
     },
+    {
+        version: 18,
+        name: "article_library_management",
+        sql: `
+        ALTER TABLE articles ADD COLUMN archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1));
+        ALTER TABLE articles ADD COLUMN pin_order INTEGER;
+        CREATE INDEX articles_active_pins ON articles(archived, pin_order) WHERE pin_order IS NOT NULL;
+        `,
+    },
 ] as const;

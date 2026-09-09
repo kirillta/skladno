@@ -7,6 +7,9 @@ export interface ArticleStore {
     get(articleId: string): Article | undefined;
     update(articleId: string, input: UpdateArticleInput): Article;
     delete(articleId: string): void;
+    setArchived(articleId: string, archived: boolean): Article[];
+    setPinned(articleId: string, pinned: boolean): Article;
+    reorderPinned(articleIds: string[]): Article[];
     saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft;
     discardDraft(articleId: string, expectedDraftVersion: number): void;
     saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision;

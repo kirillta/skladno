@@ -27,15 +27,15 @@
         {
             "id": "workspace.library.article-navigation",
             "area": "Article Library Panel",
-            "title": "Create, search, select, and list Articles by latest persisted activity",
+            "title": "Create, search, select, archive, pin, and list Article groups",
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/ArticleLibraryPanel.tsx",
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
-            "contract": "Selected Article is restored locally, Article activity includes retained Draft checkpoints, and independently selectable translation Articles appear under the selected source group or during search while other source groups show a collapsed-child indicator.",
-            "persistence": "Article service plus local workspace preferences."
+            "contract": "Selected Article is restored locally, Article activity includes retained Draft checkpoints, and independently selectable translation Articles appear under the selected source group or during search while other source groups show a collapsed-child indicator. Context menus support archive and deletion for a complete source group, while only originals can be pinned and reordered.",
+            "persistence": "Article service persists group archive state and original pin order plus local workspace preferences."
         },
         {
             "id": "workspace.assistant.explicit-request",
@@ -67,13 +67,13 @@
         {
             "id": "workspace.header.article-metadata",
             "area": "Article Header",
-            "title": "Title, Revision promotion, focus mode, and confirmed Article deletion",
+            "title": "Title, Revision promotion, focus mode, archive, and confirmed Article deletion",
             "status": "implemented",
             "owners": [
                 "packages/web/src/workspace/components/ArticleHeader.tsx"
             ],
-            "contract": "Metadata changes do not create a Revision and deletion requires confirmation.",
-            "persistence": "Article metadata PATCH, local target-language guidance, and Article deletion route."
+            "contract": "Metadata changes and archive state do not create a Revision. Archive applies to a source group, and deletion requires confirmation. Deleting an original deletes its translations atomically; deleting a translation preserves its source group.",
+            "persistence": "Article metadata PATCH, group archive and deletion routes, and local target-language guidance."
         },
         {
             "id": "workspace.navigation.views",
@@ -278,6 +278,31 @@
             "evidence": {
                 "kind": "automated",
                 "path": "packages/web/src/workspace/EditorialWorkspace.lifecycle.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.library-management",
+            "title": "Library context actions manage complete Article groups",
+            "capabilityIds": [
+                "workspace.library.article-navigation",
+                "workspace.header.article-metadata"
+            ],
+            "preconditions": [
+                "An original Article may have independently editable translations"
+            ],
+            "event": "Author opens an Article row context menu or uses the Article header archive control.",
+            "expected": [
+                "Archive and unarchive apply to the whole source group without creating Revisions",
+                "Only originals can be pinned and reordered, and archived pinned groups retain their order",
+                "Deleting an original removes its translations atomically, while deleting a translation preserves its source and siblings"
+            ],
+            "forbidden": [
+                "A context-menu invocation selecting a different Article",
+                "A partial source-group deletion"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/components/ArticleLibraryPanel.test.tsx"
             }
         },
         {

@@ -3,38 +3,12 @@ import { useIntl } from "react-intl";
 import { ArticleDraftConflictError, ArticleRevisionConflictError, type Article, type ArticleRevision } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
-import {
-    draftPresentationState,
-    hasUncommittedDraftChanges,
-    hydrateDraftLifecycle,
-    type DraftPresentationState,
-} from "../drafts/draft-lifecycle.js";
+import { draftPresentationState, hasUncommittedDraftChanges, hydrateDraftLifecycle, type DraftPresentationState } from "../drafts/draft-lifecycle.js";
 import { useDraftLifecycle } from "../drafts/useDraftLifecycle.js";
+import { createArticleWorkspaceActions } from "./article-workspace-actions.js";
+import { sortArticlesByActivity, withoutDraft } from "./article-workspace-articles.js";
 
-
-function articleActivityTimestamp(article: Article): string {
-    return article.draft && article.draft.updatedAt > article.updatedAt ? article.draft.updatedAt : article.updatedAt;
-}
-
-
-export function sortArticlesByActivity(articles: Article[]): Article[] {
-    return [...articles].sort((first, second) => articleActivityTimestamp(second).localeCompare(articleActivityTimestamp(first)) || first.id.localeCompare(second.id));
-}
-
-
-function withoutDraft(article: Article): Omit<Article, "draft"> {
-    const { draft: _draft, ...result } = article;
-    void _draft;
-    return result;
-}
-
-
-export function articleContentForWorkspace(article: Article): string {
-    if (article.draft?.baseRevisionId === article.currentRevisionId)
-        return article.draft.content;
-
-    return article.currentRevision.content;
-}
+export { articleContentForWorkspace, sortArticlesByActivity } from "./article-workspace-articles.js";
 
 
 export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelectedArticleId: string | undefined, setPersistedSelectedArticleId: (articleId: string | undefined) => void) {
@@ -68,13 +42,13 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
     useEffect(() => {
         client.listArticles().then((loaded) => {
             const sorted = sortArticlesByActivity(loaded);
-            const preferredArticleId = preferredSelectedArticleIdRef.current;
-            const selectedArticleId = sorted.some((article) => article.id === preferredArticleId) ? preferredArticleId : sorted[0]?.id;
+            const preferred = preferredSelectedArticleIdRef.current;
+            const selected = sorted.some((article) => article.id === preferred) ? preferred : sorted[0]?.id;
             articlesRef.current = sorted;
             setArticles(sorted);
             replaceDraftLifecycle(Object.fromEntries(sorted.map((article) => [article.id, hydrateDraftLifecycle(article)])));
-            setSelectedArticleId(selectedArticleId);
-            setPersistedSelectedArticleIdRef.current(selectedArticleId);
+            setSelectedArticleId(selected);
+            setPersistedSelectedArticleIdRef.current(selected);
             setState("ready");
         }).catch(() => {
             setState("error");
@@ -85,17 +59,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
 
     function recordConflict(articleId: string, error: ArticleDraftConflictError | ArticleRevisionConflictError, localContent: string) {
         const persistedDraft = error instanceof ArticleDraftConflictError ? error.draft : error.article.draft;
-        draftLifecycle.send({
-            articleId,
-            event: {
-                type: "conflicted",
-                conflict: {
-                    article: error.article,
-                    draft: persistedDraft,
-                    localContent,
-                },
-            },
-        });
+        draftLifecycle.send({ articleId, event: { type: "conflicted", conflict: { article: error.article, draft: persistedDraft, localContent } } });
     }
 
 
@@ -122,15 +86,10 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
                 }
 
                 draftLifecycle.send({ articleId, event: { type: "checkpoint-discarded", generation } });
-
                 return;
             }
 
-            const savedDraft = await client.saveArticleDraft(articleId, {
-                content,
-                baseRevisionId: latest.baseRevisionId,
-                ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion }),
-            });
+            const savedDraft = await client.saveArticleDraft(articleId, { content, baseRevisionId: latest.baseRevisionId, ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion }) });
             replaceArticles((items) => items.map((article) => article.id === articleId ? { ...article, draft: savedDraft } : article));
             draftLifecycle.send({ articleId, event: { type: "checkpointed", generation, draftVersion: savedDraft.version } });
         }).catch((error: unknown) => {
@@ -143,7 +102,6 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
         });
 
         queues.current.set(articleId, task.then(() => undefined, () => undefined));
-
         return task;
     }
 
@@ -155,8 +113,6 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
 
 
     checkpointRef.current = checkpoint;
-
-
     useEffect(() => {
         function saveWhenHidden() {
             if (document.visibilityState === "hidden" && selectedArticleId)
@@ -165,23 +121,22 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
 
 
         document.addEventListener("visibilitychange", saveWhenHidden);
-
         return () => document.removeEventListener("visibilitychange", saveWhenHidden);
     }, [selectedArticleId]);
-
-
     useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
 
     function updateRevision(articleId: string, revision: ArticleRevision) {
         draftLifecycle.send({ articleId, event: { type: "promoted", revisionId: revision.id, content: revision.content } });
-        replaceArticles((items) => items.map((article) => article.id === articleId ? {
-            ...withoutDraft(article),
-            updatedAt: revision.createdAt,
-            currentRevisionId: revision.id,
-            currentRevision: revision,
-        } : article));
+        replaceArticles((items) => items.map((article) => article.id === articleId ? { ...withoutDraft(article), updatedAt: revision.createdAt, currentRevisionId: revision.id, currentRevision: revision } : article));
     }
+
+
+    const actions = createArticleWorkspaceActions({
+        client, articlesRef, draftLifecycle, timers, checkpoint, replaceArticles, selectedArticleId,
+        setSelectedArticleId, setPersistedSelectedArticleId, comparisonArticleId, setComparisonArticleId,
+        recordConflict, notifyError, saveFailedMessage: intl.formatMessage({ id: "workspace.saveFailed" }),
+    });
 
 
     async function save(articleId = selectedArticleId): Promise<ArticleRevision | undefined> {
@@ -204,18 +159,12 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
                 return undefined;
 
             draftLifecycle.send({ articleId, event: { type: "promotion-started" } });
-            const revision = await client.saveArticleRevision(articleId, {
-                content,
-                baseRevisionId: checkpointed.baseRevisionId,
-                expectedDraftVersion: checkpointed.draftVersion,
-            });
+            const revision = await client.saveArticleRevision(articleId, { content, baseRevisionId: checkpointed.baseRevisionId, expectedDraftVersion: checkpointed.draftVersion });
             updateRevision(articleId, revision);
             return revision;
         } catch (error) {
-            if (!(error instanceof ArticleDraftConflictError) && !(error instanceof ArticleRevisionConflictError))
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
-
             if (!(error instanceof ArticleDraftConflictError) && !(error instanceof ArticleRevisionConflictError)) {
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
                 const currentSession = draftLifecycle.sessionsRef.current[articleId];
                 if (currentSession)
                     draftLifecycle.send({ articleId, event: { type: "failed", operation: "promotion", generation: currentSession.generation } });
@@ -226,135 +175,27 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
     }
 
 
-    async function resolveConflict(mode: "keep" | "draft" | "revision") {
-        if (!comparisonArticleId)
-            return;
-
-        const session = draftLifecycle.sessionsRef.current[comparisonArticleId];
-        const conflict = session?.conflict;
-        if (!conflict)
-            return;
-
-        try {
-            if (mode === "keep") {
-                draftLifecycle.send({
-                    articleId: comparisonArticleId,
-                    event: {
-                        type: "keep-local",
-                        baseRevisionId: conflict.article.currentRevisionId,
-                        ...(conflict.draft ? { draftVersion: conflict.draft.version } : {}),
-                    },
-                });
-                await checkpoint(comparisonArticleId, conflict.localContent);
-            } else if (mode === "draft" && conflict.draft) {
-                draftLifecycle.send({
-                    articleId: comparisonArticleId,
-                    event: {
-                        type: "use-retained-draft",
-                        content: conflict.draft.content,
-                        baseRevisionId: conflict.article.currentRevisionId,
-                        draftVersion: conflict.draft.version,
-                    },
-                });
-                replaceArticles((items) => items.map((article) => article.id === comparisonArticleId ? conflict.article : article));
-            } else if (mode === "revision") {
-                if (conflict.draft)
-                    await client.discardArticleDraft(comparisonArticleId, conflict.draft.version);
-
-                draftLifecycle.send({
-                    articleId: comparisonArticleId,
-                    event: {
-                        type: "use-current-revision",
-                        content: conflict.article.currentRevision.content,
-                        revisionId: conflict.article.currentRevisionId,
-                    },
-                });
-                replaceArticles((items) => items.map((article) => article.id === comparisonArticleId ? withoutDraft(conflict.article) : article));
-            }
-
-            setComparisonArticleId(undefined);
-        } catch (error) {
-            if (error instanceof ArticleDraftConflictError || error instanceof ArticleRevisionConflictError)
-                recordConflict(comparisonArticleId, error, conflict.localContent);
-            else
-                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.saveFailed" }) });
-        }
-    }
-
-
-    async function create(input: { title: string; content: string; language?: string; audience?: string; publishingProfileId?: string; sourceArticleId?: string; sourceRevisionId?: string }) {
-        const article = await client.createArticle(input);
-        replaceArticles((items) => [article, ...items]);
-        draftLifecycle.replace({
-            ...draftLifecycle.sessionsRef.current,
-            [article.id]: hydrateDraftLifecycle(article),
-        });
-        setSelectedArticleId(article.id);
-        setPersistedSelectedArticleId(article.id);
-
-        return article;
-    }
-
-
-    async function updateArticle(articleId: string, input: import("@skladno/shared").UpdateArticleInput) {
-        const article = await client.updateArticle(articleId, input);
-        replaceArticles((items) => items.map((item) => item.id === articleId ? article : item));
-    }
-
-
-    async function refreshArticle(articleId: string) {
-        const article = (await client.listArticles()).find((item) => item.id === articleId);
-        if (article)
-            replaceArticles((items) => items.map((item) => item.id === articleId ? article : item));
-    }
-
-
-    async function remove(articleId: string) {
-        await client.deleteArticle(articleId);
-        const nextSelectedArticleId = selectedArticleId === articleId
-            ? sortArticlesByActivity(articlesRef.current.filter((item) => item.id !== articleId))[0]?.id
-            : selectedArticleId;
-        replaceArticles((items) => items.filter((item) => item.id !== articleId));
-
-        if (selectedArticleId === articleId) {
-            setSelectedArticleId(nextSelectedArticleId);
-            setPersistedSelectedArticleId(nextSelectedArticleId);
-        }
-    }
-
-
     async function discardDraft(articleId = selectedArticleId) {
         if (!articleId)
             return;
 
-        const session = draftLifecycle.sessionsRef.current[articleId];
-        const expectedDraftVersion = session?.draftVersion;
+        const expectedDraftVersion = draftLifecycle.sessionsRef.current[articleId]?.draftVersion;
         if (expectedDraftVersion !== undefined)
             await client.discardArticleDraft(articleId, expectedDraftVersion);
 
         const current = articlesRef.current.find((article) => article.id === articleId);
-        if (current) {
-            draftLifecycle.send({
-                articleId,
-                event: {
-                    type: "use-current-revision",
-                    content: current.currentRevision.content,
-                    revisionId: current.currentRevisionId,
-                },
-            });
+        if (!current)
+            return;
 
-            replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
-        }
+        draftLifecycle.send({ articleId, event: { type: "use-current-revision", content: current.currentRevision.content, revisionId: current.currentRevisionId } });
+        replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(article) : article));
     }
 
 
     const selectedArticle = articles.find((article) => article.id === selectedArticleId);
     const selectedDraft = selectedArticleId ? draftLifecycle.sessions[selectedArticleId] : undefined;
-    const content = selectedDraft?.content ?? "";
     return {
-        articles,
-        selectedArticle,
-        selectedArticleId,
+        articles, selectedArticle, selectedArticleId,
         selectArticle: (articleId: string) => {
             if (selectedArticleId && selectedArticleId !== articleId)
                 void checkpoint(selectedArticleId).catch(() => undefined);
@@ -362,7 +203,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
             setSelectedArticleId(articleId);
             setPersistedSelectedArticleId(articleId);
         },
-        content,
+        content: selectedDraft?.content ?? "",
         setContent: (value: string) => {
             if (!selectedArticleId)
                 return;
@@ -370,24 +211,13 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
             draftLifecycle.send({ articleId: selectedArticleId, event: { type: "edit", content: value } });
             scheduleCheckpoint(selectedArticleId, value);
         },
-        state,
-        message,
+        state, message,
         saveState: selectedDraft ? draftPresentationState(selectedDraft) : "saved" as DraftPresentationState,
-        save,
-        retry: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(),
-        flushSelected: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(),
-        discardDraft,
+        save, retry: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(), flushSelected: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(), discardDraft,
         hasUncommittedChanges: Boolean(selectedArticle && selectedDraft && hasUncommittedDraftChanges(selectedDraft, selectedArticle.currentRevision.content)),
-        conflict: selectedDraft?.conflict,
-        comparisonArticleId,
-        openComparison: () => selectedArticleId && setComparisonArticleId(selectedArticleId),
-        closeComparison: () => setComparisonArticleId(undefined),
-        resolveConflict,
-        create,
-        updateArticle,
-        refreshArticle,
-        remove,
-        updateRevision,
+        conflict: selectedDraft?.conflict, comparisonArticleId,
+        openComparison: () => selectedArticleId && setComparisonArticleId(selectedArticleId), closeComparison: () => setComparisonArticleId(undefined),
+        ...actions, updateRevision,
     };
 }
 

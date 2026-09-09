@@ -159,6 +159,11 @@ export function DeleteIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 
+export function ArchiveIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M4 7h16v13H4zM3 4h18v3H3zM9 12h6" /></Icon>;
+}
+
+
 export function FocusIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="1.8" {...props}><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /></Icon>;
 }
