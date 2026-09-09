@@ -176,14 +176,38 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                 {archivedRoots.length > 0 && <section className="mt-4"><button className="flex w-full items-center gap-2 px-2 text-micro font-semibold uppercase tracking-overline text-muted focus:outline-none" type="button" aria-expanded={archivedOpen || Boolean(query)} onClick={() => setArchivedOpen((open) => !open)}><ChevronRightIcon className={`size-3 transition-transform ${archivedOpen || query ? "rotate-90" : ""}`} />{intl.formatMessage({ id: "navigation.archived" }, { count: archivedRoots.length })}</button>{(archivedOpen || Boolean(query)) && <div className="mt-2 space-y-1">{archivedContent}</div>}</section>}
                 {articles.length > 0 && pinnedRoots.length + recentRoots.length === 0 && archivedContent.length === 0 && <p className="px-2 py-5 text-sm text-muted">{intl.formatMessage({ id: "navigation.noArticlesMatch" })}</p>}
             </nav>
-            <footer className="border-t border-border px-2 py-2"><Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openStyleProfile}><UserIcon className="size-4 shrink-0" /><span className="ml-2">{intl.formatMessage({ id: "navigation.styleProfile" })}</span></Button><Button className="flex w-full items-center justify-start text-left" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "navigation.settings" }), KEY_BINDING_COMMAND.OPEN_SETTINGS, shortcutOverrides)} onClick={openSettings}><SettingsIcon className="size-4 shrink-0" /><span className="ml-2">{intl.formatMessage({ id: "navigation.settings" })}</span></Button><UpdateController /><div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted"><span>{languageCode(language)} · {intl.formatMessage({ id: "navigation.local" })}</span></div></footer>
+            <footer className="border-t border-border px-2 py-2">
+                <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openStyleProfile}>
+                    <UserIcon className="size-4 shrink-0" />
+                    <span className="ml-2">{intl.formatMessage({ id: "navigation.styleProfile" })}</span>
+                </Button>
+                <Button className="flex w-full items-center justify-start text-left" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "navigation.settings" }), KEY_BINDING_COMMAND.OPEN_SETTINGS, shortcutOverrides)} onClick={openSettings}>
+                    <SettingsIcon className="size-4 shrink-0" />
+                    <span className="ml-2">{intl.formatMessage({ id: "navigation.settings" })}</span>
+                </Button>
+                <div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted">
+                    <span>{languageCode(language)} · {intl.formatMessage({ id: "navigation.local" })}</span>
+                    <UpdateController />
+                </div>
+            </footer>
         </>}
         {deleteTarget && <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl" open aria-labelledby="delete-library-article-title" onCancel={(event) => {
             event.preventDefault();
             setDeleteTarget(undefined);
-        }}><h2 id="delete-library-article-title" className="text-lg font-semibold">{intl.formatMessage({ id: "articleHeader.deleteConfirmationTitle" })}</h2><p className="mt-2 text-sm leading-6 text-muted">{intl.formatMessage({ id: "articleHeader.deleteGroupConfirmationDescription" }, { articleTitle: deleteTarget.title, count: groupCount })}</p><div className="mt-5 flex justify-end gap-2"><Button variant="secondary" autoFocus onClick={() => setDeleteTarget(undefined)}>{intl.formatMessage({ id: "editor.cancel" })}</Button><Button variant="danger" onClick={() => run(async () => {
-                await (remove?.(deleteTarget.id) ?? Promise.resolve());
-                setDeleteTarget(undefined);
-            })}>{intl.formatMessage({ id: "articleHeader.confirmDeleteArticle" })}</Button></div></Dialog>}
+        }}>
+            <h2 id="delete-library-article-title" className="text-lg font-semibold">{intl.formatMessage({ id: "articleHeader.deleteConfirmationTitle" })}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">{intl.formatMessage({ id: "articleHeader.deleteGroupConfirmationDescription" }, { articleTitle: deleteTarget.title, count: groupCount })}</p>
+            <div className="mt-5 flex justify-end gap-2">
+                <Button variant="secondary" autoFocus onClick={() => setDeleteTarget(undefined)}>{intl.formatMessage({ id: "editor.cancel" })}</Button>
+                <Button variant="danger"
+                    onClick={() => run(async () => {
+                        await (remove?.(deleteTarget.id) ?? Promise.resolve());
+                        setDeleteTarget(undefined);
+                    })}
+                >
+                    {intl.formatMessage({ id: "articleHeader.confirmDeleteArticle" })}
+                </Button>
+            </div>
+        </Dialog>}
     </aside>;
 }

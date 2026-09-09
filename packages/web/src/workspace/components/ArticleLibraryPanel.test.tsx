@@ -67,7 +67,10 @@ describe("ArticleLibraryPanel", () => {
             <ArticleLibraryPanel articles={[]} selectedArticleId={undefined} selectArticle={vi.fn()} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" />
         </IntlProvider>);
 
-        expect((await screen.findByRole("button", { name: "Update 0.1.1-preview.1 is available" })).textContent).not.toContain(message("settings.updates"));
+        const updateButton = await screen.findByRole("button", { name: "Update 0.1.1-preview.1 is available" });
+        expect(updateButton.textContent).not.toContain(message("settings.updates"));
+        expect(updateButton.parentElement?.querySelector("span")?.textContent).toBe("EN · Local");
+        expect(updateButton.classList.contains("hover:bg-brand-soft")).toBe(true);
     });
 
 

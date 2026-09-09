@@ -23,7 +23,7 @@ export function UpdateController() {
 
     const label = state.kind === "failed" ? intl.formatMessage({ id: "status.updateFailed" }) : state.kind === "ready" ? intl.formatMessage({ id: "status.updateReady" }) : state.kind === "downloading" ? intl.formatMessage({ id: "status.updateDownloading" }) : intl.formatMessage({ id: "status.updateAvailable" }, { version: state.version });
     const warning = state.kind !== "failed" && state.security;
-    return <button className={`ml-2 grid size-6 place-items-center border-l border-border ${warning || state.kind === "failed" ? "text-warning" : "text-brand"} focus:outline-none`} type="button" aria-label={label} title={label} aria-busy={state.kind === "downloading" || undefined} onClick={() => window.dispatchEvent(new Event("skladno:open-updates"))}>
+    return <button className={`grid size-9 place-items-center rounded-control border border-transparent transition-colors hover:bg-brand-soft hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${warning || state.kind === "failed" ? "text-warning" : "text-brand"}`} type="button" aria-label={label} title={label} aria-busy={state.kind === "downloading" || undefined} onClick={() => window.dispatchEvent(new Event("skladno:open-updates"))}>
         <UpdateIcon className={`size-3 ${state.kind === "downloading" ? "motion-safe:animate-pulse" : ""}`} />
     </button>;
 }
