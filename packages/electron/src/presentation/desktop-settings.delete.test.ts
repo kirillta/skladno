@@ -75,6 +75,11 @@ test("a failed backup does not close or delete local data", async () => {
         assert.equal(fixture.closed(), false);
         assert.equal(fixture.quit(), false);
         assert.equal(readFileSync(join(fixture.dataDirectory, "skladno.sqlite"), "utf8"), "author data");
+        const [event] = fixture.telemetry();
+        if (!event || event.kind !== "backup_finished")
+            assert.fail("Expected a backup telemetry event.");
+
+        assert.equal(event.outcome, "failed");
     } finally {
         fixture.cleanup();
     }

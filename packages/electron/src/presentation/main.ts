@@ -181,6 +181,7 @@ if (squirrelStartup) {
             userDataPath: app.getPath("userData"),
             dataDirectory: dirname(config.databasePath),
             database: application.database,
+            telemetry,
             services: application.services,
             messages: nativeMessages,
             chooseDirectory: async () => (await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] })).filePaths[0],
@@ -220,6 +221,7 @@ if (squirrelStartup) {
             closeApplication: () => closeApplication?.(),
             openExternal: (url) => shell.openExternal(url),
             supported: app.isPackaged,
+            telemetry,
         });
         registerDesktopUpdatesAdapter({ ipcMain, coordinator: updates });
         Menu.setApplicationMenu(null);

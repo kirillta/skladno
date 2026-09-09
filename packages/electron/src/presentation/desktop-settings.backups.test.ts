@@ -16,6 +16,12 @@ test("a separate backup folder with snapshots and unrelated files can be reused"
         assert.equal(readdirSync(selectedDirectory).filter((file) => file.endsWith(".sqlite")).length, 2);
         assert.equal(readFileSync(join(selectedDirectory, "keep.txt"), "utf8"), "unrelated");
         assert.equal(JSON.parse(readFileSync(join(fixture.root, "user-data", "runtime-settings.json"), "utf8")).backupDirectory, selectedDirectory);
+        assert.equal(fixture.telemetry().length, 1);
+        const [event] = fixture.telemetry();
+        if (!event || event.kind !== "backup_finished")
+            assert.fail("Expected a backup telemetry event.");
+
+        assert.equal(event.outcome, "completed");
     } finally {
         fixture.cleanup();
     }
