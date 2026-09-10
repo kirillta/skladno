@@ -21,6 +21,8 @@ export const ListIcon = () => <FormatIcon><path d="M9 6h11M9 12h11M9 18h11M4 6h.
 export const NumberedListIcon = () => <FormatIcon><path d="M10 6h10M10 12h10M10 18h10M4 5h1v3M4 15h2l-2 3h2" /></FormatIcon>;
 export const SideBySideIcon = () => <FormatIcon><path d="M4 7h6M4 11h6M4 15h6M14 7h6M14 11h4" /></FormatIcon>;
 export const AlignedParagraphsIcon = () => <FormatIcon><path d="M3.5 6h7M13.5 6h7M3.5 10h5M15.5 10h5M3.5 14h7M13.5 14h7M3.5 18h5M15.5 18h5" /></FormatIcon>;
+export const StackedDiffIcon = () => <FormatIcon strokeWidth="1.8"><path d="M5 5h14M5 8h9M5 15h14M5 18h9" /></FormatIcon>;
+export const HighlightChangesIcon = () => <FormatIcon><path d="M4 6h16M4 12h5M15 12h5M4 18h16" /><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none" /></FormatIcon>;
 
 
 export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {

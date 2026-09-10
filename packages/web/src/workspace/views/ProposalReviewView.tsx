@@ -3,7 +3,7 @@ import type { TextProposal } from "@skladno/shared";
 import { Banner, Button, Diff, EmptyState, IconButton, Status } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 import { presentProposalReview, type ProposalDecision } from "./proposal-review-presentation.js";
-import { AlignedParagraphsIcon, AssistantIcon, ChevronRightIcon, CloseIcon, ListIcon, SideBySideIcon } from "../../ui/icons.js";
+import { AssistantIcon, ChevronRightIcon, CloseIcon, HighlightChangesIcon, SideBySideIcon, StackedDiffIcon } from "../../ui/icons.js";
 
 
 function highlightedText(original: string, proposed: string) {
@@ -135,10 +135,10 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
                             <SideBySideIcon />
                         </IconButton>
                         <IconButton className={displayMode === "stacked" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalStacked" })} title={intl.formatMessage({ id: "views.proposalStacked" })} aria-pressed={displayMode === "stacked"} onClick={() => setDisplayMode("stacked")}>
-                            <ListIcon />
+                            <StackedDiffIcon />
                         </IconButton>
                         <IconButton className={highlightChanges ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalHighlight" })} title={intl.formatMessage({ id: "views.proposalHighlight" })} aria-pressed={highlightChanges} onClick={() => setHighlightChanges((current) => !current)}>
-                            <AlignedParagraphsIcon />
+                            <HighlightChangesIcon />
                         </IconButton>
                     </div>}
                     {presentation.changes.length > 1 && <nav className="flex gap-2" aria-label={intl.formatMessage({ id: "views.changeNavigation" })}>
