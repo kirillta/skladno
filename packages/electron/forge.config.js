@@ -1,9 +1,10 @@
 import path from "node:path";
-import { cpSync, mkdirSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
 
 const rootPackage = JSON.parse(readFileSync(path.join(import.meta.dirname, "..", "..", "package.json"), "utf8"));
+const telemetryConfig = path.join(import.meta.dirname, "telemetry.json");
 
 
 export default {
@@ -20,7 +21,7 @@ export default {
         appBundleId: "io.github.kirillta.skladno",
         executableName: "Skladno",
         icon: path.join(import.meta.dirname, "assets", "icon.ico"),
-        extraResource: [path.join(import.meta.dirname, "..", "web", "dist")],
+        extraResource: [path.join(import.meta.dirname, "..", "web", "dist"), ...(existsSync(telemetryConfig) ? [telemetryConfig] : [])],
     },
     makers: [
         {

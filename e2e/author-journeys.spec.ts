@@ -9,14 +9,19 @@ async function activateWithKeyboard(page: import("@playwright/test").Page, targe
 
 async function createArticle(page: import("@playwright/test").Page): Promise<void> {
     const create = page.getByRole("button", { name: "Create" });
+    const created = page.waitForResponse((response) => response.url().endsWith("/api/articles") && response.request().method() === "POST");
     if (await create.isVisible())
         await create.click();
     else
         await page.getByRole("button", { name: "New article" }).click();
 
-    await page.getByRole("button", { name: /Rename article:/ }).click();
-    await page.getByRole("textbox", { name: "Article title" }).fill("Fixture Article");
-    await page.getByRole("textbox", { name: "Article draft" }).pressSequentially("Original fixture Article.");
+    await created;
+
+    const editor = page.getByRole("textbox", { name: "Article draft" });
+    const checkpointed = page.waitForResponse((response) => response.url().includes("/draft") && response.request().method() === "PUT");
+    await editor.pressSequentially("Original fixture Article.");
+    await expect(editor).toContainText("Original fixture Article.");
+    await checkpointed;
     const saved = page.waitForResponse((response) => response.url().includes("/revisions") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Save revision" }).click();
     await saved;

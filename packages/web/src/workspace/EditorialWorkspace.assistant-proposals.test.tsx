@@ -59,6 +59,8 @@ describe("Editorial Workspace assistant", () => {
     it("restores the latest completed Proposal Review from local Assistant records", async () => {
         const client = fakeClient();
         const user = userEvent.setup();
+        const telemetry = { getTelemetryConsent: vi.fn(), setTelemetryConsent: vi.fn(), beginTelemetryCapture: vi.fn().mockResolvedValue(7), captureTelemetry: vi.fn().mockResolvedValue(undefined) };
+        window.skladnoTelemetry = telemetry;
         client.acceptProposal = vi.fn().mockResolvedValue({
             id: "accepted-revision",
             articleId: "one",
@@ -94,6 +96,7 @@ describe("Editorial Workspace assistant", () => {
             content: "Improved Draft",
             provenance: { kind: "accepted-proposal", baseRevisionId: "one-revision", editorialArtifactId: "proposal-artifact", wholeProposal: true },
         }));
+        await waitFor(() => expect(telemetry.captureTelemetry).toHaveBeenCalledWith({ kind: "proposal_reviewed", decision: "accepted" }, 7));
         expect(await screen.findByText("This proposal was accepted. Its decisions are read-only.")).toBeTruthy();
     });
 

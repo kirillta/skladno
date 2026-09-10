@@ -1,4 +1,5 @@
 import type { DesktopTelemetryClient } from "@skladno/shared";
+import { beginBestEffortTelemetryCapture, captureBestEffortTelemetry } from "../telemetry.js";
 
 
 const flushDelayMs = 30_000;
@@ -30,7 +31,7 @@ export function createDraftCheckpointTelemetry(client: DesktopTelemetryClient | 
             return;
 
         const { generation, ...event } = current;
-        void client?.captureTelemetry({ kind: "draft_checkpoint_finished", ...event }, generation).catch(() => undefined);
+        captureBestEffortTelemetry(client, { kind: "draft_checkpoint_finished", ...event }, generation);
     }
 
 
@@ -51,7 +52,7 @@ export function createDraftCheckpointTelemetry(client: DesktopTelemetryClient | 
 
 
     return {
-        begin: async () => client?.beginTelemetryCapture().catch(() => undefined),
+        begin: () => beginBestEffortTelemetryCapture(client),
         record,
         dispose: () => {
             if (timer !== undefined)

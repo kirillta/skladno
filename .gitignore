@@ -43,3 +43,4 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
+packages/electron/telemetry.json

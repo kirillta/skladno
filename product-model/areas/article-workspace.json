@@ -10,7 +10,7 @@
             "owners": [
                 "packages/web/src/workspace/components/WorkspaceShell.tsx"
             ],
-            "contract": "The Article remains the central column at viewport height.",
+            "contract": "The Article remains the central column at viewport height. A responsively collapsed Assistant Panel can always be reopened; it overlays the workspace when the viewport cannot fit the minimum side-by-side layout.",
             "persistence": "Local workspace layout preferences only."
         },
         {
@@ -227,6 +227,8 @@
             "event": "Viewport becomes narrower than the requested three-column layout.",
             "expected": [
                 "Assistant Panel collapses before the Article Library Panel",
+                "An explicit Assistant Panel expand request overrides temporary responsive collapse",
+                "The expanded Assistant Panel overlays the workspace when the minimum side-by-side layout cannot fit",
                 "Article Workspace remains first in keyboard and visual order"
             ],
             "forbidden": [

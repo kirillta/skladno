@@ -2,6 +2,7 @@ export const telemetrySchemaVersion = 1;
 
 export type TelemetryFailureCategory = "configuration" | "network" | "persistence" | "cancelled" | "unknown";
 export type TelemetryOperation = "assistant" | "thesis_to_narrative" | "flow_revision" | "fact_check" | "style_review" | "translation";
+export type TelemetryTermination = "crashed" | "killed" | "oom" | "launch_failed" | "integrity_failure" | "abnormal_exit";
 
 export type TelemetryEvent =
     | { kind: "app_session_started" }
@@ -10,7 +11,8 @@ export type TelemetryEvent =
     | { kind: "draft_checkpoint_finished"; attempts: number; successes: number; failures: number; elapsedMs: number; failure?: TelemetryFailureCategory }
     | { kind: "backup_finished"; outcome: "completed" | "failed"; elapsedMs: number; failure?: TelemetryFailureCategory }
     | { kind: "recovery_finished"; recovery: "restore" | "revision"; outcome: "completed" | "failed"; failure?: TelemetryFailureCategory }
-    | { kind: "app_failure"; failure: TelemetryFailureCategory };
+    | { kind: "app_failure"; source: "startup"; failure: TelemetryFailureCategory }
+    | { kind: "app_failure"; source: "renderer" | "child_process"; failure: TelemetryFailureCategory; termination: TelemetryTermination };
 
 
 export interface TelemetryConsent {
@@ -64,7 +66,11 @@ export function isTelemetryEvent(value: unknown): value is TelemetryEvent {
         case "proposal_reviewed":
             return hasOnly(candidate, ["kind", "decision"]) && (candidate.decision === "accepted" || candidate.decision === "rejected");
         case "app_failure":
-            return hasOnly(candidate, ["kind", "failure"]) && isTelemetryFailureCategory(candidate.failure);
+            return isTelemetryFailureCategory(candidate.failure)
+                && (candidate.source === "startup" && hasOnly(candidate, ["kind", "source", "failure"])
+                    || (candidate.source === "renderer" || candidate.source === "child_process")
+                    && hasOnly(candidate, ["kind", "source", "failure", "termination"])
+                    && (candidate.termination === "crashed" || candidate.termination === "killed" || candidate.termination === "oom" || candidate.termination === "launch_failed" || candidate.termination === "integrity_failure" || candidate.termination === "abnormal_exit"));
         case "ai_operation_finished":
             return hasOnly(candidate, ["kind", "operation", "outcome", "elapsedMs", "failure"])
                 && (candidate.operation === "assistant" || candidate.operation === "thesis_to_narrative" || candidate.operation === "flow_revision" || candidate.operation === "fact_check" || candidate.operation === "style_review" || candidate.operation === "translation")

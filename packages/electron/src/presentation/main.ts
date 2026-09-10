@@ -7,7 +7,8 @@ import { requestDraftCheckpoint } from "../application/close-coordinator.js";
 import { applyPendingRestore, PendingRestoreError } from "../application/pending-restore.js";
 import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window-policy.js";
 import { readWindowBounds, writeWindowBounds } from "../infrastructure/window-state.js";
-import { createTelemetryOwner } from "../infrastructure/telemetry-owner.js";
+import { createTelemetryOwner, readTelemetryDelivery } from "../infrastructure/telemetry-owner.js";
+import { applicationFailureEvent } from "./application-failure-telemetry.js";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
 import { registerDesktopTelemetryAdapter } from "./desktop-telemetry.js";
 import { registerDesktopShellAdapter } from "./desktop-shell.js";
@@ -115,6 +116,11 @@ async function createMainWindow(): Promise<void> {
         if (isExternalWebUrl(url))
             void shell.openExternal(url);
     });
+    window.webContents.on("render-process-gone", (_event, details) => {
+        const failure = applicationFailureEvent("renderer", details.reason);
+        if (failure)
+            telemetry?.capture(failure);
+    });
     window.on("close", (event) => {
         event.preventDefault();
         void quitFrom(window);
@@ -155,9 +161,7 @@ if (squirrelStartup) {
             runtimePath,
             packaged: app.isPackaged,
             appVersion: app.getVersion(),
-            delivery: app.isPackaged
-                ? { endpoint: process.env.SKLADNO_POSTHOG_ENDPOINT, projectKey: process.env.SKLADNO_POSTHOG_PROJECT_KEY }
-                : undefined,
+            delivery: app.isPackaged ? readTelemetryDelivery(join(process.resourcesPath, "telemetry.json")) : undefined,
         });
         const pendingRestore = applyPendingRestore({ runtimePath, databasePath: config.databasePath, telemetry });
         let application;
@@ -223,12 +227,18 @@ if (squirrelStartup) {
             supported: app.isPackaged,
             telemetry,
         });
+        app.on("child-process-gone", (_event, details) => {
+            const failure = applicationFailureEvent("child_process", details.reason);
+            if (failure)
+                telemetry?.capture(failure);
+        });
         registerDesktopUpdatesAdapter({ ipcMain, coordinator: updates });
         Menu.setApplicationMenu(null);
 
         await createMainWindow();
         updates?.schedule();
     }).catch((error: unknown) => {
+        telemetry?.capture({ kind: "app_failure", source: "startup", failure: error instanceof PendingRestoreError ? "persistence" : "unknown" });
         if (!app.isPackaged)
             console.error("Skladno startup failed.", error);
 
