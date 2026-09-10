@@ -83,12 +83,15 @@ describe("ProposalReviewView", () => {
 
         fireEvent.click(stacked);
         expect(stacked.getAttribute("aria-pressed")).toBe("true");
-        expect(screen.getByLabelText(message("ui.proposedChange")).className).toContain("overflow-hidden");
+        expect(screen.getByLabelText(message("ui.proposedChange")).className).toContain("bg-canvas");
+        expect(screen.getByText(message("ui.original"))).toBeTruthy();
+        expect(screen.getByText(message("ui.proposed"))).toBeTruthy();
 
         fireEvent.click(highlight);
 
         expect(highlight.getAttribute("aria-pressed")).toBe("true");
-        expect(screen.getByLabelText(message("ui.proposedChange")).className).toContain("bg-diff-added");
+        expect(screen.getByLabelText(message("ui.proposedChange")).className).toContain("bg-canvas");
+        expect(screen.getByText(message("ui.proposed"))).toBeTruthy();
         expect(screen.getByText("Improved").tagName).toBe("MARK");
         expect(screen.getByLabelText(message("ui.proposedChange")).querySelector("mark")?.textContent).toBe("Improved");
     });

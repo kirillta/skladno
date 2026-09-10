@@ -152,21 +152,18 @@ export function Diff({ removed, added, layout = "stacked", state = "pending" }: 
     const removedContent = removed ?? <span className="italic text-muted">{intl.formatMessage({ id: "ui.noOriginal" })}</span>;
     const addedContent = added ?? <span className="italic text-muted">{intl.formatMessage({ id: "ui.noProposed" })}</span>;
 
-    if (layout === "columns")
-        return (
-            <div className="grid gap-3 rounded-panel border border-border bg-canvas p-3 md:grid-cols-2" aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>
-                <del className={joinClassNames("block min-w-0 whitespace-pre-wrap rounded-control border-l-4 border-danger bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,var(--color-diff-removed-stripe)_6px,var(--color-diff-removed-stripe)_12px)] p-4 no-underline", state === "accepted" ? "opacity-55" : undefined)}>
-                    <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-danger">{intl.formatMessage({ id: "ui.original" })}</strong>
-                    {removedContent}
-                </del>
-                <ins className={joinClassNames("block min-w-0 whitespace-pre-wrap rounded-control border-l-4 border-success bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,var(--color-diff-added-stripe)_6px,var(--color-diff-added-stripe)_12px)] p-4 no-underline", state === "rejected" ? "opacity-55" : undefined)}>
-                    <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">{intl.formatMessage({ id: "ui.proposed" })}</strong>
-                    {addedContent}
-                </ins>
-            </div>
-        );
-
-    return <div className="overflow-hidden rounded-panel border border-border" aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>{removed && <del className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,var(--color-diff-removed-stripe)_6px,var(--color-diff-removed-stripe)_12px)] p-2 no-underline"><strong>{intl.formatMessage({ id: "ui.removed" })}</strong>{removed}</del>}{added && <ins className="block whitespace-pre-wrap bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,var(--color-diff-added-stripe)_6px,var(--color-diff-added-stripe)_12px)] p-2 no-underline"><strong>{intl.formatMessage({ id: "ui.added" })}</strong>{added}</ins>}</div>;
+    return (
+        <div className={joinClassNames("grid gap-3 rounded-panel border border-border bg-canvas p-3", layout === "columns" ? "md:grid-cols-2" : undefined)} aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>
+            <del className={joinClassNames("block min-w-0 whitespace-pre-wrap rounded-control border-l-4 border-danger bg-[repeating-linear-gradient(-45deg,var(--color-diff-removed),var(--color-diff-removed)_6px,var(--color-diff-removed-stripe)_6px,var(--color-diff-removed-stripe)_12px)] p-4 no-underline", state === "accepted" ? "opacity-55" : undefined)}>
+                <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-danger">{intl.formatMessage({ id: "ui.original" })}</strong>
+                {removedContent}
+            </del>
+            <ins className={joinClassNames("block min-w-0 whitespace-pre-wrap rounded-control border-l-4 border-success bg-[repeating-linear-gradient(-45deg,var(--color-diff-added),var(--color-diff-added)_6px,var(--color-diff-added-stripe)_6px,var(--color-diff-added-stripe)_12px)] p-4 no-underline", state === "rejected" ? "opacity-55" : undefined)}>
+                <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">{intl.formatMessage({ id: "ui.proposed" })}</strong>
+                {addedContent}
+            </ins>
+        </div>
+    );
 }
 
 

@@ -46,12 +46,14 @@ function HighlightedChange({ original, proposed, decision }: { original: string;
     if (!proposed)
         return <Diff removed={original} state={decision} />;
 
-    return <ins className={`block whitespace-pre-wrap rounded-panel border-l-4 border-success bg-diff-added p-4 no-underline ${decision === "rejected" ? "opacity-55" : ""}`} aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>
-        <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">{intl.formatMessage({ id: "ui.proposed" })}</strong>
-        {highlightedProposal(original, proposed).map((part, index) => part.changed
-            ? <mark className="bg-success text-on-brand" key={index}>{part.text}</mark>
-            : part.text)}
-    </ins>;
+    return <div className="grid gap-3 rounded-panel border border-border bg-canvas p-3" aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>
+        <ins className={`block min-w-0 whitespace-pre-wrap rounded-control border-l-4 border-success bg-diff-added p-4 no-underline ${decision === "rejected" ? "opacity-55" : ""}`}>
+            <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">{intl.formatMessage({ id: "ui.proposed" })}</strong>
+            {highlightedProposal(original, proposed).map((part, index) => part.changed
+                ? <mark className="bg-success text-on-brand" key={index}>{part.text}</mark>
+                : part.text)}
+        </ins>
+    </div>;
 }
 
 
