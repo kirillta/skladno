@@ -59,6 +59,8 @@ The release target is Windows 11 x64. Stable releases and prereleases are unsign
 
 Build the unpacked application with `npm run package:electron`, or build the Squirrel.Windows installer with `npm run make:electron`. Both commands build the existing React application first. The packaged renderer uses local IPC and does not require the loopback HTTP server.
 
+The release workflow packages `telemetry.json` only after the repository variable `SKLADNO_POSTHOG_PROJECT_KEY` is set to the approved public capture key. The workflow fixes the endpoint to `https://us.i.posthog.com/batch`; it never packages an admin token. A missing variable blocks a telemetry-enabled release rather than making an installed app depend on a shell variable. Before release, manually verify the packaged Settings switch through opt-out, restart, re-enable, offline delivery, and shutdown with a pending Draft checkpoint. Verify PostHog account access, retention, IP handling, and stored payloads only in that authorized release workflow.
+
 Environment-variable credentials remain supported. Managed credentials use Windows Credential Manager and never enter SQLite, backup snapshots, or renderer responses. The installer does not create or import a `.env` file.
 
 Run `npm run release` to release the next stable patch or `npm run release -- 1.2.3` to release an explicit stable version. Run `npm run release:preview` to advance the current version's preview number or `npm run release:preview -- 1.2.3` to release the next available preview of `1.2.3`. Both commands require a clean worktree, update both package versions and the lockfile, run verification, commit, tag, and atomically push the commit and tag.

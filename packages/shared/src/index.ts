@@ -39,6 +39,7 @@ export {
     type TelemetryEvent,
     type TelemetryFailureCategory,
     type TelemetryOperation,
+    type TelemetryTermination,
 } from "./telemetry/telemetry.js";
 export {
     applicationSettingsPath,

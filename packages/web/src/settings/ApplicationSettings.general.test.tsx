@@ -115,7 +115,8 @@ describe("ApplicationSettings general", () => {
         const toggle = await screen.findByRole("switch", { name: message("settings.telemetry") });
         expect(toggle.getAttribute("aria-checked")).toBe("true");
         expect(screen.getByRole("button", { name: message("settings.copyTelemetryIdentifier") })).toBeTruthy();
-        await user.click(toggle);
+        toggle.focus();
+        await user.keyboard(" ");
         await waitFor(() => expect(setTelemetryConsent).toHaveBeenCalledWith(false));
         expect(toggle.getAttribute("aria-checked")).toBe("false");
     });

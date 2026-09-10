@@ -1,5 +1,7 @@
 # Issue #195 implementation POIs
 
+The [telemetry follow-up plan](issue-195-telemetry-follow-up.md) supersedes this plan's implementation sequence and default-off instructions. The product owner confirmed default-on telemetry until beta ends. Use the follow-up plan for the current fixes.
+
 Agent handoff for [#195](https://github.com/kirillta/skladno/issues/195), opt-in PostHog telemetry for the packaged Windows Electron app. POI means a point of interest to inspect or change during implementation.
 
 Prepared on 2026-09-09 against commit `814b5ee`. This file describes remaining work. No telemetry implementation or PostHog account configuration was performed. Treat the issue as the acceptance contract; re-read its body and comments before implementation.

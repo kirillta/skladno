@@ -66,6 +66,13 @@ jobs:
                   RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
               run: node scripts/check-electron-release-tag.mjs $env:RELEASE_TAG
 
+            - name: Package telemetry configuration
+              env:
+                  SKLADNO_POSTHOG_PROJECT_KEY: ${{ vars.SKLADNO_POSTHOG_PROJECT_KEY }}
+              run: |
+                  if ([string]::IsNullOrWhiteSpace($env:SKLADNO_POSTHOG_PROJECT_KEY)) { throw 'The SKLADNO_POSTHOG_PROJECT_KEY repository variable is required to create a telemetry-enabled release.' }
+                  @{ endpoint = 'https://us.i.posthog.com/batch'; projectKey = $env:SKLADNO_POSTHOG_PROJECT_KEY } | ConvertTo-Json -Compress | Set-Content -NoNewline packages/electron/telemetry.json
+
             - name: Build installer
               run: npm run make:electron
 

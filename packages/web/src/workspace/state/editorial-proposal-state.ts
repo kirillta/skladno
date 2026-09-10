@@ -19,6 +19,7 @@ import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 import { getDesktopTelemetryClient } from "../../desktop-client.js";
+import { beginBestEffortTelemetryCapture, captureBestEffortTelemetry } from "../telemetry.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName } from "./editorial-language.js";
 import { useEditorialResults } from "./editorial-results-state.js";
@@ -213,6 +214,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         if (!article || !base || !review || stale || accepted)
             return;
 
+        const telemetryGeneration = await beginBestEffortTelemetryCapture(telemetry);
         const content = base.correctedFindingIds?.length
             ? applyProposalChanges(review, wholeProposal ? new Set(review.changes.map((change) => change.id)) : acceptedChangeIds, true)
             : wholeProposal ? review.proposedContent : applyProposalChanges(review, acceptedChangeIds);
@@ -221,12 +223,12 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
             workspace.updateRevision(article.id, revision);
             workspace.setContent(content);
+            captureBestEffortTelemetry(telemetry, { kind: "proposal_reviewed", decision: "accepted" }, telemetryGeneration);
             if (base.correctedFindingIds?.length)
                 await markCorrectedFindings(article.id, base.correctedFindingIds);
 
             setBase({ ...base, accepted: true });
             setDecisions(Object.fromEntries(review.changes.map((change) => [change.id, wholeProposal || acceptedChangeIds.has(change.id) ? "accepted" : "rejected"])));
-            void telemetry?.captureTelemetry({ kind: "proposal_reviewed", decision: "accepted" });
         } catch (error) {
             if (error instanceof ArticleRevisionConflictError) {
                 workspace.updateRevision(article.id, error.article.currentRevision);
@@ -305,7 +307,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
         applyAccepted: () => accept(new Set(Object.entries(decisions).filter(([, decision]) => decision === "accepted").map(([id]) => id)), false),
         rejectAll: () => {
             setDecisions(Object.fromEntries((review?.changes ?? []).map((change) => [change.id, "rejected"])));
-            void telemetry?.captureTelemetry({ kind: "proposal_reviewed", decision: "rejected" });
+            void beginBestEffortTelemetryCapture(telemetry).then((generation) => captureBestEffortTelemetry(telemetry, { kind: "proposal_reviewed", decision: "rejected" }, generation));
         },
         dismissProposal: () => {
             if (base)
