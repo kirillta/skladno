@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { LanguageModelV3StreamPart } from "@ai-sdk/provider";
+import { AI_PROVIDER, EDITORIAL_OPERATION } from "@skladno/shared";
+import { MockLanguageModelV3 } from "ai/test";
 
-import { assistantConversationPrompt, assistantStepOptions } from "./ai-sdk-editorial-engine.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
+import { AiSdkEditorialEngine, assistantConversationPrompt, assistantStepOptions } from "./ai-sdk-editorial-engine.js";
 import { supportingTextProviderOptions } from "./ai-sdk-provider.js";
 import { openAiResponsesProviderOptions } from "./openai-responses.js";
-import { AI_PROVIDER } from "@skladno/shared";
 
 
 test("keeps previous Assistant output separate from the next Author request", () => {
@@ -46,4 +49,39 @@ test("a resolved skill must call its artifact tool before it can answer", () => 
     assert.deepEqual(assistantStepOptions(1, ["translate", "inspect_translations"]), {
         activeTools: ["translate", "inspect_translations", "find_capabilities", "load_skill"],
     });
+});
+
+
+test("editorial prompts route system messages through AI SDK 7 instructions", async () => {
+    const model = new MockLanguageModelV3({
+        doStream: {
+            stream: new ReadableStream<LanguageModelV3StreamPart>({
+                start(controller) {
+                    controller.enqueue({ type: "text-start", id: "text" });
+                    controller.enqueue({ type: "text-delta", id: "text", delta: "Clear revision" });
+                    controller.enqueue({ type: "text-end", id: "text" });
+                    controller.enqueue({
+                        type: "finish",
+                        finishReason: { unified: "stop", raw: undefined },
+                        usage: {
+                            inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+                            outputTokens: { total: 1, text: 1, reasoning: 0 },
+                        },
+                    });
+                    controller.close();
+                },
+            }),
+        },
+    });
+    const engine = new AiSdkEditorialEngine({ provider: AI_PROVIDER.OPENAI, languageModel: model, storeResponses: false });
+    const events = [];
+
+    for await (const event of engine.stream({
+        operation: EDITORIAL_OPERATION.FLOW_REVISION,
+        article: "An Article that needs clearer flow.",
+        authorContext: "Keep it concise.",
+    }, new AbortController().signal))
+        events.push(event.type);
+
+    assert.deepEqual(events, [EDITORIAL_ENGINE_EVENT.TEXT_DELTA, EDITORIAL_ENGINE_EVENT.COMPLETED]);
 });

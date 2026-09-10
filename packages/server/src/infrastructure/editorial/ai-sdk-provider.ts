@@ -1,3 +1,4 @@
+import type { LanguageModel } from "ai";
 import { AI_PROVIDER, type AiProvider, type ReasoningEffort } from "@skladno/shared";
 
 import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
@@ -23,6 +24,16 @@ export function isAcceptedFinish(reason: string): boolean {
 
 
 export type SupportingTextProviderOptions = OpenAiResponsesProviderOptions | undefined;
+
+
+export function aiSdkGenerationOptions({ model, signal, providerOptions }: { model: LanguageModel; signal: AbortSignal; providerOptions?: SupportingTextProviderOptions }) {
+    return {
+        model,
+        abortSignal: signal,
+        telemetry: { isEnabled: false },
+        providerOptions,
+    };
+}
 
 
 export function supportingTextProviderOptions(provider: AiProvider, reasoningEffort?: ReasoningEffort): SupportingTextProviderOptions {

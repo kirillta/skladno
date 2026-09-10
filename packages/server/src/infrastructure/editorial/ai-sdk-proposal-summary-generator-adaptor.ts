@@ -5,7 +5,7 @@ import type { ProposalChange, ProposalChangeSummary } from "@skladno/shared";
 import type { ProposalSummaryGenerator } from "../../application/ports/proposal-summary-generator.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
-import { isAcceptedFinish, type SupportingTextProviderOptions } from "./ai-sdk-provider.js";
+import { aiSdkGenerationOptions, isAcceptedFinish, type SupportingTextProviderOptions } from "./ai-sdk-provider.js";
 
 
 const summariesSchema = z.object({
@@ -26,12 +26,9 @@ export class AiSdkProposalSummaryGeneratorAdapter implements ProposalSummaryGene
             return [];
 
         const result = await generateText({
-            model: this.model,
+            ...aiSdkGenerationOptions({ model: this.model, signal, providerOptions: this.providerOptions }),
             prompt: `Summarize each proposed editorial change in one short, neutral sentence for the Author reviewing it. Write every summary in the interface locale ${interfaceLocale}, regardless of the Article language. Describe only what changed and why it helps when that is evident. Do not endorse the change, invent facts, or repeat the full text. Preserve each changeId exactly.\n\n${JSON.stringify(changes.map((change) => ({ changeId: change.id, original: change.baseLines.join("\n").slice(0, 6000), proposed: change.proposalLines.join("\n").slice(0, 6000) })))}`,
             output: Output.object({ schema: summariesSchema }),
-            abortSignal: signal,
-            telemetry: { isEnabled: false },
-            ...(this.providerOptions ? { providerOptions: this.providerOptions } : {}),
         });
 
         if (!isAcceptedFinish(result.finishReason))
