@@ -68,3 +68,13 @@ test("adjacent paragraph replacements form one group until unchanged text anchor
     assert.equal(applyProposalChanges(review, new Set()), base);
     assert.deepEqual(createTextProposal("\nSame.\n \nSame.\n", "\nSame.\n \nSame.\n").changes, []);
 });
+
+
+test("matching paragraph replacements remain independently reviewable", () => {
+    const base = "First original.\n\nSecond original.\n\nThird original.";
+    const proposed = "First proposed.\n\nSecond proposed.\n\nThird proposed.";
+    const review = createTextProposal(base, proposed);
+
+    assert.equal(review.changes.length, 3);
+    assert.equal(applyProposalChanges(review, new Set([review.changes[1]!.id])), "First original.\n\nSecond proposed.\n\nThird original.");
+});
