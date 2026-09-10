@@ -6,7 +6,7 @@ import { presentProposalReview, type ProposalDecision } from "./proposal-review-
 import { AlignedParagraphsIcon, AssistantIcon, ChevronRightIcon, CloseIcon, ListIcon, SideBySideIcon } from "../../ui/icons.js";
 
 
-function highlightedProposal(original: string, proposed: string) {
+function highlightedText(original: string, proposed: string) {
     const originalTokens = original.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
     const proposedTokens = proposed.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
     // ponytail: quadratic per paragraph; replace with Myers diff if long paragraphs become slow.
@@ -20,40 +20,42 @@ function highlightedProposal(original: string, proposed: string) {
         }
     }
 
-    const parts: { changed: boolean; text: string }[] = [];
+    const originalParts: { changed: boolean; text: string }[] = [];
+    const proposedParts: { changed: boolean; text: string }[] = [];
     let originalIndex = 0;
     let proposedIndex = 0;
-    while (proposedIndex < proposedTokens.length) {
+    while (originalIndex < originalTokens.length || proposedIndex < proposedTokens.length) {
         const unchanged = originalIndex < originalTokens.length && originalTokens[originalIndex] === proposedTokens[proposedIndex];
         if (unchanged) {
-            parts.push({ changed: false, text: proposedTokens[proposedIndex]! });
+            originalParts.push({ changed: false, text: originalTokens[originalIndex]! });
+            proposedParts.push({ changed: false, text: proposedTokens[proposedIndex]! });
             originalIndex += 1;
             proposedIndex += 1;
-        } else if (originalIndex < originalTokens.length && matches[originalIndex + 1]![proposedIndex]! > matches[originalIndex]![proposedIndex + 1]!) {
+        } else if (originalIndex < originalTokens.length && (proposedIndex === proposedTokens.length || matches[originalIndex + 1]![proposedIndex]! >= matches[originalIndex]![proposedIndex + 1]!)) {
+            originalParts.push({ changed: true, text: originalTokens[originalIndex]! });
             originalIndex += 1;
         } else {
-            parts.push({ changed: true, text: proposedTokens[proposedIndex]! });
+            proposedParts.push({ changed: true, text: proposedTokens[proposedIndex]! });
             proposedIndex += 1;
         }
     }
 
-    return parts;
+    return { original: originalParts, proposed: proposedParts };
 }
 
 
-function HighlightedChange({ original, proposed, decision }: { original: string; proposed: string; decision: ProposalDecision }) {
-    const intl = useIntl();
-    if (!proposed)
-        return <Diff removed={original} state={decision} />;
+function HighlightedText({ parts, tone }: { parts: { changed: boolean; text: string }[]; tone: "added" | "removed" }) {
+    return parts.map((part, index) => part.changed
+        ? <mark className={tone === "added" ? "bg-success text-on-brand" : "bg-danger text-on-brand"} key={index}>{part.text}</mark>
+        : part.text);
+}
 
-    return <div className="grid gap-3 rounded-panel border border-border bg-canvas p-3" aria-label={intl.formatMessage({ id: "ui.proposedChange" })}>
-        <ins className={`block min-w-0 whitespace-pre-wrap rounded-control border-l-4 border-success bg-diff-added p-4 no-underline ${decision === "rejected" ? "opacity-55" : ""}`}>
-            <strong className="mb-3 block font-ui text-micro uppercase tracking-overline text-success">{intl.formatMessage({ id: "ui.proposed" })}</strong>
-            {highlightedProposal(original, proposed).map((part, index) => part.changed
-                ? <mark className="bg-success text-on-brand" key={index}>{part.text}</mark>
-                : part.text)}
-        </ins>
-    </div>;
+
+function ProposalDiff({ original, proposed, layout, decision = "pending", highlight }: { original: string; proposed: string; layout: "columns" | "stacked"; decision?: ProposalDecision; highlight: boolean }) {
+    const highlights = highlight ? highlightedText(original, proposed) : undefined;
+    return <Diff layout={layout} state={decision}
+        removed={highlights ? <HighlightedText parts={highlights.original} tone="removed" /> : original}
+        added={highlights ? <HighlightedText parts={highlights.proposed} tone="added" /> : proposed} />;
 }
 
 
@@ -76,7 +78,8 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
 }) {
     const intl = useIntl();
     const cards = useRef<(HTMLElement | null)[]>([]);
-    const [displayMode, setDisplayMode] = useState<"side-by-side" | "stacked" | "highlight">("side-by-side");
+    const [displayMode, setDisplayMode] = useState<"side-by-side" | "stacked">("side-by-side");
+    const [highlightChanges, setHighlightChanges] = useState(false);
 
 
     function moveChange(direction: -1 | 1) {
@@ -134,7 +137,7 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
                         <IconButton className={displayMode === "stacked" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalStacked" })} title={intl.formatMessage({ id: "views.proposalStacked" })} aria-pressed={displayMode === "stacked"} onClick={() => setDisplayMode("stacked")}>
                             <ListIcon />
                         </IconButton>
-                        <IconButton className={displayMode === "highlight" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalHighlight" })} title={intl.formatMessage({ id: "views.proposalHighlight" })} aria-pressed={displayMode === "highlight"} onClick={() => setDisplayMode("highlight")}>
+                        <IconButton className={highlightChanges ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalHighlight" })} title={intl.formatMessage({ id: "views.proposalHighlight" })} aria-pressed={highlightChanges} onClick={() => setHighlightChanges((current) => !current)}>
                             <AlignedParagraphsIcon />
                         </IconButton>
                     </div>}
@@ -151,9 +154,7 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
         {(!presentation.reliable || stale)
             && <div className="mt-4">{!presentation.reliable
                 && <Banner className="mb-3" tone="warning">{intl.formatMessage({ id: "views.proposalFallback" })}</Banner>}
-            {displayMode === "highlight"
-                ? <HighlightedChange original={review.baseContent} proposed={review.proposedContent} decision="pending" />
-                : <Diff layout={displayMode === "side-by-side" ? "columns" : "stacked"} removed={review.baseContent} added={review.proposedContent} />}
+            <ProposalDiff original={review.baseContent} proposed={review.proposedContent} layout={displayMode === "side-by-side" ? "columns" : "stacked"} highlight={highlightChanges} />
             </div>}
         {presentation.changes.length === 0
             ? <EmptyState title={intl.formatMessage({ id: "views.proposalNoChanges" })}>
@@ -180,9 +181,7 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
                         <p>{summaries?.[change.id] ?? (summaryState === "loading" ? intl.formatMessage({ id: "views.proposalSummaryLoading" }) : intl.formatMessage({ id: "views.proposalSummaryUnavailable" }))}</p>
                     </div>
                     <div className="mt-4">
-                        {displayMode === "highlight"
-                            ? <HighlightedChange decision={decision} original={change.baseLines.join("\n")} proposed={change.proposalLines.join("\n")} />
-                            : <Diff layout={displayMode === "side-by-side" ? "columns" : "stacked"} state={decision} removed={change.baseLines.join("\n")} added={change.proposalLines.join("\n")} />}
+                        <ProposalDiff decision={decision} original={change.baseLines.join("\n")} proposed={change.proposalLines.join("\n")} layout={displayMode === "side-by-side" ? "columns" : "stacked"} highlight={highlightChanges} />
                     </div>
                 </article>;
             })}</div>

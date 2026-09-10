@@ -67,7 +67,7 @@ describe("ProposalReviewView", () => {
         expect(screen.getByRole("button", { name: message("views.nextChange") }).querySelector("svg")).toBeTruthy();
     });
 
-    it("switches between side-by-side, stacked, and highlighted changes", () => {
+    it("applies exact-text highlights to both layouts", () => {
         render(<IntlProvider locale="en" messages={messages}>
             <ProposalReviewView review={{
                 baseContent: "Original sentence.",
@@ -90,10 +90,14 @@ describe("ProposalReviewView", () => {
         fireEvent.click(highlight);
 
         expect(highlight.getAttribute("aria-pressed")).toBe("true");
-        expect(screen.getByLabelText(message("ui.proposedChange")).className).toContain("bg-canvas");
-        expect(screen.getByText(message("ui.proposed"))).toBeTruthy();
+        expect(stacked.getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getAllByText("Original").some((element) => element.tagName === "MARK")).toBe(true);
         expect(screen.getByText("Improved").tagName).toBe("MARK");
-        expect(screen.getByLabelText(message("ui.proposedChange")).querySelector("mark")?.textContent).toBe("Improved");
+
+        fireEvent.click(sideBySide);
+        expect(sideBySide.getAttribute("aria-pressed")).toBe("true");
+        expect(highlight.getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getByText("Improved").tagName).toBe("MARK");
     });
 
     it("selects every change as rejected without dismissing the Proposal", () => {
