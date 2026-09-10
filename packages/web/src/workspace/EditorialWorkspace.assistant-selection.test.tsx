@@ -43,6 +43,7 @@ describe("Editorial Workspace assistant", () => {
         client.saveArticleRevision = vi.fn().mockResolvedValue(source.currentRevision);
         render(<App client={client} />);
         const editor = await screen.findByRole("textbox", { name: "Article draft" });
+        await waitFor(() => expect(editor.textContent).toBe("Draft"));
         const text = editor.firstChild;
         expect(text).toBeTruthy();
 
@@ -51,7 +52,6 @@ describe("Editorial Workspace assistant", () => {
         fireEvent(document, new Event("selectionchange"));
         fireEvent.mouseUp(editor);
         expect(await screen.findByLabelText(message("assistant.articleSelection"))).toBeTruthy();
-        await waitFor(() => expect(editor.textContent).toBe("Draft"));
         await new Promise((resolve) => setTimeout(resolve, 0));
         expect(screen.getByLabelText(message("assistant.articleSelection"))).toBeTruthy();
 
