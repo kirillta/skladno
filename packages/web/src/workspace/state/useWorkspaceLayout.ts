@@ -87,9 +87,15 @@ export function useWorkspaceLayout() {
         return migrated;
     });
     const [focusMode, setFocusMode] = useState(false);
+    const [assistantOpenRequest, setAssistantOpenRequest] = useState(0);
 
     const setView = useCallback((view: WorkspaceView) => setPreferences((current) => ({ ...current, view })), []);
     const setSelectedArticleId = useCallback((selectedArticleId: string | undefined) => setPreferences((current) => ({ ...current, ...(selectedArticleId ? { selectedArticleId } : { selectedArticleId: undefined }) })), []);
+    const setAssistantCollapsed = useCallback((assistantCollapsed: boolean) => {
+        setPreferences((current) => ({ ...current, assistantCollapsed }));
+        if (!assistantCollapsed)
+            setAssistantOpenRequest((current) => current + 1);
+    }, []);
 
     useEffect(() => localStorage.setItem("skladno-workspace-layout", JSON.stringify(preferences)), [preferences]);
 
@@ -101,7 +107,8 @@ export function useWorkspaceLayout() {
         libraryCollapsed: preferences.libraryCollapsed,
         setLibraryCollapsed: (libraryCollapsed: boolean) => setPreferences((current) => ({ ...current, libraryCollapsed })),
         assistantCollapsed: preferences.assistantCollapsed,
-        setAssistantCollapsed: (assistantCollapsed: boolean) => setPreferences((current) => ({ ...current, assistantCollapsed })),
+        setAssistantCollapsed,
+        assistantOpenRequest,
         proposalWarningsDismissed: preferences.proposalWarningsDismissed,
         setProposalWarningsDismissed: (proposalWarningsDismissed: boolean) => setPreferences((current) => ({ ...current, proposalWarningsDismissed })),
         libraryWidth: preferences.libraryWidth,

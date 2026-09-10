@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
@@ -27,6 +28,7 @@ function renderShell(props: Partial<Parameters<typeof WorkspaceShell>[0]> = {}) 
         setLibraryCollapsed: vi.fn(),
         assistantCollapsed: false,
         setAssistantCollapsed: vi.fn(),
+        assistantOpenRequest: 0,
         libraryWidth: 208,
         setLibraryWidth: vi.fn(),
         assistantWidth: 384,
@@ -40,6 +42,47 @@ function renderShell(props: Partial<Parameters<typeof WorkspaceShell>[0]> = {}) 
             <div data-article-workspace tabIndex={-1}>Article Workspace</div>
         </WorkspaceShell>
     </IntlProvider>);
+}
+
+
+function InteractiveAssistant({ collapsed, setCollapsed }: { collapsed?: boolean; setCollapsed?: (collapsed: boolean) => void }) {
+    return <aside aria-label="Editorial Assistant Panel">
+        {collapsed
+            ? <button onClick={() => setCollapsed?.(false)}>Expand Assistant</button>
+            : <button onClick={() => setCollapsed?.(true)}>Collapse Assistant</button>}
+    </aside>;
+}
+
+
+function ResponsiveShell() {
+    const [assistantCollapsed, setAssistantCollapsed] = useState(false);
+    const [assistantOpenRequest, setAssistantOpenRequest] = useState(0);
+
+
+    function updateAssistantCollapsed(collapsed: boolean) {
+        setAssistantCollapsed(collapsed);
+        if (!collapsed)
+            setAssistantOpenRequest((current) => current + 1);
+    }
+
+
+    return <IntlProvider locale="en" messages={messages}>
+        <WorkspaceShell
+            focusMode={false}
+            libraryCollapsed={false}
+            setLibraryCollapsed={vi.fn()}
+            assistantCollapsed={assistantCollapsed}
+            setAssistantCollapsed={updateAssistantCollapsed}
+            assistantOpenRequest={assistantOpenRequest}
+            libraryWidth={280}
+            setLibraryWidth={vi.fn()}
+            assistantWidth={384}
+            setAssistantWidth={vi.fn()}
+            library={<aside aria-label="Article Library Panel">Library</aside>}
+            assistant={<InteractiveAssistant />}>
+            <div data-article-workspace tabIndex={-1}>Article Workspace</div>
+        </WorkspaceShell>
+    </IntlProvider>;
 }
 
 
@@ -90,6 +133,26 @@ describe("WorkspaceShell", () => {
         setViewportWidth(1440);
         expect(screen.getByRole("separator", { name: message("assistant.resize") })).toBeTruthy();
         view.unmount();
+    });
+
+
+    it("expands a responsively collapsed Assistant Panel when the author requests it", () => {
+        setViewportWidth(1280);
+        render(<ResponsiveShell />);
+
+        fireEvent.click(screen.getByRole("button", { name: "Expand Assistant" }));
+
+        expect(screen.getByRole("button", { name: "Collapse Assistant" })).toBeTruthy();
+        const assistantResize = screen.getByRole("separator", { name: message("assistant.resize") });
+        expect(assistantResize.getAttribute("aria-valuenow")).toBe("360");
+        expect(assistantResize.getAttribute("aria-valuemax")).toBe("360");
+
+        setViewportWidth(800);
+        expect(screen.getByRole("button", { name: "Collapse Assistant" })).toBeTruthy();
+        const overlay = screen.getByLabelText("Editorial Assistant Panel").parentElement;
+        expect(overlay?.dataset.responsiveOverlay).toBe("true");
+        expect(overlay?.className).toContain("border-border-strong");
+        expect(screen.queryByRole("separator", { name: message("assistant.resize") })).toBeNull();
     });
 
 

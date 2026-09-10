@@ -48,6 +48,7 @@ export function WorkspaceScreen({ layout, workspace, assistant, editorial, revis
         setLibraryCollapsed={layout.setLibraryCollapsed}
         assistantCollapsed={layout.assistantCollapsed}
         setAssistantCollapsed={layout.setAssistantCollapsed}
+        assistantOpenRequest={layout.assistantOpenRequest}
         libraryWidth={layout.libraryWidth}
         setLibraryWidth={layout.setLibraryWidth}
         assistantWidth={layout.assistantWidth}
