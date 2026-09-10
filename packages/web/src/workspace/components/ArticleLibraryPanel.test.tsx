@@ -70,6 +70,8 @@ describe("ArticleLibraryPanel", () => {
         const updateButton = await screen.findByRole("button", { name: "Update 0.1.1-preview.1 is available" });
         expect(updateButton.textContent).not.toContain(message("settings.updates"));
         expect(updateButton.parentElement?.querySelector("span")?.textContent).toBe("EN · Local");
+        expect(updateButton.parentElement?.classList.contains("relative")).toBe(true);
+        expect(updateButton.classList.contains("absolute")).toBe(true);
         expect(updateButton.classList.contains("hover:bg-brand-soft")).toBe(true);
     });
 

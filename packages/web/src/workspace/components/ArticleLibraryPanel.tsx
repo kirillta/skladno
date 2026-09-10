@@ -185,9 +185,9 @@ export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle
                     <SettingsIcon className="size-4 shrink-0" />
                     <span className="ml-2">{intl.formatMessage({ id: "navigation.settings" })}</span>
                 </Button>
-                <div className="flex items-center justify-between px-2 pb-1 pt-2 text-micro font-medium text-muted">
+                <div className="relative flex items-center justify-between px-2 pb-1 pt-2 pr-11 text-micro font-medium text-muted">
                     <span>{languageCode(language)} · {intl.formatMessage({ id: "navigation.local" })}</span>
-                    <UpdateController />
+                    <UpdateController className="absolute right-2 top-1/2 -translate-y-1/2" />
                 </div>
             </footer>
         </>}
