@@ -159,7 +159,7 @@ if (squirrelStartup) {
                 ? { endpoint: process.env.SKLADNO_POSTHOG_ENDPOINT, projectKey: process.env.SKLADNO_POSTHOG_PROJECT_KEY }
                 : undefined,
         });
-        const pendingRestore = applyPendingRestore({ runtimePath, databasePath: config.databasePath });
+        const pendingRestore = applyPendingRestore({ runtimePath, databasePath: config.databasePath, telemetry });
         let application;
         try {
             application = createLocalApplication(config, telemetry);

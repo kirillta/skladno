@@ -38,7 +38,7 @@ export function createApplicationServices(
     editorial?: EditorialService,
     telemetry?: TelemetryObserver,
 ): ApplicationServices {
-    const articleService = new ArticleService(articles, assistant);
+    const articleService = new ArticleService(articles, assistant, telemetry);
     const publishing = new PublishingService(settings);
     const factCheckService = new FactCheckService(factChecks);
     const styleCorpusService = new StyleCorpusService(styleCorpus, engines, articles);

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EDITORIAL_OPERATION, HTTP_METHOD, type TelemetryEvent } from "@skladno/shared";
+import { EDITORIAL_OPERATION, HTTP_METHOD, restoreRevisionPath, type TelemetryEvent } from "@skladno/shared";
 import type { EditorialEngine } from "../application/ports/editorial-engine.js";
 import type { EditorialEngineEvent } from "../application/ports/editorial-engine-event.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-events.js";
@@ -86,4 +86,26 @@ test("a cancelled direct Editorial operation records one cancellation", async ()
     assert.ok(event?.kind === "ai_operation_finished");
     assert.deepEqual({ kind: event.kind, operation: event.operation, outcome: event.outcome, failure: event.failure }, { kind: "ai_operation_finished", operation: "flow_revision", outcome: "cancelled", failure: "cancelled" });
     assert.equal(typeof event.elapsedMs, "number");
+});
+
+
+test("Article revision recovery records only its terminal outcome", async () => {
+    const events: TelemetryEvent[] = [];
+    const telemetry = { beginCapture: () => (event: TelemetryEvent) => events.push(event) };
+
+    await withService(undefined, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Private title", content: "Private first Revision" });
+        repositories.articles.appendRevision(article.id, "Private second Revision", { kind: "manual" });
+        const other = repositories.articleService.createArticle({ title: "Other", content: "Private other Revision" });
+
+        const restored = await fetch(`${baseUrl}${restoreRevisionPath(article.id, article.currentRevisionId)}`, { method: HTTP_METHOD.POST });
+        assert.equal(restored.status, 201);
+        await fetch(`${baseUrl}${restoreRevisionPath(article.id, other.currentRevisionId)}`, { method: HTTP_METHOD.POST });
+    }, true, undefined, telemetry);
+
+    assert.deepEqual(events, [
+        { kind: "recovery_finished", recovery: "revision", outcome: "completed" },
+        { kind: "recovery_finished", recovery: "revision", outcome: "failed", failure: "unknown" },
+    ]);
+    assert.doesNotMatch(JSON.stringify(events), /Private (title|first Revision|second Revision|other Revision)/);
 });
