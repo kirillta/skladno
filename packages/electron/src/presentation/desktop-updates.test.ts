@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createDesktopUpdateCoordinator } from "./desktop-updates.js";
+import { createTelemetryOwner } from "../infrastructure/telemetry-owner.js";
 
 // Product scenarios: application.electron-preview-update-discovery, application.electron-preview-update-recovery
 test("update discovery selects the newest complete Windows release without downloading", async () => {
@@ -13,9 +14,11 @@ test("update discovery selects the newest complete Windows release without downl
     let checked = false;
     const coordinator = createDesktopUpdateCoordinator({
         runtimePath, currentVersion: "0.1.0-preview.1", database: { exec: () => undefined }, dataDirectory: root,
-        updater: { setFeedURL: () => undefined, checkForUpdates: () => {
-            checked = true;
-        }, quitAndInstall: () => undefined, on: () => undefined },
+        updater: {
+            setFeedURL: () => undefined, checkForUpdates: () => {
+                checked = true;
+            }, quitAndInstall: () => undefined, on: () => undefined
+        },
         fetchReleases: async () => new Response(JSON.stringify([
             { tag_name: "v0.3.0-preview.1", html_url: "https://example.test/future-preview", prerelease: true, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] },
             { tag_name: "v0.2.0", name: "Stable release", html_url: "https://example.test/stable", prerelease: false, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] },
@@ -87,6 +90,66 @@ test("automatic update discovery runs at startup and daily while Skladno remains
         assert.equal(scheduled[0]!.delay, 86_400_000);
         await scheduled.shift()!.callback();
         assert.equal(requests, 2);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test("a late update response preserves a newer telemetry consent", async () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
+    const runtimePath = join(root, "runtime-settings.json");
+    let resolveResponse: ((response: Response) => void) | undefined;
+    const coordinator = createDesktopUpdateCoordinator({
+        runtimePath, currentVersion: "0.1.0", database: { exec: () => undefined }, dataDirectory: root,
+        updater: { setFeedURL: () => undefined, checkForUpdates: () => undefined, quitAndInstall: () => undefined, on: () => undefined },
+        fetchReleases: () => new Promise((resolve) => {
+            resolveResponse = resolve;
+        }),
+        notify: () => undefined, requestCheckpoint: async () => true, closeApplication: () => undefined, openExternal: async () => undefined,
+    });
+    const telemetry = createTelemetryOwner({ runtimePath, packaged: true, appVersion: "0.1.0", delivery: { endpoint: "https://us.i.posthog.com/batch", projectKey: "test" } });
+    try {
+        coordinator.setNetworkAccess(true);
+        const checking = coordinator.checkNow();
+        telemetry.setConsent(true);
+        resolveResponse?.(new Response(JSON.stringify([])));
+        await checking;
+        assert.equal(typeof JSON.parse(readFileSync(runtimePath, "utf8")).telemetry?.installationId, "string");
+    } finally {
+        telemetry.dispose();
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("applying a downloaded update records its recovery snapshot outcome", async () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
+    const runtimePath = join(root, "runtime-settings.json");
+    const telemetry: unknown[] = [];
+    let downloaded: (() => void) | undefined;
+    const coordinator = createDesktopUpdateCoordinator({
+        runtimePath, currentVersion: "0.1.0", dataDirectory: root,
+        database: { exec: (sql) => writeFileSync(sql.match(/'(.+)'/)![1]!, "snapshot") },
+        updater: {
+            setFeedURL: () => undefined, checkForUpdates: () => downloaded?.(), quitAndInstall: () => undefined,
+            on: (event, listener) => {
+                if (event === "update-downloaded")
+                    downloaded = listener;
+            },
+        },
+        fetchReleases: async () => new Response(JSON.stringify([{ tag_name: "v0.1.1", html_url: "https://example.test/release", prerelease: false, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] }])),
+        notify: () => undefined, requestCheckpoint: async () => true, closeApplication: () => undefined, openExternal: async () => undefined,
+        telemetry: { beginCapture: () => (event) => telemetry.push(event) },
+    });
+
+    try {
+        coordinator.setNetworkAccess(true);
+        await coordinator.checkNow();
+        coordinator.download();
+        assert.equal(await coordinator.restartAndUpdate(), true);
+        assert.equal(telemetry.length, 1);
+        assert.equal((telemetry[0] as { kind?: unknown }).kind, "backup_finished");
+        assert.equal((telemetry[0] as { outcome?: unknown }).outcome, "completed");
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

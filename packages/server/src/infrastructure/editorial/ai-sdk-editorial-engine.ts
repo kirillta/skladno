@@ -1,4 +1,4 @@
-import { generateText, Output, streamText, type LanguageModel, type ModelMessage } from "ai";
+import { generateText, Output, streamText, type LanguageModel, type ModelMessage, type SystemModelMessage } from "ai";
 import { randomUUID } from "node:crypto";
 import { EDITORIAL_OPERATION, type AiProvider } from "@skladno/shared";
 
@@ -14,7 +14,7 @@ import { protectArticleSpans, restoreProtectedSpans } from "../../application/ed
 import { authorControlInstruction, createEditorialMessages } from "../../application/editorial/workflow-prompt.js";
 import { streamFactCheck, type FactCheckProvider } from "./fact-check-workflow.js";
 import { boundedArticleContext } from "./editorial-context.js";
-import { continuationToken, editorialProviderOptions, isAcceptedFinish, providerError } from "./ai-sdk-provider.js";
+import { aiSdkGenerationOptions, continuationToken, editorialProviderOptions, isAcceptedFinish, providerError } from "./ai-sdk-provider.js";
 import { AiSdkAssistantExecutor } from "./ai-sdk-assistant-executor.js";
 import { styleReview, styleReviewSchema, translationSchema } from "./ai-sdk-editorial-output.js";
 
@@ -117,14 +117,35 @@ export class AiSdkEditorialEngine implements EditorialEngine {
     }
 
 
+    private generationOptions({ messages, signal, previousResponseId }: { messages: ModelMessage[]; signal: AbortSignal; previousResponseId?: string }) {
+        const instructions: SystemModelMessage[] = [];
+        const promptMessages: ModelMessage[] = [];
+        for (const message of messages) {
+            if (message.role === "system")
+                instructions.push(message);
+            else
+                promptMessages.push(message);
+        }
+
+        return {
+            ...aiSdkGenerationOptions({
+                model: this.options.languageModel,
+                signal,
+                providerOptions: editorialProviderOptions({
+                    provider: this.options.provider,
+                    storeResponses: this.options.storeResponses,
+                    previousResponseId,
+                    reasoningEffort: this.options.reasoningEffort,
+                }),
+            }),
+            instructions,
+            messages: promptMessages,
+        };
+    }
+
+
     private async *streamProposal(messages: ModelMessage[], signal: AbortSignal, previousResponseId?: string): AsyncIterable<EditorialEngineEvent> {
-        const result = streamText({
-            model: this.options.languageModel,
-            messages,
-            abortSignal: signal,
-            telemetry: { isEnabled: false },
-            providerOptions: editorialProviderOptions({ provider: this.options.provider, storeResponses: this.options.storeResponses, previousResponseId, reasoningEffort: this.options.reasoningEffort }),
-        });
+        const result = streamText(this.generationOptions({ messages, signal, previousResponseId }));
         let text = "";
         let finished = false;
 
@@ -157,23 +178,18 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
         const result = await generateText({
-            model: this.options.languageModel,
-            messages: createEditorialMessages({
-                operation: request.operation,
-                article: boundedArticleContext(request.article),
-                authorContext: request.authorContext,
-                styleProfile: request.styleProfile,
-                articleStyleRules: request.articleStyleRules,
+            ...this.generationOptions({
+                messages: createEditorialMessages({
+                    operation: request.operation,
+                    article: boundedArticleContext(request.article),
+                    authorContext: request.authorContext,
+                    styleProfile: request.styleProfile,
+                    articleStyleRules: request.articleStyleRules,
+                }),
+                signal,
+                previousResponseId: request.previousResponseId,
             }),
             output: Output.object({ schema: styleReviewSchema }),
-            abortSignal: signal,
-            telemetry: { isEnabled: false },
-            providerOptions: editorialProviderOptions({
-                provider: this.options.provider,
-                storeResponses: this.options.storeResponses,
-                previousResponseId: request.previousResponseId,
-                reasoningEffort: this.options.reasoningEffort
-            }),
         });
         if (!result.output || !isAcceptedFinish(result.finishReason))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
@@ -197,22 +213,17 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         const protectedArticle = protectArticleSpans(boundedArticleContext(request.article));
         const protectedTitle = protectArticleSpans(request.articleTitle ?? "");
         const result = await generateText({
-            model: this.options.languageModel,
-            messages: createEditorialMessages({
-                operation: request.operation,
-                article: protectedArticle.protectedText,
-                articleTitle: protectedTitle.protectedText,
-                authorContext: request.authorContext,
-                targetLanguage
+            ...this.generationOptions({
+                messages: createEditorialMessages({
+                    operation: request.operation,
+                    article: protectedArticle.protectedText,
+                    articleTitle: protectedTitle.protectedText,
+                    authorContext: request.authorContext,
+                    targetLanguage
+                }),
+                signal,
             }),
             output: Output.object({ schema: translationSchema }),
-            abortSignal: signal,
-            telemetry: { isEnabled: false },
-            providerOptions: editorialProviderOptions({
-                provider: this.options.provider,
-                storeResponses: this.options.storeResponses,
-                reasoningEffort: this.options.reasoningEffort
-            }),
         });
         if (!result.output || !isAcceptedFinish(result.finishReason) || result.output.targetLanguage.trim() !== targetLanguage)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);

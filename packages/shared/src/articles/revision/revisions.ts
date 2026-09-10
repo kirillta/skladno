@@ -49,6 +49,31 @@ function lines(content: string): string[] {
 }
 
 
+function paragraphRanges(contentLines: string[]): { paragraphs: { start: number; end: number }[]; separators: string[][] } {
+    const paragraphs: { start: number; end: number }[] = [];
+    const separators: string[][] = [];
+    let index = 0;
+
+    while (index < contentLines.length) {
+        const start = index;
+        while (index < contentLines.length && contentLines[index]!.trim() !== "")
+            index += 1;
+
+        if (start < index)
+            paragraphs.push({ start, end: index });
+
+        const separatorStart = index;
+        while (index < contentLines.length && contentLines[index]!.trim() === "")
+            index += 1;
+
+        if (index < contentLines.length)
+            separators.push(contentLines.slice(separatorStart, index));
+    }
+
+    return { paragraphs, separators };
+}
+
+
 function replacementLines(change: ProposalChange, preserveBlankLines: boolean): string[] {
     if (!preserveBlankLines)
         return change.proposalLines;
@@ -106,13 +131,24 @@ export function createTextProposal(baseContent: string, proposedContent: string)
         if (removed.length === 0 && added.length === 0)
             return;
 
-        changes.push({
-            id: `change-${changes.length + 1}`,
-            baseStart: changeBaseStart,
-            baseEnd: changeBaseStart + removed.length,
-            baseLines: removed,
-            proposalLines: added,
-        });
+        const baseParagraphs = paragraphRanges(removed);
+        const proposalParagraphs = paragraphRanges(added);
+        const sameParagraphStructure = baseParagraphs.paragraphs.length > 1
+            && baseParagraphs.paragraphs.length === proposalParagraphs.paragraphs.length
+            && JSON.stringify(baseParagraphs.separators) === JSON.stringify(proposalParagraphs.separators);
+        const ranges = sameParagraphStructure
+            ? baseParagraphs.paragraphs.map((base, index) => ({ base, proposal: proposalParagraphs.paragraphs[index]! }))
+            : [{ base: { start: 0, end: removed.length }, proposal: { start: 0, end: added.length } }];
+
+        for (const range of ranges) {
+            changes.push({
+                id: `change-${changes.length + 1}`,
+                baseStart: changeBaseStart + range.base.start,
+                baseEnd: changeBaseStart + range.base.end,
+                baseLines: removed.slice(range.base.start, range.base.end),
+                proposalLines: added.slice(range.proposal.start, range.proposal.end),
+            });
+        }
 
         removed = [];
         added = [];

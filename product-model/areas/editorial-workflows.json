@@ -71,7 +71,7 @@
             "title": "Summarized diff review, bulk acceptance or rejection, fallback, and stale protection",
             "status": "implemented",
             "owners": ["packages/shared/src/articles/revision/revisions.ts", "packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may review non-authoritative Interface-locale summaries, decide every change locally, apply the accepted subset in one Revision, accept a whole Proposal in one Revision, or dismiss stale and zero-change Proposals without Article changes. Accepted Proposals restore with read-only decisions instead of becoming stale. Fact corrections preserve blank-line formatting. Summary failure does not block review. Stale and preservation warnings precede labelled change navigation and diff; stale or unreliable Proposals cannot be partially accepted. Whole-Proposal fallback discloses its change count.",
+            "contract": "Authors may switch Proposal diffs between side-by-side and stacked layouts, then independently toggle exact-text highlighting in either layout. Highlighting marks changed original text in bright red and changed proposed text in bright green within the existing light paragraph backgrounds. Authors may review non-authoritative Interface-locale summaries, decide every change locally, apply the accepted subset in one Revision, accept a whole Proposal in one Revision, or dismiss stale and zero-change Proposals without Article changes. Zero-change Proposals are labelled Unchanged. Accepted Proposals restore with read-only decisions instead of becoming stale. Fact corrections preserve blank-line formatting. Summary failure does not block review. Stale and preservation warnings precede labelled change navigation and diff; stale or unreliable Proposals cannot be partially accepted. Whole-Proposal fallback discloses its change count.",
             "persistence": "Completed Proposal content, summaries with their Interface locale, and the base Revision remain locally recoverable in the Proposal artifact; acceptance creates one immutable Revision whose provenance links the Proposal artifact, and rejection leaves Article history unchanged.",
             "relatedCapabilityIds": ["workspace.proposal.explicit-acceptance"]
         },
@@ -192,8 +192,8 @@
             "capabilityIds": ["editorial-workflows.proposal-lifecycle"],
             "preconditions": ["A Proposal inserts, deletes, splits, or merges paragraphs."],
             "event": "The author reviews and accepts selected change groups.",
-            "expected": ["Unchanged nonblank lines anchor change groups; blank separators cannot shift later replacements.", "Applying a group preserves unselected content, Article order, and unchanged protected content."],
-            "forbidden": ["Pairing unrelated paragraphs solely by blank-line position."],
+            "expected": ["Unchanged nonblank lines anchor change groups; replacements with matching paragraph structure remain independently reviewable; split and merged paragraphs stay grouped.", "Applying a group preserves unselected content, Article order, and unchanged protected content."],
+            "forbidden": ["Pairing unrelated paragraphs when their paragraph structure differs."],
             "evidence": { "kind": "automated", "path": "packages/shared/src/articles/revision/revisions.test.ts" }
         },
         {

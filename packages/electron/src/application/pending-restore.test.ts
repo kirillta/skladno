@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { openDatabase } from "@skladno/server/electron";
+import type { TelemetryEvent } from "@skladno/shared";
 
 import { readRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
 import { applyPendingRestore, PendingRestoreError } from "./pending-restore.js";
@@ -36,17 +37,19 @@ test("staged restoration replaces active data only until a rollback is needed", 
     const stagedSnapshotPath = join(root, "selected.sqlite");
     const recoverySnapshotPath = join(root, "recovery.sqlite");
     const runtimePath = join(root, "runtime-settings.json");
+    const telemetry: TelemetryEvent[] = [];
     writeSetting(databasePath, "active");
     copyFileSync(databasePath, recoverySnapshotPath);
     writeSetting(stagedSnapshotPath, "restored");
     writeRuntimeSettings(runtimePath, { pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } });
 
     try {
-        const restore = applyPendingRestore({ runtimePath, databasePath });
+        const restore = applyPendingRestore({ runtimePath, databasePath, telemetry: { beginCapture: () => (event) => telemetry.push(event) } });
         assert.ok(restore);
         assert.equal(readSetting(databasePath), "restored");
         restore.rollback();
         assert.equal(readSetting(databasePath), "active");
+        assert.deepEqual(telemetry, [{ kind: "recovery_finished", recovery: "restore", outcome: "failed", failure: "persistence" }]);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }
@@ -59,16 +62,18 @@ test("successful restoration removes only the staged backup", () => {
     const stagedSnapshotPath = join(root, "selected.sqlite");
     const recoverySnapshotPath = join(root, "recovery.sqlite");
     const runtimePath = join(root, "runtime-settings.json");
+    const telemetry: TelemetryEvent[] = [];
     writeSetting(databasePath, "active");
     copyFileSync(databasePath, recoverySnapshotPath);
     writeSetting(stagedSnapshotPath, "restored");
     writeRuntimeSettings(runtimePath, { pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } });
 
     try {
-        const restore = applyPendingRestore({ runtimePath, databasePath });
+        const restore = applyPendingRestore({ runtimePath, databasePath, telemetry: { beginCapture: () => (event) => telemetry.push(event) } });
         assert.ok(restore);
         restore.complete();
         assert.equal(readSetting(databasePath), "restored");
+        assert.deepEqual(telemetry, [{ kind: "recovery_finished", recovery: "restore", outcome: "completed" }]);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }
@@ -81,15 +86,17 @@ test("leaves active data unchanged when a pending restore cannot be applied", ()
     const stagedSnapshotPath = join(root, "selected.sqlite");
     const recoverySnapshotPath = join(root, "recovery.sqlite");
     const runtimePath = join(root, "runtime-settings.json");
+    const telemetry: TelemetryEvent[] = [];
     writeSetting(databasePath, "active");
     copyFileSync(databasePath, recoverySnapshotPath);
     writeFileSync(stagedSnapshotPath, "not a SQLite database");
     writeRuntimeSettings(runtimePath, { pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } });
 
     try {
-        assert.throws(() => applyPendingRestore({ runtimePath, databasePath }), PendingRestoreError);
+        assert.throws(() => applyPendingRestore({ runtimePath, databasePath, telemetry: { beginCapture: () => (event) => telemetry.push(event) } }), PendingRestoreError);
         assert.equal(readSetting(databasePath), "active");
         assert.equal(readRuntimeSettings(runtimePath).pendingRestore, undefined);
+        assert.deepEqual(telemetry, [{ kind: "recovery_finished", recovery: "restore", outcome: "failed", failure: "persistence" }]);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

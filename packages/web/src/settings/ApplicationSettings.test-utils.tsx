@@ -17,4 +17,5 @@ export function resetApplicationSettingsTestEnvironment() {
     cleanup();
     window.skladnoDesktop = undefined;
     window.skladnoUpdates = undefined;
+    window.skladnoTelemetry = undefined;
 }

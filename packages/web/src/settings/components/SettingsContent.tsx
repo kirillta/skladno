@@ -1,4 +1,4 @@
-import type { AiConnection, AiProvider, ApplicationSettingsSnapshot, AvailableAiModel, BackupPolicy, GeneralSettings, KeyBindingOverrides, ModelPreferences, PublishingSettings } from "@skladno/shared";
+import type { AiConnection, AiProvider, ApplicationSettingsSnapshot, AvailableAiModel, BackupPolicy, DesktopTelemetryClient, GeneralSettings, KeyBindingOverrides, ModelPreferences, PublishingSettings } from "@skladno/shared";
 
 import type { EditorialWorkspaceClient } from "../../application-client.js";
 import { AboutSettingsSection } from "./AboutSettingsSection.js";
@@ -11,7 +11,7 @@ import { settingsSections, type SettingsSection } from "../settings-sections.js"
 import { useIntl } from "react-intl";
 
 
-export function SettingsContent({ client, section, settings, general, preferences, backupPolicy, keyBindingOverrides, publishingSettings, models, connectionProvider, connectionName, environmentName, managedConnectionName, apiKey, connectionError, desktopAvailable, onThemeApplied, setConnectionProvider, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, saveGeneral, savePreferences, saveBackupPolicy, saveKeyBindingOverrides, savePublishingSettings, addConnection, addManagedConnection, setConnectionActive, requestConnectionRename, requestConnectionRemoval, refreshModels }: {
+export function SettingsContent({ client, section, settings, general, preferences, backupPolicy, keyBindingOverrides, publishingSettings, models, connectionProvider, connectionName, environmentName, managedConnectionName, apiKey, connectionError, desktopAvailable, telemetry, onThemeApplied, setConnectionProvider, setConnectionName, setEnvironmentName, setManagedConnectionName, setApiKey, saveGeneral, savePreferences, saveBackupPolicy, saveKeyBindingOverrides, savePublishingSettings, addConnection, addManagedConnection, setConnectionActive, requestConnectionRename, requestConnectionRemoval, refreshModels }: {
     client: EditorialWorkspaceClient;
     section: SettingsSection;
     settings: ApplicationSettingsSnapshot | undefined;
@@ -28,6 +28,7 @@ export function SettingsContent({ client, section, settings, general, preference
     apiKey: string;
     connectionError: string | undefined;
     desktopAvailable: boolean;
+    telemetry?: DesktopTelemetryClient;
     onThemeApplied: ((theme: GeneralSettings["theme"]) => void) | undefined;
     setConnectionProvider: (value: AiProvider) => void;
     setConnectionName: (value: string) => void;
@@ -50,7 +51,7 @@ export function SettingsContent({ client, section, settings, general, preference
     let content = <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />;
 
     if (settings && section === "general")
-        content = <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} />;
+        content = <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} telemetry={telemetry} />;
     else if (settings && section === "keyBindings")
         content = <KeyBindingSettings general={general} saveGeneral={saveGeneral} overrides={keyBindingOverrides} save={saveKeyBindingOverrides} />;
     else if (settings && section === "ai")

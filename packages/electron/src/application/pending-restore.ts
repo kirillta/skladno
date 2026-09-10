@@ -1,8 +1,9 @@
 import { copyFileSync, existsSync, renameSync, rmSync } from "node:fs";
 
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
+import type { TelemetryEvent } from "@skladno/shared";
 
-import { readRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
+import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
 
 
 function sidecars(databasePath: string): string[] {
@@ -30,7 +31,7 @@ export class PendingRestoreError extends Error {
 }
 
 
-function applyReadyRestore({ runtimePath, databasePath, runtime, pending }: { runtimePath: string; databasePath: string; runtime: ReturnType<typeof readRuntimeSettings>; pending: NonNullable<ReturnType<typeof readRuntimeSettings>["pendingRestore"]> }): void {
+function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath: string; databasePath: string; pending: NonNullable<ReturnType<typeof readRuntimeSettings>["pendingRestore"]> }): void {
     const originalPath = `${databasePath}.before-restore`;
     const temporary = `${databasePath}.restore`;
     let originalMoved = false;
@@ -52,7 +53,7 @@ function applyReadyRestore({ runtimePath, databasePath, runtime, pending }: { ru
 
         renameSync(temporary, databasePath);
         restored = true;
-        writeRuntimeSettings(runtimePath, { ...runtime, pendingRestore: { ...pending, phase: "applied" } });
+        updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: { ...pending, phase: "applied" } }));
     } catch (error) {
         if (restored)
             removeDatabase(databasePath);
@@ -61,30 +62,38 @@ function applyReadyRestore({ runtimePath, databasePath, runtime, pending }: { ru
         if (canRestoreOriginal)
             renameSync(originalPath, databasePath);
 
-        writeRuntimeSettings(runtimePath, { ...runtime, pendingRestore: undefined });
+        updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: undefined }));
         throw new PendingRestoreError(error);
     }
 }
 
 
 /** Applies a validated, private staged snapshot before SQLite opens. */
-export function applyPendingRestore({ runtimePath, databasePath }: { runtimePath: string; databasePath: string }): PendingRestore | undefined {
+export function applyPendingRestore({ runtimePath, databasePath, telemetry }: { runtimePath: string; databasePath: string; telemetry?: { beginCapture(): (event: TelemetryEvent) => void } }): PendingRestore | undefined {
     const runtime = readRuntimeSettings(runtimePath);
     const pending = runtime.pendingRestore;
     if (!pending)
         return undefined;
 
+    const capture = telemetry?.beginCapture() ?? (() => undefined);
     const originalPath = `${databasePath}.before-restore`;
-    if (pending.phase === "ready")
-        applyReadyRestore({ runtimePath, databasePath, runtime, pending });
+    try {
+        if (pending.phase === "ready")
+            applyReadyRestore({ runtimePath, databasePath, pending });
+    } catch (error) {
+        capture({ kind: "recovery_finished", recovery: "restore", outcome: "failed", failure: "persistence" });
+        throw error;
+    }
 
     return {
         complete: () => {
             removeDatabase(originalPath);
             rmSync(pending.stagedSnapshotPath, { force: true });
             writeRuntimeSettings(runtimePath, { ...readRuntimeSettings(runtimePath), pendingRestore: undefined });
+            capture({ kind: "recovery_finished", recovery: "restore", outcome: "completed" });
         },
         rollback: () => {
+            capture({ kind: "recovery_finished", recovery: "restore", outcome: "failed", failure: "persistence" });
             validateDatabaseSnapshot(pending.recoverySnapshotPath);
             removeDatabase(databasePath);
             copyFileSync(pending.recoverySnapshotPath, databasePath);

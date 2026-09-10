@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { electronMessagesFor } from "@skladno/shared";
+import { electronMessagesFor, type TelemetryEvent } from "@skladno/shared";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
 
 
@@ -24,6 +24,7 @@ export function setup(response: number, backupChecked = false, backupFails = fal
     let checkboxInitiallyChecked: boolean | undefined;
     let closed = false;
     let quit = false;
+    const telemetry: TelemetryEvent[] = [];
     registerDesktopSettingsAdapter({
         ipcMain: { handle: (_channel: string, listener: (event: unknown, request: unknown) => Promise<unknown>) => {
             handler = listener;
@@ -44,6 +45,7 @@ export function setup(response: number, backupChecked = false, backupFails = fal
             if (temporary)
                 writeFileSync(temporary, "backup");
         } },
+        telemetry: { beginCapture: () => (event) => telemetry.push(event) },
         services: {} as never,
         messages: electronMessagesFor("en"),
         chooseDirectory: async () => chooseDirectory?.({ root, dataDirectory }),
@@ -70,6 +72,7 @@ export function setup(response: number, backupChecked = false, backupFails = fal
         invokeCreateBackup: async () => handler?.({}, { method: "createNativeBackup", args: [] }),
         closed: () => closed,
         quit: () => quit,
+        telemetry: () => telemetry,
         cleanup: () => rmSync(root, { recursive: true, force: true }),
     };
 }

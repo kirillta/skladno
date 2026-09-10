@@ -12,6 +12,16 @@
             "persistence": "app_settings.application-general"
         },
         {
+            "id": "settings.telemetry-consent",
+            "area": "General",
+            "title": "Optional packaged-app telemetry consent",
+            "status": "partial",
+            "owners": ["packages/web/src/settings/components/TelemetrySettingsGroup.tsx", "packages/web/src/workspace/state/article-workspace-state.ts", "packages/web/src/workspace/drafts/draft-checkpoint-telemetry.ts", "packages/electron/src/infrastructure/runtime-settings.ts", "packages/electron/src/infrastructure/telemetry-owner.ts", "packages/electron/src/application/pending-restore.ts", "packages/electron/src/presentation/desktop-telemetry.ts", "packages/electron/src/presentation/desktop-settings.ts", "packages/electron/src/presentation/desktop-update-coordinator.ts", "packages/electron/src/presentation/main.ts", "packages/server/src/application/articles/article-service.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/editorial/editorial-service.ts"],
+            "contract": "During public beta, the packaged Electron app shows a localized, keyboard-accessible default-on switch for a finite pseudonymous diagnostic and usage event contract, plus an enabled-only copyable Telemetry ID for deletion requests. The server emits one finite terminal event after persisted Assistant or direct Editorial completion, or after their failure/cancellation; staged Assistant work is not counted separately. The workspace batches only actual Draft save/discard persistence attempts that began with telemetry enabled into a 30-second in-memory aggregate; no-op checkpoints are excluded. Electron emits one terminal event for each manual, deletion-protective, restore-recovery, or update-recovery SQLite snapshot. Native backup restores emit only after the restored application completes startup or fails/rolls back; Article revision restores emit only after persistence completes or fails. Main validates each IPC request and event, keeps identity and consent outside Article data, clears both on opt-out, and treats missing delivery configuration as disabled. Browser and development runtimes cannot send telemetry.",
+            "persistence": "Electron userData/runtime-settings.json only; it is excluded from SQLite Article data, backups, and restore staging.",
+            "limitations": ["A manually inspected opted-in packaged-beta deletion request, payload, dashboard definitions, and packaged Windows acceptance remain release prerequisites."]
+        },
+        {
             "id": "settings.key-bindings",
             "area": "Key bindings",
             "title": "Configurable application shortcuts",
@@ -113,6 +123,16 @@
             "expected": ["The preference is saved with an accessible label, hint, and timestamp preview."],
             "forbidden": ["Changing display preferences rewrites saved timestamps or Revision history."],
             "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.general.test.tsx" }
+        },
+        {
+            "id": "settings.telemetry-consent",
+            "title": "Telemetry remains installation-local and controllable",
+            "capabilityIds": ["settings.telemetry-consent"],
+            "preconditions": ["The author opens General Settings in the Electron app."],
+            "event": "The author copies the Telemetry ID, then enables or disables diagnostic and usage data sharing.",
+            "expected": ["The main process confirms the persisted value before the switch changes.", "The enabled-only Telemetry ID can be copied for a deletion request before opt-out clears it.", "Each explicit Assistant or direct Editorial operation sends at most one finite terminal event, with no Article content.", "Draft save/discard persistence attempts that started with telemetry enabled are emitted only as a bounded aggregate, with no Article content.", "Electron snapshot creation emits one completed or failed finite backup event with no path or snapshot data.", "Native backup and Article revision restoration emit one completed or failed recovery event only after their terminal outcome, with no Article content.", "Opt-out clears the installation identity and future queued events."],
+            "forbidden": ["Copying consent or the Telemetry ID through Article backup or restore."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.telemetry.test.ts" }
         },
         {
             "id": "settings.theme-appearance",

@@ -1,7 +1,8 @@
 import { mkdirSync, renameSync, statSync } from "node:fs";
+import { performance } from "node:perf_hooks";
 import { join } from "node:path";
-import type { DesktopUpdateState } from "@skladno/shared";
-import { readRuntimeSettings, writeRuntimeSettings, type RuntimeSettings } from "../infrastructure/runtime-settings.js";
+import type { DesktopUpdateState, TelemetryEvent } from "@skladno/shared";
+import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings, type RuntimeSettings } from "../infrastructure/runtime-settings.js";
 import { availableUpdateState, newestCompatibleRelease, updatePreferences, type Release } from "./desktop-update-releases.js";
 
 const releasesUrl = "https://api.github.com/repos/kirillta/skladno/releases";
@@ -19,21 +20,29 @@ interface NativeUpdater {
 }
 
 
-function createUpdateSnapshot(database: { exec(sql: string): void }, directory: string, priorVersion: string): string {
-    mkdirSync(directory, { recursive: true });
-    const path = join(directory, `skladno-before-${priorVersion}.sqlite`);
-    const temporary = `${path}.tmp`;
-    database.exec(`VACUUM INTO '${temporary.replaceAll("'", "''")}'`);
-    renameSync(temporary, path);
+function createUpdateSnapshot(database: { exec(sql: string): void }, directory: string, priorVersion: string, telemetry?: { beginCapture(): (event: TelemetryEvent) => void }): string {
+    const capture = telemetry?.beginCapture() ?? (() => undefined);
+    const startedAt = performance.now();
+    try {
+        mkdirSync(directory, { recursive: true });
+        const path = join(directory, `skladno-before-${priorVersion}.sqlite`);
+        const temporary = `${path}.tmp`;
+        database.exec(`VACUUM INTO '${temporary.replaceAll("'", "''")}'`);
+        renameSync(temporary, path);
 
-    if (statSync(path).size === 0)
-        throw new Error("Update snapshot is empty.");
+        if (statSync(path).size === 0)
+            throw new Error("Update snapshot is empty.");
 
-    return path;
+        capture({ kind: "backup_finished", outcome: "completed", elapsedMs: Math.round(performance.now() - startedAt) });
+        return path;
+    } catch (error) {
+        capture({ kind: "backup_finished", outcome: "failed", elapsedMs: Math.round(performance.now() - startedAt), failure: "unknown" });
+        throw error;
+    }
 }
 
 
-export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, database, dataDirectory, updater, fetchReleases = () => fetch(releasesUrl), notify, requestCheckpoint, closeApplication, openExternal, supported = true, scheduleTimeout = setTimeout }: {
+export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, database, dataDirectory, updater, fetchReleases = () => fetch(releasesUrl), notify, requestCheckpoint, closeApplication, openExternal, supported = true, scheduleTimeout = setTimeout, telemetry }: {
     runtimePath: string;
     currentVersion: string;
     database: { exec(sql: string): void };
@@ -46,6 +55,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
     openExternal(url: string): Promise<void>;
     supported?: boolean;
     scheduleTimeout?: (callback: () => void | Promise<void>, delay: number) => unknown;
+    telemetry?: { beginCapture(): (event: TelemetryEvent) => void };
 }) {
     let release: Release | undefined;
     let state: DesktopUpdateState = initialState();
@@ -89,8 +99,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
                 throw new Error("Release discovery failed.");
 
             release = newestCompatibleRelease(payload, currentVersion, runtime);
-            const nextRuntime = { ...runtime, lastUpdateCheckAt: new Date().toISOString() };
-            writeRuntimeSettings(runtimePath, nextRuntime);
+            const nextRuntime = updateRuntimeSettings(runtimePath, (current) => ({ ...current, lastUpdateCheckAt: new Date().toISOString() }));
             return release
                 ? setState(availableUpdateState(release, currentVersion, nextRuntime))
                 : setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, ...updatePreferences(nextRuntime, currentVersion) });
@@ -155,7 +164,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
                 return false;
 
             try {
-                const snapshot = createUpdateSnapshot(database, join(dataDirectory, "update-recovery"), currentVersion);
+                const snapshot = createUpdateSnapshot(database, join(dataDirectory, "update-recovery"), currentVersion, telemetry);
                 writeRuntimeSettings(runtimePath, { ...settings(), priorVersion: currentVersion, recoverySnapshotPath: snapshot, startupSuccess: false });
                 closeApplication();
                 updater.quitAndInstall();

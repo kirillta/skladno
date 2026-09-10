@@ -11,6 +11,7 @@ import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-ev
 import type { EditorialEngineRequest } from "../application/ports/editorial-engine-request.js";
 import type { EditorialAssistantRequest } from "../application/ports/editorial-assistant-request.js";
 import type { AssistantActionIntentVerifier } from "../application/ports/assistant-action-intent-verifier.js";
+import type { TelemetryObserver } from "../application/ports/telemetry-observer.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
@@ -63,7 +64,7 @@ export class CapabilityFixtureEngine extends FixtureEngine {
 }
 
 
-export async function withService(engine: EditorialEngine | undefined, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier): Promise<void> {
+export async function withService(engine: EditorialEngine | undefined, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier, telemetry?: TelemetryObserver): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
@@ -77,8 +78,8 @@ export async function withService(engine: EditorialEngine | undefined, run: (bas
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: storeResponses
     };
-    const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses, persistence.factChecks);
-    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection", persistence.factChecks, undefined, undefined, editorial);
+    const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses, persistence.factChecks, telemetry);
+    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection", persistence.factChecks, undefined, undefined, editorial, telemetry);
     const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");

@@ -9,6 +9,7 @@ import {
     type StyleProfile
 } from "@skladno/shared";
 import { createHash } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { EditorialEngine } from "../ports/editorial-engine.js";
 import type { EditorialEngineEvent } from "../ports/editorial-engine-event.js";
@@ -17,6 +18,9 @@ import { EDITORIAL_ENGINE_EVENT } from "../ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../ports/editorial-engine-error.js";
 import type { EditorialEngineResolver } from "../ports/editorial-engine-resolver.js";
 import type { EditorialServiceRequest } from "./editorial-request.js";
+import type { TelemetryObserver } from "../ports/telemetry-observer.js";
+
+const noTelemetry: TelemetryObserver = { beginCapture: () => () => undefined };
 
 
 interface EditorialStreamContext {
@@ -210,23 +214,28 @@ export class EditorialService {
         private readonly engines: EditorialEngineResolver,
         private readonly sessionContinuationEnabled: boolean,
         private readonly factChecks: FactChecksStore = { save: () => undefined },
+        private readonly telemetry: TelemetryObserver = noTelemetry,
     ) { }
 
 
     async *stream(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const context = prepareEditorialStream(this.articles, this.sessions, this.styleCorpus, this.engines, this.sessionContinuationEnabled, request);
+        const capture = this.telemetry.beginCapture();
+        const startedAt = performance.now();
 
         try {
+            const context = prepareEditorialStream(this.articles, this.sessions, this.styleCorpus, this.engines, this.sessionContinuationEnabled, request);
             yield* streamEditorialOperation(
                 request,
                 context,
                 signal,
                 (event) => persistCompletedEditorialOutput(this.sessions, this.artifacts, this.factChecks, request, context, this.sessionContinuationEnabled, event),
             );
+            capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "completed", elapsedMs: Math.round(performance.now() - startedAt), ...(signal.aborted ? { failure: "cancelled" as const } : {}) });
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
                 this.sessions.remove(request.articleId);
 
+            capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "failed", elapsedMs: Math.round(performance.now() - startedAt), failure: signal.aborted ? "cancelled" : "unknown" });
             throw error;
         }
     }

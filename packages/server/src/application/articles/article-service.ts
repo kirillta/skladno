@@ -1,12 +1,14 @@
 import { type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
 import type { ArticleStore, AssistantGreetingStore } from "../ports/article-store.js";
+import type { TelemetryObserver } from "../ports/telemetry-observer.js";
 
 
 export class ArticleService {
     constructor(
         private readonly store: ArticleStore,
         private readonly assistant: AssistantGreetingStore,
+        private readonly telemetry?: TelemetryObserver,
     ) { }
 
 
@@ -84,6 +86,14 @@ export class ArticleService {
 
 
     restoreRevision(articleId: string, revisionId: string): ArticleRevision {
-        return this.store.restoreRevision(articleId, revisionId);
+        const capture = this.telemetry?.beginCapture() ?? (() => undefined);
+        try {
+            const revision = this.store.restoreRevision(articleId, revisionId);
+            capture({ kind: "recovery_finished", recovery: "revision", outcome: "completed" });
+            return revision;
+        } catch (error) {
+            capture({ kind: "recovery_finished", recovery: "revision", outcome: "failed", failure: "unknown" });
+            throw error;
+        }
     }
 }

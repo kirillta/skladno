@@ -22,6 +22,8 @@ Browser directory handles used for author-selected backup destinations remain br
 
 Windows-native Settings operations are exposed through their own finite, context-isolated desktop client; dialogs, Explorer reveal, credential storage, and native snapshots remain in Electron main as specified by ADR-009.
 
+The packaged main process may expose finite telemetry consent and allowlisted event operations through a separate context-isolated desktop client. It validates the sender, request shape, and event schema, then rechecks consent in the main process; browser and development runtimes cannot fall back to remote telemetry.
+
 The loopback boundary limits network exposure but does not defend against another process already running as the same local user. Operating-system account security remains part of the trust model.
 
 ## Consequences

@@ -9,6 +9,7 @@ import { exposeElectronApplicationClient } from "./preload-bridge.js";
 import { createDesktopSettingsClient } from "./desktop-settings-client.js";
 import { createDesktopShellClient } from "./desktop-shell.js";
 import { createDesktopUpdateClient } from "./desktop-updates.js";
+import { createDesktopTelemetryClient } from "./desktop-telemetry.js";
 
 
 function isPrepareCloseRequest(value: unknown): value is ElectronPrepareCloseRequest {
@@ -44,6 +45,7 @@ exposeElectronApplicationClient(ipcRenderer, contextBridge);
 contextBridge.exposeInMainWorld("skladnoDesktop", createDesktopSettingsClient(ipcRenderer));
 contextBridge.exposeInMainWorld("skladnoShell", createDesktopShellClient(ipcRenderer));
 contextBridge.exposeInMainWorld("skladnoUpdates", createDesktopUpdateClient(ipcRenderer));
+contextBridge.exposeInMainWorld("skladnoTelemetry", createDesktopTelemetryClient(ipcRenderer));
 
 ipcRenderer.on(ELECTRON_LIFECYCLE_CHANNEL.prepareClose, (_event, payload: unknown) => {
     if (!isPrepareCloseRequest(payload))

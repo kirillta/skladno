@@ -67,6 +67,39 @@ describe("ProposalReviewView", () => {
         expect(screen.getByRole("button", { name: message("views.nextChange") }).querySelector("svg")).toBeTruthy();
     });
 
+    it("applies exact-text highlights to both layouts", () => {
+        render(<IntlProvider locale="en" messages={messages}>
+            <ProposalReviewView review={{
+                baseContent: "Original sentence.",
+                proposedContent: "Improved sentence.",
+                changes: [{ id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original sentence."], proposalLines: ["Improved sentence."] }],
+            }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} dismissProposal={vi.fn()} warningsDismissed dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
+        </IntlProvider>);
+
+        const sideBySide = screen.getByRole("button", { name: message("views.proposalSideBySide") });
+        const stacked = screen.getByRole("button", { name: message("views.proposalStacked") });
+        const highlight = screen.getByRole("button", { name: message("views.proposalHighlight") });
+        expect(sideBySide.getAttribute("aria-pressed")).toBe("true");
+
+        fireEvent.click(stacked);
+        expect(stacked.getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getByLabelText(message("ui.proposedChange")).className).toContain("bg-canvas");
+        expect(screen.getByText(message("ui.original"))).toBeTruthy();
+        expect(screen.getByText(message("ui.proposed"))).toBeTruthy();
+
+        fireEvent.click(highlight);
+
+        expect(highlight.getAttribute("aria-pressed")).toBe("true");
+        expect(stacked.getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getAllByText("Original").some((element) => element.tagName === "MARK")).toBe(true);
+        expect(screen.getByText("Improved").tagName).toBe("MARK");
+
+        fireEvent.click(sideBySide);
+        expect(sideBySide.getAttribute("aria-pressed")).toBe("true");
+        expect(highlight.getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getByText("Improved").tagName).toBe("MARK");
+    });
+
     it("selects every change as rejected without dismissing the Proposal", () => {
         const rejectAll = vi.fn();
         const dismissProposal = vi.fn();

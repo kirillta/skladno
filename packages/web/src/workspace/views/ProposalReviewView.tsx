@@ -1,9 +1,62 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { TextProposal } from "@skladno/shared";
 import { Banner, Button, Diff, EmptyState, IconButton, Status } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 import { presentProposalReview, type ProposalDecision } from "./proposal-review-presentation.js";
-import { AssistantIcon, ChevronRightIcon, CloseIcon } from "../../ui/icons.js";
+import { AssistantIcon, ChevronRightIcon, CloseIcon, HighlightChangesIcon, SideBySideIcon, StackedDiffIcon } from "../../ui/icons.js";
+
+
+function highlightedText(original: string, proposed: string) {
+    const originalTokens = original.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
+    const proposedTokens = proposed.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
+    // ponytail: quadratic per paragraph; replace with Myers diff if long paragraphs become slow.
+    const matches = Array.from({ length: originalTokens.length + 1 }, () => Array<number>(proposedTokens.length + 1).fill(0));
+
+    for (let originalIndex = originalTokens.length - 1; originalIndex >= 0; originalIndex -= 1) {
+        for (let proposedIndex = proposedTokens.length - 1; proposedIndex >= 0; proposedIndex -= 1) {
+            matches[originalIndex]![proposedIndex] = originalTokens[originalIndex] === proposedTokens[proposedIndex]
+                ? matches[originalIndex + 1]![proposedIndex + 1]! + 1
+                : Math.max(matches[originalIndex + 1]![proposedIndex]!, matches[originalIndex]![proposedIndex + 1]!);
+        }
+    }
+
+    const originalParts: { changed: boolean; text: string }[] = [];
+    const proposedParts: { changed: boolean; text: string }[] = [];
+    let originalIndex = 0;
+    let proposedIndex = 0;
+    while (originalIndex < originalTokens.length || proposedIndex < proposedTokens.length) {
+        const unchanged = originalIndex < originalTokens.length && originalTokens[originalIndex] === proposedTokens[proposedIndex];
+        if (unchanged) {
+            originalParts.push({ changed: false, text: originalTokens[originalIndex]! });
+            proposedParts.push({ changed: false, text: proposedTokens[proposedIndex]! });
+            originalIndex += 1;
+            proposedIndex += 1;
+        } else if (originalIndex < originalTokens.length && (proposedIndex === proposedTokens.length || matches[originalIndex + 1]![proposedIndex]! >= matches[originalIndex]![proposedIndex + 1]!)) {
+            originalParts.push({ changed: true, text: originalTokens[originalIndex]! });
+            originalIndex += 1;
+        } else {
+            proposedParts.push({ changed: true, text: proposedTokens[proposedIndex]! });
+            proposedIndex += 1;
+        }
+    }
+
+    return { original: originalParts, proposed: proposedParts };
+}
+
+
+function HighlightedText({ parts, tone }: { parts: { changed: boolean; text: string }[]; tone: "added" | "removed" }) {
+    return parts.map((part, index) => part.changed
+        ? <mark className={tone === "added" ? "bg-success text-on-brand" : "bg-danger text-on-brand"} key={index}>{part.text}</mark>
+        : part.text);
+}
+
+
+function ProposalDiff({ original, proposed, layout, decision = "pending", highlight }: { original: string; proposed: string; layout: "columns" | "stacked"; decision?: ProposalDecision; highlight: boolean }) {
+    const highlights = highlight ? highlightedText(original, proposed) : undefined;
+    return <Diff layout={layout} state={decision}
+        removed={highlights ? <HighlightedText parts={highlights.original} tone="removed" /> : original}
+        added={highlights ? <HighlightedText parts={highlights.proposed} tone="added" /> : proposed} />;
+}
 
 
 export function ProposalReviewView({ review, accepted = false, stale, decisions, summaries, summaryState, setDecision, acceptAll, applyAccepted, rejectAll, dismissProposal, warningsDismissed, dismissWarnings, openWrite, openAssistant }: {
@@ -25,6 +78,8 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
 }) {
     const intl = useIntl();
     const cards = useRef<(HTMLElement | null)[]>([]);
+    const [displayMode, setDisplayMode] = useState<"side-by-side" | "stacked">("side-by-side");
+    const [highlightChanges, setHighlightChanges] = useState(false);
 
 
     function moveChange(direction: -1 | 1) {
@@ -74,7 +129,18 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
                         ? intl.formatMessage({ id: "views.proposalWhole" }, { changes: presentation.changes.length })
                         : intl.formatMessage({ id: "views.proposalCounts" }, { total: presentation.changes.length, pending: counts.pending, accepted: counts.accepted, rejected: counts.rejected })}</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    {presentation.changes.length > 0 && <div className="flex items-center gap-1" aria-label={intl.formatMessage({ id: "views.proposalDisplayMode" })}>
+                        <IconButton className={displayMode === "side-by-side" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalSideBySide" })} title={intl.formatMessage({ id: "views.proposalSideBySide" })} aria-pressed={displayMode === "side-by-side"} onClick={() => setDisplayMode("side-by-side")}>
+                            <SideBySideIcon />
+                        </IconButton>
+                        <IconButton className={displayMode === "stacked" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalStacked" })} title={intl.formatMessage({ id: "views.proposalStacked" })} aria-pressed={displayMode === "stacked"} onClick={() => setDisplayMode("stacked")}>
+                            <StackedDiffIcon />
+                        </IconButton>
+                        <IconButton className={highlightChanges ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalHighlight" })} title={intl.formatMessage({ id: "views.proposalHighlight" })} aria-pressed={highlightChanges} onClick={() => setHighlightChanges((current) => !current)}>
+                            <HighlightChangesIcon />
+                        </IconButton>
+                    </div>}
                     {presentation.changes.length > 1 && <nav className="flex gap-2" aria-label={intl.formatMessage({ id: "views.changeNavigation" })}>
                         <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "views.previousChange" })} title={intl.formatMessage({ id: "views.previousChange" })} onClick={() => moveChange(-1)}><ChevronRightIcon className="size-4 rotate-180" /></Button>
                         <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "views.nextChange" })} title={intl.formatMessage({ id: "views.nextChange" })} onClick={() => moveChange(1)}><ChevronRightIcon className="size-4" /></Button>
@@ -88,7 +154,7 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
         {(!presentation.reliable || stale)
             && <div className="mt-4">{!presentation.reliable
                 && <Banner className="mb-3" tone="warning">{intl.formatMessage({ id: "views.proposalFallback" })}</Banner>}
-            <Diff layout="columns" removed={review.baseContent} added={review.proposedContent} />
+            <ProposalDiff original={review.baseContent} proposed={review.proposedContent} layout={displayMode === "side-by-side" ? "columns" : "stacked"} highlight={highlightChanges} />
             </div>}
         {presentation.changes.length === 0
             ? <EmptyState title={intl.formatMessage({ id: "views.proposalNoChanges" })}>
@@ -115,7 +181,7 @@ export function ProposalReviewView({ review, accepted = false, stale, decisions,
                         <p>{summaries?.[change.id] ?? (summaryState === "loading" ? intl.formatMessage({ id: "views.proposalSummaryLoading" }) : intl.formatMessage({ id: "views.proposalSummaryUnavailable" }))}</p>
                     </div>
                     <div className="mt-4">
-                        <Diff layout="columns" state={decision} removed={change.baseLines.join("\n")} added={change.proposalLines.join("\n")} />
+                        <ProposalDiff decision={decision} original={change.baseLines.join("\n")} proposed={change.proposalLines.join("\n")} layout={displayMode === "side-by-side" ? "columns" : "stacked"} highlight={highlightChanges} />
                     </div>
                 </article>;
             })}</div>

@@ -19,6 +19,7 @@ import type { ManagedCredentials } from "./ports/managed-credentials.js";
 import { EditorialCapabilityCatalog } from "./assistant/editorial-capability-catalog.js";
 import type { EditorialService } from "./editorial/editorial-service.js";
 import { AssistantSkillCatalog, builtInSkillSource } from "./assistant/assistant-skill-catalog.js";
+import type { TelemetryObserver } from "./ports/telemetry-observer.js";
 
 
 export function createApplicationServices(
@@ -35,15 +36,16 @@ export function createApplicationServices(
     backups?: BackupManager,
     credentials?: ManagedCredentials,
     editorial?: EditorialService,
+    telemetry?: TelemetryObserver,
 ): ApplicationServices {
-    const articleService = new ArticleService(articles, assistant);
+    const articleService = new ArticleService(articles, assistant, telemetry);
     const publishing = new PublishingService(settings);
     const factCheckService = new FactCheckService(factChecks);
     const styleCorpusService = new StyleCorpusService(styleCorpus, engines, articles);
     const capabilities = editorial ? new EditorialCapabilityCatalog(articleService, artifacts, publishing, editorial, styleCorpusService, factChecks) : undefined;
     return {
         articles: articleService,
-        assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks, capabilities),
+        assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks, capabilities, telemetry),
         settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId, backups, credentials),
         publishing,
         styleCorpus: styleCorpusService,
