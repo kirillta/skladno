@@ -15,8 +15,15 @@ async function createArticle(page: import("@playwright/test").Page): Promise<voi
         await page.getByRole("button", { name: "New article" }).click();
 
     await page.getByRole("button", { name: /Rename article:/ }).click();
-    await page.getByRole("textbox", { name: "Article title" }).fill("Fixture Article");
-    await page.getByRole("textbox", { name: "Article draft" }).pressSequentially("Original fixture Article.");
+    const title = page.getByRole("textbox", { name: "Article title" });
+    const renamed = page.waitForResponse((response) => response.url().includes("/articles/") && response.request().method() === "PATCH");
+    await title.fill("Fixture Article");
+    await title.press("Enter");
+    await renamed;
+
+    const editor = page.getByRole("textbox", { name: "Article draft" });
+    await editor.fill("Original fixture Article.");
+    await expect(editor).toContainText("Original fixture Article.");
     const saved = page.waitForResponse((response) => response.url().includes("/revisions") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Save revision" }).click();
     await saved;
