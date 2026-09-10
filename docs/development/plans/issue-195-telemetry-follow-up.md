@@ -7,8 +7,8 @@ in-memory work, and re-enablement creates a new identity.
 
 The remaining work is release evidence, not product implementation:
 
-1. Set the repository variable `SKLADNO_POSTHOG_PROJECT_KEY` to the approved
-   public capture key. The Windows release workflow creates the ignored
+1. Set the `Production` environment variable `SKLADNO_POSTHOG_PROJECT_KEY` to
+   the approved public capture key. The Windows release workflow creates the ignored
    `packages/electron/telemetry.json` resource with that key and the fixed US
    endpoint. It must never contain an admin token.
 2. On an installed Windows package with a disposable profile, verify Settings
