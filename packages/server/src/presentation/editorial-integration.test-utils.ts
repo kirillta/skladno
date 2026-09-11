@@ -47,7 +47,7 @@ export class FixtureEngine implements EditorialEngine {
 
 
 export class CapabilityFixtureEngine extends FixtureEngine {
-    constructor(events: EditorialEngineEvent[], private readonly capability = "generate_proposal", private readonly input: Readonly<Record<string, string>> = {}, private readonly requiredActiveCapability?: string) {
+    constructor(events: EditorialEngineEvent[], private readonly capability = "generate_proposal", private readonly input?: Readonly<Record<string, string>>, private readonly requiredActiveCapability?: string) {
         super(events);
     }
 
@@ -58,7 +58,7 @@ export class CapabilityFixtureEngine extends FixtureEngine {
 
         const selected = request.tools.find((tool) => tool.capability === this.capability);
         assert.ok(selected);
-        await selected.execute(this.capability === "generate_proposal" ? { operation: EDITORIAL_OPERATION.FLOW_REVISION } : this.input, new AbortController().signal);
+        await selected.execute(this.input ?? (this.capability === "generate_proposal" ? { operation: EDITORIAL_OPERATION.FLOW_REVISION } : {}), new AbortController().signal);
         yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-tool-loop", text: "Proposal prepared." };
     }
 }

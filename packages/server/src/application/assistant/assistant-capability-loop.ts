@@ -164,6 +164,8 @@ export class AssistantCapabilityLoop {
             context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
             requestId: request.requestId,
             authorContext: request.authorMessage,
+            ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId } : {}),
+            ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
             ...(input.operation ? { operation: input.operation as StreamContext["operation"] } : {}),
             ...(input.targetLanguage ? { targetLanguage: input.targetLanguage } : {}),
             ...(input.findingIds ? { findingIds: input.findingIds } : {}),

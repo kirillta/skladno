@@ -1,4 +1,4 @@
-import type { EditorialOperation } from "@skladno/shared";
+import type { BuiltInSkillId, EditorialOperation } from "@skladno/shared";
 
 
 export interface EditorialServiceRequest {
@@ -6,6 +6,8 @@ export interface EditorialServiceRequest {
     requestId: string;
     operation: EditorialOperation;
     authorContext: string;
+    skillId?: BuiltInSkillId;
+    targetArticleCharacterLimit?: number;
     targetLanguage?: string;
     articleContent?: string;
     articleSelection?: boolean;

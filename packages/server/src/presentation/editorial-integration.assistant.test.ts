@@ -179,9 +179,9 @@ test("Assistant HTTP accepts a legacy Editorial operation without persisting its
 
 
 test("Narrative Draft without guidance uses the whole Article and its selected character limit", async () => {
-    const engine = new FixtureEngine([
+    const engine = new CapabilityFixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-whole-article", text: "improved Article" },
-    ]);
+    ], "generate_proposal", { operation: "thesis_to_narrative" }, "generate_proposal");
 
     await withService(engine, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Draft", content: "The whole Article", publishingProfileId: "default" });

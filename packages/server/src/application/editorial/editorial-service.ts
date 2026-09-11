@@ -74,7 +74,7 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
     if (request.operation === EDITORIAL_OPERATION.STYLE_REVIEW && (corpus?.status !== "ready" || !styleProfile))
         throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
-    const engine = engines.resolve(request.operation);
+    const engine = engines.resolve(request.operation, request.skillId);
     if (!engine)
         throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 
@@ -112,6 +112,8 @@ function engineRequest(request: EditorialServiceRequest, context: EditorialStrea
         ...(request.articleSelection ? { articleSelection: true } : {}),
         ...(request.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: request.surroundingArticleCharacterCount } : {}),
         authorContext: request.authorContext,
+        ...(request.skillId ? { skillId: request.skillId } : {}),
+        ...(request.targetArticleCharacterLimit ? { targetArticleCharacterLimit: request.targetArticleCharacterLimit } : {}),
         ...(context.styleProfile ? { styleProfile: context.styleProfile } : {}),
         ...(context.styleProfile ? { articleStyleRules: context.articleStyleRules } : {}),
         ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),

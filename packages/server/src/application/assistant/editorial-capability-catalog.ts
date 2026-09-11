@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, EDITORIAL_OPERATION, HTTP_STATUS, getPublishLimitProfile, isArticleLanguage, isPublishLimitProfileId, type Article, type AssistantAuthorizedAction, type EditorialArtifact, type EditorialOperation, type FactCheck, type StyleCorpus } from "@skladno/shared";
+import { APPLICATION_ERROR, EDITORIAL_OPERATION, HTTP_STATUS, getPublishLimitProfile, isArticleLanguage, isPublishLimitProfileId, type Article, type AssistantAuthorizedAction, type BuiltInSkillId, type EditorialArtifact, type EditorialOperation, type FactCheck, type StyleCorpus } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleService } from "../articles/article-service.js";
@@ -166,7 +166,7 @@ interface ArtifactStore { list(articleId: string): EditorialArtifact[]; get(arti
 interface FactChecksStore { list(articleId: string): FactCheck[]; }
 
 
-export interface StreamContext { capability: Extract<EditorialCapabilityId, "generate_proposal" | "generate_finding_corrections" | "fact_check" | "style_review" | "translate">; context: EditorialCapabilityContext; requestId: string; authorContext: string; operation?: Extract<EditorialOperation, "thesis_to_narrative" | "flow_revision">; targetLanguage?: string; findingIds?: string; articleContent?: string; articleSelection?: boolean; surroundingArticleCharacterCount?: number; }
+export interface StreamContext { capability: Extract<EditorialCapabilityId, "generate_proposal" | "generate_finding_corrections" | "fact_check" | "style_review" | "translate">; context: EditorialCapabilityContext; requestId: string; authorContext: string; skillId?: BuiltInSkillId; targetArticleCharacterLimit?: number; operation?: Extract<EditorialOperation, "thesis_to_narrative" | "flow_revision">; targetLanguage?: string; findingIds?: string; articleContent?: string; articleSelection?: boolean; surroundingArticleCharacterCount?: number; }
 
 
 function currentArticle(articles: ArticleService, context: EditorialCapabilityContext): Article {
@@ -350,7 +350,7 @@ export class EditorialCapabilityCatalog {
         currentArticle(this.articles, input.context);
         const operation = operationFor(input);
         const corrections = input.capability === EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS ? this.correctionContext(input.context.articleId, input.findingIds!) : "";
-        const request = { articleId: input.context.articleId, requestId: input.requestId, operation, authorContext: corrections || input.authorContext, ...(input.targetLanguage?.trim() ? { targetLanguage: input.targetLanguage.trim() } : {}), ...(input.articleContent !== undefined ? { articleContent: input.articleContent } : {}), ...(input.articleSelection ? { articleSelection: true } : {}), ...(input.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: input.surroundingArticleCharacterCount } : {}) };
+        const request = { articleId: input.context.articleId, requestId: input.requestId, operation, authorContext: corrections || input.authorContext, ...(input.skillId ? { skillId: input.skillId } : {}), ...(input.targetArticleCharacterLimit ? { targetArticleCharacterLimit: input.targetArticleCharacterLimit } : {}), ...(input.targetLanguage?.trim() ? { targetLanguage: input.targetLanguage.trim() } : {}), ...(input.articleContent !== undefined ? { articleContent: input.articleContent } : {}), ...(input.articleSelection ? { articleSelection: true } : {}), ...(input.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: input.surroundingArticleCharacterCount } : {}) };
         return staged ? this.editorial.streamStaged(request, signal) : this.editorial.stream(request, signal);
     }
 
