@@ -14,12 +14,25 @@ export function useArticleRevisions(client: EditorialWorkspaceClient, article: A
     const currentRevisionId = article?.currentRevisionId;
 
     useEffect(() => {
+        let cancelled = false;
         if (!articleId) {
             setRevisions([]);
-            return;
+            return () => {
+                cancelled = true;
+            };
         }
 
-        client.listArticleRevisions(articleId).then(setRevisions).catch((error) => notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.revisionHistoryFailed" }) }));
+        void client.listArticleRevisions(articleId).then((items) => {
+            if (!cancelled)
+                setRevisions(items);
+        }).catch((error) => {
+            if (!cancelled)
+                notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.revisionHistoryFailed" }) });
+        });
+
+        return () => {
+            cancelled = true;
+        };
     }, [articleId, currentRevisionId, client, intl, notifyError]);
 
 
