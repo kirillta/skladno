@@ -1,4 +1,4 @@
-import type { AssistantAuthorizedAction, BuiltInSkillId, EditorialOperation, FactCheck, FactCheckFinding, NewAssistantRequest, StartAssistantRequest } from "@skladno/shared";
+import type { AssistantAuthorizedAction, BuiltInSkillId, EditorialOperation, FactCheck, NewAssistantRequest, StartAssistantRequest } from "@skladno/shared";
 
 import type { EditorialCapabilityId } from "./editorial-capability-catalog.js";
 import type { EditorialEngine } from "../ports/editorial-engine.js";
@@ -34,7 +34,6 @@ export interface PreparedAssistantRequest extends ReplayedAssistantRequest {
     resolvedSkillId?: BuiltInSkillId;
     operation: EditorialOperation;
     engine: EditorialEngine;
-    reusableFactFindings?: FactCheckFinding[];
     usesCapabilityLoop: boolean;
     completedCapability?: string;
     capabilityActivities: { summary: string; status: "started" | "completed" }[];

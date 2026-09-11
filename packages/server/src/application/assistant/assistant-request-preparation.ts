@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantMessage, type BuiltInSkillId, type EditorialOperation, type FactCheckFinding } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantMessage, type BuiltInSkillId, type EditorialOperation } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleStore } from "../ports/article-store.js";
@@ -7,7 +7,7 @@ import type { EditorialEngine } from "../ports/editorial-engine.js";
 import type { EditorialEngineResolver } from "../ports/editorial-engine-resolver.js";
 import type { StyleCorpusStore } from "../ports/style-corpus-store.js";
 import { capabilityForEditorialOperation, type EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
-import { type AssistantServiceRequest, type FactChecksStore, type PreparedAssistantRequest, type ReplayedAssistantRequest } from "./assistant-service-types.js";
+import { type AssistantServiceRequest, type PreparedAssistantRequest, type ReplayedAssistantRequest } from "./assistant-service-types.js";
 
 
 function operationFor(skill: BuiltInSkillId): EditorialOperation {
@@ -29,7 +29,6 @@ export interface AssistantRequestPreparationDependencies {
     assistant: AssistantStore;
     styleCorpus: StyleCorpusStore;
     engines: EditorialEngineResolver;
-    factChecks: FactChecksStore;
     capabilities?: EditorialCapabilityCatalog;
 }
 
@@ -57,8 +56,6 @@ export class AssistantRequestPreparation {
 
         const routing = this.resolveRequestRouting(replay);
         this.validateResolvedRequest(replay, routing.resolvedSkillId, routing.usesCapabilityLoop);
-        const reusableFactFindings = this.reusableFactFindings(article.id, routing.resolvedSkillId);
-
         return {
             ...replay,
             articleContent,
@@ -68,8 +65,7 @@ export class AssistantRequestPreparation {
             capabilityActivities: [],
             pendingActions: [],
             authorizedActions: [],
-            ...(!routing.usesCapabilityLoop && routing.resolvedSkillId ? { completedCapability: capabilityForEditorialOperation(routing.operation) } : {}),
-            ...(reusableFactFindings.length ? { reusableFactFindings } : {})
+            ...(!routing.usesCapabilityLoop && routing.resolvedSkillId ? { completedCapability: capabilityForEditorialOperation(routing.operation) } : {})
         };
     }
 
@@ -142,13 +138,4 @@ export class AssistantRequestPreparation {
             : {};
     }
 
-
-    private reusableFactFindings(articleId: string, skillId?: BuiltInSkillId): FactCheckFinding[] {
-        if (skillId !== BUILT_IN_SKILL.FACT_CHECKING)
-            return [];
-
-        return this.dependencies.factChecks.list(articleId).flatMap((factCheck) => factCheck.findings
-            .filter((finding) => finding.status === FACT_CHECK_STATUS.SUPPORTED)
-            .map((finding) => ({ ...finding, reusedFromRevisionId: factCheck.reviewedRevisionId })));
-    }
 }

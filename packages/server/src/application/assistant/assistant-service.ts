@@ -6,6 +6,7 @@ import { AssistantCompletion, responseKind } from "./assistant-completion.js";
 import { AssistantRequestPreparation } from "./assistant-request-preparation.js";
 import type { AssistantServiceRequest, FactChecksStore, PreparedAssistantRequest } from "./assistant-service-types.js";
 import { activityForEditorialOperation, type EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
+import { reusableFactFindings } from "../editorial/fact-check-reuse.js";
 import type { ArticleStore } from "../ports/article-store.js";
 import type { AssistantArtifactStore } from "../ports/assistant-artifact-store.js";
 import type { AssistantStore } from "../ports/assistant-store.js";
@@ -42,11 +43,11 @@ export class AssistantService {
         private readonly styleCorpus: StyleCorpusStore,
         artifacts: AssistantArtifactStore,
         engines: EditorialEngineResolver,
-        factChecks: FactChecksStore = { list: () => [], save: () => undefined },
+        private readonly factChecks: FactChecksStore = { list: () => [], save: () => undefined },
         capabilities?: EditorialCapabilityCatalog,
         private readonly telemetry: TelemetryObserver = noTelemetry,
     ) {
-        this.preparation = new AssistantRequestPreparation({ articles, assistant, styleCorpus, engines, factChecks, capabilities });
+        this.preparation = new AssistantRequestPreparation({ articles, assistant, styleCorpus, engines, capabilities });
         this.capabilityLoop = new AssistantCapabilityLoop({ assistant, engines, capabilities, conversationHistory: (articleId, limit) => this.conversationHistory(articleId, limit) });
         this.completion = new AssistantCompletion({ articles, assistant, styleCorpus, artifacts, factChecks, capabilities });
     }
@@ -193,7 +194,7 @@ export class AssistantService {
                 ? { styleProfile: this.styleCorpus.get().profile, articleStyleRules: this.styleCorpus.getArticleRules(request.articleId) }
                 : {}
             ),
-            ...(request.reusableFactFindings ? { reusableFactFindings: request.reusableFactFindings } : {})
+            ...(request.operation === EDITORIAL_OPERATION.FACT_CHECK ? { reusableFactFindings: reusableFactFindings(this.factChecks, request.articleId) } : {})
         };
     }
 

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
+import { EDITORIAL_OPERATION, HTTP_METHOD, type FactCheckFinding } from "@skladno/shared";
+import type { EditorialEngine } from "../application/ports/editorial-engine.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-events.js";
+import { streamFactCheck, type FactCheckFindingDraft, type FactCheckProvider } from "../infrastructure/editorial/fact-check-workflow.js";
 import { FixtureEngine, withService } from "./editorial-integration.test-utils.js";
 
 // Product scenarios: workspace.findings.advisory-only, editorial-workflows.finding-operations-preserve-article, history-and-publishing.fact-findings-advisory
@@ -63,13 +65,15 @@ test("Assistant Fact Check results persist revision-bound findings for review", 
         type: EDITORIAL_ENGINE_EVENT.COMPLETED,
         responseId: "assistant-fact-check-complete",
         text: "",
-        factCheck: { findings: [{
-            claim: "HTTP was standardized in 1999.",
-            status: "disputed",
-            rationale: "The RFC date differs from the claim.",
-            uncertainty: "The cited source is primary.",
-            sources: [],
-        }] },
+        factCheck: {
+            findings: [{
+                claim: "HTTP was standardized in 1999.",
+                status: "disputed",
+                rationale: "The RFC date differs from the claim.",
+                uncertainty: "The cited source is primary.",
+                sources: [],
+            }]
+        },
     }]);
 
     await withService(engine, async (baseUrl, repositories) => {
@@ -90,3 +94,53 @@ test("Assistant Fact Check results persist revision-bound findings for review", 
 });
 
 
+test("Assistant Fact Check reuses an unchanged supported claim without researching it again", async () => {
+    let researchCalls = 0;
+    const finding: FactCheckFinding = { claim: "HTTP was standardized in 1999.", status: "supported", rationale: "RFC 2616 records the date.", uncertainty: "Primary source.", sources: [] };
+    const evaluatedFinding: FactCheckFindingDraft = { ...finding, sources: [] };
+    const provider: FactCheckProvider = {
+        researchStage: "web_research",
+        extractClaims: async () => ({ responseId: "claim-extraction", claims: [{ claim: finding.claim }] }),
+        researchClaims: async (claims) => {
+            researchCalls++;
+            return claims.map((claim) => ({ ...claim, evidence: "RFC 2616", sources: [] }));
+        },
+
+        evaluateClaims: async () => ({ responseId: "evaluation", findings: [evaluatedFinding] }),
+    };
+
+    const engine: EditorialEngine = {
+        async *stream(request, signal) {
+            yield* streamFactCheck({ request: { article: request.article, reusableFactFindings: request.reusableFactFindings }, signal, provider });
+        },
+        async *streamConversation() {
+            return;
+        },
+        async *streamAssistant(request, signal) {
+            const factCheck = request.tools.find((tool) => tool.capability === "fact_check");
+            assert.ok(factCheck);
+            await factCheck.execute({}, signal);
+
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant-fact-check", text: "" };
+        },
+    };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: finding.claim });
+        await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "first-fact-check", operation: EDITORIAL_OPERATION.FACT_CHECK }),
+        });
+        assert.equal(researchCalls, 1);
+
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "reused-fact-check", authorMessage: "", explicitSkillId: "fact_checking", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+
+        assert.equal(response.status, 200);
+        assert.equal(researchCalls, 1);
+    });
+});
