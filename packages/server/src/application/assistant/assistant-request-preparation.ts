@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantMessage, type AssistantRequestScope, type BuiltInSkillId, type EditorialOperation, type FactCheckFinding } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, FACT_CHECK_STATUS, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantMessage, type BuiltInSkillId, type EditorialOperation, type FactCheckFinding } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { ArticleStore } from "../ports/article-store.js";
@@ -8,21 +8,6 @@ import type { EditorialEngineResolver } from "../ports/editorial-engine-resolver
 import type { StyleCorpusStore } from "../ports/style-corpus-store.js";
 import { capabilityForEditorialOperation, type EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
 import { type AssistantServiceRequest, type FactChecksStore, type PreparedAssistantRequest, type ReplayedAssistantRequest } from "./assistant-service-types.js";
-
-
-function inferSkill(message: string, requestScope: AssistantRequestScope): BuiltInSkillId | undefined {
-    const candidates: [BuiltInSkillId, RegExp][] = [
-        [BUILT_IN_SKILL.FACT_CHECKING, /fact.?check|verify|source|citation/],
-        [BUILT_IN_SKILL.STYLE_REVIEW, /style|voice|tone/],
-        [BUILT_IN_SKILL.TRANSLATION, /translat/],
-        [BUILT_IN_SKILL.TALKING_POINTS, /talking points|outline|bullet/],
-        [BUILT_IN_SKILL.NARRATIVE_DRAFT, /narrative|write (?:a |the )?draft|turn .* into (?:an? )?article/],
-        [BUILT_IN_SKILL.FLOW_AND_CLARITY, /flow|clarity|transition|readability|smooth/],
-    ];
-    const matched = candidates.filter(([skill, pattern]) => pattern.test(message.toLowerCase()) && builtInSkillScopeCompatibility[skill].includes(requestScope.kind));
-
-    return matched.length === 1 ? matched[0]![0] : undefined;
-}
 
 
 function operationFor(skill: BuiltInSkillId): EditorialOperation {
@@ -124,7 +109,7 @@ export class AssistantRequestPreparation {
 
 
     private resolveRequestRouting(request: ReplayedAssistantRequest): { resolvedSkillId?: BuiltInSkillId; operation: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
-        const resolvedSkillId = request.explicitSkillId ?? inferSkill(request.authorMessage, request.scope);
+        const resolvedSkillId = request.explicitSkillId;
         const operation = operationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
         const engine = this.resolveEngine(operation, resolvedSkillId);
         const usesCapabilityLoop = Boolean(engine.streamAssistant && this.dependencies.capabilities);
@@ -146,7 +131,7 @@ export class AssistantRequestPreparation {
         if (!usesCapabilityLoop && resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !request.targetLanguage?.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
-        if (resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && this.dependencies.styleCorpus.get().status !== "ready")
+        if (!usesCapabilityLoop && resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && this.dependencies.styleCorpus.get().status !== "ready")
             throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
     }
 

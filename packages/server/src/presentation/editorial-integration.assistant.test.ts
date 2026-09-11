@@ -23,6 +23,7 @@ test("assistant requests persist a revision-bound proposal and splice only the s
             body: JSON.stringify({
                 requestId: "assistant-request-1",
                 authorMessage: "Improve the flow of this selection.",
+                explicitSkillId: "flow_and_clarity",
                 scope: { kind: "selection", baseRevisionId: article.currentRevisionId, startOffset: 7, endOffset: 15 },
             }),
         });
@@ -76,13 +77,35 @@ test("the live Assistant tool loop stages one catalog Proposal before completion
 });
 
 
+test("the capability loop does not infer a Style Review from conversational tone", async () => {
+    const engine = new CapabilityFixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "catalog-conversation", text: "The argument follows from its premises." },
+    ]);
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "assistant-tone-conversation", authorMessage: "Do not change the tone. Explain the argument.", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+        const body = await response.text();
+
+        assert.equal(response.status, 200);
+        assert.doesNotMatch(body, /"skillId":"style_review"/);
+        assert.doesNotMatch(body, /style_corpus_required/);
+        assert.equal(JSON.parse(repositories.editorialArtifacts.list(article.id)[0]!.content).capability, "generate_proposal");
+    });
+});
+
+
 test("the live Assistant routes a plain-language translation request through the Translation tool", async () => {
     const engine = new CapabilityFixtureEngine([{
         type: EDITORIAL_ENGINE_EVENT.COMPLETED,
         responseId: "catalog-translation",
         text: "Artículo traducido",
         translation: { targetLanguage: "Spanish", protectedSpans: [] },
-    }], "translate", { targetLanguage: "Spanish" }, "translate");
+    }], "translate", { targetLanguage: "Spanish" });
 
     await withService(engine, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
@@ -93,7 +116,7 @@ test("the live Assistant routes a plain-language translation request through the
         });
         const body = await response.text();
 
-        assert.match(body, /"skillId":"translation".*"source":"inferred"/);
+        assert.doesNotMatch(body, /"skillId":"translation"/);
         assert.match(body, /"responseKind":"translation_proposal_prepared"/);
         assert.equal(JSON.parse(repositories.editorialArtifacts.list(article.id)[0]!.content).capability, "translate");
     });
@@ -249,6 +272,7 @@ test("assistant streams include a stable failure code", async () => {
             body: JSON.stringify({
                 requestId: "assistant-request-error",
                 authorMessage: "Improve the flow.",
+                explicitSkillId: "flow_and_clarity",
                 scope: { kind: "article", baseRevisionId: article.currentRevisionId },
             }),
         });
