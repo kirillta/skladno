@@ -5,6 +5,9 @@ import { createId, now, required, type Row } from "./repository-utils.js";
 
 
 export class EditorialArtifactsRepository {
+    private transactionId = 0;
+
+
     constructor(private readonly database: SqliteDatabase) { }
 
 
@@ -25,6 +28,20 @@ export class EditorialArtifactsRepository {
             content: input.content,
             createdAt
         };
+    }
+
+
+    withinTransaction<T>(run: () => T): T {
+        const savepoint = `editorial_artifacts_${this.transactionId++}`;
+        this.database.exec(`SAVEPOINT ${savepoint};`);
+        try {
+            const result = run();
+            this.database.exec(`RELEASE SAVEPOINT ${savepoint};`);
+            return result;
+        } catch (error) {
+            this.database.exec(`ROLLBACK TO SAVEPOINT ${savepoint}; RELEASE SAVEPOINT ${savepoint};`);
+            throw error;
+        }
     }
 
 
@@ -74,19 +91,13 @@ export class EditorialArtifactsRepository {
 
 
     createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact {
-        this.database.exec("BEGIN IMMEDIATE;");
-        try {
+        return this.withinTransaction(() => {
             const artifact = this.create(input);
             for (const citation of citations)
                 this.createCitation({ ...citation, editorialArtifactId: artifact.id });
 
-            this.database.exec("COMMIT;");
-
             return artifact;
-        } catch (error) {
-            this.database.exec("ROLLBACK;");
-            throw error;
-        }
+        });
     }
 
 

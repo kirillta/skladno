@@ -71,7 +71,7 @@ test("Assistant Fact Check results persist revision-bound findings for review", 
                 status: "disputed",
                 rationale: "The RFC date differs from the claim.",
                 uncertainty: "The cited source is primary.",
-                sources: [],
+                sources: [{ url: "https://www.rfc-editor.org/rfc/rfc2616", title: "RFC 2616", quality: "primary", publishedAt: "1999-06" }],
             }]
         },
     }]);
@@ -85,11 +85,13 @@ test("Assistant Fact Check results persist revision-bound findings for review", 
         });
         const body = await response.text();
         const checks = await (await fetch(`${baseUrl}/api/articles/${article.id}/fact-checks`)).json() as { reviewedRevisionId: string; findings: { occurrenceId?: string }[] }[];
+        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
 
         assert.match(body, /"claims":\[{"claim":"HTTP was standardized in 1999\.","checked":false}\]/);
         assert.match(body, /"reviewedRevisionId":"[^"]+"/);
         assert.equal(checks[0]?.reviewedRevisionId, article.currentRevisionId);
         assert.ok(checks[0]?.findings[0]?.occurrenceId);
+        assert.equal(repositories.editorialArtifacts.listCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
     });
 });
 

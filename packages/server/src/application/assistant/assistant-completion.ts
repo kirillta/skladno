@@ -1,7 +1,7 @@
 import { APPLICATION_ERROR, ASSISTANT_EVENT, HTTP_STATUS, type AssistantEditorialResult, type AssistantEvent, type AssistantResponseKind, type FactCheck } from "@skladno/shared";
-import { createHash } from "node:crypto";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
+import { persistFactCheckArtifact } from "../editorial/fact-check-artifact.js";
 import type { AssistantArtifactStore } from "../ports/assistant-artifact-store.js";
 import type { ArticleStore } from "../ports/article-store.js";
 import type { AssistantStore } from "../ports/assistant-store.js";
@@ -36,20 +36,6 @@ export function responseKind(capability?: string): AssistantResponseKind {
 }
 
 
-function enrichedFactCheck(factCheck: FactCheck, revisionId: string): FactCheck {
-    const checkedAt = new Date().toISOString();
-    return {
-        ...factCheck,
-        reviewedRevisionId: revisionId,
-        createdAt: checkedAt,
-        findings: factCheck.findings.map((finding) => {
-            const factId = createHash("sha256").update(finding.claim.trim().toLowerCase().replace(/\s+/g, " ")).digest("hex").slice(0, 16);
-            return { ...finding, factId, occurrenceId: `${revisionId}:${factId}`, checkedAt };
-        }),
-    };
-}
-
-
 export interface AssistantCompletionDependencies {
     articles: ArticleStore;
     assistant: AssistantStore;
@@ -77,12 +63,9 @@ export class AssistantCompletion {
         const metadataChanged = this.applyPendingActions(request);
         const content = completedContent(request, event.text);
         const kind = responseKind(request.completedCapability);
-        const factCheck = event.factCheck && enrichedFactCheck(event.factCheck, request.scope.baseRevisionId);
-        const artifactId = this.createCompletionArtifact(request, event, content, factCheck);
-        if (artifactId && factCheck)
-            this.dependencies.factChecks.save(artifactId, request.articleId, request.scope.baseRevisionId);
+        const artifact = this.createCompletionArtifact(request, event, content);
 
-        const result = this.completionResult(request, event, content, factCheck, metadataChanged);
+        const result = this.completionResult(request, event, content, artifact.factCheck, metadataChanged);
         const message = this.dependencies.assistant.completeRequest({
             requestId: request.requestId,
             articleId: request.articleId,
@@ -90,10 +73,10 @@ export class AssistantCompletion {
             responseKind: kind,
             content: request.completedCapability ? "" : content,
             proposalContent: result?.proposal,
-            editorialArtifactId: artifactId
+            editorialArtifactId: artifact.id
         });
 
-        return { responseKind: kind, messageId: message.id, ...(artifactId ? { editorialArtifactId: artifactId } : {}), ...(result ? { result } : {}) };
+        return { responseKind: kind, messageId: message.id, ...(artifact.id ? { editorialArtifactId: artifact.id } : {}), ...(result ? { result } : {}) };
     }
 
 
@@ -118,31 +101,45 @@ export class AssistantCompletion {
     }
 
 
-    private createCompletionArtifact(request: PreparedAssistantRequest, event: CompletionEvent, content: string, factCheck: FactCheck | undefined): string | undefined {
+    private createCompletionArtifact(request: PreparedAssistantRequest, event: CompletionEvent, content: string): { id?: string; factCheck?: FactCheck } {
         if (!request.completedCapability)
-            return undefined;
+            return {};
 
-        return this.dependencies.artifacts.create({
-            articleId: request.articleId,
-            revisionId: request.scope.baseRevisionId,
-            kind: request.completedCapability === EDITORIAL_CAPABILITY.FACT_CHECK ? "fact-check" : "assistant-proposal",
-            content: JSON.stringify({
-                requestId: request.requestId,
-                ...(request.resolvedSkillId ? { resolvedSkillId: request.resolvedSkillId } : {}),
-                capability: request.completedCapability,
-                ...(request.explicitSkillId ? { skillSource: "explicit" } : {}),
-                authorGuidance: request.authorMessage,
-                scope: request.scope,
-                responseId: event.responseId,
-                proposal: content,
-                ...(request.completedCapability === EDITORIAL_CAPABILITY.STYLE_REVIEW
-                    ? { styleProfile: this.dependencies.styleCorpus.get().profile, articleStyleRules: this.dependencies.styleCorpus.getArticleRules(request.articleId) }
-                    : {}
-                ),
-                ...(factCheck ? { factCheck } : { findings: event.styleReview }),
-                translation: event.translation
-            })
-        }).id;
+        const metadata = {
+            requestId: request.requestId,
+            ...(request.resolvedSkillId ? { resolvedSkillId: request.resolvedSkillId } : {}),
+            capability: request.completedCapability,
+            ...(request.explicitSkillId ? { skillSource: "explicit" } : {}),
+            authorGuidance: request.authorMessage,
+            scope: request.scope,
+            responseId: event.responseId,
+            proposal: content,
+            ...(request.completedCapability === EDITORIAL_CAPABILITY.STYLE_REVIEW
+                ? { styleProfile: this.dependencies.styleCorpus.get().profile, articleStyleRules: this.dependencies.styleCorpus.getArticleRules(request.articleId) }
+                : {}
+            ),
+            translation: event.translation
+        };
+        if (request.completedCapability === EDITORIAL_CAPABILITY.FACT_CHECK && event.factCheck) {
+            const persisted = persistFactCheckArtifact({
+                artifacts: this.dependencies.artifacts,
+                factChecks: this.dependencies.factChecks,
+                articleId: request.articleId,
+                revisionId: request.scope.baseRevisionId,
+                metadata,
+                factCheck: event.factCheck,
+            });
+            return { id: persisted.artifactId, factCheck: persisted.factCheck };
+        }
+
+        return {
+            id: this.dependencies.artifacts.create({
+                articleId: request.articleId,
+                revisionId: request.scope.baseRevisionId,
+                kind: "assistant-proposal",
+                content: JSON.stringify({ ...metadata, findings: event.styleReview }),
+            }).id,
+        };
     }
 
 

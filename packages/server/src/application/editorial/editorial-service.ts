@@ -9,7 +9,6 @@ import {
     type FactCheck,
     type StyleProfile
 } from "@skladno/shared";
-import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { EditorialEngine } from "../ports/editorial-engine.js";
@@ -20,6 +19,7 @@ import { EditorialEngineError } from "../ports/editorial-engine-error.js";
 import type { EditorialEngineResolver } from "../ports/editorial-engine-resolver.js";
 import type { EditorialServiceRequest } from "./editorial-request.js";
 import { reusableFactFindings } from "./fact-check-reuse.js";
+import { persistFactCheckArtifact, type FactCheckArtifactStore } from "./fact-check-artifact.js";
 import type { TelemetryObserver } from "../ports/telemetry-observer.js";
 
 const noTelemetry: TelemetryObserver = { beginCapture: () => () => undefined };
@@ -55,9 +55,8 @@ interface EditorialStyleCorpusStore {
 }
 
 
-interface EditorialArtifactsStore {
+interface EditorialArtifactsStore extends FactCheckArtifactStore {
     create(input: CreateEditorialArtifactInput): EditorialArtifact;
-    createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<import("@skladno/shared").CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact;
 }
 
 
@@ -133,35 +132,20 @@ function artifactKind(operation: EditorialOperation, factCheck: boolean): "fact-
 }
 
 
-function artifactInput(request: EditorialServiceRequest, context: EditorialStreamContext, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): CreateEditorialArtifactInput {
+function artifactMetadata(request: EditorialServiceRequest, context: EditorialStreamContext, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>, includeFactCheck = true) {
     return {
-        articleId: request.articleId,
-        revisionId: context.article.currentRevisionId,
-        kind: artifactKind(request.operation, context.factCheck),
-        content: JSON.stringify({
-            requestId: request.requestId,
-            operation: request.operation,
-            authorContext: request.authorContext,
-            ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
-            responseId: event.responseId,
-            proposal: event.text,
-            styleProfile: context.styleProfile,
-            articleStyleRules: context.articleStyleRules,
-            findings: event.styleReview?.findings,
-            factCheck: event.factCheck,
-            translation: event.translation,
-        }),
+        requestId: request.requestId,
+        operation: request.operation,
+        authorContext: request.authorContext,
+        ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
+        responseId: event.responseId,
+        proposal: event.text,
+        styleProfile: context.styleProfile,
+        articleStyleRules: context.articleStyleRules,
+        findings: event.styleReview?.findings,
+        ...(includeFactCheck ? { factCheck: event.factCheck } : {}),
+        translation: event.translation,
     };
-}
-
-
-function citationsFor(event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>) {
-    return event.factCheck?.findings.flatMap((finding) => finding.sources.map((source) => ({
-        url: source.url,
-        title: source.title,
-        excerpt: source.excerpt,
-        uncertainty: `${source.quality}${source.publishedAt ? `; published ${source.publishedAt}` : ""}; ${finding.uncertainty}`,
-    }))) ?? [];
 }
 
 
@@ -170,25 +154,21 @@ function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifa
         sessions.save(request.articleId, { continuationToken: event.continuationToken, ...context.continuationScope });
 
     if (!context.factCheck)
-        return artifacts.create(artifactInput(request, context, event)).id;
+        return artifacts.create({
+            articleId: request.articleId,
+            revisionId: context.article.currentRevisionId,
+            kind: artifactKind(request.operation, context.factCheck),
+            content: JSON.stringify(artifactMetadata(request, context, event)),
+        }).id;
 
-    const factCheck = event.factCheck!;
-    const enriched = {
-        ...event, factCheck: {
-            ...factCheck,
-            reviewedRevisionId: context.article.currentRevisionId,
-            createdAt: new Date().toISOString(),
-            findings: factCheck.findings.map((finding) => {
-                const factId = createHash("sha256").update(finding.claim.trim().toLowerCase().replace(/\s+/g, " ")).digest("hex").slice(0, 16);
-                return { ...finding, factId, occurrenceId: `${context.article.currentRevisionId}:${factId}`, checkedAt: new Date().toISOString() };
-            }),
-        }
-    };
-
-    const artifact = artifacts.createWithCitations(artifactInput(request, context, enriched), citationsFor(enriched));
-    factChecks.save(artifact.id, request.articleId, context.article.currentRevisionId);
-
-    return artifact.id;
+    return persistFactCheckArtifact({
+        artifacts,
+        factChecks,
+        articleId: request.articleId,
+        revisionId: context.article.currentRevisionId,
+        metadata: artifactMetadata(request, context, event, false),
+        factCheck: event.factCheck!,
+    }).artifactId;
 }
 
 
