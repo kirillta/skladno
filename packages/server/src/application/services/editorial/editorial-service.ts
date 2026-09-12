@@ -178,6 +178,7 @@ async function* streamEditorialOperation(request: EditorialServiceRequest, conte
             completed = true;
             const editorialArtifactId = onCompleted(event);
             yield { ...event, ...(editorialArtifactId ? { editorialArtifactId } : {}) };
+
             continue;
         }
 
