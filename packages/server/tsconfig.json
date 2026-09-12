@@ -1,6 +1,5 @@
 {
     "compilerOptions": {
-        "baseUrl": ".",
         "paths": {
             "@skladno/shared": [
                 "../shared/src/index.ts"
