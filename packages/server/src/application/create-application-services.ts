@@ -22,22 +22,40 @@ import { AssistantSkillCatalog, builtInSkillSource } from "./assistant/assistant
 import type { TelemetryObserver } from "./ports/telemetry-observer.js";
 
 
-export function createApplicationServices(
-    articles: ArticleStore,
-    settings: SettingsStore,
-    styleCorpus: StyleCorpusStore,
-    assistant: AssistantStore,
-    artifacts: AssistantArtifactStore,
-    engines: EditorialEngineResolver,
-    dateTimeFormat: SystemDateTimeFormatProvider,
-    models: AvailableModelsProvider,
-    createConnectionId: () => string,
-    factChecks: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void } = { list: () => [], resolve: () => undefined, save: () => undefined },
-    backups?: BackupManager,
-    credentials?: ManagedCredentials,
-    editorial?: EditorialService,
-    telemetry?: TelemetryObserver,
-): ApplicationServices {
+export interface CreateApplicationServicesOptions {
+    articles: ArticleStore;
+    settings: SettingsStore;
+    styleCorpus: StyleCorpusStore;
+    assistant: AssistantStore;
+    artifacts: AssistantArtifactStore;
+    engines: EditorialEngineResolver;
+    dateTimeFormat: SystemDateTimeFormatProvider;
+    models: AvailableModelsProvider;
+    createConnectionId: () => string;
+    factChecks?: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void };
+    backups?: BackupManager;
+    credentials?: ManagedCredentials;
+    editorial?: EditorialService;
+    telemetry?: TelemetryObserver;
+}
+
+
+export function createApplicationServices({
+    articles,
+    settings,
+    styleCorpus,
+    assistant,
+    artifacts,
+    engines,
+    dateTimeFormat,
+    models,
+    createConnectionId,
+    factChecks = { list: () => [], resolve: () => undefined, save: () => undefined },
+    backups,
+    credentials,
+    editorial,
+    telemetry,
+}: CreateApplicationServicesOptions): ApplicationServices {
     const articleService = new ArticleService(articles, assistant, telemetry);
     const publishing = new PublishingService(settings);
     const factCheckService = new FactCheckService(factChecks);

@@ -79,7 +79,20 @@ export async function withService(engine: EditorialEngine | undefined, run: (bas
         aiSessionContinuationEnabled: storeResponses
     };
     const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses, persistence.factChecks, telemetry);
-    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "test-connection", persistence.factChecks, undefined, undefined, editorial, telemetry);
+    const services = createApplicationServices({
+        articles: persistence.articles,
+        settings: persistence.settings,
+        styleCorpus: persistence.styleCorpus,
+        assistant: persistence.assistant,
+        artifacts: persistence.editorialArtifacts,
+        engines,
+        dateTimeFormat: { read: async () => ({ locale: "en" }) },
+        models: { list: async () => [] },
+        createConnectionId: () => "test-connection",
+        factChecks: persistence.factChecks,
+        editorial,
+        telemetry,
+    });
     const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");
     await once(service, "listening");

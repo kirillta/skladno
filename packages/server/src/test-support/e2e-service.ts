@@ -109,7 +109,18 @@ const assistant = new AssistantRepository(database);
 const engines: EditorialEngineResolver = { resolve: () => new E2eFixtureEngine() };
 
 assistant.seedGreetings();
-const services = createApplicationServices(articles, settings, styleCorpus, assistant, artifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, randomUUID, factChecks);
+const services = createApplicationServices({
+    articles,
+    settings,
+    styleCorpus,
+    assistant,
+    artifacts,
+    engines,
+    dateTimeFormat: { read: async () => ({ locale: "en" }) },
+    models: { list: async () => [] },
+    createConnectionId: randomUUID,
+    factChecks,
+});
 const editorial = new EditorialService(articles, sessions, styleCorpus, artifacts, engines, false, factChecks);
 const service = createLocalService(config, editorial, services);
 

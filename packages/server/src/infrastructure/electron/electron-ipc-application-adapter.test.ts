@@ -41,7 +41,17 @@ function createAdapter(): { ipcMain: FakeIpcMain; close: () => void } {
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
     const engines = { resolve: () => undefined };
-    const services = createApplicationServices(persistence.articles, persistence.settings, persistence.styleCorpus, persistence.assistant, persistence.editorialArtifacts, engines, { read: async () => ({ locale: "en" }) }, { list: async () => [] }, () => "connection");
+    const services = createApplicationServices({
+        articles: persistence.articles,
+        settings: persistence.settings,
+        styleCorpus: persistence.styleCorpus,
+        assistant: persistence.assistant,
+        artifacts: persistence.editorialArtifacts,
+        engines,
+        dateTimeFormat: { read: async () => ({ locale: "en" }) },
+        models: { list: async () => [] },
+        createConnectionId: () => "connection",
+    });
     const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, false);
     const ipcMain = new FakeIpcMain();
 

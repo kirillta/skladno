@@ -42,7 +42,17 @@ test("article API supports CRUD and revision-aware saves", async () => {
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId), diagnostics);
+    }, editorial, createApplicationServices({
+        articles: repositories.articles,
+        settings: repositories.settings,
+        styleCorpus: repositories.styleCorpus,
+        assistant: repositories.assistant,
+        artifacts: repositories.editorialArtifacts,
+        engines,
+        dateTimeFormat: testDateTimeFormat,
+        models: testModels,
+        createConnectionId: testConnectionId,
+    }), diagnostics);
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");

@@ -31,7 +31,17 @@ test("AI connections share environment-variable names, activate independently, a
         databasePath: "unused",
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
-    }, editorial, createApplicationServices(repositories.articles, repositories.settings, repositories.styleCorpus, repositories.assistant, repositories.editorialArtifacts, engines, testDateTimeFormat, testModels, testConnectionId));
+    }, editorial, createApplicationServices({
+        articles: repositories.articles,
+        settings: repositories.settings,
+        styleCorpus: repositories.styleCorpus,
+        assistant: repositories.assistant,
+        artifacts: repositories.editorialArtifacts,
+        engines,
+        dateTimeFormat: testDateTimeFormat,
+        models: testModels,
+        createConnectionId: testConnectionId,
+    }));
 
     service.listen(0, "127.0.0.1");
     await once(service, "listening");

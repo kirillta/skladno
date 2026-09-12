@@ -36,7 +36,26 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
 
     const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled, factChecks, telemetry);
     return {
-        services: createApplicationServices(articles, settings, styleCorpus, assistant, editorialArtifacts, engines, { read: readSystemDateTimeFormat }, { list: (connection, apiKey) => listAvailableModels(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable" ? process.env[connection.credentialSource.environmentVariableName] : credentials.get(connection.id))) }, randomUUID, factChecks, new SqliteBackupManager(database), credentials, editorial, telemetry),
+        services: createApplicationServices({
+            articles,
+            settings,
+            styleCorpus,
+            assistant,
+            artifacts: editorialArtifacts,
+            engines,
+            dateTimeFormat: { read: readSystemDateTimeFormat },
+            models: {
+                list: (connection, apiKey) => listAvailableModels(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable"
+                    ? process.env[connection.credentialSource.environmentVariableName]
+                    : credentials.get(connection.id)))
+            },
+            createConnectionId: randomUUID,
+            factChecks,
+            backups: new SqliteBackupManager(database),
+            credentials,
+            editorial,
+            telemetry,
+        }),
         editorial,
         database,
     };
