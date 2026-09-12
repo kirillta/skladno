@@ -5,6 +5,7 @@ import { AssistantService, type PreparedAssistantRequest } from "../../applicati
 import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
+import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
 import { object, readJson, string, writeJson } from "../transport/json.js";
 
 
@@ -76,7 +77,7 @@ function streamErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STR
 }
 
 
-async function streamAssistantRequest(request: PreparedAssistantRequest, incomingRequest: IncomingMessage, response: ServerResponse, assistant: AssistantService): Promise<void> {
+async function streamAssistantRequest(request: PreparedAssistantRequest, incomingRequest: IncomingMessage, response: ServerResponse, assistant: AssistantService, diagnostics?: LocalDiagnostics): Promise<void> {
     const controller = startResponseStream(response);
     incomingRequest.once("aborted", () => controller.abort());
     response.once("close", () => controller.abort());
@@ -84,6 +85,8 @@ async function streamAssistantRequest(request: PreparedAssistantRequest, incomin
         for await (const event of assistant.stream(request, controller.signal))
             writeEvent(response, event);
     } catch (error) {
+        diagnostics?.write("request.failed", { method: incomingRequest.method ?? "POST", status: error instanceof ApplicationServiceError ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR }, error);
+
         if (!controller.signal.aborted)
             writeEvent(response, { type: "error", requestId: request.requestId, errorCode: streamErrorCode(error), retryable: true });
     }
@@ -97,8 +100,8 @@ export function listAssistantMessagesRoute(response: ServerResponse, articleId: 
 }
 
 
-export async function createAssistantRequestRoute(request: IncomingMessage, response: ServerResponse, articleId: string, assistant: AssistantService): Promise<void> {
+export async function createAssistantRequestRoute(request: IncomingMessage, response: ServerResponse, articleId: string, assistant: AssistantService, diagnostics?: LocalDiagnostics): Promise<void> {
     const input = readAssistantRequest(object(await readJson(request)));
     const prepared = assistant.prepare({ ...input, articleId });
-    await streamAssistantRequest(prepared, request, response, assistant);
+    await streamAssistantRequest(prepared, request, response, assistant, diagnostics);
 }

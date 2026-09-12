@@ -46,6 +46,11 @@ export function createLocalService(config: ServerConfig, editorial: EditorialSer
             if (await router.handle(request, response, pathname))
                 return;
         } catch (error) {
+            diagnostics?.write("request.failed", {
+                method: request.method ?? "unknown",
+                status: error instanceof ApplicationServiceError ? error.status : error instanceof ArticleRevisionConflictError || error instanceof ArticleDraftConflictError ? HTTP_STATUS.CONFLICT : HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            }, error);
+
             if (error instanceof ArticleRevisionConflictError) {
                 writeJson(response, HTTP_STATUS.CONFLICT, { error: { code: APPLICATION_ERROR.REVISION_CONFLICT }, article: error.article });
                 return;
@@ -65,8 +70,6 @@ export function createLocalService(config: ServerConfig, editorial: EditorialSer
                 writeJson(response, error.status, { error: { code: error.code, ...(error.parameters ? { parameters: error.parameters } : {}) } });
                 return;
             }
-
-            diagnostics?.write("request.failed", { method: request.method ?? "unknown", status: HTTP_STATUS.INTERNAL_SERVER_ERROR }, error);
 
             writeJson(response, HTTP_STATUS.INTERNAL_SERVER_ERROR, { error: { code: APPLICATION_ERROR.EDITORIAL_REQUEST_FAILED } });
             return;
