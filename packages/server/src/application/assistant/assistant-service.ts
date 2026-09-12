@@ -4,6 +4,7 @@ import { performance } from "node:perf_hooks";
 import { AssistantCapabilityLoop } from "./assistant-capability-loop.js";
 import { AssistantCompletion, responseKind } from "./assistant-completion.js";
 import { AssistantRequestPreparation } from "./assistant-request-preparation.js";
+import { AssistantSkillCatalog, builtInSkillSource } from "./assistant-skill-catalog.js";
 import type { AssistantServiceRequest, FactChecksStore, PreparedAssistantRequest } from "./assistant-service-types.js";
 import { activityForEditorialOperation, type EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
 import { reusableFactFindings } from "../editorial/fact-check-reuse.js";
@@ -46,9 +47,10 @@ export class AssistantService {
         private readonly factChecks: FactChecksStore = { list: () => [], save: () => undefined },
         capabilities?: EditorialCapabilityCatalog,
         private readonly telemetry: TelemetryObserver = noTelemetry,
+        skills = new AssistantSkillCatalog([builtInSkillSource]),
     ) {
         this.preparation = new AssistantRequestPreparation({ articles, assistant, styleCorpus, engines, capabilities });
-        this.capabilityLoop = new AssistantCapabilityLoop({ assistant, engines, capabilities, conversationHistory: (articleId, limit) => this.conversationHistory(articleId, limit) });
+        this.capabilityLoop = new AssistantCapabilityLoop({ assistant, engines, capabilities, skills, conversationHistory: (articleId, limit) => this.conversationHistory(articleId, limit) });
         this.completion = new AssistantCompletion({ articles, assistant, styleCorpus, artifacts, factChecks, capabilities });
     }
 

@@ -43,15 +43,16 @@ export function createApplicationServices(
     const factCheckService = new FactCheckService(factChecks);
     const styleCorpusService = new StyleCorpusService(styleCorpus, engines, articles);
     const capabilities = editorial ? new EditorialCapabilityCatalog(articleService, artifacts, publishing, editorial, styleCorpusService, factChecks) : undefined;
+    const skills = new AssistantSkillCatalog([builtInSkillSource]);
     return {
         articles: articleService,
-        assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks, capabilities, telemetry),
+        assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks, capabilities, telemetry, skills),
         settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId, backups, credentials),
         publishing,
         styleCorpus: styleCorpusService,
         proposalSummaries: new ProposalSummaryService(engines, artifacts),
         factChecks: factCheckService,
-        skills: new AssistantSkillCatalog([builtInSkillSource]),
+        skills,
         ...(capabilities ? { capabilities } : {}),
     };
 }

@@ -8,7 +8,7 @@ import { EditorialEngineError } from "../ports/editorial-engine-error.js";
 import type { EditorialEngineEvent } from "../ports/editorial-engine-event.js";
 import type { EditorialEngineResolver } from "../ports/editorial-engine-resolver.js";
 import type { EditorialAssistantTool } from "../ports/editorial-assistant-request.js";
-import { builtInSkillPackages } from "./built-in-skill-packages.js";
+import { AssistantSkillCatalog } from "./assistant-skill-catalog.js";
 import { EDITORIAL_CAPABILITY, isValidatedEditorialCapabilityCall, type EditorialCapabilityCatalog, type EditorialCapabilityDefinition, type StreamContext } from "./editorial-capability-catalog.js";
 import { type ActionCapability, type CompletionEvent, type ConversationHistory, type PreparedAssistantRequest, type ReadCapability } from "./assistant-service-types.js";
 
@@ -19,9 +19,10 @@ function isTransientReadFailure(error: unknown): boolean {
 
 
 export interface AssistantCapabilityLoopDependencies {
-    assistant: AssistantStore;
-    engines: EditorialEngineResolver;
-    capabilities?: EditorialCapabilityCatalog;
+    assistant: Pick<AssistantStore, "setExecution">;
+    engines: Pick<EditorialEngineResolver, "resolveAssistantActionIntentVerifier">;
+    capabilities?: Pick<EditorialCapabilityCatalog, "definitions" | "discover" | "read" | "action" | "stream">;
+    skills: AssistantSkillCatalog;
     conversationHistory: (articleId: string, limit?: number) => ConversationHistory;
 }
 
@@ -39,16 +40,18 @@ export class AssistantCapabilityLoop {
         const tools = this.capabilityTools(request, excerpt, () => primary, (event) => {
             primary = event;
         });
+        const skills = this.dependencies.skills.load(this.dependencies.skills.discover().map((skill) => skill.reference));
+        const selectedSkills = request.resolvedSkillId
+            ? skills.filter((skill) => skill.reference.id === request.resolvedSkillId)
+            : [];
 
         for await (const event of request.engine.streamAssistant({
             message: request.authorMessage,
             article: excerpt,
             scope: request.scope.kind,
-            instructions: request.resolvedSkillId
-                ? builtInSkillPackages.filter((skillPackage) => skillPackage.reference.id === request.resolvedSkillId).map((skillPackage) => skillPackage.instructions)
-                : [],
+            instructions: selectedSkills.map((skill) => skill.instructions),
             history: this.dependencies.conversationHistory(request.articleId, 12),
-            skills: builtInSkillPackages.map((skillPackage) => ({ id: skillPackage.reference.id, name: skillPackage.name, description: skillPackage.description, instructions: skillPackage.instructions })),
+            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: skill.instructions })),
             tools,
             ...(request.resolvedSkillId ? { initialActiveCapabilities: this.initialCapabilities(request.resolvedSkillId) } : {}),
         }, signal)) {
