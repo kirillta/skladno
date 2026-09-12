@@ -2,23 +2,24 @@ import { generateText, Output, streamText, type LanguageModel, type ModelMessage
 import { randomUUID } from "node:crypto";
 import { EDITORIAL_OPERATION, type AiProvider } from "@skladno/shared";
 
-import type { EditorialConversationRequest } from "../../application/models/editorial/editorial-conversation-request.js";
-import type { EditorialAssistantRequest } from "../../application/models/editorial/editorial-assistant-request.js";
-import type { EditorialEngine } from "../../application/services/editorial/editorial-engine.js";
-import type { EditorialEngineEvent } from "../../application/models/editorial/editorial-engine-event.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
-import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
-import type { EditorialEngineRequest } from "../../application/models/editorial/editorial-engine-request.js";
-import { protectArticleSpans, restoreProtectedSpans } from "../../application/helpers/editorial/translation.js";
-import { authorControlInstruction, createEditorialMessages } from "../../application/helpers/editorial/workflow-prompt.js";
-import { streamFactCheck, type FactCheckProvider } from "./fact-check-workflow.js";
-import { boundedArticleContext } from "./editorial-context.js";
-import { aiSdkGenerationOptions, continuationToken, editorialProviderOptions, isAcceptedFinish, providerError } from "./ai-sdk-provider.js";
-import { AiSdkAssistantExecutor } from "./ai-sdk-assistant-executor.js";
-import { styleReview, styleReviewSchema, translationSchema } from "./ai-sdk-editorial-output.js";
+import type { EditorialConversationRequest } from "../../../application/models/editorial/editorial-conversation-request.js";
+import type { EditorialAssistantRequest } from "../../../application/models/editorial/editorial-assistant-request.js";
+import type { EditorialEngine } from "../../../application/services/editorial/editorial-engine.js";
+import type { EditorialEngineEvent } from "../../../application/models/editorial/editorial-engine-event.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../../application/errors/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../../application/models/editorial/editorial-engine-events.js";
+import { EditorialEngineError } from "../../../application/errors/editorial-engine-error.js";
+import type { EditorialEngineRequest } from "../../../application/models/editorial/editorial-engine-request.js";
+import { protectArticleSpans, restoreProtectedSpans } from "../../../application/helpers/editorial/translation.js";
+import { authorControlInstruction, createEditorialMessages } from "../../../application/helpers/editorial/workflow-prompt.js";
+import { streamFactCheck } from "../workflows/fact-check-workflow.js";
+import type { FactCheckProvider } from "../models/fact-check-provider.js";
+import { boundedArticleContext } from "../models/editorial-context.js";
+import { aiSdkGenerationOptions, continuationToken, editorialProviderOptions, isAcceptedFinish, providerError } from "../adapters/ai-sdk-provider.js";
+import { AiSdkAssistantExecutor } from "../adapters/ai-sdk-assistant-executor.js";
+import { styleReview, styleReviewSchema, translationSchema } from "../models/ai-sdk-editorial-output.js";
 
-export { assistantConversationPrompt, assistantStepOptions } from "./ai-sdk-assistant.js";
+export { assistantConversationPrompt, assistantStepOptions } from "../adapters/ai-sdk-assistant.js";
 
 
 interface AiSdkEditorialEngineOptions {
@@ -70,7 +71,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 return;
             }
 
-            yield* this.streamProposal(createEditorialMessages({
+            const modelMessage = createEditorialMessages({
                 operation: request.operation,
                 article: boundedArticleContext(request.article),
                 articleSelection: request.articleSelection,
@@ -78,7 +79,9 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 skillId: request.skillId,
                 surroundingArticleCharacterCount: request.surroundingArticleCharacterCount,
                 targetArticleCharacterLimit: request.targetArticleCharacterLimit,
-            }), signal, request.previousResponseId);
+            });
+
+            yield* this.streamProposal(modelMessage, signal, request.previousResponseId);
         } catch (error) {
             if (error instanceof EditorialEngineError || signal.aborted)
                 throw error;
@@ -93,8 +96,12 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             role: "system",
             content: `You are Skladno's editorial assistant. Answer conversationally and help the author decide what to do next. ${authorControlInstruction} Do not turn the Article into a proposal unless the author explicitly asks for an editorial operation.`
         }];
+
         if (request.article)
-            messages.push({ role: "system", content: `${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}` });
+            messages.push({
+                role: "system",
+                content: `${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`
+            });
 
         for (const turn of request.history.slice(-12))
             messages.push({ role: turn.role === "author" ? "user" : "assistant", content: turn.content });
@@ -191,6 +198,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             }),
             output: Output.object({ schema: styleReviewSchema }),
         });
+
         if (!result.output || !isAcceptedFinish(result.finishReason))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
@@ -212,19 +220,21 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
         const protectedArticle = protectArticleSpans(boundedArticleContext(request.article));
         const protectedTitle = protectArticleSpans(request.articleTitle ?? "");
+        const editorialMessage = createEditorialMessages({
+            operation: request.operation,
+            article: protectedArticle.protectedText,
+            articleTitle: protectedTitle.protectedText,
+            authorContext: request.authorContext,
+            targetLanguage
+        });
         const result = await generateText({
             ...this.generationOptions({
-                messages: createEditorialMessages({
-                    operation: request.operation,
-                    article: protectedArticle.protectedText,
-                    articleTitle: protectedTitle.protectedText,
-                    authorContext: request.authorContext,
-                    targetLanguage
-                }),
+                messages: editorialMessage,
                 signal,
             }),
             output: Output.object({ schema: translationSchema }),
         });
+
         if (!result.output || !isAcceptedFinish(result.finishReason) || result.output.targetLanguage.trim() !== targetLanguage)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
@@ -239,6 +249,12 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             metadata: result.providerMetadata
         });
 
-        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), ...(token ? { continuationToken: token } : {}), text, translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans, title } };
+        yield {
+            type: EDITORIAL_ENGINE_EVENT.COMPLETED,
+            responseId: randomUUID(),
+            ...(token ? { continuationToken: token } : {}),
+            text,
+            translation: { targetLanguage, protectedSpans: protectedArticle.protectedSpans, title }
+        };
     }
 }

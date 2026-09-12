@@ -1,43 +1,9 @@
 import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding } from "@skladno/shared";
 
-import type { EditorialEngineEvent } from "../../application/models/editorial/editorial-engine-event.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
-
-
-export interface FactCheckResearch {
-    claim: string;
-    evidence: string;
-    sources: unknown;
-}
-
-
-export interface FactCheckFindingDraft {
-    claim: string;
-    status: FactCheckFinding["status"];
-    rationale: string;
-    uncertainty: string;
-    sources: {
-        url: string;
-        title: string;
-        excerpt: string | null;
-        quality: FactCheckFinding["sources"][number]["quality"];
-        publishedAt: string | null;
-    }[];
-}
-
-
-export interface FactCheckProvider {
-    researchStage: string;
-    extractClaims(article: string, signal: AbortSignal): Promise<{ responseId: string; claims: { claim: string }[] }>;
-    researchClaims(claims: { claim: string }[], signal: AbortSignal): Promise<FactCheckResearch[]>;
-    evaluateClaims(research: FactCheckResearch[], signal: AbortSignal): Promise<{ responseId: string; findings: FactCheckFindingDraft[] }>;
-}
-
-
-interface FactCheckRequest {
-    article: string;
-    reusableFactFindings?: FactCheckFinding[];
-}
+import type { EditorialEngineEvent } from "../../../application/models/editorial/editorial-engine-event.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../../application/models/editorial/editorial-engine-events.js";
+import type { FactCheckRequest } from "../models/fact-check-request.js";
+import type { FactCheckProvider } from "../models/fact-check-provider.js";
 
 
 export async function* streamFactCheck({ request, signal, provider }: { request: FactCheckRequest; signal: AbortSignal; provider: FactCheckProvider }): AsyncIterable<EditorialEngineEvent> {

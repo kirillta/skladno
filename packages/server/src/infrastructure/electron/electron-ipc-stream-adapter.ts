@@ -37,7 +37,10 @@ function validAssistantRequest(value: unknown): value is Extract<ElectronStreamR
 
 
 function validEditorialRequest(value: unknown): value is Extract<ElectronStreamRequest, { kind: "editorial" }>["input"] {
-    return isRecord(value) && typeof value.requestId === "string" && typeof value.operation === "string" && isEditorialOperation(value.operation)
+    return isRecord(value)
+        && typeof value.requestId === "string"
+        && typeof value.operation === "string"
+        && isEditorialOperation(value.operation)
         && (value.authorContext === undefined || typeof value.authorContext === "string")
         && (value.targetLanguage === undefined || typeof value.targetLanguage === "string");
 }
@@ -63,7 +66,9 @@ function send(event: ElectronIpcMainEvent, value: ElectronStreamEvent): void {
 
 
 function assistantErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE | typeof APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED {
-    return error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;
+    return error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
+        ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
+        : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;
 }
 
 

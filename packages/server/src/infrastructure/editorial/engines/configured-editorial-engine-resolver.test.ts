@@ -3,7 +3,7 @@ import test from "node:test";
 import { aiModelPreferenceId } from "@skladno/shared";
 
 import { ConfiguredEditorialEngineResolver, resolveAppModelConfiguration } from "./configured-editorial-engine-resolver.js";
-import type { ServerConfig } from "../configuration/config.js";
+import type { ServerConfig } from "../../configuration/config.js";
 
 
 test("app work prefers its dedicated model and otherwise falls back to the default", () => {

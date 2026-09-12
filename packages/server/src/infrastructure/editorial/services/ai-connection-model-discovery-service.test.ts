@@ -3,11 +3,11 @@ import test from "node:test";
 
 import { AI_PROVIDER, type AiConnection, type AiProvider } from "@skladno/shared";
 
-import { editorialModels, listAvailableModels } from "./available-models.js";
+import { AiConnectionModelDiscoveryService } from "./ai-connection-model-discovery-service.js";
 
 
 test("lists current editorial model variants", () => {
-    assert.deepEqual(editorialModels(["babbage-002", "gpt-5.5", "gpt-5.5-mini", "gpt-5.6-luna", "gpt-image-1"]), ["gpt-5.5", "gpt-5.5-mini", "gpt-5.6-luna"]);
+    assert.deepEqual(new AiConnectionModelDiscoveryService().filterOpenAiEditorialModels(["babbage-002", "gpt-5.5", "gpt-5.5-mini", "gpt-5.6-luna", "gpt-image-1"]), ["gpt-5.5", "gpt-5.5-mini", "gpt-5.6-luna"]);
 });
 
 
@@ -17,6 +17,7 @@ function connection(provider: AiProvider): AiConnection {
 
 
 test("uses each provider's documented model endpoint and authentication", async () => {
+    const service = new AiConnectionModelDiscoveryService();
     const requests: { url: string; headers: Headers }[] = [];
     const fetchImplementation: typeof fetch = async (input, init) => {
         requests.push({ url: String(input), headers: new Headers(init?.headers) });
@@ -24,7 +25,7 @@ test("uses each provider's documented model endpoint and authentication", async 
     };
 
     for (const provider of Object.values(AI_PROVIDER))
-        await listAvailableModels(connection(provider), "secret", fetchImplementation);
+        await service.list(connection(provider), "secret", fetchImplementation);
 
     assert.deepEqual(requests.map((request) => request.url), [
         "https://api.openai.com/v1/models",
@@ -43,9 +44,10 @@ test("uses each provider's documented model endpoint and authentication", async 
 
 
 test("keeps the complete Zen catalog and safely ignores malformed discovery payloads", async () => {
-    const zenModels = await listAvailableModels(connection(AI_PROVIDER.OPENCODE), "secret", async () => new Response(JSON.stringify({ data: [{ id: "z-model" }, { id: "a-model" }, { id: "z-model" }] }), { status: 200 }));
-    const googleModels = await listAvailableModels(connection(AI_PROVIDER.GOOGLE), "secret", async () => new Response(JSON.stringify({ models: [{ name: "models/gemini-test" }] }), { status: 200 }));
-    const malformed = await listAvailableModels(connection(AI_PROVIDER.DEEPSEEK), "secret", async () => new Response("not json", { status: 200 }));
+    const service = new AiConnectionModelDiscoveryService();
+    const zenModels = await service.list(connection(AI_PROVIDER.OPENCODE), "secret", async () => new Response(JSON.stringify({ data: [{ id: "z-model" }, { id: "a-model" }, { id: "z-model" }] }), { status: 200 }));
+    const googleModels = await service.list(connection(AI_PROVIDER.GOOGLE), "secret", async () => new Response(JSON.stringify({ models: [{ name: "models/gemini-test" }] }), { status: 200 }));
+    const malformed = await service.list(connection(AI_PROVIDER.DEEPSEEK), "secret", async () => new Response("not json", { status: 200 }));
 
     assert.deepEqual(zenModels, ["a-model", "z-model"]);
     assert.deepEqual(googleModels, ["gemini-test"]);

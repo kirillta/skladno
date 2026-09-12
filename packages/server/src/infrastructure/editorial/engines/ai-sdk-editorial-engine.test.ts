@@ -4,10 +4,10 @@ import type { LanguageModelV3StreamPart } from "@ai-sdk/provider";
 import { AI_PROVIDER, EDITORIAL_OPERATION } from "@skladno/shared";
 import { MockLanguageModelV3 } from "ai/test";
 
-import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../../application/models/editorial/editorial-engine-events.js";
 import { AiSdkEditorialEngine, assistantConversationPrompt, assistantStepOptions } from "./ai-sdk-editorial-engine.js";
-import { supportingTextProviderOptions } from "./ai-sdk-provider.js";
-import { openAiResponsesProviderOptions } from "./openai-responses.js";
+import { supportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";
+import { openAiResponsesProviderOptions } from "../adapters/openai-responses.js";
 
 
 test("keeps previous Assistant output separate from the next Author request", () => {

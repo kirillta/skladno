@@ -7,7 +7,7 @@ import { createXai } from "@ai-sdk/xai";
 import { APPLICATION_ERROR, AI_PROVIDER, HTTP_STATUS, type AiProvider } from "@skladno/shared";
 import type { LanguageModel } from "ai";
 
-import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
+import { ApplicationServiceError } from "../../../application/errors/application-service-error.js";
 
 
 export interface ProviderModelConfiguration {
@@ -17,7 +17,6 @@ export interface ProviderModelConfiguration {
 }
 
 
-// OpenCode Zen is a gateway: its selected model family determines the SDK protocol, but every Zen request uses its gateway URL.
 const openCodeZenBaseUrl = "https://opencode.ai/zen/v1";
 
 

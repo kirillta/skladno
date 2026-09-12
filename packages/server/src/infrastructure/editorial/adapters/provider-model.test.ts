@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { APPLICATION_ERROR, AI_PROVIDER } from "@skladno/shared";
 
-import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
+import { ApplicationServiceError } from "../../../application/errors/application-service-error.js";
 import { createProviderModel } from "./provider-model.js";
 
 

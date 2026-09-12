@@ -1,8 +1,8 @@
 import { generateText, type LanguageModel } from "ai";
 
-import type { ArticleTitleGenerator } from "../../application/services/editorial/article-title-generator.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
-import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
+import type { ArticleTitleGenerator } from "../../../application/services/editorial/article-title-generator.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../../application/errors/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../../application/errors/editorial-engine-error.js";
 import { aiSdkGenerationOptions, isAcceptedFinish, type SupportingTextProviderOptions } from "./ai-sdk-provider.js";
 
 

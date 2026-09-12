@@ -3,7 +3,9 @@ import test from "node:test";
 import { EDITORIAL_OPERATION, HTTP_METHOD, type FactCheckFinding } from "@skladno/shared";
 import type { EditorialEngine } from "../application/services/editorial/editorial-engine.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/models/editorial/editorial-engine-events.js";
-import { streamFactCheck, type FactCheckFindingDraft, type FactCheckProvider } from "../infrastructure/editorial/fact-check-workflow.js";
+import { streamFactCheck } from "../infrastructure/editorial/workflows/fact-check-workflow.js";
+import { type FactCheckFindingDraft } from "../infrastructure/editorial/models/fact-check-finding-draft.js";
+import { type FactCheckProvider } from "../infrastructure/editorial/models/fact-check-provider.js";
 import { FixtureEngine, withService } from "./editorial-integration.test-utils.js";
 
 // Product scenarios: workspace.findings.advisory-only, editorial-workflows.finding-operations-preserve-article, history-and-publishing.fact-findings-advisory

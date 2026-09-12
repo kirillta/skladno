@@ -5,8 +5,8 @@ import type { ApplicationServices } from "./application/application-services.js"
 import { EditorialService } from "./application/services/editorial/editorial-service.js";
 import { loadServerConfig, type ServerConfig } from "./infrastructure/configuration/config.js";
 import { readSystemDateTimeFormat } from "./infrastructure/configuration/system-date-time-format.js";
-import { listAvailableModels } from "./infrastructure/editorial/available-models.js";
-import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/configured-editorial-engine-resolver.js";
+import { AiConnectionModelDiscoveryService } from "./infrastructure/editorial/services/ai-connection-model-discovery-service.js";
+import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/engines/configured-editorial-engine-resolver.js";
 import { SqliteBackupManager } from "./infrastructure/persistence/sqlite-backup-manager.js";
 import { WindowsCredentialStore } from "./infrastructure/configuration/windows-credential-store.js";
 import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, SettingsRepository, StyleCorpusRepository, openDatabase } from "./infrastructure/persistence/index.js";
@@ -30,6 +30,7 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
     const styleCorpus = new StyleCorpusRepository(database);
     const assistant = new AssistantRepository(database);
     const credentialStore = new WindowsCredentialStore();
+    const modelDiscovery = new AiConnectionModelDiscoveryService();
     const engines = new ConfiguredEditorialEngineResolver(config, settings, credentialStore);
 
     assistant.seedGreetings();
@@ -45,7 +46,7 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
             engines,
             dateTimeFormat: { read: readSystemDateTimeFormat },
             models: {
-                list: (connection, apiKey) => listAvailableModels(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable"
+                list: (connection, apiKey) => modelDiscovery.list(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable"
                     ? process.env[connection.credentialSource.environmentVariableName]
                     : credentialStore.get(connection.id)))
             },

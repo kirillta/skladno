@@ -4,8 +4,8 @@ import { MockLanguageModelV3 } from "ai/test";
 import type { LanguageModelV3StreamPart } from "@ai-sdk/provider";
 import { AI_PROVIDER } from "@skladno/shared";
 
-import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../../application/errors/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../../application/models/editorial/editorial-engine-events.js";
 import { AiSdkAssistantExecutor } from "./ai-sdk-assistant-executor.js";
 
 

@@ -1,6 +1,6 @@
 import { APPLICATION_ERROR, AI_PROVIDER, HTTP_STATUS, type AiConnection, type AiProvider } from "@skladno/shared";
 
-import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
+import { ApplicationServiceError } from "../../../application/errors/application-service-error.js";
 
 
 const modelsEndpoints: Record<AiProvider, string> = {
@@ -12,12 +12,7 @@ const modelsEndpoints: Record<AiProvider, string> = {
     [AI_PROVIDER.DEEPSEEK]: "https://api.deepseek.com/models",
 };
 
-const editorialModelFamilies = ["gpt-5.5", "gpt-5.6"];
-
-
-export function editorialModels(models: string[]): string[] {
-    return models.filter((model) => editorialModelFamilies.some((family) => model === family || model.startsWith(`${family}-`))).sort();
-}
+const editorialModelFamilies = ["gpt-5.5", "gpt-5.6", "gpt-6"];
 
 
 function requestOptions(provider: AiProvider, apiKey: string): RequestInit {
@@ -59,19 +54,28 @@ function modelIds(body: unknown, provider: AiProvider): string[] {
 }
 
 
-export async function listAvailableModels(connection: AiConnection, apiKey = connection.credentialSource.kind === "environment-variable" ? process.env[connection.credentialSource.environmentVariableName] : undefined, fetchImplementation: typeof fetch = fetch): Promise<string[]> {
-    const provider = connection.provider;
-    if (!apiKey)
-        throw new ApplicationServiceError(APPLICATION_ERROR.ENVIRONMENT_VARIABLE_UNAVAILABLE, HTTP_STATUS.BAD_REQUEST);
+export class AiConnectionModelDiscoveryService {
+    async list(connection: AiConnection, apiKey = connection.credentialSource.kind === "environment-variable" ? process.env[connection.credentialSource.environmentVariableName] : undefined, fetchImplementation: typeof fetch = fetch): Promise<string[]> {
+        const provider = connection.provider;
+        if (!apiKey)
+            throw new ApplicationServiceError(APPLICATION_ERROR.ENVIRONMENT_VARIABLE_UNAVAILABLE, HTTP_STATUS.BAD_REQUEST);
 
-    const response = await fetchImplementation(modelsEndpoints[provider], requestOptions(provider, apiKey));
-    if (!response.ok)
-        throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
+        const response = await fetchImplementation(modelsEndpoints[provider], requestOptions(provider, apiKey));
+        if (!response.ok)
+            throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
 
-    try {
-        const models = modelIds(await response.json(), provider);
-        return provider === AI_PROVIDER.OPENAI ? editorialModels(models) : [...new Set(models)].sort();
-    } catch {
-        return [];
+        try {
+            const models = modelIds(await response.json(), provider);
+            return provider === AI_PROVIDER.OPENAI
+                ? this.filterOpenAiEditorialModels(models)
+                : [...new Set(models)].sort();
+        } catch {
+            return [];
+        }
+    }
+
+
+    filterOpenAiEditorialModels(models: string[]): string[] {
+        return models.filter((model) => editorialModelFamilies.some((family) => model === family || model.startsWith(`${family}-`))).sort();
     }
 }
