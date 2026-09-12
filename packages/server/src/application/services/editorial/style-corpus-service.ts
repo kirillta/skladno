@@ -1,9 +1,9 @@
 import { APPLICATION_ERROR, HTTP_STATUS, type CreateStyleCorpusItemInput, type StyleCorpus } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
-import type { EditorialEngineResolver } from "../../ports/editorial-engine-resolver.js";
-import type { StyleCorpusStore } from "../../ports/style-corpus-store.js";
-import type { ArticleStore } from "../../ports/article-store.js";
+import type { EditorialEngineResolver } from "./editorial-engine-resolver.js";
+import type { StyleCorpusStore } from "./style-corpus-store.js";
+import type { ArticleStore } from "../articles/article-store.js";
 
 
 export class StyleCorpusService {

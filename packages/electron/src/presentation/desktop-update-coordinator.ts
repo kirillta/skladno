@@ -1,7 +1,6 @@
 import { mkdirSync, renameSync, statSync } from "node:fs";
-import { performance } from "node:perf_hooks";
 import { join } from "node:path";
-import type { DesktopUpdateState, TelemetryEvent } from "@skladno/shared";
+import { beginTimedTelemetryCapture, type DesktopUpdateState, type TelemetryCaptureSource } from "@skladno/shared";
 import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings, type RuntimeSettings } from "../infrastructure/runtime-settings.js";
 import { availableUpdateState, newestCompatibleRelease, updatePreferences, type Release } from "./desktop-update-releases.js";
 
@@ -20,9 +19,8 @@ interface NativeUpdater {
 }
 
 
-function createUpdateSnapshot(database: { exec(sql: string): void }, directory: string, priorVersion: string, telemetry?: { beginCapture(): (event: TelemetryEvent) => void }): string {
-    const capture = telemetry?.beginCapture() ?? (() => undefined);
-    const startedAt = performance.now();
+function createUpdateSnapshot(database: { exec(sql: string): void }, directory: string, priorVersion: string, telemetry?: TelemetryCaptureSource): string {
+    const observed = beginTimedTelemetryCapture(telemetry);
     try {
         mkdirSync(directory, { recursive: true });
         const path = join(directory, `skladno-before-${priorVersion}.sqlite`);
@@ -33,10 +31,10 @@ function createUpdateSnapshot(database: { exec(sql: string): void }, directory: 
         if (statSync(path).size === 0)
             throw new Error("Update snapshot is empty.");
 
-        capture({ kind: "backup_finished", outcome: "completed", elapsedMs: Math.round(performance.now() - startedAt) });
+        observed.capture({ kind: "backup_finished", outcome: "completed", elapsedMs: observed.elapsedMs() });
         return path;
     } catch (error) {
-        capture({ kind: "backup_finished", outcome: "failed", elapsedMs: Math.round(performance.now() - startedAt), failure: "unknown" });
+        observed.capture({ kind: "backup_finished", outcome: "failed", elapsedMs: observed.elapsedMs(), failure: "unknown" });
         throw error;
     }
 }
@@ -55,7 +53,7 @@ export function createDesktopUpdateCoordinator({ runtimePath, currentVersion, da
     openExternal(url: string): Promise<void>;
     supported?: boolean;
     scheduleTimeout?: (callback: () => void | Promise<void>, delay: number) => unknown;
-    telemetry?: { beginCapture(): (event: TelemetryEvent) => void };
+    telemetry?: TelemetryCaptureSource;
 }) {
     let release: Release | undefined;
     let state: DesktopUpdateState = initialState();

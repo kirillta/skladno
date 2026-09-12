@@ -7,7 +7,7 @@ import {
     type PublishingSettings
 } from "@skladno/shared";
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
-import type { SettingsStore } from "../../ports/settings-store.js";
+import type { SettingsStore } from "../settings/settings-store.js";
 
 
 const publishLimitProfileSettingKey = "publish-limit-profile";

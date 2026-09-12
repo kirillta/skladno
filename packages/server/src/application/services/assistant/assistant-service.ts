@@ -1,5 +1,4 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, EDITORIAL_OPERATION, type AssistantEvent, type AssistantMessage, type TelemetryEvent } from "@skladno/shared";
-import { performance } from "node:perf_hooks";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, BUILT_IN_SKILL, EDITORIAL_OPERATION, type AssistantEvent, type AssistantMessage, type TimedTelemetryCapture } from "@skladno/shared";
 
 import { AssistantCapabilityLoop } from "./assistant-capability-loop.js";
 import { AssistantCompletion, responseKind } from "./assistant-completion.js";
@@ -10,18 +9,16 @@ import type { PreparedAssistantRequest } from "../../models/assistant/prepared-a
 import type { AssistantServiceRequest } from "../../models/assistant/assistant-service-request.js";
 import { activityForEditorialOperation, type EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
 import { reusableFactFindings } from "../../helpers/editorial/reusable-fact-findings.js";
-import type { ArticleStore } from "../../ports/article-store.js";
-import type { AssistantArtifactStore } from "../../ports/assistant-artifact-store.js";
-import type { AssistantStore } from "../../ports/assistant-store.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../ports/editorial-engine-events.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../ports/editorial-engine-errors.js";
-import { EditorialEngineError } from "../../ports/editorial-engine-error.js";
-import type { EditorialEngineEvent } from "../../ports/editorial-engine-event.js";
-import type { EditorialEngineResolver } from "../../ports/editorial-engine-resolver.js";
-import type { StyleCorpusStore } from "../../ports/style-corpus-store.js";
-import type { TelemetryObserver } from "../../ports/telemetry-observer.js";
-
-const noTelemetry: TelemetryObserver = { beginCapture: () => () => undefined };
+import type { ArticleStore } from "../articles/article-store.js";
+import type { AssistantArtifactStore } from "./assistant-artifact-store.js";
+import type { AssistantStore } from "./assistant-store.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../models/editorial/editorial-engine-events.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../errors/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../errors/editorial-engine-error.js";
+import type { EditorialEngineEvent } from "../../models/editorial/editorial-engine-event.js";
+import type { EditorialEngineResolver } from "../editorial/editorial-engine-resolver.js";
+import type { StyleCorpusStore } from "../editorial/style-corpus-store.js";
+import type { TelemetryObserver } from "../../telemetry/telemetry-observer.js";
 
 
 export type { AssistantServiceRequest } from "../../models/assistant/assistant-service-request.js";
@@ -29,7 +26,7 @@ export type { PreparedAssistantRequest } from "../../models/assistant/prepared-a
 
 
 export class AssistantService {
-    private readonly startedAt = new Map<string, { capture: (event: TelemetryEvent) => void; startedAt: number }>();
+    private readonly startedAt = new Map<string, TimedTelemetryCapture>();
 
 
     private readonly preparation: AssistantRequestPreparation;
@@ -49,7 +46,7 @@ export class AssistantService {
         engines: EditorialEngineResolver,
         private readonly factChecks: FactChecksStore = { list: () => [], save: () => undefined },
         capabilities?: EditorialCapabilityCatalog,
-        private readonly telemetry: TelemetryObserver = noTelemetry,
+        private readonly telemetry?: TelemetryObserver,
         skills = new AssistantSkillCatalog([builtInSkillSource]),
     ) {
         this.preparation = new AssistantRequestPreparation({ articles, assistant, styleCorpus, engines, capabilities });
@@ -64,21 +61,27 @@ export class AssistantService {
 
 
     prepare(request: AssistantServiceRequest): PreparedAssistantRequest {
-        const capture = this.telemetry.beginCapture();
-        const startedAt = performance.now();
+        const observed = beginTimedTelemetryCapture(this.telemetry);
         try {
             const prepared = this.preparation.prepare(request);
-            this.startedAt.set(prepared.requestId, { capture, startedAt });
+            this.startedAt.set(prepared.requestId, observed);
             return prepared;
         } catch (error) {
-            capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "failed", elapsedMs: Math.round(performance.now() - startedAt), failure: "unknown" });
+            observed.capture({
+                kind: "ai_operation_finished",
+                operation: "assistant",
+                outcome: "failed",
+                elapsedMs: observed.elapsedMs(),
+                failure: "unknown"
+            });
+
             throw error;
         }
     }
 
 
     async *stream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<AssistantEvent> {
-        const observed = this.startedAt.get(request.requestId) ?? { capture: this.telemetry.beginCapture(), startedAt: performance.now() };
+        const observed = this.startedAt.get(request.requestId) ?? beginTimedTelemetryCapture(this.telemetry);
         this.startedAt.delete(request.requestId);
         let initialized = false;
         try {
@@ -97,16 +100,35 @@ export class AssistantService {
 
             if (signal.aborted) {
                 this.assistant.failRequest(request.requestId, "cancelled", "request_cancelled");
-                observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "cancelled", elapsedMs: Math.round(performance.now() - observed.startedAt), failure: "cancelled" });
+                observed.capture({
+                    kind: "ai_operation_finished",
+                    operation: "assistant",
+                    outcome: "cancelled",
+                    elapsedMs: observed.elapsedMs(),
+                    failure: "cancelled"
+                });
+
                 return;
             }
 
-            observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "completed", elapsedMs: Math.round(performance.now() - observed.startedAt) });
+            observed.capture({
+                kind: "ai_operation_finished",
+                operation: "assistant",
+                outcome: "completed",
+                elapsedMs: observed.elapsedMs()
+            });
         } catch (error) {
             if (initialized)
                 this.assistant.failRequest(request.requestId, signal.aborted ? "cancelled" : "failed", signal.aborted ? "request_cancelled" : this.errorCode(error));
 
-            observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: signal.aborted ? "cancelled" : "failed", elapsedMs: Math.round(performance.now() - observed.startedAt), failure: signal.aborted ? "cancelled" : "unknown" });
+            observed.capture({
+                kind: "ai_operation_finished",
+                operation: "assistant",
+                outcome: signal.aborted ? "cancelled" : "failed",
+                elapsedMs: observed.elapsedMs(),
+                failure: signal.aborted ? "cancelled" : "unknown"
+            });
+
             throw error;
         }
     }
@@ -129,13 +151,24 @@ export class AssistantService {
 
     private initialEvents(request: PreparedAssistantRequest): AssistantEvent[] {
         return [
-            { type: ASSISTANT_EVENT.ACCEPTED, requestId: request.requestId },
+            {
+                type: ASSISTANT_EVENT.ACCEPTED,
+                requestId: request.requestId
+            },
             {
                 type: ASSISTANT_EVENT.SKILL_RESOLVED,
                 requestId: request.requestId,
                 ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {})
             },
-            ...(!request.usesCapabilityLoop ? [{ type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: activityForEditorialOperation(request.operation), status: "started" as const } }] : [])
+            ...(
+                !request.usesCapabilityLoop
+                    ? [{
+                        type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY,
+                        requestId: request.requestId,
+                        activity: { summary: activityForEditorialOperation(request.operation), status: "started" as const }
+                    }]
+                    : []
+            )
         ];
     }
 

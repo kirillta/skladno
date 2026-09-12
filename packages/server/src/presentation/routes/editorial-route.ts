@@ -4,9 +4,9 @@ import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, HTTP_
 import { EditorialService } from "../../application/services/editorial/editorial-service.js";
 import type { EditorialServiceRequest } from "../../application/models/editorial/editorial-request.js";
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
-import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
+import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
 import { isEditorialOperation } from "../../application/helpers/editorial/workflow-prompt.js";
 import { object, readJson, string } from "../transport/json.js";
 

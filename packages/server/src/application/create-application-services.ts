@@ -1,25 +1,25 @@
 import type { ApplicationServices } from "./application-services.js";
 import { ArticleService } from "./services/articles/article-service.js";
 import { AssistantService } from "./services/assistant/assistant-service.js";
-import type { AvailableModelsProvider } from "./ports/available-models-provider.js";
-import type { BackupManager } from "./ports/backup-manager.js";
-import type { AssistantArtifactStore } from "./ports/assistant-artifact-store.js";
-import type { AssistantStore } from "./ports/assistant-store.js";
-import type { EditorialEngineResolver } from "./ports/editorial-engine-resolver.js";
+import type { AvailableModelsProvider } from "./services/settings/available-models-provider.js";
+import type { BackupManager } from "./services/settings/backup-manager.js";
+import type { AssistantArtifactStore } from "./services/assistant/assistant-artifact-store.js";
+import type { AssistantStore } from "./services/assistant/assistant-store.js";
+import type { EditorialEngineResolver } from "./services/editorial/editorial-engine-resolver.js";
 import { PublishingService } from "./services/publishing/publishing-service.js";
 import { StyleCorpusService } from "./services/editorial/style-corpus-service.js";
 import { ApplicationSettingsService } from "./services/settings/application-settings-service.js";
 import { ProposalSummaryService } from "./services/editorial/proposal-summary-service.js";
 import { FactCheckService } from "./services/editorial/fact-check-service.js";
-import type { ArticleStore } from "./ports/article-store.js";
-import type { SettingsStore } from "./ports/settings-store.js";
-import type { StyleCorpusStore } from "./ports/style-corpus-store.js";
-import type { SystemDateTimeFormatProvider } from "./ports/system-date-time-format-provider.js";
-import type { ManagedCredentials } from "./ports/managed-credentials.js";
+import type { ArticleStore } from "./services/articles/article-store.js";
+import type { SettingsStore } from "./services/settings/settings-store.js";
+import type { StyleCorpusStore } from "./services/editorial/style-corpus-store.js";
+import type { SystemDateTimeFormatProvider } from "./services/settings/system-date-time-format-provider.js";
+import type { CredentialStore } from "./services/settings/credential-store.js";
 import { EditorialCapabilityCatalog } from "./services/assistant/editorial-capability-catalog.js";
 import type { EditorialService } from "./services/editorial/editorial-service.js";
 import { AssistantSkillCatalog, builtInSkillSource } from "./services/assistant/assistant-skill-catalog.js";
-import type { TelemetryObserver } from "./ports/telemetry-observer.js";
+import type { TelemetryObserver } from "./telemetry/telemetry-observer.js";
 
 
 export interface CreateApplicationServicesOptions {
@@ -34,7 +34,7 @@ export interface CreateApplicationServicesOptions {
     createConnectionId: () => string;
     factChecks?: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void };
     backups?: BackupManager;
-    credentials?: ManagedCredentials;
+    credentialStore?: CredentialStore;
     editorial?: EditorialService;
     telemetry?: TelemetryObserver;
 }
@@ -52,7 +52,7 @@ export function createApplicationServices({
     createConnectionId,
     factChecks = { list: () => [], resolve: () => undefined, save: () => undefined },
     backups,
-    credentials,
+    credentialStore,
     editorial,
     telemetry,
 }: CreateApplicationServicesOptions): ApplicationServices {
@@ -68,7 +68,7 @@ export function createApplicationServices({
     return {
         articles: articleService,
         assistant: new AssistantService(articles, assistant, styleCorpus, artifacts, engines, factChecks, capabilities, telemetry, skills),
-        settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId, backups, credentials),
+        settings: new ApplicationSettingsService(settings, dateTimeFormat, models, createConnectionId, backups, credentialStore),
         publishing,
         styleCorpus: styleCorpusService,
         proposalSummaries: new ProposalSummaryService(engines, artifacts),

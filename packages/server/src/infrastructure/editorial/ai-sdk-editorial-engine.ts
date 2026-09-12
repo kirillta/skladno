@@ -2,14 +2,14 @@ import { generateText, Output, streamText, type LanguageModel, type ModelMessage
 import { randomUUID } from "node:crypto";
 import { EDITORIAL_OPERATION, type AiProvider } from "@skladno/shared";
 
-import type { EditorialConversationRequest } from "../../application/ports/editorial-conversation-request.js";
-import type { EditorialAssistantRequest } from "../../application/ports/editorial-assistant-request.js";
-import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
-import type { EditorialEngineEvent } from "../../application/ports/editorial-engine-event.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
-import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
-import type { EditorialEngineRequest } from "../../application/ports/editorial-engine-request.js";
+import type { EditorialConversationRequest } from "../../application/models/editorial/editorial-conversation-request.js";
+import type { EditorialAssistantRequest } from "../../application/models/editorial/editorial-assistant-request.js";
+import type { EditorialEngine } from "../../application/services/editorial/editorial-engine.js";
+import type { EditorialEngineEvent } from "../../application/models/editorial/editorial-engine-event.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
+import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
+import type { EditorialEngineRequest } from "../../application/models/editorial/editorial-engine-request.js";
 import { protectArticleSpans, restoreProtectedSpans } from "../../application/helpers/editorial/translation.js";
 import { authorControlInstruction, createEditorialMessages } from "../../application/helpers/editorial/workflow-prompt.js";
 import { streamFactCheck, type FactCheckProvider } from "./fact-check-workflow.js";

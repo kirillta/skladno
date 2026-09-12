@@ -1,17 +1,20 @@
 import { APPLICATION_ERROR, BUILT_IN_SKILL, HTTP_STATUS, type BuiltInSkillId } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../ports/editorial-engine-events.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../ports/editorial-engine-errors.js";
-import { EditorialEngineError } from "../../ports/editorial-engine-error.js";
-import type { EditorialEngineEvent } from "../../ports/editorial-engine-event.js";
-import type { EditorialAssistantTool } from "../../ports/editorial-assistant-request.js";
-import { EDITORIAL_CAPABILITY, isValidatedEditorialCapabilityCall, type EditorialCapabilityDefinition, type StreamContext } from "./editorial-capability-catalog.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../models/editorial/editorial-engine-events.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../errors/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../errors/editorial-engine-error.js";
+import type { EditorialEngineEvent } from "../../models/editorial/editorial-engine-event.js";
+import type { EditorialAssistantTool } from "../../models/editorial/editorial-assistant-tool.js";
+import { EDITORIAL_CAPABILITY, isValidatedEditorialCapabilityCall, type EditorialCapabilityCatalog, type EditorialCapabilityDefinition, type StreamContext } from "./editorial-capability-catalog.js";
 import type { ActionCapability } from "../../models/assistant/action-capability.js";
 import type { CompletionEvent } from "../../models/assistant/completion-event.js";
 import type { PreparedAssistantRequest } from "../../models/assistant/prepared-assistant-request.js";
 import type { ReadCapability } from "../../models/assistant/read-capability.js";
-import type { AssistantCapabilityLoopDependencies } from "../../models/assistant/assistant-capability-loop-dependencies.js";
+import type { AssistantStore } from "./assistant-store.js";
+import type { EditorialEngineResolver } from "../editorial/editorial-engine-resolver.js";
+import type { ConversationHistory } from "../../models/assistant/conversation-history.js";
+import { AssistantSkillCatalog } from "./assistant-skill-catalog.js";
 
 
 function isTransientReadFailure(error: unknown): boolean {
@@ -20,7 +23,13 @@ function isTransientReadFailure(error: unknown): boolean {
 
 
 export class AssistantCapabilityLoop {
-    constructor(private readonly dependencies: AssistantCapabilityLoopDependencies) { }
+    constructor(private readonly dependencies: {
+        assistant: Pick<AssistantStore, "setExecution">;
+        engines: Pick<EditorialEngineResolver, "resolveAssistantActionIntentVerifier">;
+        capabilities?: Pick<EditorialCapabilityCatalog, "definitions" | "discover" | "read" | "action" | "stream">;
+        skills: AssistantSkillCatalog;
+        conversationHistory: (articleId: string, limit?: number) => ConversationHistory;
+    }) { }
 
 
     async *stream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
@@ -66,16 +75,16 @@ export class AssistantCapabilityLoop {
 
 
     private initialCapabilities(skill: BuiltInSkillId): readonly string[] {
-        if (skill === BUILT_IN_SKILL.FACT_CHECKING)
-            return [EDITORIAL_CAPABILITY.FACT_CHECK, EDITORIAL_CAPABILITY.INSPECT_FACT_CHECKS];
-
-        if (skill === BUILT_IN_SKILL.STYLE_REVIEW)
-            return [EDITORIAL_CAPABILITY.STYLE_REVIEW, EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS, EDITORIAL_CAPABILITY.INSPECT_ARTICLE_STYLE_RULES];
-
-        if (skill === BUILT_IN_SKILL.TRANSLATION)
-            return [EDITORIAL_CAPABILITY.TRANSLATE, EDITORIAL_CAPABILITY.INSPECT_TRANSLATIONS];
-
-        return [EDITORIAL_CAPABILITY.GENERATE_PROPOSAL];
+        switch (skill) {
+            case BUILT_IN_SKILL.FACT_CHECKING:
+                return [EDITORIAL_CAPABILITY.FACT_CHECK, EDITORIAL_CAPABILITY.INSPECT_FACT_CHECKS];
+            case BUILT_IN_SKILL.STYLE_REVIEW:
+                return [EDITORIAL_CAPABILITY.STYLE_REVIEW, EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS, EDITORIAL_CAPABILITY.INSPECT_ARTICLE_STYLE_RULES];
+            case BUILT_IN_SKILL.TRANSLATION:
+                return [EDITORIAL_CAPABILITY.TRANSLATE, EDITORIAL_CAPABILITY.INSPECT_TRANSLATIONS];
+            default:
+                return [EDITORIAL_CAPABILITY.GENERATE_PROPOSAL];
+        }
     }
 
 

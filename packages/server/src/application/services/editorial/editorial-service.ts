@@ -1,5 +1,6 @@
 import {
     APPLICATION_ERROR,
+    beginTimedTelemetryCapture,
     EDITORIAL_OPERATION,
     HTTP_STATUS,
     type Article,
@@ -9,21 +10,18 @@ import {
     type FactCheck,
     type StyleProfile
 } from "@skladno/shared";
-import { performance } from "node:perf_hooks";
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
-import type { EditorialEngine } from "../../ports/editorial-engine.js";
-import type { EditorialEngineEvent } from "../../ports/editorial-engine-event.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../ports/editorial-engine-errors.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../ports/editorial-engine-events.js";
-import { EditorialEngineError } from "../../ports/editorial-engine-error.js";
-import type { EditorialEngineResolver } from "../../ports/editorial-engine-resolver.js";
+import type { EditorialEngine } from "./editorial-engine.js";
+import type { EditorialEngineEvent } from "../../models/editorial/editorial-engine-event.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../errors/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../models/editorial/editorial-engine-events.js";
+import { EditorialEngineError } from "../../errors/editorial-engine-error.js";
+import type { EditorialEngineResolver } from "./editorial-engine-resolver.js";
 import type { EditorialServiceRequest } from "../../models/editorial/editorial-request.js";
 import { reusableFactFindings } from "../../helpers/editorial/reusable-fact-findings.js";
 import { persistFactCheckArtifact } from "../../helpers/editorial/persist-fact-check-artifact.js";
 import type { FactCheckArtifactStore } from "../../models/editorial/fact-check-artifact-store.js";
-import type { TelemetryObserver } from "../../ports/telemetry-observer.js";
-
-const noTelemetry: TelemetryObserver = { beginCapture: () => () => undefined };
+import type { TelemetryObserver } from "../../telemetry/telemetry-observer.js";
 
 
 interface EditorialStreamContext {
@@ -200,13 +198,12 @@ export class EditorialService {
         private readonly engines: EditorialEngineResolver,
         private readonly sessionContinuationEnabled: boolean,
         private readonly factChecks: FactChecksStore = { list: () => [], save: () => undefined },
-        private readonly telemetry: TelemetryObserver = noTelemetry,
+        private readonly telemetry?: TelemetryObserver,
     ) { }
 
 
     async *stream(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const capture = this.telemetry.beginCapture();
-        const startedAt = performance.now();
+        const observed = beginTimedTelemetryCapture(this.telemetry);
 
         try {
             const context = prepareEditorialStream(this.articles, this.sessions, this.styleCorpus, this.engines, this.sessionContinuationEnabled, request);
@@ -217,12 +214,12 @@ export class EditorialService {
                 signal,
                 (event) => persistCompletedEditorialOutput(this.sessions, this.artifacts, this.factChecks, request, context, this.sessionContinuationEnabled, event),
             );
-            capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "completed", elapsedMs: Math.round(performance.now() - startedAt), ...(signal.aborted ? { failure: "cancelled" as const } : {}) });
+            observed.capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "completed", elapsedMs: observed.elapsedMs(), ...(signal.aborted ? { failure: "cancelled" as const } : {}) });
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
                 this.sessions.remove(request.articleId);
 
-            capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "failed", elapsedMs: Math.round(performance.now() - startedAt), failure: signal.aborted ? "cancelled" : "unknown" });
+            observed.capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "failed", elapsedMs: observed.elapsedMs(), failure: signal.aborted ? "cancelled" : "unknown" });
             throw error;
         }
     }

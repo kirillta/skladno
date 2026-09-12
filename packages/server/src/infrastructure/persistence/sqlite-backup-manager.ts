@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { BackupManager } from "../../application/ports/backup-manager.js";
+import type { BackupManager } from "../../application/services/settings/backup-manager.js";
 import type { SqliteDatabase } from "./database.js";
 
 

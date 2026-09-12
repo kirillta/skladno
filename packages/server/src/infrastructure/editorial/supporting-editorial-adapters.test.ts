@@ -3,7 +3,7 @@ import test from "node:test";
 import { MockLanguageModelV3 } from "ai/test";
 import type { LanguageModelV3GenerateResult } from "@ai-sdk/provider";
 
-import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
 import { AiSdkProposalSummaryGeneratorAdapter } from "./ai-sdk-proposal-summary-generator-adaptor.js";
 import { AiSdkArticleTitleGeneratorAdapter } from "./article-title-generator.js";
 

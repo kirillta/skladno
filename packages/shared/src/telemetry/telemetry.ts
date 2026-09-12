@@ -15,6 +15,34 @@ export type TelemetryEvent =
     | { kind: "app_failure"; source: "renderer" | "child_process"; failure: TelemetryFailureCategory; termination: TelemetryTermination };
 
 
+export type TelemetryCapture = (event: TelemetryEvent) => void;
+
+
+export interface TelemetryCaptureSource {
+    beginCapture(): TelemetryCapture;
+}
+
+
+export interface TimedTelemetryCapture {
+    capture: TelemetryCapture;
+    elapsedMs(): number;
+}
+
+
+const noTelemetryCapture: TelemetryCapture = () => undefined;
+
+
+export function beginTelemetryCapture(source?: TelemetryCaptureSource): TelemetryCapture {
+    return source?.beginCapture() ?? noTelemetryCapture;
+}
+
+
+export function beginTimedTelemetryCapture(source?: TelemetryCaptureSource): TimedTelemetryCapture {
+    const startedAt = performance.now();
+    return { capture: beginTelemetryCapture(source), elapsedMs: () => Math.round(performance.now() - startedAt) };
+}
+
+
 export interface TelemetryConsent {
     enabled: boolean;
     supported: boolean;

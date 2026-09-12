@@ -4,7 +4,7 @@ import { ApplicationServiceError } from "../../errors/application-service-error.
 import type { ArticleService } from "../articles/article-service.js";
 import type { EditorialService } from "../editorial/editorial-service.js";
 import type { PublishingService } from "../publishing/publishing-service.js";
-import type { EditorialEngineEvent } from "../../ports/editorial-engine-event.js";
+import type { EditorialEngineEvent } from "../../models/editorial/editorial-engine-event.js";
 import type { StyleCorpusService } from "../editorial/style-corpus-service.js";
 
 

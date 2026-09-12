@@ -31,15 +31,20 @@ export { desktopShellCommands, isDesktopShellCommand, type DesktopShellClient, t
 export { isDesktopUpdateState, type DesktopUpdateClient, type DesktopUpdateState } from "./application/desktop-updates.js";
 export { HTTP_METHOD, HTTP_STATUS } from "./transport/http.js";
 export {
+    beginTelemetryCapture,
+    beginTimedTelemetryCapture,
     isTelemetryEvent,
     isTelemetryFailureCategory,
     telemetrySchemaVersion,
     type DesktopTelemetryClient,
+    type TelemetryCapture,
+    type TelemetryCaptureSource,
     type TelemetryConsent,
     type TelemetryEvent,
     type TelemetryFailureCategory,
     type TelemetryOperation,
     type TelemetryTermination,
+    type TimedTelemetryCapture,
 } from "./telemetry/telemetry.js";
 export {
     applicationSettingsPath,

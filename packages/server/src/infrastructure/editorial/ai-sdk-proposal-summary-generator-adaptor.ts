@@ -2,9 +2,9 @@ import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import type { ProposalChange, ProposalChangeSummary } from "@skladno/shared";
 
-import type { ProposalSummaryGenerator } from "../../application/ports/proposal-summary-generator.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
-import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
+import type { ProposalSummaryGenerator } from "../../application/services/editorial/proposal-summary-generator.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
 import { aiSdkGenerationOptions, isAcceptedFinish, type SupportingTextProviderOptions } from "./ai-sdk-provider.js";
 
 

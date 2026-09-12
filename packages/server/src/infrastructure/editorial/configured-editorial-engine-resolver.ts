@@ -1,14 +1,14 @@
 import { AI_PROVIDER, parseAiModelPreferenceId, resolveBuiltInSkillId, type AiConnection, type AiProvider, type AppModelPreference, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
 
-import type { EditorialEngineResolver } from "../../application/ports/editorial-engine-resolver.js";
-import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
-import type { SettingsStore } from "../../application/ports/settings-store.js";
+import type { EditorialEngineResolver } from "../../application/services/editorial/editorial-engine-resolver.js";
+import type { EditorialEngine } from "../../application/services/editorial/editorial-engine.js";
+import type { SettingsStore } from "../../application/services/settings/settings-store.js";
 import type { ServerConfig } from "../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
 import { AiSdkProposalSummaryGeneratorAdapter } from "./ai-sdk-proposal-summary-generator-adaptor.js";
 import { AiSdkArticleTitleGeneratorAdapter } from "./article-title-generator.js";
 import { AiSdkAssistantActionIntentVerifier } from "./ai-sdk-assistant-action-intent-verifier.js";
-import type { ManagedCredentials } from "../../application/ports/managed-credentials.js";
+import type { CredentialStore } from "../../application/services/settings/credential-store.js";
 import { createProviderModel } from "./provider-model.js";
 import { editorialModelCapabilities, supportsEditorialOperation } from "./provider-capabilities.js";
 import { supportingTextProviderOptions } from "./ai-sdk-provider.js";
@@ -34,7 +34,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
     constructor(
         private readonly config: ServerConfig,
         private readonly settings: SettingsStore,
-        private readonly credentials?: ManagedCredentials,
+        private readonly credentialStore?: CredentialStore,
     ) { }
 
 
@@ -136,6 +136,6 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
     private connectionApiKey(connection: AiConnection): string | undefined {
         return connection.credentialSource.kind === "environment-variable"
             ? process.env[connection.credentialSource.environmentVariableName]
-            : this.credentials?.get(connection.id);
+            : this.credentialStore?.get(connection.id);
     }
 }

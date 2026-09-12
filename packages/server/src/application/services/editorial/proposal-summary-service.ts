@@ -1,7 +1,7 @@
 import { APPLICATION_ERROR, HTTP_STATUS, type ProposalChange, type ProposalChangeSummary } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
-import type { EditorialEngineResolver } from "../../ports/editorial-engine-resolver.js";
+import type { EditorialEngineResolver } from "./editorial-engine-resolver.js";
 
 
 interface ProposalSummaryArtifactStore {

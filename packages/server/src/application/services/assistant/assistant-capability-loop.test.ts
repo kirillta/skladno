@@ -5,8 +5,8 @@ import { BUILT_IN_SKILL, type AssistantSkillReference, type AssistantSkillSummar
 import { AssistantCapabilityLoop } from "./assistant-capability-loop.js";
 import { AssistantSkillCatalog, type AssistantSkillSource } from "./assistant-skill-catalog.js";
 import type { PreparedAssistantRequest } from "../../models/assistant/prepared-assistant-request.js";
-import type { EditorialAssistantRequest } from "../../ports/editorial-assistant-request.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../ports/editorial-engine-events.js";
+import type { EditorialAssistantRequest } from "../../models/editorial/editorial-assistant-request.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../models/editorial/editorial-engine-events.js";
 
 
 test("Assistant execution loads Skills from its catalog", async () => {

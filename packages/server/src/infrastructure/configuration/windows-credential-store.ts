@@ -2,14 +2,14 @@ import { Entry } from "@napi-rs/keyring";
 import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
-import type { ManagedCredentials } from "../../application/ports/managed-credentials.js";
+import type { CredentialStore } from "../../application/services/settings/credential-store.js";
 
 
 const service = "io.github.kirillta.skladno";
 
 
 /** Windows Credential Manager adapter. It deliberately has no plaintext fallback. */
-export class WindowsManagedCredentials implements ManagedCredentials {
+export class WindowsCredentialStore implements CredentialStore {
     available(): boolean {
         return process.platform === "win32";
     }

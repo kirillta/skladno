@@ -1,11 +1,11 @@
 import { APPLICATION_ERROR, aiModelPreferenceId, AI_PROVIDER, HTTP_STATUS, isAiProvider, parseAiModelPreferenceId, type AiConnection, type AiProvider, type AppModelPreference, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
-import type { AvailableModelsProvider } from "../../ports/available-models-provider.js";
-import type { BackupManager } from "../../ports/backup-manager.js";
-import type { SettingsStore } from "../../ports/settings-store.js";
-import type { SystemDateTimeFormatProvider } from "../../ports/system-date-time-format-provider.js";
-import type { ManagedCredentials } from "../../ports/managed-credentials.js";
+import type { AvailableModelsProvider } from "./available-models-provider.js";
+import type { BackupManager } from "./backup-manager.js";
+import type { SettingsStore } from "./settings-store.js";
+import type { SystemDateTimeFormatProvider } from "./system-date-time-format-provider.js";
+import type { CredentialStore } from "./credential-store.js";
 import { aiConnections, appModel, backupPolicy, environmentVariableName, generalSettings, keyBindingOverrides, modelPreferences, requestedKeyBindingOverrides } from "../../helpers/settings/application-settings-normalizers.js";
 
 
@@ -16,7 +16,7 @@ export class ApplicationSettingsService {
         private readonly models: AvailableModelsProvider,
         private readonly createConnectionId: () => string,
         private readonly backups?: BackupManager,
-        private readonly credentials?: ManagedCredentials,
+        private readonly credentialStore?: CredentialStore,
     ) { }
 
 
@@ -123,18 +123,26 @@ export class ApplicationSettingsService {
 
 
     async createManagedAiConnection(value: { provider?: unknown; label?: unknown; apiKey?: unknown }): Promise<AiConnection> {
-        if (!this.credentials?.available() || typeof value.apiKey !== "string" || !value.apiKey.trim())
+        if (!this.credentialStore?.available() || typeof value.apiKey !== "string" || !value.apiKey.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
         const provider = this.provider(value.provider);
-        const connection: AiConnection = { id: this.createConnectionId(), provider, label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.providerLabel(provider), credentialSource: { kind: "managed" }, active: true, status: "unchecked" };
+        const connection: AiConnection = {
+            id: this.createConnectionId(),
+            provider,
+            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.providerLabel(provider),
+            credentialSource: { kind: "managed" },
+            active: true,
+            status: "unchecked"
+        };
+
         try {
             await this.models.list(connection, value.apiKey);
         } catch {
             throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
         }
 
-        this.credentials.set(connection.id, value.apiKey);
+        this.credentialStore.set(connection.id, value.apiKey);
         try {
             const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
             saved.connections.push({ ...connection, status: "connected", lastCheckedAt: new Date().toISOString() });
@@ -142,7 +150,7 @@ export class ApplicationSettingsService {
 
             return saved.connections.at(-1)!;
         } catch (error) {
-            this.credentials.delete(connection.id);
+            this.credentialStore.delete(connection.id);
             throw error;
         }
     }
@@ -210,7 +218,7 @@ export class ApplicationSettingsService {
     deleteAiConnection(connectionId: string): void {
         const { saved, index, connection } = this.connectionState(connectionId);
         if (connection.credentialSource.kind === "managed")
-            this.credentials?.delete(connection.id);
+            this.credentialStore?.delete(connection.id);
 
         saved.connections.splice(index, 1);
         this.settings.set("application-ai-connections", { connections: saved.connections });
@@ -220,7 +228,8 @@ export class ApplicationSettingsService {
     async listAiModels(): Promise<AvailableAiModel[]> {
         const saved = aiConnections(this.settings.get("application-ai-connections")?.value);
         const lists = await Promise.allSettled(saved.connections.filter((connection) => connection.active).map(async (connection) =>
-            (await this.models.list(connection)).map((model) => ({ id: aiModelPreferenceId(connection.id, model), model, connectionId: connection.id, provider: connection.provider }))));
+            (await this.models.list(connection))
+                .map((model) => ({ id: aiModelPreferenceId(connection.id, model), model, connectionId: connection.id, provider: connection.provider }))));
 
         return lists.flatMap((result) => result.status === "fulfilled" ? result.value : []);
     }

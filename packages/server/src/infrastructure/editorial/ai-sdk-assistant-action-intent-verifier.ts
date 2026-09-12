@@ -2,7 +2,7 @@ import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import type { AssistantAuthorizedAction } from "@skladno/shared";
 
-import type { AssistantActionIntentVerifier } from "../../application/ports/assistant-action-intent-verifier.js";
+import type { AssistantActionIntentVerifier } from "../../application/services/editorial/assistant-action-intent-verifier.js";
 import { aiSdkGenerationOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
 import type { SupportingTextProviderOptions } from "./ai-sdk-provider.js";
 

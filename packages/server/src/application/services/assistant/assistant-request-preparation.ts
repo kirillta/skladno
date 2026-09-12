@@ -1,11 +1,11 @@
 import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantMessage, type BuiltInSkillId, type EditorialOperation } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
-import type { ArticleStore } from "../../ports/article-store.js";
-import type { AssistantStore } from "../../ports/assistant-store.js";
-import type { EditorialEngine } from "../../ports/editorial-engine.js";
-import type { EditorialEngineResolver } from "../../ports/editorial-engine-resolver.js";
-import type { StyleCorpusStore } from "../../ports/style-corpus-store.js";
+import type { ArticleStore } from "../articles/article-store.js";
+import type { AssistantStore } from "./assistant-store.js";
+import type { EditorialEngine } from "../editorial/editorial-engine.js";
+import type { EditorialEngineResolver } from "../editorial/editorial-engine-resolver.js";
+import type { StyleCorpusStore } from "../editorial/style-corpus-store.js";
 import { capabilityForEditorialOperation, type EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
 import type { PreparedAssistantRequest } from "../../models/assistant/prepared-assistant-request.js";
 import type { ReplayedAssistantRequest } from "../../models/assistant/replayed-assistant-request.js";
@@ -26,17 +26,14 @@ function operationFor(skill: BuiltInSkillId): EditorialOperation {
 }
 
 
-export interface AssistantRequestPreparationDependencies {
-    articles: ArticleStore;
-    assistant: AssistantStore;
-    styleCorpus: StyleCorpusStore;
-    engines: EditorialEngineResolver;
-    capabilities?: EditorialCapabilityCatalog;
-}
-
-
 export class AssistantRequestPreparation {
-    constructor(private readonly dependencies: AssistantRequestPreparationDependencies) { }
+    constructor(private readonly dependencies: {
+        articles: ArticleStore;
+        assistant: AssistantStore;
+        styleCorpus: StyleCorpusStore;
+        engines: EditorialEngineResolver;
+        capabilities?: EditorialCapabilityCatalog;
+    }) { }
 
 
     listMessages(articleId: string): AssistantMessage[] {
@@ -139,5 +136,4 @@ export class AssistantRequestPreparation {
             ? { publishingCharacterLimit: getPublishLimitProfile(publishingProfileId).characterLimit }
             : {};
     }
-
 }

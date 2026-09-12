@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, renameSync, rmSync } from "node:fs";
 
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
-import type { TelemetryEvent } from "@skladno/shared";
+import { beginTelemetryCapture, type TelemetryCaptureSource } from "@skladno/shared";
 
 import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings } from "../infrastructure/runtime-settings.js";
 
@@ -69,13 +69,13 @@ function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath
 
 
 /** Applies a validated, private staged snapshot before SQLite opens. */
-export function applyPendingRestore({ runtimePath, databasePath, telemetry }: { runtimePath: string; databasePath: string; telemetry?: { beginCapture(): (event: TelemetryEvent) => void } }): PendingRestore | undefined {
+export function applyPendingRestore({ runtimePath, databasePath, telemetry }: { runtimePath: string; databasePath: string; telemetry?: TelemetryCaptureSource }): PendingRestore | undefined {
     const runtime = readRuntimeSettings(runtimePath);
     const pending = runtime.pendingRestore;
     if (!pending)
         return undefined;
 
-    const capture = telemetry?.beginCapture() ?? (() => undefined);
+    const capture = beginTelemetryCapture(telemetry);
     const originalPath = `${databasePath}.before-restore`;
     try {
         if (pending.phase === "ready")

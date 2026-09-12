@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ProposalSummaryGenerator } from "../../ports/proposal-summary-generator.js";
+import type { ProposalSummaryGenerator } from "./proposal-summary-generator.js";
 import { ProposalSummaryService } from "./proposal-summary-service.js";
 
 

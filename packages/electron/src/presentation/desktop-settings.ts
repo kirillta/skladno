@@ -1,11 +1,10 @@
 import { copyFileSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { performance } from "node:perf_hooks";
 import { basename, join, parse, relative, resolve } from "node:path";
 import type { Dialog, IpcMain, Shell } from "electron";
 import type { ApplicationServices } from "@skladno/server/electron";
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
-import { type DesktopSettingsLocations, type ElectronMessages, type TelemetryEvent } from "@skladno/shared";
+import { beginTimedTelemetryCapture, type DesktopSettingsLocations, type ElectronMessages, type TelemetryCaptureSource } from "@skladno/shared";
 import { readRuntimeSettings, updateRuntimeSettings } from "../infrastructure/runtime-settings.js";
 import { desktopSettingsChannel } from "./desktop-settings-client.js";
 
@@ -16,9 +15,8 @@ function overlaps(first: string, second: string): boolean {
 }
 
 
-function createNativeBackup(database: { exec(sql: string): void }, backupDirectory: string, telemetry?: { beginCapture(): (event: TelemetryEvent) => void }): { path: string; createdAt: string } {
-    const capture = telemetry?.beginCapture() ?? (() => undefined);
-    const startedAt = performance.now();
+function createNativeBackup(database: { exec(sql: string): void }, backupDirectory: string, telemetry?: TelemetryCaptureSource): { path: string; createdAt: string } {
+    const observed = beginTimedTelemetryCapture(telemetry);
     try {
         mkdirSync(backupDirectory, { recursive: true });
         const created = new Date();
@@ -31,10 +29,10 @@ function createNativeBackup(database: { exec(sql: string): void }, backupDirecto
         if (statSync(path).size === 0)
             throw new Error("Backup is empty.");
 
-        capture({ kind: "backup_finished", outcome: "completed", elapsedMs: Math.round(performance.now() - startedAt) });
+        observed.capture({ kind: "backup_finished", outcome: "completed", elapsedMs: observed.elapsedMs() });
         return { path, createdAt: created.toISOString() };
     } catch (error) {
-        capture({ kind: "backup_finished", outcome: "failed", elapsedMs: Math.round(performance.now() - startedAt), failure: "unknown" });
+        observed.capture({ kind: "backup_finished", outcome: "failed", elapsedMs: observed.elapsedMs(), failure: "unknown" });
         throw error;
     }
 }
@@ -53,7 +51,7 @@ interface DesktopSettingsAdapterOptions {
     userDataPath: string;
     dataDirectory: string;
     database: { exec(sql: string): void };
-    telemetry?: { beginCapture(): (event: TelemetryEvent) => void };
+    telemetry?: TelemetryCaptureSource;
     services: ApplicationServices;
     messages: ElectronMessages;
     chooseDirectory(): Promise<string | undefined>;

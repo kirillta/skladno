@@ -1,6 +1,6 @@
 import type { AssistantAuthorizedAction, BuiltInSkillId, EditorialOperation } from "@skladno/shared";
 
-import type { EditorialEngine } from "../../ports/editorial-engine.js";
+import type { EditorialEngine } from "../../services/editorial/editorial-engine.js";
 import type { ActionCapability } from "./action-capability.js";
 import type { ReplayedAssistantRequest } from "./replayed-assistant-request.js";
 

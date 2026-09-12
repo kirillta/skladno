@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
-import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-events.js";
+import { EDITORIAL_ENGINE_EVENT } from "../application/models/editorial/editorial-engine-events.js";
 import { FixtureEngine, withService } from "./editorial-integration.test-utils.js";
 
 // Product scenarios: editorial-workflows.translation-preserves-source

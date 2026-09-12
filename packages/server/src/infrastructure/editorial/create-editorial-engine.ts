@@ -1,7 +1,7 @@
 import { AI_PROVIDER, type AiProvider } from "@skladno/shared";
 import { createOpenAI } from "@ai-sdk/openai";
 
-import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
+import type { EditorialEngine } from "../../application/services/editorial/editorial-engine.js";
 import { AiSdkEditorialEngine } from "./ai-sdk-editorial-engine.js";
 import type { FactCheckProvider } from "./fact-check-workflow.js";
 import { createOpenAIFactCheckProvider } from "./openai-fact-check-provider.js";

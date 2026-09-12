@@ -2,11 +2,11 @@ import { isStepCount, ToolLoopAgent, type LanguageModel, type ToolSet } from "ai
 import { randomUUID } from "node:crypto";
 import type { AiProvider, ReasoningEffort } from "@skladno/shared";
 
-import type { EditorialAssistantRequest } from "../../application/ports/editorial-assistant-request.js";
-import type { EditorialEngineEvent } from "../../application/ports/editorial-engine-event.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
-import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
+import type { EditorialAssistantRequest } from "../../application/models/editorial/editorial-assistant-request.js";
+import type { EditorialEngineEvent } from "../../application/models/editorial/editorial-engine-event.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
+import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
 import { assistantConversationPrompt, assistantStepOptions, createAssistantTools } from "./ai-sdk-assistant.js";
 import { continuationToken, editorialProviderOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
 

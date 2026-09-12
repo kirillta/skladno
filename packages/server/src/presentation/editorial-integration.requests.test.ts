@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
-import type { EditorialEngine } from "../application/ports/editorial-engine.js";
-import type { EditorialEngineEvent } from "../application/ports/editorial-engine-event.js";
-import { EDITORIAL_ENGINE_EVENT } from "../application/ports/editorial-engine-events.js";
-import { EditorialEngineError } from "../application/ports/editorial-engine-error.js";
+import type { EditorialEngine } from "../application/services/editorial/editorial-engine.js";
+import type { EditorialEngineEvent } from "../application/models/editorial/editorial-engine-event.js";
+import { EDITORIAL_ENGINE_EVENT } from "../application/models/editorial/editorial-engine-events.js";
+import { EditorialEngineError } from "../application/errors/editorial-engine-error.js";
 import { FixtureEngine, noConversation, withService } from "./editorial-integration.test-utils.js";
 
 // Product scenarios: editorial-workflows.assistant-stream-failure-safe

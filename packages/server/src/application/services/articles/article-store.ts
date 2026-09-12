@@ -19,8 +19,3 @@ export interface ArticleStore {
     restoreRevision(articleId: string, revisionId: string): ArticleRevision;
     appendRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision;
 }
-
-
-export interface AssistantGreetingStore {
-    ensureGreeting(articleId: string): void;
-}

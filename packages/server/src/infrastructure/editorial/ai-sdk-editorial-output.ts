@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { type StyleProfile, type StyleReview } from "@skladno/shared";
 
-import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
-import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
 
 export const styleReviewSchema = z.object({
     proposal: z.string().min(1),

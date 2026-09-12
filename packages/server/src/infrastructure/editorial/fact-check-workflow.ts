@@ -1,7 +1,7 @@
 import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding } from "@skladno/shared";
 
-import type { EditorialEngineEvent } from "../../application/ports/editorial-engine-event.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
+import type { EditorialEngineEvent } from "../../application/models/editorial/editorial-engine-event.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
 
 
 export interface FactCheckResearch {

@@ -1,7 +1,8 @@
-import { type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
+import { beginTelemetryCapture, type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
-import type { ArticleStore, AssistantGreetingStore } from "../../ports/article-store.js";
-import type { TelemetryObserver } from "../../ports/telemetry-observer.js";
+import type { ArticleStore } from "./article-store.js";
+import type { AssistantGreetingStore } from "./assistant-greeting-store.js";
+import type { TelemetryObserver } from "../../telemetry/telemetry-observer.js";
 
 
 export class ArticleService {
@@ -86,7 +87,7 @@ export class ArticleService {
 
 
     restoreRevision(articleId: string, revisionId: string): ArticleRevision {
-        const capture = this.telemetry?.beginCapture() ?? (() => undefined);
+        const capture = beginTelemetryCapture(this.telemetry);
         try {
             const revision = this.store.restoreRevision(articleId, revisionId);
             capture({ kind: "recovery_finished", recovery: "revision", outcome: "completed" });

@@ -2,15 +2,15 @@ import { APPLICATION_ERROR, ASSISTANT_EVENT, HTTP_STATUS, type AssistantEditoria
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
 import { persistFactCheckArtifact } from "../../helpers/editorial/persist-fact-check-artifact.js";
-import type { AssistantArtifactStore } from "../../ports/assistant-artifact-store.js";
-import type { ArticleStore } from "../../ports/article-store.js";
-import type { AssistantStore } from "../../ports/assistant-store.js";
 import { EDITORIAL_CAPABILITY } from "./editorial-capability-catalog.js";
-import type { EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
-import type { StyleCorpusStore } from "../../ports/style-corpus-store.js";
 import type { CompletionEvent } from "../../models/assistant/completion-event.js";
-import type { FactChecksStore } from "../../models/assistant/fact-checks-store.js";
 import type { PreparedAssistantRequest } from "../../models/assistant/prepared-assistant-request.js";
+import type { FactChecksStore } from "../../models/assistant/fact-checks-store.js";
+import type { ArticleStore } from "../articles/article-store.js";
+import type { StyleCorpusStore } from "../editorial/style-corpus-store.js";
+import type { AssistantArtifactStore } from "./assistant-artifact-store.js";
+import type { AssistantStore } from "./assistant-store.js";
+import type { EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
 
 
 function completedContent(request: PreparedAssistantRequest, text: string): string {
@@ -22,34 +22,30 @@ function completedContent(request: PreparedAssistantRequest, text: string): stri
 
 
 export function responseKind(capability?: string): AssistantResponseKind {
-    if (capability === EDITORIAL_CAPABILITY.FACT_CHECK)
-        return "findings_prepared";
-
-    if (capability === EDITORIAL_CAPABILITY.STYLE_REVIEW)
-        return "proposal_and_findings_prepared";
-
-    if (capability === EDITORIAL_CAPABILITY.TRANSLATE)
-        return "translation_proposal_prepared";
-
-    if (capability === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL)
-        return "proposal_prepared";
-
-    return "editorial_conversation";
-}
-
-
-export interface AssistantCompletionDependencies {
-    articles: ArticleStore;
-    assistant: AssistantStore;
-    styleCorpus: StyleCorpusStore;
-    artifacts: AssistantArtifactStore;
-    factChecks: FactChecksStore;
-    capabilities?: EditorialCapabilityCatalog;
+    switch (capability) {
+        case EDITORIAL_CAPABILITY.FACT_CHECK:
+            return "findings_prepared";
+        case EDITORIAL_CAPABILITY.STYLE_REVIEW:
+            return "proposal_and_findings_prepared";
+        case EDITORIAL_CAPABILITY.TRANSLATE:
+            return "translation_proposal_prepared";
+        case EDITORIAL_CAPABILITY.GENERATE_PROPOSAL:
+            return "proposal_prepared";
+        default:
+            return "editorial_conversation";
+    }
 }
 
 
 export class AssistantCompletion {
-    constructor(private readonly dependencies: AssistantCompletionDependencies) { }
+    constructor(private readonly dependencies: {
+        articles: ArticleStore;
+        assistant: AssistantStore;
+        styleCorpus: StyleCorpusStore;
+        artifacts: AssistantArtifactStore;
+        factChecks: FactChecksStore;
+        capabilities?: EditorialCapabilityCatalog;
+    }) { }
 
 
     persist(request: PreparedAssistantRequest, event: CompletionEvent): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {

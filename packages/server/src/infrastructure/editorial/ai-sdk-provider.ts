@@ -1,8 +1,8 @@
 import type { LanguageModel } from "ai";
 import { AI_PROVIDER, type AiProvider, type ReasoningEffort } from "@skladno/shared";
 
-import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
-import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
 import { openAiResponseId, openAiResponsesProviderOptions, type OpenAiResponsesProviderOptions } from "./openai-responses.js";
 
 

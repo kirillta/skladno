@@ -1,7 +1,7 @@
-import type { EditorialConversationRequest } from "./editorial-conversation-request.js";
-import type { EditorialAssistantRequest } from "./editorial-assistant-request.js";
-import type { EditorialEngineEvent } from "./editorial-engine-event.js";
-import type { EditorialEngineRequest } from "./editorial-engine-request.js";
+import type { EditorialConversationRequest } from "../../models/editorial/editorial-conversation-request.js";
+import type { EditorialAssistantRequest } from "../../models/editorial/editorial-assistant-request.js";
+import type { EditorialEngineEvent } from "../../models/editorial/editorial-engine-event.js";
+import type { EditorialEngineRequest } from "../../models/editorial/editorial-engine-request.js";
 
 
 export interface EditorialEngine {

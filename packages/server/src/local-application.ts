@@ -8,9 +8,9 @@ import { readSystemDateTimeFormat } from "./infrastructure/configuration/system-
 import { listAvailableModels } from "./infrastructure/editorial/available-models.js";
 import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/configured-editorial-engine-resolver.js";
 import { SqliteBackupManager } from "./infrastructure/persistence/sqlite-backup-manager.js";
-import { WindowsManagedCredentials } from "./infrastructure/configuration/windows-managed-credentials.js";
+import { WindowsCredentialStore } from "./infrastructure/configuration/windows-credential-store.js";
 import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, SettingsRepository, StyleCorpusRepository, openDatabase } from "./infrastructure/persistence/index.js";
-import type { TelemetryObserver } from "./application/ports/telemetry-observer.js";
+import type { TelemetryObserver } from "./application/telemetry/telemetry-observer.js";
 
 
 export interface LocalApplication {
@@ -29,8 +29,8 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
     const editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.get(articleId)));
     const styleCorpus = new StyleCorpusRepository(database);
     const assistant = new AssistantRepository(database);
-    const credentials = new WindowsManagedCredentials();
-    const engines = new ConfiguredEditorialEngineResolver(config, settings, credentials);
+    const credentialStore = new WindowsCredentialStore();
+    const engines = new ConfiguredEditorialEngineResolver(config, settings, credentialStore);
 
     assistant.seedGreetings();
 
@@ -47,12 +47,12 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
             models: {
                 list: (connection, apiKey) => listAvailableModels(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable"
                     ? process.env[connection.credentialSource.environmentVariableName]
-                    : credentials.get(connection.id)))
+                    : credentialStore.get(connection.id)))
             },
             createConnectionId: randomUUID,
             factChecks,
             backups: new SqliteBackupManager(database),
-            credentials,
+            credentialStore,
             editorial,
             telemetry,
         }),
