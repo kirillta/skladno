@@ -8,7 +8,7 @@ export function AiSettingsSection(props: AiSettingsSectionProps) {
     return <>
         <AiConnectionsSection {...props} />
         <div className="pt-8">
-            <AiModelsSection preferences={props.preferences} models={props.models} settingsConnections={settingsConnections} onRefreshModels={props.onRefreshModels} savePreferences={props.savePreferences} />
+            <AiModelsSection preferences={props.preferences} appModel={props.appModel} models={props.models} settingsConnections={settingsConnections} onRefreshModels={props.onRefreshModels} savePreferences={props.savePreferences} saveAppModel={props.saveAppModel} />
         </div>
     </>;
 }

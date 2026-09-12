@@ -10,8 +10,8 @@ import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine
 import { EDITORIAL_ENGINE_EVENT } from "../../application/ports/editorial-engine-events.js";
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
 import type { EditorialEngineRequest } from "../../application/ports/editorial-engine-request.js";
-import { protectArticleSpans, restoreProtectedSpans } from "../../application/editorial/translation.js";
-import { authorControlInstruction, createEditorialMessages } from "../../application/editorial/workflow-prompt.js";
+import { protectArticleSpans, restoreProtectedSpans } from "../../application/helpers/editorial/translation.js";
+import { authorControlInstruction, createEditorialMessages } from "../../application/helpers/editorial/workflow-prompt.js";
 import { streamFactCheck, type FactCheckProvider } from "./fact-check-workflow.js";
 import { boundedArticleContext } from "./editorial-context.js";
 import { aiSdkGenerationOptions, continuationToken, editorialProviderOptions, isAcceptedFinish, providerError } from "./ai-sdk-provider.js";

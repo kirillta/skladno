@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
 import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
 
-import { ApplicationSettingsService } from "../../application/settings/application-settings-service.js";
+import { ApplicationSettingsService } from "../../application/services/settings/application-settings-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
 import { object, readBinary, readJson, writeJson } from "../transport/json.js";
 
@@ -54,6 +54,11 @@ export async function handleKeyBindingsRoute(request: IncomingMessage, response:
 
 export async function handleModelPreferencesRoute(request: IncomingMessage, response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
     writeJson(response, HTTP_STATUS.OK, settings.updateModelPreferences(object(await readJson(request))));
+}
+
+
+export async function handleAppModelRoute(request: IncomingMessage, response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
+    writeJson(response, HTTP_STATUS.OK, settings.updateAppModel(await readJson(request)));
 }
 
 

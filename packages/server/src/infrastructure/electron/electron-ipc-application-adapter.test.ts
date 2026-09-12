@@ -7,7 +7,7 @@ import test from "node:test";
 import { ELECTRON_APPLICATION_METHOD, ELECTRON_IPC_CHANNEL, type ElectronApplicationMethod, type ElectronApplicationOperationMap, type ElectronIpcError, type ElectronInvokeResult } from "@skladno/shared";
 
 import { createApplicationServices } from "../../application/create-application-services.js";
-import { EditorialService } from "../../application/editorial/editorial-service.js";
+import { EditorialService } from "../../application/services/editorial/editorial-service.js";
 import { openDatabase } from "../persistence/index.js";
 import { createTestPersistence } from "../../test-support/test-persistence.js";
 import { registerElectronIpcApplicationAdapter, type ElectronIpcMain, type ElectronIpcMainEvent } from "./electron-ipc-application-adapter.js";

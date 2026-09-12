@@ -100,8 +100,8 @@
             "title": "Refreshed model list and purpose-specific model preferences",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/editorial/configured-editorial-engine-resolver.ts", "packages/server/src/application/editorial/proposal-summary-service.ts"],
-            "contract": "Connection-bound default models and built-in-skill overrides determine editorial requests. An optional text-generation model handles supporting text such as Proposal summaries and falls back to that default. Each adapter receives only model options it supports. Structured and sourced operations are capability-gated before the Article is sent.",
-            "persistence": "Connection-bound model preferences persist globally; refreshed provider model lists are not persisted.",
+            "contract": "Connection-bound default models and built-in-skill overrides determine editorial requests. A separate optional app model handles Skladno features such as Proposal summaries, titles, and action-intent checks and falls back to the default. Each adapter receives only model options it supports. Structured and sourced operations are capability-gated before the Article is sent.",
+            "persistence": "Connection-bound editorial preferences and the independent app model persist globally; refreshed provider model lists are not persisted.",
             "relatedCapabilityIds": ["settings.model-preferences", "settings.available-model-list"]
         }
     ],
@@ -220,9 +220,9 @@
             "id": "editorial-workflows.ai-model-preferences",
             "title": "Model preferences resolve for new requests",
             "capabilityIds": ["editorial-workflows.ai-model-selection"],
-            "preconditions": ["A default model, text generation model, or skill-specific override is configured."],
+            "preconditions": ["A default model, app model, or skill-specific override is configured."],
             "event": "A new editorial request resolves its model." ,
-            "expected": ["The applicable editorial override, supporting-text preference, or default model is selected."],
+            "expected": ["The applicable editorial override, app-model preference, or default model is selected."],
             "forbidden": ["Treating a refreshed provider list as persisted preference data."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/server.ai-connections.test.ts" }
         }

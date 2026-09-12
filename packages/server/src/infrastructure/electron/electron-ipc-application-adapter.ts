@@ -1,7 +1,7 @@
 import { ELECTRON_IPC_CHANNEL } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
-import type { EditorialService } from "../../application/editorial/editorial-service.js";
+import type { EditorialService } from "../../application/services/editorial/editorial-service.js";
 import { invokeElectronApplication } from "./electron-ipc-invoke-adapter.js";
 import { registerElectronStreamAdapters } from "./electron-ipc-stream-adapter.js";
 import type { ElectronIpcMain } from "./electron-ipc-types.js";

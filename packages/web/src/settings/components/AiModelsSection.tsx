@@ -1,5 +1,5 @@
 /* eslint-disable @stylistic/max-statements-per-line */
-import { AI_PROVIDER, builtInSkills, type AiProvider, type AvailableAiModel, type ModelPreferences } from "@skladno/shared";
+import { AI_PROVIDER, builtInSkills, type AiProvider, type AppModelPreference, type AvailableAiModel, type ModelPreferences } from "@skladno/shared";
 import { useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { ChevronDownIcon } from "../../ui/icons.js";
@@ -8,7 +8,7 @@ import { SettingRow, SettingsGroup } from "./SettingRow.js";
 import { ModelAndReasoning, skillMessages } from "./AiModelSelect.js";
 
 
-export function AiModelsSection({ preferences, models, settingsConnections, onRefreshModels, savePreferences }: { preferences: ModelPreferences; models: AvailableAiModel[]; settingsConnections: { active?: boolean; provider: AiProvider }[]; onRefreshModels: () => void; savePreferences: (next: ModelPreferences) => Promise<void> }) {
+export function AiModelsSection({ preferences, appModel, models, settingsConnections, onRefreshModels, savePreferences, saveAppModel }: { preferences: ModelPreferences; appModel?: AppModelPreference; models: AvailableAiModel[]; settingsConnections: { active?: boolean; provider: AiProvider }[]; onRefreshModels: () => void; savePreferences: (next: ModelPreferences) => Promise<void>; saveAppModel: (next: AppModelPreference | null) => Promise<void> }) {
     const intl = useIntl(); const [specificModelsOpen, setSpecificModelsOpen] = useState(false); const specificModelsContent = useRef<HTMLDivElement>(null);
     const selectedProvider = (model: string) => model ? models.find((item) => item.id === model || item.model === model)?.provider ?? settingsConnections.find((connection) => connection.active !== false)?.provider : undefined;
     const toggleSpecificModels = () => {
@@ -25,8 +25,8 @@ export function AiModelsSection({ preferences, models, settingsConnections, onRe
             <ModelAndReasoning model={modelProps(preferences.defaultModel, intl.formatMessage({ id: "settings.model" }), (defaultModel) => void savePreferences({ ...preferences, defaultModel }))} effort={preferences.reasoningEffort} onEffortChange={selectedProvider(preferences.defaultModel) === AI_PROVIDER.OPENAI ? (reasoningEffort) => void savePreferences({ ...preferences, reasoningEffort }) : undefined} />
             <Button className="mt-3 w-fit" variant="secondary" onClick={onRefreshModels}>{intl.formatMessage({ id: "settings.refreshModels" })}</Button>
         </SettingRow>
-        <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.textGenerationModel" })} hint={intl.formatMessage({ id: "settings.textGenerationModelHint" })}>
-            <ModelAndReasoning model={modelProps(preferences.textGenerationModel ?? "", intl.formatMessage({ id: "settings.textGenerationModel" }), (textGenerationModel) => void savePreferences({ ...preferences, textGenerationModel: textGenerationModel || undefined }), true)} effort={preferences.textGenerationReasoningEffort} onEffortChange={selectedProvider(preferences.textGenerationModel ?? "") === AI_PROVIDER.OPENAI ? (textGenerationReasoningEffort) => void savePreferences({ ...preferences, textGenerationReasoningEffort }) : undefined} />
+        <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.appModel" })} hint={intl.formatMessage({ id: "settings.appModelHint" })}>
+            <ModelAndReasoning model={modelProps(appModel?.model ?? "", intl.formatMessage({ id: "settings.appModel" }), (model) => void saveAppModel(model ? { model, ...(appModel?.reasoningEffort ? { reasoningEffort: appModel.reasoningEffort } : {}) } : null), true)} effort={appModel?.reasoningEffort} onEffortChange={selectedProvider(appModel?.model ?? "") === AI_PROVIDER.OPENAI ? (reasoningEffort) => void saveAppModel({ model: appModel?.model ?? "", reasoningEffort }) : undefined} />
         </SettingRow>
         <div className="mt-8">
             <button type="button" aria-expanded={specificModelsOpen} aria-controls="specific-model-overrides" className="group flex min-h-9 w-full items-center gap-2 text-left text-sm font-semibold hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={toggleSpecificModels}>

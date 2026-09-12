@@ -43,11 +43,11 @@
         {
             "id": "settings.model-preferences",
             "area": "AI",
-            "title": "Default, supporting-text, per-skill, reasoning, and favorite-model preferences",
+            "title": "Default, app, per-skill, reasoning, and favorite-model preferences",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts"],
-            "contract": "Each selected model records its active connection as well as its provider model ID, so duplicate model names remain routable and an OpenCode Zen model can disclose its underlying vendor. Default, supporting-text, per-skill, reasoning, and favorite-model preferences apply globally. An optional text-generation model handles supporting text such as Proposal summaries and falls back to the default. Authors can save favorite available models, search the available list, and filter it by recognized vendor. Low, medium, and high reasoning-level controls are offered only for selected OpenAI models. Presentation receives Settings through the application service, persistence uses focused repositories, and legacy preferences migrate to their formerly active connection without exposing unknown keys.",
-            "persistence": "app_settings.application-model-preferences"
+            "contract": "Each selected model records its active connection as well as its provider model ID, so duplicate model names remain routable and an OpenCode Zen model can disclose its underlying vendor. Default, app, per-skill, reasoning, and favorite-model preferences apply globally. The optional app model is a separate model preference for Skladno features such as Proposal summaries, titles, and action-intent checks; it falls back to the default model. Authors can save favorite available models, search the available list, and filter it by recognized vendor. Low, medium, and high reasoning-level controls are offered only for selected OpenAI models. Presentation receives Settings through the application service, persistence uses focused repositories, and legacy preferences migrate to their formerly active connection without exposing unknown keys.",
+            "persistence": "Editorial preferences persist in app_settings.application-model-preferences; the independent app model persists in app_settings.application-app-model."
         },
         {
             "id": "settings.available-model-list",
@@ -168,9 +168,9 @@
             "id": "settings.model-preferences-human-reviewed",
             "title": "Model preferences resolve for editorial and supporting work",
             "capabilityIds": ["settings.model-preferences"],
-            "preconditions": ["A default model, text generation model, skill override, or reasoning effort is saved."],
+            "preconditions": ["A default model, app model, skill override, or reasoning effort is saved."],
             "event": "A new editorial request is prepared.",
-            "expected": ["Editorial work resolves the built-in-skill override or default model through its saved active connection, while supporting text resolves its text-generation model or default-model fallback. Each selected OpenAI model receives its saved reasoning effort."],
+            "expected": ["Editorial work resolves the built-in-skill override or default model through its saved active connection, while Skladno features resolve the separate app model or default-model fallback. Each selected OpenAI model receives its saved reasoning effort."],
             "forbidden": ["Exposing unknown legacy override keys."],
             "evidence": { "kind": "human-reviewed", "path": "packages/server/src/presentation/server.ts" }
         },

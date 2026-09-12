@@ -157,6 +157,7 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         testAiConnection: (connectionId) => invoke(ELECTRON_APPLICATION_METHOD.testAiConnection, connectionId),
         refreshAiModels: () => invoke(ELECTRON_APPLICATION_METHOD.refreshAiModels),
         updateModelPreferences: (input) => invoke(ELECTRON_APPLICATION_METHOD.updateModelPreferences, input),
+        updateAppModel: (input) => invoke(ELECTRON_APPLICATION_METHOD.updateAppModel, input),
         listArticles: () => invoke(ELECTRON_APPLICATION_METHOD.listArticles),
         createArticle: (input) => invoke(ELECTRON_APPLICATION_METHOD.createArticle, input),
         updateArticle: (articleId, input) => invoke(ELECTRON_APPLICATION_METHOD.updateArticle, articleId, input),

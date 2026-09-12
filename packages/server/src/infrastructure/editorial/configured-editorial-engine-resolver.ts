@@ -1,4 +1,4 @@
-import { AI_PROVIDER, parseAiModelPreferenceId, resolveBuiltInSkillId, type AiConnection, type AiProvider, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
+import { AI_PROVIDER, parseAiModelPreferenceId, resolveBuiltInSkillId, type AiConnection, type AiProvider, type AppModelPreference, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
 
 import type { EditorialEngineResolver } from "../../application/ports/editorial-engine-resolver.js";
 import type { EditorialEngine } from "../../application/ports/editorial-engine.js";
@@ -22,15 +22,10 @@ interface ResolvedConnection {
 }
 
 
-export function resolveTextGenerationModel(preferences: Partial<ModelPreferences> | undefined, fallback: string): string {
-    return preferences?.textGenerationModel || preferences?.defaultModel || fallback;
-}
-
-
-export function resolveTextGenerationConfiguration(preferences: Partial<ModelPreferences> | undefined, fallback: string): { model: string; reasoningEffort?: ReasoningEffort } {
+export function resolveAppModelConfiguration(appModel: AppModelPreference | undefined, preferences: Partial<ModelPreferences> | undefined, fallback: string): { model: string; reasoningEffort?: ReasoningEffort } {
     return {
-        model: resolveTextGenerationModel(preferences, fallback),
-        ...(preferences?.textGenerationReasoningEffort ? { reasoningEffort: preferences.textGenerationReasoningEffort } : {}),
+        model: appModel?.model || preferences?.defaultModel || fallback,
+        ...(appModel?.reasoningEffort ? { reasoningEffort: appModel.reasoningEffort } : {}),
     };
 }
 
@@ -60,7 +55,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     resolveProposalSummaryGenerator() {
-        const configuration = this.resolveTextGenerationConnection();
+        const configuration = this.resolveAppModelConnection();
         if (!configuration)
             return undefined;
 
@@ -69,7 +64,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     resolveArticleTitleGenerator() {
-        const configuration = this.resolveTextGenerationConnection();
+        const configuration = this.resolveAppModelConnection();
         if (!configuration)
             return undefined;
 
@@ -78,18 +73,22 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     resolveAssistantActionIntentVerifier() {
-        const configuration = this.resolveTextGenerationConnection();
+        const configuration = this.resolveAppModelConnection();
         return configuration ? new AiSdkAssistantActionIntentVerifier(createProviderModel(configuration), supportingTextProviderOptions(configuration.provider, configuration.reasoningEffort)) : undefined;
     }
 
 
-    private resolveTextGenerationConnection(): (ResolvedConnection & { model: string; reasoningEffort?: ReasoningEffort }) | undefined {
+    private resolveAppModelConnection(): (ResolvedConnection & { model: string; reasoningEffort?: ReasoningEffort }) | undefined {
         const preferences = this.resolvePreferences();
-        const connection = this.resolveModel(resolveTextGenerationModel(preferences, this.config.aiModel));
+        const appModelRecord = this.settings.get("application-app-model");
+        const savedAppModel = appModelRecord?.value as AppModelPreference | undefined;
+        const legacyAppModel = appModelRecord ? undefined : (this.settings.get("application-model-preferences")?.value as { appModel?: AppModelPreference } | undefined)?.appModel;
+        const configuration = resolveAppModelConfiguration(savedAppModel ?? legacyAppModel, preferences, this.config.aiModel);
+        const connection = this.resolveModel(configuration.model);
         if (!connection)
             return undefined;
 
-        return { ...connection, model: connection.model, ...(preferences.textGenerationReasoningEffort ? { reasoningEffort: preferences.textGenerationReasoningEffort } : {}) };
+        return { ...connection, model: connection.model, ...(configuration.reasoningEffort ? { reasoningEffort: configuration.reasoningEffort } : {}) };
     }
 
 

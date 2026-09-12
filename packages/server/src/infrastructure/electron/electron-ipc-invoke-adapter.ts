@@ -48,6 +48,7 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
         case ELECTRON_APPLICATION_METHOD.testAiConnection: return services.settings.testAiConnection(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.refreshAiModels: return services.settings.listAiModels();
         case ELECTRON_APPLICATION_METHOD.updateModelPreferences: return services.settings.updateModelPreferences(args[0]);
+        case ELECTRON_APPLICATION_METHOD.updateAppModel: return services.settings.updateAppModel(args[0]);
         case ELECTRON_APPLICATION_METHOD.listArticles: return services.articles.listArticles();
         case ELECTRON_APPLICATION_METHOD.createArticle: return services.articles.createArticle(args[0] as import("@skladno/shared").CreateArticleInput);
         case ELECTRON_APPLICATION_METHOD.updateArticle: return services.articles.updateArticle(String(args[0]), args[1] as import("@skladno/shared").UpdateArticleInput);

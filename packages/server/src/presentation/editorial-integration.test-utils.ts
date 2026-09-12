@@ -12,7 +12,7 @@ import type { EditorialEngineRequest } from "../application/ports/editorial-engi
 import type { EditorialAssistantRequest } from "../application/ports/editorial-assistant-request.js";
 import type { AssistantActionIntentVerifier } from "../application/ports/assistant-action-intent-verifier.js";
 import type { TelemetryObserver } from "../application/ports/telemetry-observer.js";
-import { EditorialService } from "../application/editorial/editorial-service.js";
+import { EditorialService } from "../application/services/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";

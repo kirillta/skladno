@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { openDatabase } from "./database.js";
 import { createTestPersistence } from "../../test-support/test-persistence.js";
-import { StyleCorpusService } from "../../application/editorial/style-corpus-service.js";
+import { StyleCorpusService } from "../../application/services/editorial/style-corpus-service.js";
 import { APPLICATION_ERROR } from "@skladno/shared";
 import { withRepository } from "./repositories.test-utils.js";
 // Product scenarios: application.local-persistence-reopens, history-and-publishing.style-corpus-local

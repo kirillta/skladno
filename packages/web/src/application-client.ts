@@ -18,9 +18,11 @@ import {
     aiConnectionsPath,
     aiModelsPath,
     aiModelPreferencesPath,
+    aiAppModelPath,
     keyBindingsPath,
     type KeyBindingOverrides,
     type ModelPreferences,
+    type AppModelPreference,
     type AiConnection,
     type AvailableAiModel,
 } from "@skladno/shared";
@@ -78,6 +80,11 @@ export class HttpApplicationClient extends HttpArticleClient implements Editoria
 
     async updateModelPreferences(input: ModelPreferences): Promise<ModelPreferences> {
         return this.request<ModelPreferences>(aiModelPreferencesPath, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+    }
+
+
+    async updateAppModel(input: AppModelPreference | null): Promise<AppModelPreference | null> {
+        return this.request<AppModelPreference | null>(aiAppModelPath, { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
 
 

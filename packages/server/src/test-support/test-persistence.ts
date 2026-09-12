@@ -1,4 +1,4 @@
-import { ArticleService } from "../application/articles/article-service.js";
+import { ArticleService } from "../application/services/articles/article-service.js";
 import { AssistantRepository, ArticlesRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, MaterialsRepository, SettingsRepository, StyleCorpusRepository, type SqliteDatabase } from "../infrastructure/persistence/index.js";
 
 

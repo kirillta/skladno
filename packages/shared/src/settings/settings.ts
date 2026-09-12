@@ -5,6 +5,7 @@ export const applicationSettingsPath = "/api/settings";
 export const aiConnectionsPath = `${applicationSettingsPath}/ai/connections`;
 export const aiModelsPath = `${applicationSettingsPath}/ai/models`;
 export const aiModelPreferencesPath = `${applicationSettingsPath}/ai/model-preferences`;
+export const aiAppModelPath = `${applicationSettingsPath}/ai/app-model`;
 export const keyBindingsPath = `${applicationSettingsPath}/key-bindings`;
 export const backupsPath = `${applicationSettingsPath}/backups`;
 export const restoreBackupPath = `${backupsPath}/restore`;
@@ -142,11 +143,15 @@ export function parseAiModelPreferenceId(value: string): { connectionId: string;
 }
 
 
+export interface AppModelPreference {
+    model: string;
+    reasoningEffort?: ReasoningEffort;
+}
+
+
 export interface ModelPreferences {
     defaultModel: string;
-    textGenerationModel?: string;
     reasoningEffort?: ReasoningEffort;
-    textGenerationReasoningEffort?: ReasoningEffort;
     skillOverrides: Partial<Record<BuiltInSkillId, string>>;
     skillReasoningEfforts?: Partial<Record<BuiltInSkillId, ReasoningEffort>>;
     favoriteModels?: string[];
@@ -167,6 +172,7 @@ export interface ApplicationSettingsSnapshot {
     systemDateTimeFormat?: SystemDateTimeFormat;
     connections: AiConnection[];
     modelPreferences: ModelPreferences;
+    appModel?: AppModelPreference;
     backupPolicy: BackupPolicy;
     keyBindingOverrides: KeyBindingOverrides;
 }
@@ -204,6 +210,7 @@ export interface ApplicationSettingsClient {
     testAiConnection(connectionId: string): Promise<AiConnection>;
     refreshAiModels(): Promise<AvailableAiModel[]>;
     updateModelPreferences(input: ModelPreferences): Promise<ModelPreferences>;
+    updateAppModel(input: AppModelPreference | null): Promise<AppModelPreference | null>;
 }
 
 

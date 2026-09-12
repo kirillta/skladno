@@ -1,12 +1,12 @@
-import type { ArticleService } from "./articles/article-service.js";
-import type { AssistantService } from "./assistant/assistant-service.js";
-import type { ApplicationSettingsService } from "./settings/application-settings-service.js";
-import type { PublishingService } from "./publishing/publishing-service.js";
-import type { StyleCorpusService } from "./editorial/style-corpus-service.js";
-import type { ProposalSummaryService } from "./editorial/proposal-summary-service.js";
-import type { FactCheckService } from "./editorial/fact-check-service.js";
-import type { EditorialCapabilityCatalog } from "./assistant/editorial-capability-catalog.js";
-import type { AssistantSkillCatalog } from "./assistant/assistant-skill-catalog.js";
+import type { ArticleService } from "./services/articles/article-service.js";
+import type { AssistantService } from "./services/assistant/assistant-service.js";
+import type { ApplicationSettingsService } from "./services/settings/application-settings-service.js";
+import type { PublishingService } from "./services/publishing/publishing-service.js";
+import type { StyleCorpusService } from "./services/editorial/style-corpus-service.js";
+import type { ProposalSummaryService } from "./services/editorial/proposal-summary-service.js";
+import type { FactCheckService } from "./services/editorial/fact-check-service.js";
+import type { EditorialCapabilityCatalog } from "./services/assistant/editorial-capability-catalog.js";
+import type { AssistantSkillCatalog } from "./services/assistant/assistant-skill-catalog.js";
 
 
 export interface ApplicationServices {

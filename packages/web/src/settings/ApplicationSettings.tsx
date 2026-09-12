@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { aiModelPreferenceId, AI_PROVIDER, defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type AiProvider, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
+import { aiModelPreferenceId, AI_PROVIDER, defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type AiProvider, type AppModelPreference, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application-client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
@@ -31,6 +31,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
     const [settings, setSettings] = useState<ApplicationSettingsSnapshot>();
     const [general, setGeneral] = useState(defaultGeneralSettings);
     const [preferences, setPreferences] = useState<ModelPreferences>({ defaultModel: "", skillOverrides: {} });
+    const [appModel, setAppModel] = useState<AppModelPreference>();
     const [backupPolicy, setBackupPolicy] = useState<BackupPolicy>({ schedule: "off", retention: { mode: "count", count: 7 } });
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>({});
     const [publishingSettings, setPublishingSettings] = useState<PublishingSettings>(defaultPublishingSettings);
@@ -53,6 +54,7 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
             setSettings(loaded);
             setGeneral(loaded.general);
             setPreferences(loaded.modelPreferences);
+            setAppModel(loaded.appModel);
             setBackupPolicy(loaded.backupPolicy);
             setKeyBindingOverrides(loaded.keyBindingOverrides);
             setStatus(intl.formatMessage({ id: "settings.saved" }));
@@ -108,6 +110,19 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
         setStatus(intl.formatMessage({ id: "settings.saving" }));
         try {
             await client.updateModelPreferences(next);
+            setStatus(intl.formatMessage({ id: "settings.saved" }));
+        } catch {
+            setStatus(intl.formatMessage({ id: "settings.modelSaveFailed" }));
+            notify({ tone: "error", title: intl.formatMessage({ id: "settings.modelSaveFailed" }) });
+        }
+    }
+
+
+    async function saveAppModel(next: AppModelPreference | null) {
+        setAppModel(next ?? undefined);
+        setStatus(intl.formatMessage({ id: "settings.saving" }));
+        try {
+            await client.updateAppModel(next);
             setStatus(intl.formatMessage({ id: "settings.saved" }));
         } catch {
             setStatus(intl.formatMessage({ id: "settings.modelSaveFailed" }));
@@ -276,10 +291,10 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
 
     return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
-        <SettingsContent client={client} section={section} settings={settings} general={general} preferences={preferences} backupPolicy={backupPolicy} keyBindingOverrides={keyBindingOverrides} publishingSettings={publishingSettings} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} desktopAvailable={Boolean(desktopSettings)} telemetry={telemetry} onThemeApplied={onThemeApplied} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
+        <SettingsContent client={client} section={section} settings={settings} general={general} preferences={preferences} appModel={appModel} backupPolicy={backupPolicy} keyBindingOverrides={keyBindingOverrides} publishingSettings={publishingSettings} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} desktopAvailable={Boolean(desktopSettings)} telemetry={telemetry} onThemeApplied={onThemeApplied} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
             setEnvironmentName(value);
             setConnectionError(undefined);
-        }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} saveGeneral={saveGeneral} savePreferences={savePreferences} saveBackupPolicy={saveBackupPolicy} saveKeyBindingOverrides={saveKeyBindingOverrides} savePublishingSettings={(next) => void savePublishingSettings(next)} addConnection={() => void addConnection()} addManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} setConnectionActive={(connectionId, active) => void setConnectionActive(connectionId, active)} requestConnectionRename={requestManagedConnectionRename} requestConnectionRemoval={setConnectionPendingRemoval} refreshModels={() => void refreshModels()} />
+        }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} saveGeneral={saveGeneral} savePreferences={savePreferences} saveAppModel={saveAppModel} saveBackupPolicy={saveBackupPolicy} saveKeyBindingOverrides={saveKeyBindingOverrides} savePublishingSettings={(next) => void savePublishingSettings(next)} addConnection={() => void addConnection()} addManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} setConnectionActive={(connectionId, active) => void setConnectionActive(connectionId, active)} requestConnectionRename={requestManagedConnectionRename} requestConnectionRemoval={setConnectionPendingRemoval} refreshModels={() => void refreshModels()} />
         {connectionPendingRemoval && <ConnectionRemovalDialog connection={connectionPendingRemoval} close={() => setConnectionPendingRemoval(undefined)} remove={() => void removeConnection()} />}
         {connectionPendingRename && <ManagedConnectionRenameDialog label={renamedConnectionLabel} setLabel={setRenamedConnectionLabel} close={() => setConnectionPendingRename(undefined)} save={() => void renameManagedConnection()} />}
     </main>;

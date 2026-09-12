@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { HTTP_STATUS } from "@skladno/shared";
 
-import type { ProposalSummaryService } from "../../application/editorial/proposal-summary-service.js";
+import type { ProposalSummaryService } from "../../application/services/editorial/proposal-summary-service.js";
 import { object, readJson, writeJson } from "../transport/json.js";
 
 

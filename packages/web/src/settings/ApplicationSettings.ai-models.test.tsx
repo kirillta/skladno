@@ -53,24 +53,26 @@ describe("ApplicationSettings AI", () => {
         await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith({ defaultModel: "gpt-4.1", skillOverrides: {}, reasoningEffort: "high" }));
     });
 
-    it("saves reasoning effort for supporting text and task overrides", async () => {
+    it("saves reasoning effort for the app model and task overrides", async () => {
         const user = userEvent.setup();
         vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
         HTMLElement.prototype.scrollIntoView = vi.fn();
         const connection = { id: "connection-1", provider: "openai" as const, label: "Personal OpenAI", environmentVariableName: "OPENAI_API_KEY", status: "connected" as const };
         const updateModelPreferences = vi.fn().mockResolvedValue(undefined);
+        const updateAppModel = vi.fn().mockResolvedValue(undefined);
         const client = {
-            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id, modelPreferences: { defaultModel: "gpt-5.5", textGenerationModel: "gpt-5.5-mini", skillOverrides: { talking_points: "gpt-5.5-mini" } } }),
+            getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection], activeConnectionId: connection.id, appModel: { model: "gpt-5.5-mini" }, modelPreferences: { defaultModel: "gpt-5.5", skillOverrides: { talking_points: "gpt-5.5-mini" } } }),
             getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
             refreshAiModels: vi.fn().mockResolvedValue(["gpt-5.5", "gpt-5.5-mini"]),
             updateModelPreferences,
+            updateAppModel,
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
         await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
         await user.selectOptions(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })[1]!, "low");
-        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ textGenerationReasoningEffort: "low" })));
+        await waitFor(() => expect(updateAppModel).toHaveBeenCalledWith({ model: "gpt-5.5-mini", reasoningEffort: "low" }));
 
         await user.click(screen.getByRole("button", { name: message("settings.specificModels") }));
         expect(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })).toHaveLength(3);

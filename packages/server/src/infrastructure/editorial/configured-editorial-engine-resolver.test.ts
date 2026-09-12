@@ -2,19 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { aiModelPreferenceId } from "@skladno/shared";
 
-import { ConfiguredEditorialEngineResolver, resolveTextGenerationConfiguration, resolveTextGenerationModel } from "./configured-editorial-engine-resolver.js";
+import { ConfiguredEditorialEngineResolver, resolveAppModelConfiguration } from "./configured-editorial-engine-resolver.js";
 import type { ServerConfig } from "../configuration/config.js";
 
 
-test("supporting text prefers its model and otherwise falls back to the default", () => {
-    assert.equal(resolveTextGenerationModel({ defaultModel: "default", textGenerationModel: "supporting" }, "configured"), "supporting");
-    assert.equal(resolveTextGenerationModel({ defaultModel: "default" }, "configured"), "default");
-    assert.equal(resolveTextGenerationModel(undefined, "configured"), "configured");
-});
-
-
-test("supporting text carries its own reasoning effort", () => {
-    assert.deepEqual(resolveTextGenerationConfiguration({ defaultModel: "default", textGenerationModel: "supporting", textGenerationReasoningEffort: "high" }, "configured"), { model: "supporting", reasoningEffort: "high" });
+test("app work prefers its dedicated model and otherwise falls back to the default", () => {
+    assert.deepEqual(resolveAppModelConfiguration({ model: "app", reasoningEffort: "high" }, { defaultModel: "default" }, "configured"), { model: "app", reasoningEffort: "high" });
+    assert.deepEqual(resolveAppModelConfiguration(undefined, { defaultModel: "default" }, "configured"), { model: "default" });
+    assert.deepEqual(resolveAppModelConfiguration(undefined, undefined, "configured"), { model: "configured" });
 });
 
 

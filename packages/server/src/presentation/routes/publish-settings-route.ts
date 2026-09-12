@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { HTTP_STATUS } from "@skladno/shared";
 
-import { PublishingService } from "../../application/publishing/publishing-service.js";
+import { PublishingService } from "../../application/services/publishing/publishing-service.js";
 import { object, readJson, writeJson } from "../transport/json.js";
 
 

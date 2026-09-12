@@ -23,11 +23,11 @@ test("Draft checkpoints are versioned, recoverable, and separate from Revisions"
         content: "stale write",
         baseRevisionId: article.currentRevisionId,
         expectedDraftVersion: first.version,
-    }), /newer checkpoint/);
+    }), { message: APPLICATION_ERROR.DRAFT_CONFLICT });
 
     repositories.articles.discardDraft(article.id, second.version);
     assert.equal(repositories.articles.get(article.id)?.draft, undefined);
-    assert.throws(() => repositories.articles.discardDraft(article.id, second.version), /newer checkpoint/);
+    assert.throws(() => repositories.articles.discardDraft(article.id, second.version), { message: APPLICATION_ERROR.DRAFT_CONFLICT });
 }));
 
 
@@ -65,7 +65,7 @@ test("Draft promotion is atomic and requires matching Revision and Draft version
     assert.throws(() => repositories.articles.saveRevision(article.id, {
         content: "stale draft",
         baseRevisionId: article.currentRevisionId,
-    }), /newer checkpoint/);
+    }), { message: APPLICATION_ERROR.DRAFT_CONFLICT });
 
     const saved = repositories.articles.saveRevision(article.id, {
         content: draft.content,
@@ -85,7 +85,7 @@ test("Draft promotion is atomic and requires matching Revision and Draft version
         content: conflictedDraft.content,
         baseRevisionId: saved.id,
         expectedDraftVersion: conflictedDraft.version,
-    }), /newer revision/);
+    }), { message: APPLICATION_ERROR.REVISION_CONFLICT });
     assert.equal(repositories.articles.get(article.id)?.draft?.content, "recover me");
 }));
 

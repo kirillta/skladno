@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { HTTP_STATUS, type CreateStyleCorpusItemInput } from "@skladno/shared";
 
-import { StyleCorpusService } from "../../application/editorial/style-corpus-service.js";
+import { StyleCorpusService } from "../../application/services/editorial/style-corpus-service.js";
 import { object, readJson, string, writeJson } from "../transport/json.js";
 
 

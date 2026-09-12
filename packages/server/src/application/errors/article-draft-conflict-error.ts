@@ -1,4 +1,4 @@
-import type { Article, ArticleDraft } from "@skladno/shared";
+import { APPLICATION_ERROR, type Article, type ArticleDraft } from "@skladno/shared";
 
 
 export class ArticleDraftConflictError extends Error {
@@ -6,6 +6,6 @@ export class ArticleDraftConflictError extends Error {
         public readonly article: Article,
         public readonly draft?: ArticleDraft,
     ) {
-        super("Article Draft has a newer checkpoint.");
+        super(APPLICATION_ERROR.DRAFT_CONFLICT);
     }
 }

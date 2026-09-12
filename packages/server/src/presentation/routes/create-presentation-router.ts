@@ -1,7 +1,7 @@
-import { acceptProposalPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleArchivePath, articleDraftPath, articlePinPath, articleRevisionsPath, articlesPath, articleStyleCorpusSnapshotPath, articleStyleRulesPath, assistantMessagesPath, assistantRequestsPath, backupsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, proposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
+import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleArchivePath, articleDraftPath, articlePinPath, articleRevisionsPath, articlesPath, articleStyleCorpusSnapshotPath, articleStyleRulesPath, assistantMessagesPath, assistantRequestsPath, backupsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, proposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
-import type { EditorialService } from "../../application/editorial/editorial-service.js";
+import type { EditorialService } from "../../application/services/editorial/editorial-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, reorderPinnedArticlesRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, setArticleArchivedRoute, setArticlePinnedRoute, updateArticleRoute } from "./articles-route.js";
@@ -9,7 +9,7 @@ import { createAssistantRequestRoute, listAssistantMessagesRoute } from "./assis
 import { handleEditorialRoute } from "./editorial-route.js";
 import { handleHealthRoute } from "./health-route.js";
 import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publish-settings-route.js";
-import { handleAiModelsRoute, handleBackupPolicyRoute, handleCreateAiConnectionRoute, handleCreateBackupRoute, handleDeleteAiConnectionRoute, handleGeneralSettingsRoute, handleKeyBindingsRoute, handleModelPreferencesRoute, handleRestoreBackupRoute, handleSetAiConnectionActiveRoute, handleSettingsSnapshotRoute, handleTestAiConnectionRoute, handleUpdateAiConnectionRoute } from "./settings-route.js";
+import { handleAiModelsRoute, handleAppModelRoute, handleBackupPolicyRoute, handleCreateAiConnectionRoute, handleCreateBackupRoute, handleDeleteAiConnectionRoute, handleGeneralSettingsRoute, handleKeyBindingsRoute, handleModelPreferencesRoute, handleRestoreBackupRoute, handleSetAiConnectionActiveRoute, handleSettingsSnapshotRoute, handleTestAiConnectionRoute, handleUpdateAiConnectionRoute } from "./settings-route.js";
 import { addArticleRevisionStyleCorpusItemRoute, createStyleCorpusItemRoute, deleteStyleCorpusItemRoute, getArticleStyleRulesRoute, handleStyleCorpusRoute, rebuildStyleCorpusRoute, setArticleStyleRulesRoute, updateStyleCorpusItemRoute, updateStyleCorpusRulesRoute } from "./style-corpus-route.js";
 import { summarizeProposalRoute } from "./proposal-summary-route.js";
 import { listFactChecksRoute, resolveFactCheckRoute } from "./fact-check-route.js";
@@ -72,6 +72,7 @@ export function createPresentationRouter(editorial: EditorialService, services: 
 
     router.register(HTTP_METHOD.PUT, keyBindingsPath, (request, response) => handleKeyBindingsRoute(request, response, settings));
     router.register(HTTP_METHOD.PUT, aiModelPreferencesPath, (request, response) => handleModelPreferencesRoute(request, response, settings));
+    router.register(HTTP_METHOD.PUT, aiAppModelPath, (request, response) => handleAppModelRoute(request, response, settings));
     router.register(HTTP_METHOD.POST, aiConnectionsPath, (request, response) => handleCreateAiConnectionRoute(request, response, settings));
     router.register(HTTP_METHOD.PUT, ACTIVE_AI_CONNECTION_PATH, (request, response, parameters) => handleSetAiConnectionActiveRoute(request, response, parameters[0]!, settings));
     router.register(HTTP_METHOD.POST, TEST_AI_CONNECTION_PATH, (_request, response, parameters) => handleTestAiConnectionRoute(response, parameters[0]!, settings));

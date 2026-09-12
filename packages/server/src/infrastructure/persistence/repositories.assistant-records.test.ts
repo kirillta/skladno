@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { builtInSkills, legacyEditorialOperationSkillMap } from "@skladno/shared";
+import { APPLICATION_ERROR, builtInSkills, legacyEditorialOperationSkillMap } from "@skladno/shared";
 import { withRepository } from "./repositories.test-utils.js";
 // Product scenarios: cross-cutting.assistant-records-local
 test("Assistant compatibility records load current and legacy Skill IDs without rewriting SQLite", () => withRepository((repositories, _close, database) => {
@@ -171,6 +171,5 @@ test("proposal acceptance requires the reviewed Revision to still be current", (
         baseRevisionId: article.currentRevisionId,
         content: "stale",
         provenance: { kind: "accepted-proposal" },
-    }), /newer revision/);
+    }), { message: APPLICATION_ERROR.REVISION_CONFLICT });
 }));
-

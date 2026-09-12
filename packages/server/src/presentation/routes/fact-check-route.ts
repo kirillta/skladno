@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
-import type { FactCheckService } from "../../application/editorial/fact-check-service.js";
+import type { FactCheckService } from "../../application/services/editorial/fact-check-service.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
 import { object, readJson, string, writeJson } from "../transport/json.js";
 

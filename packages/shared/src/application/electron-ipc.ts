@@ -6,7 +6,7 @@ import type { ArticleRevision, SaveArticleRevisionInput } from "../articles/revi
 import type { HealthResponse } from "./health.js";
 import type { ApplicationErrorPayload } from "../cross-cutting/errors.js";
 import type { EditorialEvent, FactCheck, FactCheckFinding, StartEditorialRequest } from "../editorial/editorial.js";
-import type { AiConnection, AiProvider, ApplicationSettingsSnapshot, AvailableAiModel, BackupPolicy, GeneralSettings, ModelPreferences } from "../settings/settings.js";
+import type { AiConnection, AiProvider, AppModelPreference, ApplicationSettingsSnapshot, AvailableAiModel, BackupPolicy, GeneralSettings, ModelPreferences } from "../settings/settings.js";
 import type { KeyBindingOverrides } from "../cross-cutting/key-bindings.js";
 import type { CreateStyleCorpusItemInput, StyleCorpus } from "../style/style.js";
 import type { PublishingSettings } from "../publishing/publishing.js";
@@ -34,6 +34,7 @@ export interface ElectronApplicationOperationMap {
     testAiConnection: { args: [string]; result: AiConnection };
     refreshAiModels: { args: []; result: AvailableAiModel[] };
     updateModelPreferences: { args: [ModelPreferences]; result: ModelPreferences };
+    updateAppModel: { args: [AppModelPreference | null]; result: AppModelPreference | null };
     listArticles: { args: []; result: Article[] };
     createArticle: { args: [CreateArticleInput]; result: Article };
     updateArticle: { args: [string, UpdateArticleInput]; result: Article };
@@ -80,6 +81,7 @@ export const ELECTRON_APPLICATION_METHOD = {
     testAiConnection: "testAiConnection",
     refreshAiModels: "refreshAiModels",
     updateModelPreferences: "updateModelPreferences",
+    updateAppModel: "updateAppModel",
     listArticles: "listArticles",
     createArticle: "createArticle",
     updateArticle: "updateArticle",

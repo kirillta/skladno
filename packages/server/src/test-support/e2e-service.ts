@@ -4,7 +4,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { EDITORIAL_OPERATION, FACT_CHECK_STATUS } from "@skladno/shared";
 
 import { createApplicationServices } from "../application/create-application-services.js";
-import { EditorialService } from "../application/editorial/editorial-service.js";
+import { EditorialService } from "../application/services/editorial/editorial-service.js";
 import { EditorialEngineError } from "../application/ports/editorial-engine-error.js";
 import type { EditorialConversationRequest } from "../application/ports/editorial-conversation-request.js";
 import type { EditorialEngine } from "../application/ports/editorial-engine.js";

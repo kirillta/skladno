@@ -1,0 +1,225 @@
+import { APPLICATION_ERROR, ASSISTANT_EVENT, BUILT_IN_SKILL, EDITORIAL_OPERATION, type AssistantEvent, type AssistantMessage, type TelemetryEvent } from "@skladno/shared";
+import { performance } from "node:perf_hooks";
+
+import { AssistantCapabilityLoop } from "./assistant-capability-loop.js";
+import { AssistantCompletion, responseKind } from "./assistant-completion.js";
+import { AssistantRequestPreparation } from "./assistant-request-preparation.js";
+import { AssistantSkillCatalog, builtInSkillSource } from "./assistant-skill-catalog.js";
+import type { FactChecksStore } from "../../models/assistant/fact-checks-store.js";
+import type { PreparedAssistantRequest } from "../../models/assistant/prepared-assistant-request.js";
+import type { AssistantServiceRequest } from "../../models/assistant/assistant-service-request.js";
+import { activityForEditorialOperation, type EditorialCapabilityCatalog } from "./editorial-capability-catalog.js";
+import { reusableFactFindings } from "../../helpers/editorial/reusable-fact-findings.js";
+import type { ArticleStore } from "../../ports/article-store.js";
+import type { AssistantArtifactStore } from "../../ports/assistant-artifact-store.js";
+import type { AssistantStore } from "../../ports/assistant-store.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../ports/editorial-engine-events.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../ports/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../ports/editorial-engine-error.js";
+import type { EditorialEngineEvent } from "../../ports/editorial-engine-event.js";
+import type { EditorialEngineResolver } from "../../ports/editorial-engine-resolver.js";
+import type { StyleCorpusStore } from "../../ports/style-corpus-store.js";
+import type { TelemetryObserver } from "../../ports/telemetry-observer.js";
+
+const noTelemetry: TelemetryObserver = { beginCapture: () => () => undefined };
+
+
+export type { AssistantServiceRequest } from "../../models/assistant/assistant-service-request.js";
+export type { PreparedAssistantRequest } from "../../models/assistant/prepared-assistant-request.js";
+
+
+export class AssistantService {
+    private readonly startedAt = new Map<string, { capture: (event: TelemetryEvent) => void; startedAt: number }>();
+
+
+    private readonly preparation: AssistantRequestPreparation;
+
+
+    private readonly capabilityLoop: AssistantCapabilityLoop;
+
+
+    private readonly completion: AssistantCompletion;
+
+
+    constructor(
+        articles: ArticleStore,
+        private readonly assistant: AssistantStore,
+        private readonly styleCorpus: StyleCorpusStore,
+        artifacts: AssistantArtifactStore,
+        engines: EditorialEngineResolver,
+        private readonly factChecks: FactChecksStore = { list: () => [], save: () => undefined },
+        capabilities?: EditorialCapabilityCatalog,
+        private readonly telemetry: TelemetryObserver = noTelemetry,
+        skills = new AssistantSkillCatalog([builtInSkillSource]),
+    ) {
+        this.preparation = new AssistantRequestPreparation({ articles, assistant, styleCorpus, engines, capabilities });
+        this.capabilityLoop = new AssistantCapabilityLoop({ assistant, engines, capabilities, skills, conversationHistory: (articleId, limit) => this.conversationHistory(articleId, limit) });
+        this.completion = new AssistantCompletion({ articles, assistant, styleCorpus, artifacts, factChecks, capabilities });
+    }
+
+
+    listMessages(articleId: string): AssistantMessage[] {
+        return this.preparation.listMessages(articleId);
+    }
+
+
+    prepare(request: AssistantServiceRequest): PreparedAssistantRequest {
+        const capture = this.telemetry.beginCapture();
+        const startedAt = performance.now();
+        try {
+            const prepared = this.preparation.prepare(request);
+            this.startedAt.set(prepared.requestId, { capture, startedAt });
+            return prepared;
+        } catch (error) {
+            capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "failed", elapsedMs: Math.round(performance.now() - startedAt), failure: "unknown" });
+            throw error;
+        }
+    }
+
+
+    async *stream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<AssistantEvent> {
+        const observed = this.startedAt.get(request.requestId) ?? { capture: this.telemetry.beginCapture(), startedAt: performance.now() };
+        this.startedAt.delete(request.requestId);
+        let initialized = false;
+        try {
+            this.initializeRequest(request);
+            initialized = true;
+            yield* this.initialEvents(request);
+
+            let completed = false;
+            for await (const event of this.editorialStream(request, signal)) {
+                completed ||= event.type === EDITORIAL_ENGINE_EVENT.COMPLETED;
+                yield* this.assistantEvents(request, event);
+            }
+
+            if (!completed && !signal.aborted)
+                throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
+
+            if (signal.aborted) {
+                this.assistant.failRequest(request.requestId, "cancelled", "request_cancelled");
+                observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "cancelled", elapsedMs: Math.round(performance.now() - observed.startedAt), failure: "cancelled" });
+                return;
+            }
+
+            observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: "completed", elapsedMs: Math.round(performance.now() - observed.startedAt) });
+        } catch (error) {
+            if (initialized)
+                this.assistant.failRequest(request.requestId, signal.aborted ? "cancelled" : "failed", signal.aborted ? "request_cancelled" : this.errorCode(error));
+
+            observed.capture({ kind: "ai_operation_finished", operation: "assistant", outcome: signal.aborted ? "cancelled" : "failed", elapsedMs: Math.round(performance.now() - observed.startedAt), failure: signal.aborted ? "cancelled" : "unknown" });
+            throw error;
+        }
+    }
+
+
+    private initializeRequest(request: PreparedAssistantRequest): void {
+        this.assistant.createRequest({
+            id: request.requestId,
+            articleId: request.articleId,
+            authorMessage: request.authorMessage,
+            scope: request.scope,
+            explicitSkillId: request.explicitSkillId,
+            skillOffset: request.skillOffset,
+            targetLanguage: request.targetLanguage,
+            retryOfRequestId: request.retryOfRequestId
+        });
+        this.assistant.resolveRequest(request.requestId, request.resolvedSkillId, request.explicitSkillId ? "explicit" : request.resolvedSkillId ? "inferred" : undefined);
+    }
+
+
+    private initialEvents(request: PreparedAssistantRequest): AssistantEvent[] {
+        return [
+            { type: ASSISTANT_EVENT.ACCEPTED, requestId: request.requestId },
+            {
+                type: ASSISTANT_EVENT.SKILL_RESOLVED,
+                requestId: request.requestId,
+                ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {})
+            },
+            ...(!request.usesCapabilityLoop ? [{ type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: activityForEditorialOperation(request.operation), status: "started" as const } }] : [])
+        ];
+    }
+
+
+    private editorialStream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        return request.usesCapabilityLoop ? this.capabilityLoop.stream(request, signal) : this.engineStream(request, signal);
+    }
+
+
+    private async *assistantEvents(request: PreparedAssistantRequest, event: EditorialEngineEvent): AsyncIterable<AssistantEvent> {
+        if (event.type === EDITORIAL_ENGINE_EVENT.TEXT_DELTA)
+            yield { type: ASSISTANT_EVENT.TEXT_DELTA, requestId: request.requestId, delta: event.delta };
+
+        if (event.type === EDITORIAL_ENGINE_EVENT.TOOL_STATUS)
+            yield { type: ASSISTANT_EVENT.TOOL_STATUS, requestId: request.requestId, tool: event.tool, status: event.status, ...(event.claims ? { claims: event.claims } : {}) };
+
+        if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED)
+            return;
+
+        const kind = responseKind(request.completedCapability);
+        for (const activity of request.capabilityActivities)
+            yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity };
+
+        yield { type: ASSISTANT_EVENT.STAGED_COMPLETION, requestId: request.requestId, completion: { responseKind: kind } };
+        const completion = this.completion.persist(request, event);
+        if (!request.usesCapabilityLoop)
+            yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: activityForEditorialOperation(request.operation), status: "completed" } };
+
+        yield { type: ASSISTANT_EVENT.COMPLETED, requestId: request.requestId, ...completion };
+    }
+
+
+    private engineStream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        const excerpt = this.articleExcerpt(request);
+        if (request.resolvedSkillId)
+            return request.engine.stream(this.engineRequest(request, excerpt), signal);
+
+        return request.engine.streamConversation({ message: request.authorMessage, article: excerpt, scope: request.scope.kind, history: this.conversationHistory(request.articleId) }, signal);
+    }
+
+
+    private articleExcerpt(request: PreparedAssistantRequest): string {
+        return request.scope.kind === "selection"
+            ? request.articleContent.slice(request.scope.startOffset, request.scope.endOffset)
+            : request.articleContent;
+    }
+
+
+    private engineRequest(request: PreparedAssistantRequest, excerpt: string) {
+        return {
+            operation: request.operation,
+            article: excerpt,
+            ...(request.operation === EDITORIAL_OPERATION.TRANSLATION ? { articleTitle: request.articleTitle } : {}),
+            ...(request.scope.kind === "selection" ? { articleSelection: true } : {}),
+            authorContext: request.authorMessage,
+            skillId: request.resolvedSkillId!,
+            ...(request.scope.kind === "selection" ? { surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
+            ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
+            ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
+            ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW
+                ? { styleProfile: this.styleCorpus.get().profile, articleStyleRules: this.styleCorpus.getArticleRules(request.articleId) }
+                : {}
+            ),
+            ...(request.operation === EDITORIAL_OPERATION.FACT_CHECK ? { reusableFactFindings: reusableFactFindings(this.factChecks, request.articleId) } : {})
+        };
+    }
+
+
+    private conversationHistory(articleId: string, limit?: number): { role: "author" | "assistant"; content: string }[] {
+        const history = this.assistant.listMessages(articleId).flatMap((message) => {
+            const isHistoryMessage = message.role === "author" || (message.role === "assistant" && message.kind === "response");
+            if (!isHistoryMessage || !message.content)
+                return [];
+
+            return [{ role: message.role === "author" ? "author" as const : "assistant" as const, content: message.content }];
+        });
+
+        return limit === undefined ? history : history.slice(-limit);
+    }
+
+
+    private errorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE | typeof APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED {
+        return error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
+            ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
+            : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;
+    }
+}

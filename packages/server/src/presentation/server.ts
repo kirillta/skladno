@@ -4,7 +4,7 @@ import { APPLICATION_ERROR, HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 import type { ApplicationServices } from "../application/application-services.js";
 import { ArticleDraftConflictError } from "../application/errors/article-draft-conflict-error.js";
 import { ArticleRevisionConflictError } from "../application/errors/article-revision-conflict-error.js";
-import type { EditorialService } from "../application/editorial/editorial-service.js";
+import type { EditorialService } from "../application/services/editorial/editorial-service.js";
 import type { ServerConfig } from "../infrastructure/configuration/config.js";
 import type { LocalDiagnostics } from "../infrastructure/diagnostics/local-diagnostics.js";
 import { ApplicationServiceError } from "./errors/application-error.js";

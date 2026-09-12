@@ -8,7 +8,7 @@ import test from "node:test";
 
 import { aiConnectionsPath, applicationSettingsPath, HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 import { createLocalService } from "./server.js";
-import { EditorialService } from "../application/editorial/editorial-service.js";
+import { EditorialService } from "../application/services/editorial/editorial-service.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
 import { createTestPersistence } from "../test-support/test-persistence.js";

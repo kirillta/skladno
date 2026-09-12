@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { APPLICATION_ERROR, HTTP_STATUS, resolveBuiltInSkillId, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
 
-import { AssistantService, type PreparedAssistantRequest } from "../../application/assistant/assistant-service.js";
+import { AssistantService, type PreparedAssistantRequest } from "../../application/services/assistant/assistant-service.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../application/ports/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../application/ports/editorial-engine-error.js";
 import { ApplicationServiceError } from "../errors/application-error.js";

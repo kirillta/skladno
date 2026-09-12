@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { createApplicationServices } from "./application/create-application-services.js";
 import type { ApplicationServices } from "./application/application-services.js";
-import { EditorialService } from "./application/editorial/editorial-service.js";
+import { EditorialService } from "./application/services/editorial/editorial-service.js";
 import { loadServerConfig, type ServerConfig } from "./infrastructure/configuration/config.js";
 import { readSystemDateTimeFormat } from "./infrastructure/configuration/system-date-time-format.js";
 import { listAvailableModels } from "./infrastructure/editorial/available-models.js";

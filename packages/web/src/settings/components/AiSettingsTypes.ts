@@ -1,9 +1,10 @@
-import type { AiConnection, AiProvider, ApplicationSettingsSnapshot, AvailableAiModel, ModelPreferences } from "@skladno/shared";
+import type { AiConnection, AiProvider, AppModelPreference, ApplicationSettingsSnapshot, AvailableAiModel, ModelPreferences } from "@skladno/shared";
 
 
 export interface AiSettingsSectionProps {
     settings: ApplicationSettingsSnapshot;
     preferences: ModelPreferences;
+    appModel?: AppModelPreference;
     models: AvailableAiModel[];
     connectionProvider: AiProvider;
     connectionName: string;
@@ -24,4 +25,5 @@ export interface AiSettingsSectionProps {
     onRequestConnectionRemoval: (connection: AiConnection) => void;
     onRefreshModels: () => void;
     savePreferences: (next: ModelPreferences) => Promise<void>;
+    saveAppModel: (next: AppModelPreference | null) => Promise<void>;
 }

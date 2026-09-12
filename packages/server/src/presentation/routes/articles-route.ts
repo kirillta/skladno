@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { APPLICATION_ERROR, HTTP_STATUS, isArticleLanguage, isPublishLimitProfileId, type AcceptProposalInput, type CreateArticleInput, type SaveArticleRevisionInput, type UpdateArticleInput } from "@skladno/shared";
 
-import { ArticleService } from "../../application/articles/article-service.js";
+import { ArticleService } from "../../application/services/articles/article-service.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
 import { object, readJson, string, writeJson } from "../transport/json.js";
 
