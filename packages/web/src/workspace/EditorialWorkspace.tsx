@@ -53,17 +53,9 @@ interface EditorialWorkspaceUpdates {
 }
 
 
-export function EditorialWorkspaceProvider({ context, navigation, bindings, updates = {} }: { context: EditorialWorkspaceContext; navigation: EditorialWorkspaceNavigation; bindings: EditorialWorkspaceBindings; updates?: EditorialWorkspaceUpdates }) {
-    const { client, screen, settingsSection } = context;
-    const { openSettings, openModelSettings, backToWorkspace } = navigation;
-    const { dispatcher, keyBindingOverrides, onKeyBindingsUpdated, onThemeApplied } = bindings;
-    const { focusUpdates = false, onUpdatesFocused = () => undefined } = updates;
-    const intl = useIntl();
-    const { notifyError } = useNotifications();
-    const layout = useWorkspaceLayout();
-    const workspace = useArticleWorkspace(client, layout.selectedArticleId, layout.setSelectedArticleId);
-    const generalSettings = useWorkspaceGeneralSettings(client, screen);
+function useUsableAiConnection(client: EditorialWorkspaceClient, screen: EditorialWorkspaceContext["screen"]) {
     const [hasUsableAiConnection, setHasUsableAiConnection] = useState<boolean>();
+
     useEffect(() => {
         let cancelled = false;
         void client.getApplicationSettings().then((settings) => {
@@ -75,61 +67,52 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
             cancelled = true;
         };
     }, [client, screen]);
-    const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
-    const editorial = useEditorialProposal(client, workspace);
-    const [profileRebuilt, setProfileRebuilt] = useState<{ articleId: string; count: number; token: number }>();
-    const corpus = useStyleCorpus(client, (count) => {
-        if (workspace.selectedArticle)
-            setProfileRebuilt({ articleId: workspace.selectedArticle.id, count, token: Date.now() });
-    });
+
+    return hasUsableAiConnection;
+}
+
+
+function useAssistantSelection(workspace: ArticleWorkspaceState) {
     const [assistantSelection, setAssistantSelection] = useState<AssistantSelectionScope>();
     const assistantSelectionVersion = useRef(0);
+
     useEffect(() => {
         assistantSelectionVersion.current += 1;
         setAssistantSelection(undefined);
     }, [workspace.content, workspace.selectedArticleId]);
-    const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
-        editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
-    }, [editorial]);
-    const assistant = useAssistantMessages(client, workspace, assistantSelection, applyAssistantResult, profileRebuilt);
-    const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
-    const flushSelectedRef = useRef(workspace.flushSelected);
-    flushSelectedRef.current = workspace.flushSelected;
-    const restoreAssistantProposal = editorial.restoreAssistantProposal;
-    const runFactCheck = () => {
-        layout.setAssistantCollapsed(false);
-        void assistant.request("", BUILT_IN_SKILL.FACT_CHECKING);
-    };
-    const runTranslation = () => {
-        const languages = generalSettings.defaultTranslationLanguages.filter((language) => language !== workspace.selectedArticle?.language);
-        if (!languages.length)
+
+    const onSelectionChange = useCallback((snapshot: AssistantSelectionSnapshot | undefined) => {
+        const version = ++assistantSelectionVersion.current;
+        if (!snapshot || !workspace.selectedArticle) {
+            setAssistantSelection(undefined);
             return;
+        }
 
-        layout.setAssistantCollapsed(false);
-        void assistant.request("", BUILT_IN_SKILL.TRANSLATION, languages);
-    };
+        void getAssistantSelectionScope(workspace.selectedArticle.id, snapshot).then((selection) => {
+            if (version === assistantSelectionVersion.current)
+                setAssistantSelection(selection);
+        });
+    }, [workspace]);
 
-    useEffect(() => {
-        restoreAssistantProposal(assistant.messages);
-    }, [assistant.messages, restoreAssistantProposal]);
-
-    useEffect(() => {
-        const prepareClose = (event: Event) => {
-            if (!(event instanceof CustomEvent) || typeof event.detail !== "string")
-                return;
-
-            const requestId = event.detail;
-            void flushSelectedRef.current().then(
-                () => window.dispatchEvent(new CustomEvent(ELECTRON_LIFECYCLE_EVENT.checkpointResult, { detail: JSON.stringify({ requestId, ok: true }) })),
-                () => window.dispatchEvent(new CustomEvent(ELECTRON_LIFECYCLE_EVENT.checkpointResult, { detail: JSON.stringify({ requestId, ok: false }) })),
-            );
-        };
-
-        window.addEventListener(ELECTRON_LIFECYCLE_EVENT.prepareClose, prepareClose);
-
-        return () => window.removeEventListener(ELECTRON_LIFECYCLE_EVENT.prepareClose, prepareClose);
+    const clearAssistantSelection = useCallback(() => {
+        assistantSelectionVersion.current += 1;
+        setAssistantSelection(undefined);
     }, []);
 
+    return { assistantSelection, onSelectionChange, clearAssistantSelection };
+}
+
+
+function useWorkspaceActions({ client, intl, notifyError, workspace, generalSettings, layout, assistant, openSettings }: {
+    client: EditorialWorkspaceClient;
+    intl: ReturnType<typeof useIntl>;
+    notifyError: ReturnType<typeof useNotifications>["notifyError"];
+    workspace: ArticleWorkspaceState;
+    generalSettings: ReturnType<typeof useWorkspaceGeneralSettings>;
+    layout: WorkspaceLayoutState;
+    assistant: AssistantMessagesState;
+    openSettings: () => void;
+}) {
     const createBlank = useCallback(async () => {
         try {
             const settings = await client.getApplicationSettings();
@@ -151,10 +134,61 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
         openSettings();
     }, [openSettings, workspace]);
 
+    const runFactCheck = useCallback(() => {
+        layout.setAssistantCollapsed(false);
+        void assistant.request("", BUILT_IN_SKILL.FACT_CHECKING);
+    }, [assistant, layout]);
+
+    const runTranslation = useCallback(() => {
+        const languages = generalSettings.defaultTranslationLanguages.filter((language) => language !== workspace.selectedArticle?.language);
+        if (!languages.length)
+            return;
+
+        layout.setAssistantCollapsed(false);
+        void assistant.request("", BUILT_IN_SKILL.TRANSLATION, languages);
+    }, [assistant, generalSettings.defaultTranslationLanguages, layout, workspace.selectedArticle?.language]);
+
+    return { createBlank, enterSettings, runFactCheck, runTranslation };
+}
+
+
+function useWorkspaceLifecycle(workspace: ArticleWorkspaceState, assistant: AssistantMessagesState, restoreAssistantProposal: EditorialProposalState["restoreAssistantProposal"]) {
+    useEffect(() => {
+        restoreAssistantProposal(assistant.messages);
+    }, [assistant.messages, restoreAssistantProposal]);
+
+    const flushSelectedRef = useRef(workspace.flushSelected);
+    flushSelectedRef.current = workspace.flushSelected;
+
+    useEffect(() => {
+        const prepareClose = (event: Event) => {
+            if (!(event instanceof CustomEvent) || typeof event.detail !== "string")
+                return;
+
+            const requestId = event.detail;
+            void flushSelectedRef.current().then(
+                () => window.dispatchEvent(new CustomEvent(ELECTRON_LIFECYCLE_EVENT.checkpointResult, { detail: JSON.stringify({ requestId, ok: true }) })),
+                () => window.dispatchEvent(new CustomEvent(ELECTRON_LIFECYCLE_EVENT.checkpointResult, { detail: JSON.stringify({ requestId, ok: false }) })),
+            );
+        };
+
+        window.addEventListener(ELECTRON_LIFECYCLE_EVENT.prepareClose, prepareClose);
+        return () => window.removeEventListener(ELECTRON_LIFECYCLE_EVENT.prepareClose, prepareClose);
+    }, []);
+}
+
+
+function useWorkspaceShortcuts({ dispatcher, screen, actions, layout, save }: {
+    dispatcher: KeyBindingDispatcher;
+    screen: EditorialWorkspaceContext["screen"];
+    actions: ReturnType<typeof useWorkspaceActions>;
+    layout: WorkspaceLayoutState;
+    save: ArticleWorkspaceState["save"];
+}) {
     const shortcutActions = useRef({
-        createBlank,
-        save: workspace.save,
-        enterSettings,
+        createBlank: actions.createBlank,
+        save,
+        enterSettings: actions.enterSettings,
         setFocusMode: layout.setFocusMode,
         libraryCollapsed: layout.libraryCollapsed,
         setLibraryCollapsed: layout.setLibraryCollapsed,
@@ -163,9 +197,9 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
         setView: layout.setView,
     });
     shortcutActions.current = {
-        createBlank,
-        save: workspace.save,
-        enterSettings,
+        createBlank: actions.createBlank,
+        save,
+        enterSettings: actions.enterSettings,
         setFocusMode: layout.setFocusMode,
         libraryCollapsed: layout.libraryCollapsed,
         setLibraryCollapsed: layout.setLibraryCollapsed,
@@ -209,6 +243,36 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
 
         return () => unregister.forEach((remove) => remove());
     }, [dispatcher, screen]);
+}
+
+
+export function EditorialWorkspaceProvider({ context, navigation, bindings, updates = {} }: { context: EditorialWorkspaceContext; navigation: EditorialWorkspaceNavigation; bindings: EditorialWorkspaceBindings; updates?: EditorialWorkspaceUpdates }) {
+    const { client, screen, settingsSection } = context;
+    const { openSettings, openModelSettings, backToWorkspace } = navigation;
+    const { dispatcher, keyBindingOverrides, onKeyBindingsUpdated, onThemeApplied } = bindings;
+    const { focusUpdates = false, onUpdatesFocused = () => undefined } = updates;
+    const intl = useIntl();
+    const { notifyError } = useNotifications();
+    const layout = useWorkspaceLayout();
+    const workspace = useArticleWorkspace(client, layout.selectedArticleId, layout.setSelectedArticleId);
+    const generalSettings = useWorkspaceGeneralSettings(client, screen);
+    const hasUsableAiConnection = useUsableAiConnection(client, screen);
+    const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
+    const editorial = useEditorialProposal(client, workspace);
+    const [profileRebuilt, setProfileRebuilt] = useState<{ articleId: string; count: number; token: number }>();
+    const corpus = useStyleCorpus(client, (count) => {
+        if (workspace.selectedArticle)
+            setProfileRebuilt({ articleId: workspace.selectedArticle.id, count, token: Date.now() });
+    });
+    const selection = useAssistantSelection(workspace);
+    const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
+        editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
+    }, [editorial]);
+    const assistant = useAssistantMessages(client, workspace, selection.assistantSelection, applyAssistantResult, profileRebuilt);
+    const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
+    const actions = useWorkspaceActions({ client, intl, notifyError, workspace, generalSettings, layout, assistant, openSettings });
+    useWorkspaceLifecycle(workspace, assistant, editorial.restoreAssistantProposal);
+    useWorkspaceShortcuts({ dispatcher, screen, actions, layout, save: workspace.save });
 
     if (workspace.state === "loading")
         return <main className="grid min-h-screen place-items-center text-muted">
@@ -225,28 +289,10 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
 
     return <WorkspaceScreen
         content={{ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings }}
-        actions={{ createBlank, runFactCheck, runTranslation, openSettings: enterSettings, openModelSettings }}
+        actions={{ ...actions, openSettings: actions.enterSettings, openModelSettings }}
         environment={{ dispatcher, shortcutOverrides: keyBindingOverrides, hasUsableAiConnection, overlays: <>
             <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
             <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
         </> }}
-        selection={{
-            assistantSelection,
-            onSelectionChange: (snapshot: AssistantSelectionSnapshot | undefined) => {
-                const version = ++assistantSelectionVersion.current;
-                if (!snapshot || !workspace.selectedArticle) {
-                    setAssistantSelection(undefined);
-                    return;
-                }
-
-                void getAssistantSelectionScope(workspace.selectedArticle.id, snapshot).then((selection) => {
-                    if (version === assistantSelectionVersion.current)
-                        setAssistantSelection(selection);
-                });
-            },
-            clearAssistantSelection: () => {
-                assistantSelectionVersion.current += 1;
-                setAssistantSelection(undefined);
-            },
-        }} />;
+        selection={selection} />;
 }
