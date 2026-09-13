@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-30
+- Updated: 2026-09-13
 - Scope: Assistant skills, application capabilities, tool execution, Workspace handoffs, and generated artifact completion
 - Depends on: [ADR-002](adr-002-shared-contract-organization.md), [ADR-003](adr-003-web-feature-oriented-react-architecture.md), [ADR-005](adr-005-article-state-and-consistency.md), [ADR-007](adr-007-completion-gated-editorial-engine.md), [ADR-008](adr-008-loopback-service-trust-boundary.md)
 
@@ -12,6 +13,12 @@ The Assistant supports free conversation and six built-in skills. A request eith
 The dedicated Workspace Views remain central to Skladno. Proposal Review, Revision History, Fact Check, Style Profile, and Translations provide deliberate review and management that a chat transcript should not reproduce. Smoother Assistant interaction must preserve those views, explicit Author approval, minimum-context handling, Revision consistency, and completion-gated persistence.
 
 ## Decision
+
+### Implementation ownership
+
+Under `packages/server/src/application/assistant/`, `assistant-service.ts` coordinates request preparation, execution, completion, and terminal telemetry. `requests/assistant-request-preparation.ts` validates and prepares requests, `capabilities/assistant-capability-loop.ts` runs the bounded capability loop, and `completion/assistant-completion.ts` owns completion and artifact persistence. `skills/` owns the Skill catalog and built-in packages. The application service factory injects these collaborators.
+
+Within `capabilities/`, `editorial-capability-registry.ts` owns definitions and operation/transport classifications, `editorial-capability-validation.ts` owns call and coverage validation, and `editorial-capability-catalog-readers.ts` owns read dispatch. `editorial-capability-catalog.ts` retains discovery, current-Article validation, action dispatch, and editorial stream dispatch. Capability IDs, inputs, context, definitions, and discovery results have separate contract files. Extend the responsible module and its focused catalog or loop tests rather than collecting new responsibilities in the catalog class.
 
 ### One capability, two entry points
 

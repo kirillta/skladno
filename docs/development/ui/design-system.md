@@ -8,6 +8,8 @@ The [visual atlas](visual-atlas.md) maps typography, color, and visual roles to 
 
 Reuse the shared primitives for controls, status, loading, empty states, tabs, temporary focused tasks, and diffs. Preserve their accessible names, keyboard behavior, loading behavior, reduced-motion treatment, and non-color state cues.
 
+Use `Button compact` for tighter horizontal padding without reducing its 36px minimum height. Use `IconButton` with a localized `label` for icon-only actions. Its `variant` selects `default`, `secondary`, `quiet`, `danger`, `danger-quiet`, or `toolbar`; `round` selects a circular control. Pass `aria-pressed` for toggle state and use the existing variant styling rather than repeating button classes in feature code. `IconButton` does not provide the loading state supported by `Button`; callers must preserve pending-action disabling where needed.
+
 Use application popup notifications for cross-screen outcomes and background actions. Keep validation and workflow feedback beside the operation that produced it. Notifications do not move focus; use `status` for informational or successful outcomes and `alert` for warnings or errors.
 
 ## Accessibility
