@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { migrations } from "./migrations.js";
-import { chmodSync, existsSync, unlinkSync } from "node:fs";
+import { chmodSync, existsSync } from "node:fs";
 
 
 export type SqliteDatabase = DatabaseSync;
@@ -60,45 +60,8 @@ function restrictDatabasePermissions(filename: string): void {
 }
 
 
-function isLegacyDatabase(filename: string): boolean {
-    if (!existsSync(filename))
-        return false;
-
-    const database = new DatabaseSync(filename);
-    try {
-        const rows = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('documents', 'schema_migrations')").all() as { name: string }[];
-        if (rows.some((row) => row.name === "documents"))
-            return true;
-
-        return rows.some((row) => row.name === "schema_migrations") && Boolean(database.prepare("SELECT 1 FROM schema_migrations WHERE name IN ('initial_author_data', 'translation_document_links', 'document_creation_metadata') LIMIT 1").get());
-    } finally {
-        database.close();
-    }
-}
-
-
-function removeLegacyDatabase(filename: string): void {
-    for (const path of [filename, `${filename}-wal`, `${filename}-shm`, `${filename}-journal`]) {
-        if (!existsSync(path))
-            continue;
-
-        try {
-            unlinkSync(path);
-        } catch (error) {
-            const detail = error instanceof Error ? error.message : "unknown error";
-            throw new Error(`Could not remove legacy Skladno database at ${path}: ${detail}`, {
-                cause: error,
-            });
-        }
-    }
-}
-
-
 export function openDatabase(filename: string): SqliteDatabase {
     restrictDatabasePermissions(filename);
-    if (isLegacyDatabase(filename))
-        removeLegacyDatabase(filename);
-
     const database = new DatabaseSync(filename);
     restrictDatabasePermissions(filename);
     database.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");

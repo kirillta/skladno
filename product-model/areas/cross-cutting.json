@@ -60,10 +60,10 @@
         {
             "id": "cross-cutting.database-lifecycle",
             "area": "Database lifecycle",
-            "title": "SQLite persistence and Article schema transition",
+            "title": "SQLite persistence and Article schema migrations",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/persistence/database.ts"],
-            "contract": "Startup performs the one-time legacy Documents-to-Articles schema transition, then preserves the resulting Article database; persistence composition uses focused repositories directly.",
+            "contract": "Startup applies forward-only Article schema migrations without deleting the database; persistence composition uses focused repositories directly. Pre-Article prototype databases are unsupported and are no longer detected or automatically deleted.",
             "persistence": "SQLite remains the durable local data store after migration."
         },
         {
@@ -178,14 +178,14 @@
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/diagnostics/local-diagnostics.test.ts" }
         },
         {
-            "id": "cross-cutting.database-transition-human-reviewed",
-            "title": "Database transition preserves the resulting Article database",
+            "id": "cross-cutting.database-reopens",
+            "title": "Startup preserves the Article database",
             "capabilityIds": ["cross-cutting.database-lifecycle"],
-            "preconditions": ["A legacy Documents database exists before local service startup."],
-            "event": "The service starts for the first time after the Article migration.",
-            "expected": ["The legacy database and sidecars are replaced once with the Article schema."],
-            "forbidden": ["A later start deletes the resulting Article database."],
-            "evidence": { "kind": "human-reviewed", "path": "packages/server/src/infrastructure/persistence/database.ts" }
+            "preconditions": ["An Article database contains persisted author data."],
+            "event": "The database is closed and reopened.",
+            "expected": ["Persisted Article data remains available after startup."],
+            "forbidden": ["Startup deletes the Article database."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.storage-and-style.test.ts" }
         },
         {
             "id": "cross-cutting.assistant-records-local",

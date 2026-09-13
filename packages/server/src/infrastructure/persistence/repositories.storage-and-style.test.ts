@@ -9,7 +9,7 @@ import { createTestPersistence } from "../../test-support/test-persistence.js";
 import { StyleCorpusService } from "../../application/editorial/style/style-corpus-service.js";
 import { APPLICATION_ERROR } from "@skladno/shared";
 import { withRepository } from "./repositories.test-utils.js";
-// Product scenarios: application.local-persistence-reopens, history-and-publishing.style-corpus-local
+// Product scenarios: application.local-persistence-reopens, cross-cutting.database-reopens, history-and-publishing.style-corpus-local
 test("materials, settings, artifacts and citations persist through reopening", () => {
     const directory = mkdtempSync(join(tmpdir(), "skladno-persistence-"));
     const filename = join(directory, "skladno.sqlite");

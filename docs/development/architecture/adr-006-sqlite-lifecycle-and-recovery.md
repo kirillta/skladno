@@ -13,7 +13,7 @@ Skladno stores private author data locally and must upgrade it without a remote 
 
 SQLite is the local system of record. The service enables foreign keys and WAL mode. Schema changes are ordered, forward-only migrations recorded in `schema_migrations`; each unapplied migration runs in one immediate transaction.
 
-The pre-Article prototype schema is detected by its known tables and replaced once rather than supported through a permanent compatibility layer. This destructive transition remains explicit in code and release review. Future supported schemas migrate forward without deleting the database.
+The pre-Article prototype schema is no longer supported. Startup does not detect or delete prototype databases. Supported Article schemas migrate forward without deleting the database.
 
 Backups are SQLite snapshots. They include application data and exclude environment files and credentials. Automatic retention never deletes manual backups. Recovery occurs while Skladno is stopped by replacing the active database with a selected snapshot, followed by an application-level verification of Articles, Revisions, and Settings.
 
@@ -21,7 +21,7 @@ On POSIX, Skladno restricts its data directory and database files to the current
 
 ## Consequences
 
-Migrations stay small and auditable, and recovery does not require a second persistence format. Downgrade migrations and in-place restore are unsupported. Legacy prototype data is not preserved by the one-time transition.
+Migrations stay small and auditable, and recovery does not require a second persistence format. Downgrade migrations, in-place restore, and upgrades from the pre-Article prototype are unsupported.
 
 ## Verification
 
