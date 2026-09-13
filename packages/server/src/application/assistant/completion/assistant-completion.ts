@@ -54,7 +54,7 @@ export class AssistantCompletion {
 
 
     private persistInTransaction(request: PreparedAssistantRequest, event: CompletionEvent): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
-        const article = this.dependencies.articles.get(request.articleId);
+        const article = this.dependencies.articles.getArticle(request.articleId);
         if (!article || article.currentRevisionId !== request.scope.baseRevisionId)
             throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
 
@@ -114,7 +114,7 @@ export class AssistantCompletion {
             responseId: event.responseId,
             proposal: content,
             ...(request.completedCapability === EDITORIAL_CAPABILITY.STYLE_REVIEW
-                ? { styleProfile: this.dependencies.styleCorpus.get().profile, articleStyleRules: this.dependencies.styleCorpus.getArticleRules(request.articleId) }
+                ? { styleProfile: this.dependencies.styleCorpus.getStyleCorpus().profile, articleStyleRules: this.dependencies.styleCorpus.getArticleStyleRules(request.articleId) }
                 : {}
             ),
             translation: event.translation
@@ -133,7 +133,7 @@ export class AssistantCompletion {
         }
 
         return {
-            id: this.dependencies.artifacts.create({
+            id: this.dependencies.artifacts.createEditorialArtifact({
                 articleId: request.articleId,
                 revisionId: request.scope.baseRevisionId,
                 kind: "assistant-proposal",

@@ -3,9 +3,9 @@ import type { CreateEditorialArtifactInput, CreateSourceCitationInput, Editorial
 
 export interface AssistantArtifactStore {
     withinTransaction<T>(run: () => T): T;
-    create(input: CreateEditorialArtifactInput): EditorialArtifact;
-    createCitation(input: CreateSourceCitationInput): SourceCitation;
-    list(articleId: string): EditorialArtifact[];
-    get(artifactId: string, articleId: string): EditorialArtifact | undefined;
-    updateContent(artifactId: string, articleId: string, content: string): void;
+    createEditorialArtifact(input: CreateEditorialArtifactInput): EditorialArtifact;
+    createSourceCitation(input: CreateSourceCitationInput): SourceCitation;
+    listEditorialArtifacts(articleId: string): EditorialArtifact[];
+    getEditorialArtifact(artifactId: string, articleId: string): EditorialArtifact | undefined;
+    updateEditorialArtifactContent(artifactId: string, articleId: string, content: string): void;
 }

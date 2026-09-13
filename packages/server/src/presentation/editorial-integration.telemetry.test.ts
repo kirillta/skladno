@@ -95,7 +95,7 @@ test("Article revision recovery records only its terminal outcome", async () => 
 
     await withService(undefined, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Private title", content: "Private first Revision" });
-        repositories.articles.appendRevision(article.id, "Private second Revision", { kind: "manual" });
+        repositories.articles.appendArticleRevision(article.id, "Private second Revision", { kind: "manual" });
         const other = repositories.articleService.createArticle({ title: "Other", content: "Private other Revision" });
 
         const restored = await fetch(`${baseUrl}${restoreRevisionPath(article.id, article.currentRevisionId)}`, { method: HTTP_METHOD.POST });

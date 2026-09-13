@@ -26,7 +26,7 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
     const editorialArtifacts = new EditorialArtifactsRepository(database);
     const factChecks = new FactChecksRepository(database);
     const settings = new SettingsRepository(database);
-    const editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.get(articleId)));
+    const editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.getArticle(articleId)));
     const styleCorpus = new StyleCorpusRepository(database);
     const assistant = new AssistantRepository(database);
     const credentialStore = new WindowsCredentialStore();

@@ -8,7 +8,7 @@ export class EditorialSessionsRepository {
     constructor(private readonly database: SqliteDatabase, private readonly articleExists: (articleId: string) => boolean) { }
 
 
-    get(articleId: string): EditorialSession | undefined {
+    getEditorialSession(articleId: string): EditorialSession | undefined {
         const row = this.database
             .prepare("SELECT article_id, previous_response_id, connection_id, provider, model, updated_at FROM editorial_sessions WHERE article_id = ?")
             .get(articleId) as Row | undefined;
@@ -27,7 +27,7 @@ export class EditorialSessionsRepository {
     }
 
 
-    save(articleId: string, session: Pick<EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): EditorialSession {
+    saveEditorialSession(articleId: string, session: Pick<EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): EditorialSession {
         if (!this.articleExists(articleId))
             throw new Error("Article not found.");
 
@@ -39,7 +39,7 @@ export class EditorialSessionsRepository {
     }
 
 
-    remove(articleId: string): void {
+    removeEditorialSession(articleId: string): void {
         this.database.prepare("DELETE FROM editorial_sessions WHERE article_id = ?")
             .run(articleId);
     }

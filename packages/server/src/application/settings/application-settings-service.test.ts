@@ -9,8 +9,8 @@ import { ApplicationSettingsService } from "./application-settings-service.js";
 function service(records: Map<string, unknown>, list: (connection: AiConnection) => Promise<string[]> = async () => []) {
     return new ApplicationSettingsService(
         {
-            get: (key) => records.has(key) ? { key, value: records.get(key), updatedAt: "now" } : undefined,
-            set: (key, value) => {
+            getSetting: (key) => records.has(key) ? { key, value: records.get(key), updatedAt: "now" } : undefined,
+            saveSetting: (key, value) => {
                 records.set(key, value);
                 return { key, value, updatedAt: "now" };
             },

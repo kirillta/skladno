@@ -37,7 +37,7 @@ export class AssistantRequestPreparation {
 
 
     listMessages(articleId: string): AssistantMessage[] {
-        if (!this.dependencies.articles.get(articleId))
+        if (!this.dependencies.articles.getArticle(articleId))
             throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
         return this.dependencies.assistant.listMessages(articleId);
@@ -45,7 +45,7 @@ export class AssistantRequestPreparation {
 
 
     prepare(request: AssistantServiceRequest): PreparedAssistantRequest {
-        const article = this.dependencies.articles.get(request.articleId);
+        const article = this.dependencies.articles.getArticle(request.articleId);
         if (!article)
             throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
@@ -126,7 +126,7 @@ export class AssistantRequestPreparation {
         if (!usesCapabilityLoop && resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !request.targetLanguage?.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
-        if (!usesCapabilityLoop && resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && this.dependencies.styleCorpus.get().status !== "ready")
+        if (!usesCapabilityLoop && resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW && this.dependencies.styleCorpus.getStyleCorpus().status !== "ready")
             throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
     }
 

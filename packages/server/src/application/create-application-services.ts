@@ -32,7 +32,7 @@ interface ApplicationServiceStores {
     assistant: AssistantStore;
     artifacts: AssistantArtifactStore;
     engines: EditorialEngineResolver;
-    factChecks?: ConstructorParameters<typeof FactCheckService>[0] & { save(artifactId: string, articleId: string, revisionId: string): void };
+    factChecks?: ConstructorParameters<typeof FactCheckService>[0] & { saveFactCheckRun(artifactId: string, articleId: string, revisionId: string): void };
 }
 
 
@@ -60,7 +60,7 @@ export interface CreateApplicationServicesOptions {
 
 
 export function createApplicationServices({ stores, settings, integration = {} }: CreateApplicationServicesOptions): ApplicationServices {
-    const factChecks = stores.factChecks ?? { list: () => [], resolve: () => undefined, save: () => undefined };
+    const factChecks = stores.factChecks ?? { listFactChecks: () => [], resolveFactCheckFinding: () => undefined, saveFactCheckRun: () => undefined };
     const articleService = new ArticleService(stores.articles, stores.assistant, integration.telemetry);
     const publishing = new PublishingService(settings.settings);
     const factCheckService = new FactCheckService(factChecks);

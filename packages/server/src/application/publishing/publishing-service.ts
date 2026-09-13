@@ -47,7 +47,7 @@ export class PublishingService {
 
 
     getSettings(): PublishingSettings {
-        return publishingSettings(this.store.get(publishLimitProfileSettingKey)?.value) ?? { ...defaultPublishingSettings, customProfiles: [] };
+        return publishingSettings(this.store.getSetting(publishLimitProfileSettingKey)?.value) ?? { ...defaultPublishingSettings, customProfiles: [] };
     }
 
 
@@ -56,7 +56,7 @@ export class PublishingService {
         if (!settings)
             throw new ApplicationServiceError(APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE, HTTP_STATUS.BAD_REQUEST);
 
-        this.store.set(publishLimitProfileSettingKey, settings);
+        this.store.saveSetting(publishLimitProfileSettingKey, settings);
         return settings;
     }
 }

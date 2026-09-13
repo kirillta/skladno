@@ -91,9 +91,9 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
     private resolveAppModelConnection(): (ResolvedConnection & { model: string; reasoningEffort?: ReasoningEffort }) | undefined {
         const preferences = this.resolvePreferences();
-        const appModelRecord = this.settings.get("application-app-model");
+        const appModelRecord = this.settings.getSetting("application-app-model");
         const savedAppModel = appModelRecord?.value as AppModelPreference | undefined;
-        const legacyAppModel = appModelRecord ? undefined : (this.settings.get("application-model-preferences")?.value as { appModel?: AppModelPreference } | undefined)?.appModel;
+        const legacyAppModel = appModelRecord ? undefined : (this.settings.getSetting("application-model-preferences")?.value as { appModel?: AppModelPreference } | undefined)?.appModel;
         const configuration = resolveAppModelConfiguration(savedAppModel ?? legacyAppModel, preferences, this.config.aiModel);
         const connection = this.resolveModel(configuration.model);
         if (!connection)
@@ -104,8 +104,8 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     private resolvePreferences(): ModelPreferences {
-        const saved = this.settings.get("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
-        const rawPreferences = this.settings.get("application-model-preferences")?.value;
+        const saved = this.settings.getSetting("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
+        const rawPreferences = this.settings.getSetting("application-model-preferences")?.value;
         const byConnection = rawPreferences && typeof rawPreferences === "object" && !Array.isArray(rawPreferences)
             ? (rawPreferences as { byConnection?: unknown }).byConnection
             : undefined;
@@ -118,7 +118,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     private resolveModel(preference: string): (ResolvedConnection & { model: string }) | undefined {
-        const saved = this.settings.get("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
+        const saved = this.settings.getSetting("application-ai-connections")?.value as { connections?: AiConnection[]; activeConnectionId?: string } | undefined;
         const selected = parseAiModelPreferenceId(preference);
         if (!selected) {
             const legacyConnection = saved?.connections?.find((item) => item.id === saved.activeConnectionId && item.active !== false);

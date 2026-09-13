@@ -229,7 +229,7 @@ export class AssistantService {
             ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
             ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
             ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW
-                ? { styleProfile: this.stores.styleCorpus.get().profile, articleStyleRules: this.stores.styleCorpus.getArticleRules(request.articleId) }
+                ? { styleProfile: this.stores.styleCorpus.getStyleCorpus().profile, articleStyleRules: this.stores.styleCorpus.getArticleStyleRules(request.articleId) }
                 : {}
             ),
             ...(request.operation === EDITORIAL_OPERATION.FACT_CHECK ? { reusableFactFindings: reusableFactFindings(this.stores.factChecks, request.articleId) } : {})

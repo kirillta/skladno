@@ -1,7 +1,7 @@
 import type { ArticleRevision } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { revisionFromRow } from "./article-repository-records.js";
+import { revisionFromRow } from "./article-record-mappers.js";
 import type { Row } from "./repository-utils.js";
 
 

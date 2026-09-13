@@ -8,13 +8,13 @@ export class FactChecksRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
 
-    save(artifactId: string, articleId: string, revisionId: string): void {
+    saveFactCheckRun(artifactId: string, articleId: string, revisionId: string): void {
         this.database.prepare("INSERT INTO fact_check_runs (editorial_artifact_id, article_id, revision_id, created_at) VALUES (?, ?, ?, ?)")
             .run(artifactId, articleId, revisionId, now());
     }
 
 
-    list(articleId: string): FactCheck[] {
+    listFactChecks(articleId: string): FactCheck[] {
         return (this.database.prepare("SELECT a.content, r.revision_id, r.created_at FROM fact_check_runs r JOIN editorial_artifacts a ON a.id = r.editorial_artifact_id WHERE r.article_id = ? ORDER BY r.created_at DESC").all(articleId) as Row[])
             .flatMap((row) => {
                 try {
@@ -31,7 +31,7 @@ export class FactChecksRepository {
     }
 
 
-    resolve(occurrenceId: string, resolution: "corrected_or_removed" | "accepted_as_written" | "evidence_accepted"): void {
+    resolveFactCheckFinding(occurrenceId: string, resolution: "corrected_or_removed" | "accepted_as_written" | "evidence_accepted"): void {
         this.database.prepare("INSERT INTO fact_check_resolutions (occurrence_id, resolution, updated_at) VALUES (?, ?, ?) ON CONFLICT(occurrence_id) DO UPDATE SET resolution = excluded.resolution, updated_at = excluded.updated_at")
             .run(occurrenceId, resolution, now());
     }

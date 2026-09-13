@@ -19,36 +19,36 @@ export class MaterialsRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
 
-    create(input: CreateMaterialInput): Material {
+    createMaterial(input: CreateMaterialInput): Material {
         const timestamp = now();
         const materialId = input.id ?? createId();
         this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
             .run(materialId, required(input.name, "Material name"), input.content, timestamp, timestamp);
 
-        return this.get(materialId)!;
+        return this.getMaterial(materialId)!;
     }
 
 
-    get(materialId: string): Material | undefined {
+    getMaterial(materialId: string): Material | undefined {
         const row = this.database.prepare("SELECT * FROM author_materials WHERE id = ?").get(materialId) as Row | undefined;
         return row && material(row);
     }
 
 
-    list(): Material[] {
+    listMaterials(): Material[] {
         return (this.database.prepare("SELECT * FROM author_materials ORDER BY created_at, id").all() as Row[]).map(material);
     }
 
 
-    delete(materialId: string): void {
+    deleteMaterial(materialId: string): void {
         const result = this.database.prepare("DELETE FROM author_materials WHERE id = ?").run(materialId);
         if (result.changes === 0)
             throw new Error("Material not found.");
     }
 
 
-    update(materialId: string, input: UpdateMaterialInput): Material {
-        const existing = this.get(materialId);
+    updateMaterial(materialId: string, input: UpdateMaterialInput): Material {
+        const existing = this.getMaterial(materialId);
         if (!existing)
             throw new Error("Material not found.");
 
@@ -58,6 +58,6 @@ export class MaterialsRepository {
         this.database.prepare("UPDATE author_materials SET name = ?, content = ?, updated_at = ? WHERE id = ?")
             .run(input.name === undefined ? existing.name : required(input.name, "Material name"), input.content ?? existing.content, now(), materialId);
 
-        return this.get(materialId)!;
+        return this.getMaterial(materialId)!;
     }
 }

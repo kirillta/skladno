@@ -103,7 +103,7 @@ const articles = new ArticlesRepository(database);
 const artifacts = new EditorialArtifactsRepository(database);
 const factChecks = new FactChecksRepository(database);
 const settings = new SettingsRepository(database);
-const sessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.get(articleId)));
+const sessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.getArticle(articleId)));
 const styleCorpus = new StyleCorpusRepository(database);
 const assistant = new AssistantRepository(database);
 const engines: EditorialEngineResolver = { resolve: () => new E2eFixtureEngine() };

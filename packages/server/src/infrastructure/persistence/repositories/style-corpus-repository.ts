@@ -77,7 +77,7 @@ export class StyleCorpusRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
 
-    get(): StyleCorpus {
+    getStyleCorpus(): StyleCorpus {
         const rows = this.database.prepare("SELECT author_materials.*, style_corpus_items.included, style_corpus_items.origin, style_corpus_items.article_id, style_corpus_items.revision_id FROM style_corpus_items JOIN author_materials ON author_materials.id = style_corpus_items.author_material_id ORDER BY style_corpus_items.created_at, author_materials.id").all() as Row[];
         const rules = String((this.database.prepare("SELECT rules FROM style_corpus_settings WHERE id = 1").get() as Row | undefined)?.rules ?? "");
         const profileRow = this.database.prepare("SELECT profile_json FROM style_profile_versions ORDER BY version DESC LIMIT 1").get() as Row | undefined;
@@ -108,36 +108,36 @@ export class StyleCorpusRepository {
     }
 
 
-    hasContent(content: string): boolean {
+    hasStyleCorpusContent(content: string): boolean {
         return Boolean(this.database.prepare("SELECT 1 FROM style_corpus_items JOIN author_materials ON author_materials.id = style_corpus_items.author_material_id WHERE author_materials.content = ?").get(content));
     }
 
 
-    add(input: CreateStyleCorpusItemInput & { name: string; origin?: "manual" | "import" | "article-revision"; articleId?: string; revisionId?: string }): StyleCorpus {
+    addStyleCorpusItem(input: CreateStyleCorpusItemInput & { name: string; origin?: "manual" | "import" | "article-revision"; articleId?: string; revisionId?: string }): StyleCorpus {
         const timestamp = now();
         const materialId = createId();
         this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(materialId, required(input.name, "Corpus item name"), required(input.content, "Corpus item content"), timestamp, timestamp);
         this.database.prepare("INSERT INTO style_corpus_items (author_material_id, created_at, origin, article_id, revision_id) VALUES (?, ?, ?, ?, ?)").run(materialId, timestamp, input.origin ?? "manual", input.articleId ?? null, input.revisionId ?? null);
 
-        return this.get();
+        return this.getStyleCorpus();
     }
 
 
-    setIncluded(id: string, included: boolean): StyleCorpus {
+    setStyleCorpusItemIncluded(id: string, included: boolean): StyleCorpus {
         if (this.database.prepare("UPDATE style_corpus_items SET included = ? WHERE author_material_id = ?").run(included ? 1 : 0, id).changes === 0)
             throw new Error("Style corpus item not found.");
 
-        return this.get();
+        return this.getStyleCorpus();
     }
 
 
-    setRules(rules: string): StyleCorpus {
+    setStyleCorpusRules(rules: string): StyleCorpus {
         this.database.prepare("UPDATE style_corpus_settings SET rules = ?, updated_at = ? WHERE id = 1").run(rules, now());
-        return this.get();
+        return this.getStyleCorpus();
     }
 
 
-    rebuild(): StyleCorpus {
+    rebuildStyleProfile(): StyleCorpus {
         const rows = this.database.prepare("SELECT author_materials.id, author_materials.content FROM style_corpus_items JOIN author_materials ON author_materials.id = style_corpus_items.author_material_id WHERE style_corpus_items.included = 1 ORDER BY style_corpus_items.created_at, author_materials.id").all() as Row[];
         if (!rows.length)
             throw new Error("Include at least one style corpus item before rebuilding.");
@@ -147,11 +147,11 @@ export class StyleCorpusRepository {
         const profile = profileFor(rows.map((row) => ({ id: String(row.id), content: String(row.content) })), rules, version);
         this.database.prepare("INSERT INTO style_profile_versions (version, profile_json, created_at) VALUES (?, ?, ?)").run(version, JSON.stringify(profile), profile.updatedAt);
 
-        return this.get();
+        return this.getStyleCorpus();
     }
 
 
-    getArticleRules(articleId: string): string {
+    getArticleStyleRules(articleId: string): string {
         const row = this.database
             .prepare("SELECT rules FROM article_style_rules WHERE article_id = ?")
             .get(articleId) as Row | undefined;
@@ -160,7 +160,7 @@ export class StyleCorpusRepository {
     }
 
 
-    setArticleRules(articleId: string, rules: string): string {
+    setArticleStyleRules(articleId: string, rules: string): string {
         this.database.prepare("INSERT INTO article_style_rules (article_id, rules, updated_at) VALUES (?, ?, ?) ON CONFLICT(article_id) DO UPDATE SET rules = excluded.rules, updated_at = excluded.updated_at")
             .run(articleId, rules, now());
 
@@ -168,7 +168,7 @@ export class StyleCorpusRepository {
     }
 
 
-    remove(id: string): void {
+    removeStyleCorpusItem(id: string): void {
         if (this.database.prepare("DELETE FROM style_corpus_items WHERE author_material_id = ?").run(id).changes === 0)
             throw new Error("Style corpus item not found.");
 

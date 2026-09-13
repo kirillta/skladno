@@ -14,12 +14,12 @@ export class ArticleService {
 
 
     listArticles(): Article[] {
-        return this.store.list();
+        return this.store.listArticles();
     }
 
 
     createArticle(input: CreateArticleInput): Article {
-        const article = this.store.create(input);
+        const article = this.store.createArticle(input);
         this.assistant.ensureGreeting(article.id);
 
         return article;
@@ -27,32 +27,32 @@ export class ArticleService {
 
 
     getArticle(articleId: string): Article | undefined {
-        return this.store.get(articleId);
+        return this.store.getArticle(articleId);
     }
 
 
     updateArticle(articleId: string, input: UpdateArticleInput): Article {
-        return this.store.update(articleId, input);
+        return this.store.updateArticle(articleId, input);
     }
 
 
     deleteArticle(articleId: string): void {
-        this.store.delete(articleId);
+        this.store.deleteArticle(articleId);
     }
 
 
     setArticleArchived(articleId: string, archived: boolean): Article[] {
-        return this.store.setArchived(articleId, archived);
+        return this.store.setArticleArchived(articleId, archived);
     }
 
 
     setArticlePinned(articleId: string, pinned: boolean): Article {
-        return this.store.setPinned(articleId, pinned);
+        return this.store.setArticlePinned(articleId, pinned);
     }
 
 
     reorderPinnedArticles(articleIds: string[]): Article[] {
-        return this.store.reorderPinned(articleIds);
+        return this.store.reorderPinnedArticles(articleIds);
     }
 
 
@@ -77,7 +77,7 @@ export class ArticleService {
 
 
     acceptChange(articleId: string, change: AcceptedChange): ArticleRevision {
-        return this.store.appendRevision(articleId, change.content, change.provenance);
+        return this.store.appendArticleRevision(articleId, change.content, change.provenance);
     }
 
 

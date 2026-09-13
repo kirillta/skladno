@@ -28,7 +28,7 @@ test("assistant requests persist a revision-bound proposal and splice only the s
             }),
         });
         const body = await response.text();
-        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
+        const artifact = repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!;
 
         assert.match(body, /"type":"accepted"/);
         assert.match(body, /"type":"skill_resolved".*"skillId":"flow_and_clarity"/);
@@ -38,7 +38,7 @@ test("assistant requests persist a revision-bound proposal and splice only the s
         assert.equal(engine.requests[0]?.article, "selected");
         assert.equal(engine.requests[0]?.articleSelection, true);
         assert.equal(JSON.parse(artifact.content).proposal, "before improved after");
-        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "before selected after");
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "before selected after");
         assert.equal(repositories.assistant.getRequest("assistant-request-1")?.status, "completed");
         assert.equal(repositories.assistant.listMessages(article.id).filter((message) => message.requestId === "assistant-request-1").length, 2);
         assert.equal(repositories.assistant.listMessages(article.id).find((message) => message.role === "author")?.selectionText, "selected");
@@ -67,12 +67,12 @@ test("the live Assistant tool loop stages one catalog Proposal before completion
             }),
         });
         const body = await response.text();
-        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
+        const artifact = repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!;
 
         assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
         assert.equal(JSON.parse(artifact.content).capability, "generate_proposal");
         assert.equal(JSON.parse(artifact.content).proposal, "Improved Article");
-        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original Article");
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Original Article");
     });
 });
 
@@ -94,7 +94,7 @@ test("the capability loop does not infer a Style Review from conversational tone
         assert.equal(response.status, 200);
         assert.doesNotMatch(body, /"skillId":"style_review"/);
         assert.doesNotMatch(body, /style_corpus_required/);
-        assert.equal(JSON.parse(repositories.editorialArtifacts.list(article.id)[0]!.content).capability, "generate_proposal");
+        assert.equal(JSON.parse(repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!.content).capability, "generate_proposal");
     });
 });
 
@@ -118,7 +118,7 @@ test("the live Assistant routes a plain-language translation request through the
 
         assert.doesNotMatch(body, /"skillId":"translation"/);
         assert.match(body, /"responseKind":"translation_proposal_prepared"/);
-        assert.equal(JSON.parse(repositories.editorialArtifacts.list(article.id)[0]!.content).capability, "translate");
+        assert.equal(JSON.parse(repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!.content).capability, "translate");
     });
 });
 
@@ -143,7 +143,7 @@ test("the live Assistant tool loop runs no-input artifact capabilities", async (
         assert.match(body, /"summary":"Checking facts\."/);
         assert.match(body, /"type":"staged_completion"/);
         assert.match(body, /"responseKind":"findings_prepared"/);
-        assert.equal(repositories.editorialArtifacts.list(article.id)[0]?.kind, "fact-check");
+        assert.equal(repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]?.kind, "fact-check");
         assert.equal(repositories.assistant.getRequest("assistant-tool-fact")?.execution?.capability, "fact_check");
     });
 });
@@ -164,7 +164,7 @@ test("the live Assistant authorizes an exact metadata action in the Author's lan
         });
 
         assert.equal(response.status, 200);
-        assert.equal(repositories.articles.get(article.id)?.title, "Crónica del Río");
+        assert.equal(repositories.articles.getArticle(article.id)?.title, "Crónica del Río");
 
         const rejectedArticle = repositories.articleService.createArticle({ title: "Keep this", content: "Original Article" });
         await fetch(`${baseUrl}/api/articles/${rejectedArticle.id}/assistant/requests`, {
@@ -172,7 +172,7 @@ test("the live Assistant authorizes an exact metadata action in the Author's lan
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "assistant-rejected-rename", authorMessage: "No renombres el artículo", scope: { kind: "article", baseRevisionId: rejectedArticle.currentRevisionId } }),
         });
-        assert.equal(repositories.articles.get(rejectedArticle.id)?.title, "Keep this");
+        assert.equal(repositories.articles.getArticle(rejectedArticle.id)?.title, "Keep this");
     }, true, verifier);
 });
 

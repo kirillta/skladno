@@ -26,7 +26,7 @@ export function persistFactCheckArtifact(input: {
     };
 
     const artifact = input.artifacts.withinTransaction(() => {
-        const created = input.artifacts.create({
+        const created = input.artifacts.createEditorialArtifact({
             articleId: input.articleId,
             revisionId: input.revisionId,
             kind: "fact-check",
@@ -35,7 +35,7 @@ export function persistFactCheckArtifact(input: {
 
         for (const finding of factCheck.findings) {
             for (const source of finding.sources) {
-                input.artifacts.createCitation({
+                input.artifacts.createSourceCitation({
                     editorialArtifactId: created.id,
                     url: source.url,
                     ...(source.title ? { title: source.title } : {}),
@@ -45,7 +45,7 @@ export function persistFactCheckArtifact(input: {
             }
         }
 
-        input.factChecks.save(created.id, input.articleId, input.revisionId);
+        input.factChecks.saveFactCheckRun(created.id, input.articleId, input.revisionId);
         return created;
     });
 

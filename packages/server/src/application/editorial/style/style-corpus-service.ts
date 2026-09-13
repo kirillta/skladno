@@ -11,7 +11,7 @@ export class StyleCorpusService {
 
 
     get(): StyleCorpus {
-        return this.store.get();
+        return this.store.getStyleCorpus();
     }
 
 
@@ -19,12 +19,12 @@ export class StyleCorpusService {
         if (!input.content.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        if (this.store.hasContent(input.content))
+        if (this.store.hasStyleCorpusContent(input.content))
             throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_STYLE_CORPUS_ITEM, HTTP_STATUS.BAD_REQUEST);
 
         const name = input.name?.trim();
         if (name)
-            return this.store.add({ ...input, name });
+            return this.store.addStyleCorpusItem({ ...input, name });
 
         const generator = this.engines?.resolveArticleTitleGenerator?.();
         if (!generator)
@@ -34,50 +34,50 @@ export class StyleCorpusService {
         if (!generatedName)
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        return this.store.add({ ...input, name: generatedName });
+        return this.store.addStyleCorpusItem({ ...input, name: generatedName });
     }
 
 
     setIncluded(id: string, included: boolean): StyleCorpus {
-        return this.store.setIncluded(id, included);
+        return this.store.setStyleCorpusItemIncluded(id, included);
     }
 
 
     setRules(rules: string): StyleCorpus {
-        return this.store.setRules(rules);
+        return this.store.setStyleCorpusRules(rules);
     }
 
 
     rebuild(): StyleCorpus {
-        return this.store.rebuild();
+        return this.store.rebuildStyleProfile();
     }
 
 
     getArticleRules(articleId: string): string {
-        return this.store.getArticleRules(articleId);
+        return this.store.getArticleStyleRules(articleId);
     }
 
 
     setArticleRules(articleId: string, rules: string): string {
-        return this.store.setArticleRules(articleId, rules);
+        return this.store.setArticleStyleRules(articleId, rules);
     }
 
 
     addArticleRevision(articleId: string, revisionId: string): StyleCorpus {
-        const article = this.articles?.get(articleId);
+        const article = this.articles?.getArticle(articleId);
         const revision = this.articles?.getRevision(articleId, revisionId);
         if (!article || !revision)
             throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
-        if (this.store.hasContent(revision.content))
+        if (this.store.hasStyleCorpusContent(revision.content))
             throw new ApplicationServiceError(APPLICATION_ERROR.DUPLICATE_STYLE_CORPUS_ITEM, HTTP_STATUS.BAD_REQUEST);
 
         const revisionNumber = this.articles!.listRevisions(articleId).findIndex((item) => item.id === revisionId) + 1;
-        return this.store.add({ name: `${article.title} — Revision ${revisionNumber}`, content: revision.content, origin: "article-revision", articleId, revisionId });
+        return this.store.addStyleCorpusItem({ name: `${article.title} — Revision ${revisionNumber}`, content: revision.content, origin: "article-revision", articleId, revisionId });
     }
 
 
     remove(materialId: string): void {
-        this.store.remove(materialId);
+        this.store.removeStyleCorpusItem(materialId);
     }
 }

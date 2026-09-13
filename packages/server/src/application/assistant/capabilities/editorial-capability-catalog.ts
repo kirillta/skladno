@@ -84,7 +84,7 @@ export class EditorialCapabilityCatalog {
         private readonly publishing: PublishingService,
         private readonly editorial: EditorialService,
         private readonly styleCorpus: StyleCorpusService,
-        private readonly factChecks: FactChecksStore = { list: () => [] }
+        private readonly factChecks: FactChecksStore = { listFactChecks: () => [] }
     ) { }
 
 
@@ -220,7 +220,7 @@ export class EditorialCapabilityCatalog {
 
     private correctionContext(articleId: string, findingIds: string): string {
         const selected = new Set(findingIds.split(",").map((id) => id.trim()));
-        const findings = this.factChecks.list(articleId).flatMap((check) => check.findings).filter((finding) => finding.occurrenceId && selected.has(finding.occurrenceId));
+        const findings = this.factChecks.listFactChecks(articleId).flatMap((check) => check.findings).filter((finding) => finding.occurrenceId && selected.has(finding.occurrenceId));
         if (findings.length !== selected.size)
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 

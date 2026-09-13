@@ -2,14 +2,14 @@ import type { AcceptProposalInput, Article, ArticleDraft, ArticleRevision, Creat
 
 
 export interface ArticleStore {
-    list(): Article[];
-    create(input: CreateArticleInput): Article;
-    get(articleId: string): Article | undefined;
-    update(articleId: string, input: UpdateArticleInput): Article;
-    delete(articleId: string): void;
-    setArchived(articleId: string, archived: boolean): Article[];
-    setPinned(articleId: string, pinned: boolean): Article;
-    reorderPinned(articleIds: string[]): Article[];
+    listArticles(): Article[];
+    createArticle(input: CreateArticleInput): Article;
+    getArticle(articleId: string): Article | undefined;
+    updateArticle(articleId: string, input: UpdateArticleInput): Article;
+    deleteArticle(articleId: string): void;
+    setArticleArchived(articleId: string, archived: boolean): Article[];
+    setArticlePinned(articleId: string, pinned: boolean): Article;
+    reorderPinnedArticles(articleIds: string[]): Article[];
     saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft;
     discardDraft(articleId: string, expectedDraftVersion: number): void;
     saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision;
@@ -17,5 +17,5 @@ export interface ArticleStore {
     getRevision(articleId: string, revisionId: string): ArticleRevision | undefined;
     acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision;
     restoreRevision(articleId: string, revisionId: string): ArticleRevision;
-    appendRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision;
+    appendArticleRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision;
 }

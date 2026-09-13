@@ -17,7 +17,7 @@ test("Draft checkpoints are versioned, recoverable, and separate from Revisions"
 
     assert.equal(first.version, 1);
     assert.equal(second.version, 2);
-    assert.equal(repositories.articles.get(article.id)?.draft?.content, "changed twice");
+    assert.equal(repositories.articles.getArticle(article.id)?.draft?.content, "changed twice");
     assert.equal(repositories.articles.listRevisions(article.id).length, 1);
     assert.throws(() => repositories.articles.saveDraft(article.id, {
         content: "stale write",
@@ -26,7 +26,7 @@ test("Draft checkpoints are versioned, recoverable, and separate from Revisions"
     }), { message: APPLICATION_ERROR.DRAFT_CONFLICT });
 
     repositories.articles.discardDraft(article.id, second.version);
-    assert.equal(repositories.articles.get(article.id)?.draft, undefined);
+    assert.equal(repositories.articles.getArticle(article.id)?.draft, undefined);
     assert.throws(() => repositories.articles.discardDraft(article.id, second.version), { message: APPLICATION_ERROR.DRAFT_CONFLICT });
 }));
 
@@ -37,21 +37,21 @@ test("Article lists use the latest Article or Draft checkpoint activity", () => 
     database.prepare("UPDATE articles SET updated_at = ? WHERE id = ?").run("2026-01-03T00:00:00.000Z", older.id);
     database.prepare("UPDATE articles SET updated_at = ? WHERE id = ?").run("2026-01-01T00:00:00.000Z", checkpointed.id);
 
-    assert.deepEqual(repositories.articles.list().map((item) => item.id), ["z", "a"]);
+    assert.deepEqual(repositories.articles.listArticles().map((item) => item.id), ["z", "a"]);
 
     const first = repositories.articles.saveDraft(checkpointed.id, { content: "checkpoint one", baseRevisionId: checkpointed.currentRevisionId });
     database.prepare("UPDATE article_drafts SET updated_at = ? WHERE article_id = ?").run("2026-01-04T00:00:00.000Z", checkpointed.id);
-    assert.deepEqual(repositories.articles.list().map((item) => item.id), ["a", "z"]);
+    assert.deepEqual(repositories.articles.listArticles().map((item) => item.id), ["a", "z"]);
 
     const second = repositories.articles.saveDraft(checkpointed.id, { content: "checkpoint two", baseRevisionId: checkpointed.currentRevisionId, expectedDraftVersion: first.version });
     database.prepare("UPDATE article_drafts SET updated_at = ? WHERE article_id = ?").run("2026-01-05T00:00:00.000Z", checkpointed.id);
-    assert.deepEqual(repositories.articles.list().map((item) => item.id), ["a", "z"]);
+    assert.deepEqual(repositories.articles.listArticles().map((item) => item.id), ["a", "z"]);
     assert.equal(second.version, 2);
     assert.equal(repositories.articles.listRevisions(checkpointed.id).length, 1);
 
     repositories.articles.discardDraft(checkpointed.id, second.version);
     database.prepare("UPDATE articles SET updated_at = ?").run("2026-01-06T00:00:00.000Z");
-    assert.deepEqual(repositories.articles.list().map((item) => item.id), ["a", "z"]);
+    assert.deepEqual(repositories.articles.listArticles().map((item) => item.id), ["a", "z"]);
 }));
 
 
@@ -73,7 +73,7 @@ test("Draft promotion is atomic and requires matching Revision and Draft version
         expectedDraftVersion: draft.version,
     });
     assert.deepEqual(saved.provenance, { kind: "author-draft", baseRevisionId: article.currentRevisionId });
-    assert.equal(repositories.articles.get(article.id)?.draft, undefined);
+    assert.equal(repositories.articles.getArticle(article.id)?.draft, undefined);
     assert.equal(repositories.articles.listRevisions(article.id).length, 2);
 
     const conflictedDraft = repositories.articles.saveDraft(article.id, {
@@ -86,16 +86,16 @@ test("Draft promotion is atomic and requires matching Revision and Draft version
         baseRevisionId: saved.id,
         expectedDraftVersion: conflictedDraft.version,
     }), { message: APPLICATION_ERROR.REVISION_CONFLICT });
-    assert.equal(repositories.articles.get(article.id)?.draft?.content, "recover me");
+    assert.equal(repositories.articles.getArticle(article.id)?.draft?.content, "recover me");
 }));
 
 
 test("Article deletion cascades to its Draft", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Cascade", content: "first" });
     repositories.articles.saveDraft(article.id, { content: "checkpoint", baseRevisionId: article.currentRevisionId });
-    repositories.articles.delete(article.id);
+    repositories.articles.deleteArticle(article.id);
 
-    assert.equal(repositories.articles.get(article.id), undefined);
+    assert.equal(repositories.articles.getArticle(article.id), undefined);
 }));
 
 
@@ -116,18 +116,18 @@ test("Article Library archive, pins, and group deletion preserve translation bou
     assert.throws(() => repositories.articleService.setArticlePinned(translation.id, true), { code: APPLICATION_ERROR.INVALID_REQUEST });
 
     repositories.articleService.deleteArticle(translation.id);
-    assert.equal(repositories.articles.get(original.id)?.id, original.id);
-    assert.equal(repositories.articles.get(sibling.id)?.id, sibling.id);
+    assert.equal(repositories.articles.getArticle(original.id)?.id, original.id);
+    assert.equal(repositories.articles.getArticle(sibling.id)?.id, sibling.id);
     repositories.articleService.deleteArticle(original.id);
-    assert.equal(repositories.articles.get(original.id), undefined);
-    assert.equal(repositories.articles.get(sibling.id), undefined);
-    assert.equal(repositories.articles.get(independent.id)?.id, independent.id);
+    assert.equal(repositories.articles.getArticle(original.id), undefined);
+    assert.equal(repositories.articles.getArticle(sibling.id), undefined);
+    assert.equal(repositories.articles.getArticle(independent.id)?.id, independent.id);
 }));
 
 
 test("Article metadata updates preserve the current Revision", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Metadata", content: "Draft", language: "en" });
-    const updated = repositories.articles.update(article.id, {
+    const updated = repositories.articles.updateArticle(article.id, {
         title: "Updated metadata",
         language: "es",
         publishingProfileId: "default",
@@ -138,7 +138,7 @@ test("Article metadata updates preserve the current Revision", () => withReposit
     assert.equal(updated.publishingProfileId, "default");
     assert.equal(updated.currentRevisionId, article.currentRevisionId);
     assert.equal(repositories.articles.listRevisions(article.id).length, 1);
-    assert.throws(() => repositories.articles.update(article.id, { publishingProfileId: "unknown" }), { code: APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE });
+    assert.throws(() => repositories.articles.updateArticle(article.id, { publishingProfileId: "unknown" }), { code: APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE });
 }));
 
 

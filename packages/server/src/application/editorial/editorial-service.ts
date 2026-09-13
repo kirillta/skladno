@@ -37,29 +37,29 @@ interface EditorialStreamContext {
 
 
 interface EditorialArticleStore {
-    get(articleId: string): Article | undefined;
+    getArticle(articleId: string): Article | undefined;
 }
 
 
 interface EditorialSessionStore {
-    get(articleId: string): import("@skladno/shared").EditorialSession | undefined;
-    save(articleId: string, session: Pick<import("@skladno/shared").EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): void;
-    remove(articleId: string): void;
+    getEditorialSession(articleId: string): import("@skladno/shared").EditorialSession | undefined;
+    saveEditorialSession(articleId: string, session: Pick<import("@skladno/shared").EditorialSession, "continuationToken" | "connectionId" | "provider" | "model">): void;
+    removeEditorialSession(articleId: string): void;
 }
 
 
 interface EditorialStyleCorpusStore {
-    get(): { profile?: StyleProfile; status: "empty" | "outdated" | "ready" };
-    getArticleRules(articleId: string): string;
+    getStyleCorpus(): { profile?: StyleProfile; status: "empty" | "outdated" | "ready" };
+    getArticleStyleRules(articleId: string): string;
 }
 
 
 interface EditorialArtifactsStore extends FactCheckArtifactStore {
-    create(input: CreateEditorialArtifactInput): EditorialArtifact;
+    createEditorialArtifact(input: CreateEditorialArtifactInput): EditorialArtifact;
 }
 
 
-interface FactChecksStore { list(articleId: string): FactCheck[]; save(artifactId: string, articleId: string, revisionId: string): void; }
+interface FactChecksStore { listFactChecks(articleId: string): FactCheck[]; saveFactCheckRun(artifactId: string, articleId: string, revisionId: string): void; }
 
 
 interface EditorialServiceStores {
@@ -78,13 +78,13 @@ interface EditorialServiceRuntime {
 
 
 function prepareEditorialStream(articles: EditorialArticleStore, sessions: EditorialSessionStore, styleCorpus: EditorialStyleCorpusStore, engines: EditorialEngineResolver, sessionContinuationEnabled: boolean, request: EditorialServiceRequest): EditorialStreamContext {
-    const article = articles.get(request.articleId);
+    const article = articles.getArticle(request.articleId);
     if (!article)
         throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
     const factCheck = request.operation === EDITORIAL_OPERATION.FACT_CHECK;
     const translation = request.operation === EDITORIAL_OPERATION.TRANSLATION;
-    const corpus = request.operation === EDITORIAL_OPERATION.STYLE_REVIEW ? styleCorpus.get() : undefined;
+    const corpus = request.operation === EDITORIAL_OPERATION.STYLE_REVIEW ? styleCorpus.getStyleCorpus() : undefined;
     const styleProfile = corpus?.profile;
     if (request.operation === EDITORIAL_OPERATION.STYLE_REVIEW && (corpus?.status !== "ready" || !styleProfile))
         throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
@@ -94,7 +94,7 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
         throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 
     const continuationScope = engine.continuationScope;
-    const session = !factCheck && !translation && sessionContinuationEnabled ? sessions.get(request.articleId) : undefined;
+    const session = !factCheck && !translation && sessionContinuationEnabled ? sessions.getEditorialSession(request.articleId) : undefined;
     const previousResponseId = session?.continuationToken
         && continuationScope
         && session.connectionId === continuationScope.connectionId
@@ -104,7 +104,7 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
         : undefined;
 
     if (!sessionContinuationEnabled || (session && !previousResponseId))
-        sessions.remove(request.articleId);
+        sessions.removeEditorialSession(request.articleId);
 
     return {
         article,
@@ -112,7 +112,7 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
         factCheck,
         translation,
         ...(styleProfile ? { styleProfile } : {}),
-        ...(styleProfile ? { articleStyleRules: styleCorpus.getArticleRules(request.articleId) } : {}),
+        ...(styleProfile ? { articleStyleRules: styleCorpus.getArticleStyleRules(request.articleId) } : {}),
         ...(continuationScope ? { continuationScope } : {}),
         ...(previousResponseId ? { previousResponseId } : {}),
     };
@@ -165,10 +165,10 @@ function artifactMetadata(request: EditorialServiceRequest, context: EditorialSt
 
 function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifacts: EditorialArtifactsStore, factChecks: FactChecksStore, request: EditorialServiceRequest, context: EditorialStreamContext, sessionContinuationEnabled: boolean, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>): string {
     if (!context.factCheck && !context.translation && sessionContinuationEnabled && event.continuationToken && context.continuationScope)
-        sessions.save(request.articleId, { continuationToken: event.continuationToken, ...context.continuationScope });
+        sessions.saveEditorialSession(request.articleId, { continuationToken: event.continuationToken, ...context.continuationScope });
 
     if (!context.factCheck)
-        return artifacts.create({
+        return artifacts.createEditorialArtifact({
             articleId: request.articleId,
             revisionId: context.article.currentRevisionId,
             kind: artifactKind(request.operation, context.factCheck),
@@ -228,7 +228,7 @@ export class EditorialService {
             observed.capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "completed", elapsedMs: observed.elapsedMs(), ...(signal.aborted ? { failure: "cancelled" as const } : {}) });
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
-                this.stores.sessions.remove(request.articleId);
+                this.stores.sessions.removeEditorialSession(request.articleId);
 
             observed.capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "failed", elapsedMs: observed.elapsedMs(), failure: signal.aborted ? "cancelled" : "unknown" });
             throw error;
@@ -243,7 +243,7 @@ export class EditorialService {
             yield* streamEditorialOperation(request, context, this.stores.factChecks, signal, () => undefined);
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
-                this.stores.sessions.remove(request.articleId);
+                this.stores.sessions.removeEditorialSession(request.articleId);
 
             throw error;
         }

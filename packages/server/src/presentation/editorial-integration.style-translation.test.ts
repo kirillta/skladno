@@ -22,17 +22,17 @@ test("style review uses a compact local profile and saves cited findings as a pr
     ]);
 
     await withService(engine, async (baseUrl, repositories) => {
-        repositories.styleCorpus.add({ name: "Published sample", content: "I write short sentences.\n\nI keep paragraphs brief." });
-        repositories.styleCorpus.rebuild();
+        repositories.styleCorpus.addStyleCorpusItem({ name: "Published sample", content: "I write short sentences.\n\nI keep paragraphs brief." });
+        repositories.styleCorpus.rebuildStyleProfile();
         const article = repositories.articleService.createArticle({ title: "Draft", content: "A long draft" });
-        repositories.styleCorpus.setArticleRules(article.id, "Use active voice.");
+        repositories.styleCorpus.setArticleStyleRules(article.id, "Use active voice.");
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ requestId: "style-request", operation: EDITORIAL_OPERATION.STYLE_REVIEW }),
         });
         const body = await response.text();
-        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
+        const artifact = repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!;
 
         assert.match(body, /"text":"A concise proposal."/);
         assert.match(body, /"traitIds":\["structure"\]/);
@@ -44,7 +44,7 @@ test("style review uses a compact local profile and saves cited findings as a pr
         }]);
         assert.equal(JSON.parse(artifact.content).articleStyleRules, "Use active voice.");
         assert.equal(JSON.parse(artifact.content).styleProfile.version, 1);
-        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "A long draft");
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "A long draft");
     });
 });
 
@@ -69,7 +69,7 @@ test("translation carries its target language, preserves the source, and records
             body: JSON.stringify({ requestId: "translation-request", operation: EDITORIAL_OPERATION.TRANSLATION, targetLanguage: "Spanish" }),
         });
         const body = await response.text();
-        const artifact = repositories.editorialArtifacts.list(source.id)[0]!;
+        const artifact = repositories.editorialArtifacts.listEditorialArtifacts(source.id)[0]!;
         const translated = repositories.articleService.createArticle({
             title: "Source — Spanish",
             content: "Ejecuta `npm test` en https://example.com.",
@@ -82,7 +82,7 @@ test("translation carries its target language, preserves the source, and records
         assert.match(body, /"targetLanguage":"Spanish"/);
         assert.equal(engine.requests[0]?.targetLanguage, "Spanish");
         assert.equal(engine.requests[0]?.articleTitle, "Source");
-        assert.equal(repositories.articles.get(source.id)?.currentRevision.content, "Run `npm test` at https://example.com.");
+        assert.equal(repositories.articles.getArticle(source.id)?.currentRevision.content, "Run `npm test` at https://example.com.");
         assert.deepEqual(JSON.parse(artifact.content).translation, {
             targetLanguage: "Spanish",
             protectedSpans: ["`npm test`", "https://example.com"],
@@ -94,4 +94,3 @@ test("translation carries its target language, preserves the source, and records
         assert.equal(repositories.articles.restoreRevision(translated.id, translated.currentRevisionId).content, translated.currentRevision.content);
     });
 });
-

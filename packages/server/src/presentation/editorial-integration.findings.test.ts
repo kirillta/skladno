@@ -45,14 +45,14 @@ test("fact checks persist completed findings and citations against the reviewed 
             body: JSON.stringify({ requestId: "fact-request", operation: EDITORIAL_OPERATION.FACT_CHECK }),
         });
         const body = await response.text();
-        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
+        const artifact = repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!;
 
         assert.match(body, /"type":"tool_status","tool":"claim_extraction"/);
         assert.match(body, /"status":"unverifiable"/);
         assert.equal(artifact.kind, "fact-check");
         assert.equal(artifact.revisionId, article.currentRevisionId);
-        assert.equal(repositories.editorialArtifacts.listCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
-        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "An article");
+        assert.equal(repositories.editorialArtifacts.listSourceCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "An article");
     });
 });
 
@@ -87,13 +87,13 @@ test("Assistant Fact Check results persist revision-bound findings for review", 
         });
         const body = await response.text();
         const checks = await (await fetch(`${baseUrl}/api/articles/${article.id}/fact-checks`)).json() as { reviewedRevisionId: string; findings: { occurrenceId?: string }[] }[];
-        const artifact = repositories.editorialArtifacts.list(article.id)[0]!;
+        const artifact = repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!;
 
         assert.match(body, /"claims":\[{"claim":"HTTP was standardized in 1999\.","checked":false}\]/);
         assert.match(body, /"reviewedRevisionId":"[^"]+"/);
         assert.equal(checks[0]?.reviewedRevisionId, article.currentRevisionId);
         assert.ok(checks[0]?.findings[0]?.occurrenceId);
-        assert.equal(repositories.editorialArtifacts.listCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
+        assert.equal(repositories.editorialArtifacts.listSourceCitations(artifact.id)[0]?.url, "https://www.rfc-editor.org/rfc/rfc2616");
     });
 });
 

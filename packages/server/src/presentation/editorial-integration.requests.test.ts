@@ -27,12 +27,12 @@ test("editorial endpoint streams a typed proposal and saves context only after c
 
         assert.match(body, /"type":"text_delta","delta":"A "/);
         assert.match(body, /"type":"completed","responseId":"local-1","continuationToken":"resp-1","text":"A proposal"/);
-        assert.equal(repositories.editorialSessions.get(article.id)?.continuationToken, "resp-1");
-        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
+        assert.equal(repositories.editorialSessions.getEditorialSession(article.id)?.continuationToken, "resp-1");
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Original article");
         assert.equal(engine.requests[0]?.article, "Original article");
         assert.equal(engine.requests[0]?.operation, EDITORIAL_OPERATION.FLOW_REVISION);
         assert.equal(engine.requests[0]?.authorContext, "Keep the direct tone.");
-        assert.deepEqual(JSON.parse(repositories.editorialArtifacts.list(article.id)[0]!.content), {
+        assert.deepEqual(JSON.parse(repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!.content), {
             requestId: "request-1",
             operation: EDITORIAL_OPERATION.FLOW_REVISION,
             authorContext: "Keep the direct tone.",
@@ -57,9 +57,9 @@ test("failed or incomplete editorial streams leave the Article and session uncha
 
         assert.match(body, /"type":"text_delta"/);
         assert.match(body, /"type":"error","requestId":"request-2","code":"malformed_stream"/);
-        assert.equal(repositories.editorialSessions.get(article.id), undefined);
-        assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
-        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
+        assert.equal(repositories.editorialSessions.getEditorialSession(article.id), undefined);
+        assert.deepEqual(repositories.editorialArtifacts.listEditorialArtifacts(article.id), []);
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Original article");
     });
 });
 
@@ -74,7 +74,7 @@ test("an unavailable model capability is a configuration error before Article co
         });
 
         assert.match(await response.text(), /"code":"configuration","errorCode":"editorial_configuration_missing","retryable":true/);
-        assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
+        assert.deepEqual(repositories.editorialArtifacts.listEditorialArtifacts(article.id), []);
     });
 });
 
@@ -86,7 +86,7 @@ test("storage-disabled editorial requests clear hidden session continuation", as
 
     await withService(engine, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
-        repositories.editorialSessions.save(article.id, { continuationToken: "resp-old", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
+        repositories.editorialSessions.saveEditorialSession(article.id, { continuationToken: "resp-old", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
 
         await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
@@ -95,7 +95,7 @@ test("storage-disabled editorial requests clear hidden session continuation", as
         });
 
         assert.equal(engine.requests[0]?.previousResponseId, undefined);
-        assert.equal(repositories.editorialSessions.get(article.id), undefined);
+        assert.equal(repositories.editorialSessions.getEditorialSession(article.id), undefined);
     }, false);
 });
 
@@ -106,7 +106,7 @@ test("editorial continuation stays within its Article", async () => {
     await withService(engine, async (baseUrl, repositories) => {
         const firstArticle = repositories.articleService.createArticle({ title: "First", content: "First Article" });
         const secondArticle = repositories.articleService.createArticle({ title: "Second", content: "Second Article" });
-        repositories.editorialSessions.save(firstArticle.id, { continuationToken: "resp-first", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
+        repositories.editorialSessions.saveEditorialSession(firstArticle.id, { continuationToken: "resp-first", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
 
         for (const [article, requestId] of [[firstArticle, "request-first"], [secondArticle, "request-second"]] as const) {
             await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
@@ -132,7 +132,7 @@ test("expired provider session is cleared and can be retried as a fresh session"
 
     await withService(engine, async (baseUrl, repositories) => {
         const article = repositories.articleService.createArticle({ title: "Draft", content: "Original article" });
-        repositories.editorialSessions.save(article.id, { continuationToken: "resp-expired", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
+        repositories.editorialSessions.saveEditorialSession(article.id, { continuationToken: "resp-expired", connectionId: "connection-1", provider: "openai", model: "gpt-5" });
         const response = await fetch(`${baseUrl}/api/articles/${article.id}/editorial`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
@@ -140,7 +140,7 @@ test("expired provider session is cleared and can be retried as a fresh session"
         });
 
         assert.match(await response.text(), /"code":"session_expired"/);
-        assert.equal(repositories.editorialSessions.get(article.id), undefined);
+        assert.equal(repositories.editorialSessions.getEditorialSession(article.id), undefined);
     });
 });
 
@@ -164,9 +164,9 @@ test("provider errors are actionable and leave the article unchanged", async () 
 
         assert.match(body, /"type":"error","requestId":"request-provider-error","code":"network"/);
         assert.match(body, /"errorCode":"editorial_provider_failed"/);
-        assert.equal(repositories.editorialSessions.get(article.id), undefined);
-        assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
-        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
+        assert.equal(repositories.editorialSessions.getEditorialSession(article.id), undefined);
+        assert.deepEqual(repositories.editorialArtifacts.listEditorialArtifacts(article.id), []);
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Original article");
     });
 });
 
@@ -195,10 +195,8 @@ test("cancelling an editorial stream does not change the article or session", as
         controller.abort();
 
         await new Promise((resolve) => setTimeout(resolve, 10));
-        assert.equal(repositories.editorialSessions.get(article.id), undefined);
-        assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
-        assert.equal(repositories.articles.get(article.id)?.currentRevision.content, "Original article");
+        assert.equal(repositories.editorialSessions.getEditorialSession(article.id), undefined);
+        assert.deepEqual(repositories.editorialArtifacts.listEditorialArtifacts(article.id), []);
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Original article");
     });
 });
-
-

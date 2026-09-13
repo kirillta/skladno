@@ -34,7 +34,7 @@ test("accepted edits and restores create immutable ordered Revisions", () => wit
     const revisions = repositories.articles.listRevisions(article.id);
 
     assert.deepEqual(revisions.map(({ content }) => content), ["first", "second", "third", "second"]);
-    assert.equal(repositories.articles.get(article.id)?.currentRevisionId, restored.id);
+    assert.equal(repositories.articles.getArticle(article.id)?.currentRevisionId, restored.id);
     assert.equal(restored.restoredFromRevisionId, second.id);
     assert.equal(repositories.articles.listRevisions(article.id).find((item) => item.id === third.id)?.content, "third");
 }));
@@ -85,10 +85,10 @@ test("Assistant capability history is minimal and completion transactions roll b
     assert.equal(execution?.[0]?.status, "completed");
 
     assert.throws(() => repositories.assistant.completeRun(() => {
-        repositories.editorialArtifacts.create({ articleId: article.id, revisionId: article.currentRevisionId, kind: "assistant-proposal", content: "staged" });
+        repositories.editorialArtifacts.createEditorialArtifact({ articleId: article.id, revisionId: article.currentRevisionId, kind: "assistant-proposal", content: "staged" });
         throw new Error("forced completion failure");
     }), /forced completion failure/);
-    assert.deepEqual(repositories.editorialArtifacts.list(article.id), []);
+    assert.deepEqual(repositories.editorialArtifacts.listEditorialArtifacts(article.id), []);
 }));
 
 
@@ -102,7 +102,7 @@ test("Proposal summaries remain recoverable with their Assistant Proposal", () =
     });
     repositories.assistant.setAuthorMessage(request.id, "Improve the flow.");
     repositories.assistant.resolveRequest(request.id, "flow_and_clarity", "explicit");
-    const artifact = repositories.editorialArtifacts.create({
+    const artifact = repositories.editorialArtifacts.createEditorialArtifact({
         articleId: article.id,
         revisionId: article.currentRevisionId,
         kind: "assistant-proposal",
@@ -117,7 +117,7 @@ test("Proposal summaries remain recoverable with their Assistant Proposal", () =
         proposalContent: "After",
         editorialArtifactId: artifact.id,
     });
-    repositories.editorialArtifacts.updateContent(artifact.id, article.id, JSON.stringify({
+    repositories.editorialArtifacts.updateEditorialArtifactContent(artifact.id, article.id, JSON.stringify({
         proposal: "After",
         proposalSummaries: [{ changeId: "change-1", summary: "Improves the transition." }],
         proposalSummaryLocale: "en",
@@ -144,7 +144,7 @@ test("Translation proposals remain recoverable with their Assistant message", ()
     const article = repositories.articleService.createArticle({ title: "Source", content: "Hello Node.js" });
     const request = repositories.assistant.createRequest({ id: "translation-request", articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId }, explicitSkillId: "translation" });
     repositories.assistant.resolveRequest(request.id, "translation", "explicit");
-    const artifact = repositories.editorialArtifacts.create({
+    const artifact = repositories.editorialArtifacts.createEditorialArtifact({
         articleId: article.id,
         revisionId: article.currentRevisionId,
         kind: "assistant-proposal",

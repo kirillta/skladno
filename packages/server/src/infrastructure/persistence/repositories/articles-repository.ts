@@ -3,10 +3,10 @@ import { REVISION_PROVENANCE_KIND, isArticleLanguage, isPublishLimitProfileId, t
 import type { SqliteDatabase } from "../database.js";
 import { ArticleDraftConflictError } from "../../../application/articles/article-draft-conflict-error.js";
 import { ArticleRevisionConflictError } from "../../../application/articles/article-revision-conflict-error.js";
-import { deleteArticle, reorderPinnedArticles, setArticleArchived, setArticlePinned } from "./article-library-repository.js";
+import { deleteArticle, reorderPinnedArticles, setArticleArchived, setArticlePinned } from "./article-library-operations.js";
 import { articleNotFound, invalidArticleRequest, requireArticleTitle, revisionNotFound, unsupportedPublishingProfile } from "./article-repository-errors.js";
-import { articleFromRow, articleSelect } from "./article-repository-records.js";
-import { getArticleRevision, insertArticleRevision, listArticleRevisions } from "./article-repository-revisions.js";
+import { articleFromRow, articleSelect } from "./article-record-mappers.js";
+import { getArticleRevision, insertArticleRevision, listArticleRevisions } from "./article-revision-queries.js";
 import { createId, now, type Row } from "./repository-utils.js";
 
 
@@ -14,7 +14,7 @@ export class ArticlesRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
 
-    create(input: CreateArticleInput): Article {
+    createArticle(input: CreateArticleInput): Article {
         const language = input.language;
         if (language !== undefined && !isArticleLanguage(language))
             invalidArticleRequest();
@@ -43,23 +43,23 @@ export class ArticlesRepository {
             throw error;
         }
 
-        return this.get(articleId)!;
+        return this.getArticle(articleId)!;
     }
 
 
-    list(): Article[] {
+    listArticles(): Article[] {
         return (this.database.prepare(`${articleSelect} ORDER BY CASE WHEN d.updated_at IS NOT NULL AND d.updated_at > a.updated_at THEN d.updated_at ELSE a.updated_at END DESC, a.id ASC`).all() as Row[]).map(articleFromRow);
     }
 
 
-    get(articleId: string): Article | undefined {
+    getArticle(articleId: string): Article | undefined {
         const row = this.database.prepare(`${articleSelect} WHERE a.id = ?`).get(articleId) as Row | undefined;
         return row && articleFromRow(row);
     }
 
 
-    update(articleId: string, input: UpdateArticleInput): Article {
-        if (!this.get(articleId))
+    updateArticle(articleId: string, input: UpdateArticleInput): Article {
+        if (!this.getArticle(articleId))
             articleNotFound();
 
         const language = input.language;
@@ -91,27 +91,27 @@ export class ArticlesRepository {
         values.push(now(), articleId);
         this.database.prepare(`UPDATE articles SET ${assignments.join(", ")} WHERE id = ?`).run(...values);
 
-        return this.get(articleId)!;
+        return this.getArticle(articleId)!;
     }
 
 
-    delete(articleId: string): void {
-        deleteArticle(this.database, articleId, (id) => this.get(id));
+    deleteArticle(articleId: string): void {
+        deleteArticle(this.database, articleId, (id) => this.getArticle(id));
     }
 
 
-    setArchived(articleId: string, archived: boolean): Article[] {
-        return setArticleArchived(this.database, articleId, archived, (id) => this.get(id), () => this.list());
+    setArticleArchived(articleId: string, archived: boolean): Article[] {
+        return setArticleArchived(this.database, articleId, archived, (id) => this.getArticle(id), () => this.listArticles());
     }
 
 
-    setPinned(articleId: string, pinned: boolean): Article {
-        return setArticlePinned(this.database, articleId, pinned, (id) => this.get(id));
+    setArticlePinned(articleId: string, pinned: boolean): Article {
+        return setArticlePinned(this.database, articleId, pinned, (id) => this.getArticle(id));
     }
 
 
-    reorderPinned(articleIds: string[]): Article[] {
-        return reorderPinnedArticles(this.database, articleIds, () => this.list());
+    reorderPinnedArticles(articleIds: string[]): Article[] {
+        return reorderPinnedArticles(this.database, articleIds, () => this.listArticles());
     }
 
 
@@ -128,7 +128,7 @@ export class ArticlesRepository {
     saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft {
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            const current = this.get(articleId);
+            const current = this.getArticle(articleId);
             if (!current)
                 articleNotFound();
 
@@ -149,14 +149,14 @@ export class ArticlesRepository {
             throw error;
         }
 
-        return this.get(articleId)!.draft!;
+        return this.getArticle(articleId)!.draft!;
     }
 
 
     discardDraft(articleId: string, expectedDraftVersion: number): void {
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            const current = this.get(articleId);
+            const current = this.getArticle(articleId);
             if (!current)
                 articleNotFound();
 
@@ -174,7 +174,7 @@ export class ArticlesRepository {
 
 
     acceptChange(articleId: string, change: AcceptedChange): ArticleRevision {
-        return this.appendRevision(articleId, change.content, change.provenance);
+        return this.appendArticleRevision(articleId, change.content, change.provenance);
     }
 
 
@@ -183,7 +183,7 @@ export class ArticlesRepository {
         const timestamp = now();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            const current = this.get(articleId);
+            const current = this.getArticle(articleId);
             if (!current)
                 articleNotFound();
 
@@ -212,7 +212,7 @@ export class ArticlesRepository {
         const timestamp = now();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            const current = this.get(articleId);
+            const current = this.getArticle(articleId);
             if (!current)
                 articleNotFound();
 
@@ -272,8 +272,8 @@ export class ArticlesRepository {
     }
 
 
-    appendRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision {
-        if (!this.get(articleId))
+    appendArticleRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision {
+        if (!this.getArticle(articleId))
             articleNotFound();
 
         const revisionId = createId();

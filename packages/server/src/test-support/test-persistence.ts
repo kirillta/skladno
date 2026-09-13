@@ -19,7 +19,7 @@ export function createTestPersistence(database: SqliteDatabase): TestPersistence
     const articles = new ArticlesRepository(database);
     const assistant = new AssistantRepository(database);
     const editorialArtifacts = new EditorialArtifactsRepository(database);
-    const editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.get(articleId)));
+    const editorialSessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.getArticle(articleId)));
     const factChecks = new FactChecksRepository(database);
     const materials = new MaterialsRepository(database);
     const settings = new SettingsRepository(database);

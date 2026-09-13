@@ -18,8 +18,8 @@ test("summarizes validated Proposal changes through the supporting generator", a
         resolve: () => undefined,
         resolveProposalSummaryGenerator: () => generator,
     }, {
-        get: () => ({ content }),
-        updateContent: (_artifactId, _articleId, value) => {
+        getEditorialArtifact: () => ({ content }),
+        updateEditorialArtifactContent: (_artifactId, _articleId, value) => {
             content = value;
         },
     });

@@ -8,7 +8,7 @@ export class SettingsRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
 
-    set(key: string, value: unknown): AppSetting {
+    saveSetting(key: string, value: unknown): AppSetting {
         required(key, "Setting key");
         const updatedAt = now();
         this.database.prepare("INSERT INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at")
@@ -18,7 +18,7 @@ export class SettingsRepository {
     }
 
 
-    get(key: string): AppSetting | undefined {
+    getSetting(key: string): AppSetting | undefined {
         const row = this.database.prepare("SELECT * FROM app_settings WHERE key = ?").get(key) as Row | undefined;
         return row && {
             key: String(row.key),

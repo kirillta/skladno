@@ -5,8 +5,8 @@ import type { EditorialEngineResolver } from "../engine/editorial-engine-resolve
 
 
 interface ProposalSummaryArtifactStore {
-    get(artifactId: string, articleId: string): { content: string } | undefined;
-    updateContent(artifactId: string, articleId: string, content: string): void;
+    getEditorialArtifact(artifactId: string, articleId: string): { content: string } | undefined;
+    updateEditorialArtifactContent(artifactId: string, articleId: string, content: string): void;
 }
 
 
@@ -42,7 +42,7 @@ export class ProposalSummaryService {
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
         const requestedChanges = changes(input.changes);
-        const artifact = this.artifacts.get(input.editorialArtifactId, articleId);
+        const artifact = this.artifacts.getEditorialArtifact(input.editorialArtifactId, articleId);
         if (!artifact)
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -55,7 +55,7 @@ export class ProposalSummaryService {
             throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 
         const summaries = await generator.summarize(requestedChanges, input.interfaceLocale, signal);
-        this.artifacts.updateContent(input.editorialArtifactId, articleId, JSON.stringify({
+        this.artifacts.updateEditorialArtifactContent(input.editorialArtifactId, articleId, JSON.stringify({
             ...content,
             proposalSummaries: summaries,
             proposalSummaryLocale: input.interfaceLocale,

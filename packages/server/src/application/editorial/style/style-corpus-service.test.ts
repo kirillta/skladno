@@ -10,18 +10,18 @@ test("generates a source name only when the Author leaves it blank", async () =>
     const inputs: CreateStyleCorpusItemInput[] = [];
     const corpus = { items: [], rules: "", status: "empty" } as StyleCorpus;
     const store = {
-        get: () => corpus,
-        hasContent: () => false,
-        add: (input: CreateStyleCorpusItemInput & { name: string }) => {
+        getStyleCorpus: () => corpus,
+        hasStyleCorpusContent: () => false,
+        addStyleCorpusItem: (input: CreateStyleCorpusItemInput & { name: string }) => {
             inputs.push(input);
             return corpus;
         },
-        setIncluded: () => corpus,
-        setRules: () => corpus,
-        rebuild: () => corpus,
-        getArticleRules: () => "",
-        setArticleRules: () => "",
-        remove: () => undefined,
+        setStyleCorpusItemIncluded: () => corpus,
+        setStyleCorpusRules: () => corpus,
+        rebuildStyleProfile: () => corpus,
+        getArticleStyleRules: () => "",
+        setArticleStyleRules: () => "",
+        removeStyleCorpusItem: () => undefined,
     };
     const service = new StyleCorpusService(store, {
         resolve: () => undefined,
@@ -41,15 +41,15 @@ test("generates a source name only when the Author leaves it blank", async () =>
 test("rejects text already in the style corpus", async () => {
     const corpus = { items: [], rules: "", status: "empty" } as StyleCorpus;
     const store = {
-        get: () => corpus,
-        hasContent: (content: string) => content === "Text",
-        add: () => corpus,
-        setIncluded: () => corpus,
-        setRules: () => corpus,
-        rebuild: () => corpus,
-        getArticleRules: () => "",
-        setArticleRules: () => "",
-        remove: () => undefined,
+        getStyleCorpus: () => corpus,
+        hasStyleCorpusContent: (content: string) => content === "Text",
+        addStyleCorpusItem: () => corpus,
+        setStyleCorpusItemIncluded: () => corpus,
+        setStyleCorpusRules: () => corpus,
+        rebuildStyleProfile: () => corpus,
+        getArticleStyleRules: () => "",
+        setArticleStyleRules: () => "",
+        removeStyleCorpusItem: () => undefined,
     };
     const service = new StyleCorpusService(store);
 

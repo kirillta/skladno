@@ -8,10 +8,10 @@ import { EDITORIAL_CAPABILITY } from "./editorial-capability-id.js";
 import type { EditorialCapabilityId } from "./editorial-capability-id.js";
 
 
-export interface ArtifactStore { list(articleId: string): EditorialArtifact[]; get(artifactId: string, articleId: string): EditorialArtifact | undefined; }
+export interface ArtifactStore { listEditorialArtifacts(articleId: string): EditorialArtifact[]; getEditorialArtifact(artifactId: string, articleId: string): EditorialArtifact | undefined; }
 
 
-export interface FactChecksStore { list(articleId: string): FactCheck[]; }
+export interface FactChecksStore { listFactChecks(articleId: string): FactCheck[]; }
 
 
 export interface EditorialCapabilityReadDependencies {
@@ -58,11 +58,11 @@ export function readEditorialCapability(
                 ? { state: article.draft.baseRevisionId === article.currentRevisionId ? "current" : "stale", baseRevisionId: article.draft.baseRevisionId, version: article.draft.version, updatedAt: article.draft.updatedAt }
                 : { state: "none" };
         case EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS:
-            return dependencies.artifacts.list(article.id).map(({ id, revisionId, kind, createdAt }) => ({ id, revisionId, kind, createdAt }));
+            return dependencies.artifacts.listEditorialArtifacts(article.id).map(({ id, revisionId, kind, createdAt }) => ({ id, revisionId, kind, createdAt }));
         case EDITORIAL_CAPABILITY.INSPECT_PROPOSAL_SUMMARY:
             return readProposalSummary(dependencies.artifacts, article.id, input.artifactId!);
         case EDITORIAL_CAPABILITY.INSPECT_FACT_CHECKS:
-            return dependencies.factChecks.list(article.id).map((check) => ({
+            return dependencies.factChecks.listFactChecks(article.id).map((check) => ({
                 reviewedRevisionId: check.reviewedRevisionId,
                 createdAt: check.createdAt,
                 findings: check.findings.map(({ claim, status, sources, uncertainty, checkedAt, occurrenceId, resolution, stale }) => ({ claim, status, sources, uncertainty, checkedAt, occurrenceId, resolution, stale }))
@@ -90,7 +90,7 @@ export function readEditorialCapability(
 
 
 function readProposalSummary(artifacts: ArtifactStore, articleId: string, artifactId: string): unknown {
-    const artifact = artifacts.get(artifactId, articleId);
+    const artifact = artifacts.getEditorialArtifact(artifactId, articleId);
     if (!artifact)
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -102,7 +102,7 @@ function readProposalSummary(artifacts: ArtifactStore, articleId: string, artifa
 
 
 function readTranslations(artifacts: ArtifactStore, articles: ArticleService, article: Article): unknown {
-    const prepared = artifacts.list(article.id).flatMap((artifact) => {
+    const prepared = artifacts.listEditorialArtifacts(article.id).flatMap((artifact) => {
         try {
             const content = JSON.parse(artifact.content) as { translation?: { targetLanguage?: unknown } };
             return typeof content.translation?.targetLanguage === "string"

@@ -11,7 +11,7 @@ export class EditorialArtifactsRepository {
     constructor(private readonly database: SqliteDatabase) { }
 
 
-    create(input: CreateEditorialArtifactInput): EditorialArtifact {
+    createEditorialArtifact(input: CreateEditorialArtifactInput): EditorialArtifact {
         const id = input.id ?? createId();
         const createdAt = now();
         required(input.kind, "Artifact kind");
@@ -45,7 +45,7 @@ export class EditorialArtifactsRepository {
     }
 
 
-    list(articleId: string): EditorialArtifact[] {
+    listEditorialArtifacts(articleId: string): EditorialArtifact[] {
         return (this.database.prepare("SELECT * FROM editorial_artifacts WHERE article_id = ? ORDER BY created_at ASC, id ASC").all(articleId) as Row[])
             .map((row) => ({
                 id: String(row.id),
@@ -58,18 +58,18 @@ export class EditorialArtifactsRepository {
     }
 
 
-    get(artifactId: string, articleId: string): EditorialArtifact | undefined {
-        return this.list(articleId).find((artifact) => artifact.id === artifactId);
+    getEditorialArtifact(artifactId: string, articleId: string): EditorialArtifact | undefined {
+        return this.listEditorialArtifacts(articleId).find((artifact) => artifact.id === artifactId);
     }
 
 
-    updateContent(artifactId: string, articleId: string, content: string): void {
+    updateEditorialArtifactContent(artifactId: string, articleId: string, content: string): void {
         if (this.database.prepare("UPDATE editorial_artifacts SET content = ? WHERE id = ? AND article_id = ?").run(content, artifactId, articleId).changes === 0)
             throw new Error("Editorial artifact not found.");
     }
 
 
-    createCitation(input: CreateSourceCitationInput): SourceCitation {
+    createSourceCitation(input: CreateSourceCitationInput): SourceCitation {
         const id = input.id ?? createId();
         const createdAt = now();
         const editorialArtifactId = input.editorialArtifactId;
@@ -90,18 +90,18 @@ export class EditorialArtifactsRepository {
     }
 
 
-    createWithCitations(input: CreateEditorialArtifactInput, citations: Omit<CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact {
+    createEditorialArtifactWithCitations(input: CreateEditorialArtifactInput, citations: Omit<CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact {
         return this.withinTransaction(() => {
-            const artifact = this.create(input);
+            const artifact = this.createEditorialArtifact(input);
             for (const citation of citations)
-                this.createCitation({ ...citation, editorialArtifactId: artifact.id });
+                this.createSourceCitation({ ...citation, editorialArtifactId: artifact.id });
 
             return artifact;
         });
     }
 
 
-    listCitations(editorialArtifactId: string): SourceCitation[] {
+    listSourceCitations(editorialArtifactId: string): SourceCitation[] {
         return (this.database.prepare("SELECT * FROM source_citations WHERE editorial_artifact_id = ? ORDER BY created_at ASC, id ASC").all(editorialArtifactId) as Row[])
             .map((row) => ({
                 id: String(row.id),
