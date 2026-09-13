@@ -17,9 +17,11 @@ function NotificationHarness({ onReady }: { onReady: (notifications: Notificatio
 
 export function renderNotifications() {
     let notifications: Notifications | undefined;
-    render(<IntlProvider locale="en" messages={messages}><NotificationProvider><NotificationHarness onReady={(value) => {
-        notifications = value;
-    }} /></NotificationProvider></IntlProvider>);
+    render(<IntlProvider locale="en" messages={messages}>
+        <NotificationProvider>
+            <NotificationHarness onReady={(value) => { notifications = value; }} />
+        </NotificationProvider>
+    </IntlProvider>);
 
     if (!notifications)
         throw new Error("Notification harness did not initialize.");

@@ -9,7 +9,9 @@ export function SettingsNavigation({ section, setSection, back, status }: { sect
 
     return <>
         <header className="flex shrink-0 items-center gap-3 border-b border-border bg-surface-supporting p-2 md:hidden">
-            <Button className="inline-flex items-center gap-2" variant="quiet" onClick={back}><ArrowLeftIcon className="size-4" />{intl.formatMessage({ id: "settings.backToWorkspace" })}</Button>
+            <Button className="inline-flex items-center gap-2" variant="quiet" onClick={back}>
+                <ArrowLeftIcon className="size-4" />{intl.formatMessage({ id: "settings.backToWorkspace" })}
+            </Button>
             <Select aria-label={intl.formatMessage({ id: "settings.navigation" })} value={section} onChange={(event) => {
                 const selected = settingsSections.find((item) => item.id === event.target.value);
                 if (selected)

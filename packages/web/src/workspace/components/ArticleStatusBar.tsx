@@ -185,5 +185,13 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, save
 
 
 function getLanguageMessageId(language: string): "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" {
-    return ({ en: "languages.english", es: "languages.spanish", pt: "languages.portuguese", ru: "languages.russian", fr: "languages.french", de: "languages.german", it: "languages.italian" } as const)[language as "en" | "es" | "pt" | "ru" | "fr" | "de" | "it"];
+    return ({
+        en: "languages.english",
+        es: "languages.spanish",
+        pt: "languages.portuguese",
+        ru: "languages.russian",
+        fr: "languages.french",
+        de: "languages.german",
+        it: "languages.italian"
+    } as const)[language as "en" | "es" | "pt" | "ru" | "fr" | "de" | "it"];
 }

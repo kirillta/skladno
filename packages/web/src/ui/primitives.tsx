@@ -104,12 +104,19 @@ export function Badge({ children, className, variant = "soft", compact = false, 
 
 
 export function Status({ label, children, className, compact = false, tone = "info" }: PropsWithChildren<{ label: string; className?: string; compact?: boolean; tone?: Tone }>) {
-    return <div className={joinClassNames("flex gap-2 rounded-panel border border-border text-xs leading-5", compact ? "min-h-9 p-2" : "p-3", toneClasses[tone], className)} role="status"><StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" /><span><strong>{label}</strong>{children}</span></div>;
+    return <div className={joinClassNames("flex gap-2 rounded-panel border border-border text-xs leading-5", compact ? "min-h-9 p-2" : "p-3", toneClasses[tone], className)} role="status">
+        <StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" />
+        <span>
+            <strong>{label}</strong>{children}
+        </span>
+    </div>;
 }
 
 
 export function Banner({ children, tone = "info", className, role = "status", ...props }: PropsWithChildren<HTMLAttributes<HTMLDivElement> & { tone?: Tone }>) {
-    return <div {...props} className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone], className)} role={role}><StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" />{children}</div>;
+    return <div {...props} className={joinClassNames("flex gap-2 rounded-panel border border-border p-3 text-xs leading-5", toneClasses[tone], className)} role={role}>
+        <StatusIcon tone={tone} className="mt-0.5 size-4 shrink-0" />{children}
+    </div>;
 }
 
 
@@ -125,7 +132,9 @@ export function Tab({ children, selected, ...props }: PropsWithChildren<ButtonHT
 
 export function Progress({ value, label }: { value?: number; label: string }) {
     const safeValue = Math.max(0, Math.min(value ?? 0, 100));
-    return <div className="h-2 overflow-hidden rounded-full bg-brand-soft" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={safeValue}><span className="block h-full bg-brand transition-[width]" style={{ width: `${safeValue}%` }} /></div>;
+    return <div className="h-2 overflow-hidden rounded-full bg-brand-soft" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={safeValue}>
+        <span className="block h-full bg-brand transition-[width]" style={{ width: `${safeValue}%` }} />
+    </div>;
 }
 
 
@@ -144,7 +153,9 @@ export function EmptyState({ title, children, className }: PropsWithChildren<{ t
 
 
 export function Tooltip({ children, content }: { children: ReactNode; content: string }) {
-    return <span className="group relative">{children}<span role="tooltip" className="pointer-events-none absolute z-10 w-max max-w-64 translate-y-1 rounded-control bg-ink p-2 text-xs text-on-brand opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{content}</span></span>;
+    return <span className="group relative">{children}
+        <span role="tooltip" className="pointer-events-none absolute z-10 w-max max-w-64 translate-y-1 rounded-control bg-ink p-2 text-xs text-on-brand opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{content}</span>
+    </span>;
 }
 
 

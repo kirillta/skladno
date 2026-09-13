@@ -114,6 +114,7 @@ async function recoverRequest({ articleId, error, intl, store, reload, clearStre
         await reload(articleId).catch(() => undefined);
         clearStream(articleId);
         store.setStateByArticle((states) => ({ ...states, [articleId]: "idle" }));
+        
         return;
     }
 

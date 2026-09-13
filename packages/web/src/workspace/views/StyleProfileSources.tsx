@@ -71,14 +71,16 @@ export function StyleProfileSources({ data, actions }: { data: StyleProfileSourc
                 </div>
             </div>
         </div>
-        <div className="space-y-3">{corpus?.items.map((item) => <article className={`rounded-panel border p-4 ${item.included ? "border-border bg-surface-raised" : "border-border bg-surface"}`} key={item.id}>
-            <div className="grid grid-cols-[1rem_minmax(0,1fr)_2.25rem] items-center gap-2">
-                <input className="size-4 accent-brand" type="checkbox" checked={item.included} disabled={Boolean(pendingAction)} aria-label={intl.formatMessage({ id: "styleProfile.include" })} onChange={(event) => onSetIncluded(item.id, event.target.checked)} />
-                <p className="min-w-0 text-sm font-semibold">{item.name}</p>
-                <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "views.remove" })} disabled={Boolean(pendingAction)} onClick={() => onRemove(item.id)}><DeleteIcon className="size-4" /></IconButton>
-            </div>
-            <p className="mt-2 text-sm italic text-muted">{item.excerpt}</p>
-            <p className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "styleProfile.words" }, { count: item.wordCount })} · {intl.formatMessage({ id: "styleProfile.addedDate" }, { date: formatDate(item.createdAt, generalSettings.dateFormat, generalSettings.timeZone) })}</p>
-        </article>)}</div>
+        <div className="space-y-3">
+            {corpus?.items.map((item) => <article className={`rounded-panel border p-4 ${item.included ? "border-border bg-surface-raised" : "border-border bg-surface"}`} key={item.id}>
+                <div className="grid grid-cols-[1rem_minmax(0,1fr)_2.25rem] items-center gap-2">
+                    <input className="size-4 accent-brand" type="checkbox" checked={item.included} disabled={Boolean(pendingAction)} aria-label={intl.formatMessage({ id: "styleProfile.include" })} onChange={(event) => onSetIncluded(item.id, event.target.checked)} />
+                    <p className="min-w-0 text-sm font-semibold">{item.name}</p>
+                    <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "views.remove" })} disabled={Boolean(pendingAction)} onClick={() => onRemove(item.id)}><DeleteIcon className="size-4" /></IconButton>
+                </div>
+                <p className="mt-2 text-sm italic text-muted">{item.excerpt}</p>
+                <p className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "styleProfile.words" }, { count: item.wordCount })} · {intl.formatMessage({ id: "styleProfile.addedDate" }, { date: formatDate(item.createdAt, generalSettings.dateFormat, generalSettings.timeZone) })}</p>
+            </article>)}
+        </div>
     </section>;
 }

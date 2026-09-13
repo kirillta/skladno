@@ -30,7 +30,8 @@ export function useAssistantMessageHistory({ client, articleId, profileRebuilt, 
                 if (!cancelled)
                     setMessagesByArticle((current) => ({
                         ...current,
-                        [articleId]: [...messages, ...(current[articleId] ?? []).filter((message) => message.id.startsWith("pending-") && !messages.some((item) => item.requestId === message.requestId))],
+                        [articleId]: [...messages, ...(current[articleId] ?? [])
+                            .filter((message) => message.id.startsWith("pending-") && !messages.some((item) => item.requestId === message.requestId))],
                     }));
             })
             .catch(() => {
@@ -55,7 +56,15 @@ export function useAssistantMessageHistory({ client, articleId, profileRebuilt, 
         setMessagesByArticle((current) => ({
             ...current,
             [articleId]: [...(current[articleId] ?? []), {
-                id: `profile-rebuilt-${profileRebuilt.token}`, articleId, role: "system", kind: "status", status: "completed", template: "profile_rebuilt", content: String(profileRebuilt.count), createdAt: timestamp, updatedAt: timestamp,
+                id: `profile-rebuilt-${profileRebuilt.token}`,
+                articleId,
+                role: "system",
+                kind: "status",
+                status: "completed",
+                template: "profile_rebuilt",
+                content: String(profileRebuilt.count),
+                createdAt: timestamp,
+                updatedAt: timestamp,
             }],
         }));
     }, [articleId, profileRebuilt, setMessagesByArticle]);
