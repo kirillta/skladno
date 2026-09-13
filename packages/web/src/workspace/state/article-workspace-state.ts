@@ -214,8 +214,11 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
 
     const selectedArticle = articles.find((article) => article.id === selectedArticleId);
     const selectedDraft = selectedArticleId ? draftLifecycle.sessions[selectedArticleId] : undefined;
+
     return {
-        articles, selectedArticle, selectedArticleId,
+        articles,
+        selectedArticle,
+        selectedArticleId,
         selectArticle: (articleId: string) => {
             if (selectedArticleId && selectedArticleId !== articleId)
                 void checkpoint(selectedArticleId).catch(() => undefined);
@@ -231,7 +234,8 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
             draftLifecycle.send({ articleId: selectedArticleId, event: { type: "edit", content: value } });
             scheduleCheckpoint(selectedArticleId, value);
         },
-        state, message,
+        state,
+        message,
         saveState: selectedDraft ? getDraftPresentationState(selectedDraft) : "saved" as DraftPresentationState,
         save, retry: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(), flushSelected: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(), discardDraft,
         hasUncommittedChanges: Boolean(selectedArticle && selectedDraft && hasUncommittedDraftChanges(selectedDraft, selectedArticle.currentRevision.content)),

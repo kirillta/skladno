@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAiModelPreferenceId, AI_PROVIDER, defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type AiProvider, type AppModelPreference, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
+import { defaultGeneralSettings, defaultPublishingSettings, type AppModelPreference, type ApplicationSettingsSnapshot, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application/client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
@@ -15,19 +15,7 @@ import { GeneralSettingsSection } from "./components/GeneralSettingsSection.js";
 import { KeyBindingSettings } from "./components/KeyBindingSettings.js";
 import { PublishingSettingsSection } from "./components/PublishingSettingsSection.js";
 import type { SettingsSection } from "./settings-sections.js";
-
-
-function getAvailableModels(value: unknown, connections: AiConnection[]): AvailableAiModel[] {
-    const fallback = connections.find((connection) => connection.active !== false);
-    return Array.isArray(value) ? value.flatMap((item): AvailableAiModel[] => {
-        if (typeof item === "string" && fallback)
-            return [{ id: getAiModelPreferenceId(fallback.id, item), model: item, connectionId: fallback.id, provider: fallback.provider }];
-
-        return item && typeof item === "object" && typeof (item as AvailableAiModel).id === "string" && typeof (item as AvailableAiModel).model === "string"
-            ? [item as AvailableAiModel]
-            : [];
-    }) : [];
-}
+import { useAiSettingsController } from "./use-ai-settings-controller.js";
 
 
 export function ApplicationSettings(props: { client: EditorialWorkspaceClient; back: () => void; initialSection?: SettingsSection; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
@@ -42,19 +30,10 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
     const [backupPolicy, setBackupPolicy] = useState<BackupPolicy>({ schedule: "off", retention: { mode: "count", count: 7 } });
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>({});
     const [publishingSettings, setPublishingSettings] = useState<PublishingSettings>(defaultPublishingSettings);
-    const [models, setModels] = useState<AvailableAiModel[]>([]);
-    const [connectionProvider, setConnectionProvider] = useState<AiProvider>(AI_PROVIDER.OPENAI);
-    const [connectionName, setConnectionName] = useState("");
-    const [environmentName, setEnvironmentName] = useState("");
-    const [managedConnectionName, setManagedConnectionName] = useState("");
-    const [apiKey, setApiKey] = useState("");
-    const [connectionError, setConnectionError] = useState<string>();
-    const [connectionPendingRemoval, setConnectionPendingRemoval] = useState<AiConnection>();
-    const [connectionPendingRename, setConnectionPendingRename] = useState<AiConnection>();
-    const [renamedConnectionLabel, setRenamedConnectionLabel] = useState("");
     const [status, setStatus] = useState(() => intl.formatMessage({ id: "settings.loading" }));
     const desktopSettings = getDesktopSettingsClient();
     const telemetry = getDesktopTelemetryClient();
+    const ai = useAiSettingsController({ client, intl, settings, desktopSettings, setSettings, setStatus, aiSettingsOpen: section === "ai" });
 
     useEffect(() => {
         void client.getApplicationSettings().then((loaded) => {
@@ -88,15 +67,6 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
             onUpdatesFocused?.();
         });
     }, [focusUpdates, onUpdatesFocused, section, settings]);
-
-    useEffect(() => {
-        if (section !== "ai" || !settings?.connections.some((connection) => connection.active !== false))
-            return;
-
-        void client.refreshAiModels().then((loaded) => setModels(getAvailableModels(loaded, settings.connections))).catch((error) => {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.modelsLoadFailed" }) });
-        });
-    }, [client, intl, notifyError, section, settings?.connections]);
 
 
     async function saveGeneral(next: GeneralSettings) {
@@ -166,124 +136,6 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
     }
 
 
-    async function addConnection() {
-        setConnectionError(undefined);
-        setStatus(intl.formatMessage({ id: "settings.saving" }));
-        try {
-            const connection = await client.addAiConnection({ provider: connectionProvider, label: connectionName, environmentVariableName: environmentName });
-            setSettings((current) => current ? {
-                ...current,
-                connections: [...current.connections, connection],
-            } : current);
-            setConnectionName("");
-            setEnvironmentName("");
-            setStatus(intl.formatMessage({ id: "settings.saved" }));
-        } catch (error) {
-            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionAddFailed" }) });
-        }
-    }
-
-
-    async function addManagedConnection() {
-        if (!desktopSettings)
-            return;
-
-        setConnectionError(undefined);
-        setStatus(intl.formatMessage({ id: "settings.saving" }));
-        try {
-            const connection = await desktopSettings.addManagedAiConnection({ provider: connectionProvider, label: managedConnectionName, apiKey });
-            setSettings((current) => current ? {
-                ...current,
-                connections: [...current.connections, connection],
-            } : current);
-            setManagedConnectionName("");
-            setApiKey("");
-            setStatus(intl.formatMessage({ id: "settings.saved" }));
-        } catch (error) {
-            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionAddFailed" }) });
-        }
-    }
-
-
-    async function setConnectionActive(connectionId: string, active: boolean) {
-        setStatus(intl.formatMessage({ id: "settings.saving" }));
-        try {
-            const connection = await client.setAiConnectionActive(connectionId, active);
-            setSettings((current) => current ? { ...current, connections: current.connections.map((item) => item.id === connection.id ? connection : item) } : current);
-            setModels([]);
-            setStatus(intl.formatMessage({ id: "settings.saved" }));
-        } catch (error) {
-            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionUpdateFailed" }) });
-        }
-    }
-
-
-    async function renameManagedConnection() {
-        if (!connectionPendingRename)
-            return;
-
-        setStatus(intl.formatMessage({ id: "settings.saving" }));
-        try {
-            const source = connectionPendingRename.credentialSource;
-            let connection: AiConnection;
-            if (source.kind === "managed") {
-                if (!desktopSettings)
-                    return;
-
-                connection = await desktopSettings.renameManagedAiConnection(connectionPendingRename.id, renamedConnectionLabel);
-            } else {
-                connection = await client.updateAiConnection(connectionPendingRename.id, { label: renamedConnectionLabel, environmentVariableName: source.environmentVariableName });
-            }
-
-            setSettings((current) => current ? { ...current, connections: current.connections.map((item) => item.id === connection.id ? connection : item) } : current);
-            setConnectionPendingRename(undefined);
-            setStatus(intl.formatMessage({ id: "settings.saved" }));
-        } catch (error) {
-            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionUpdateFailed" }) });
-        }
-    }
-
-
-    function requestManagedConnectionRename(connection: AiConnection) {
-        setConnectionPendingRename(connection);
-        setRenamedConnectionLabel(connection.label);
-    }
-
-
-    async function removeConnection() {
-        if (!connectionPendingRemoval)
-            return;
-
-        setStatus(intl.formatMessage({ id: "settings.saving" }));
-        try {
-            await client.removeAiConnection(connectionPendingRemoval.id);
-            setSettings((current) => current ? {
-                ...current,
-                connections: current.connections.filter((connection) => connection.id !== connectionPendingRemoval.id),
-            } : current);
-            setConnectionPendingRemoval(undefined);
-            setModels([]);
-            setStatus(intl.formatMessage({ id: "settings.saved" }));
-        } catch (error) {
-            setStatus(intl.formatMessage({ id: "settings.saveFailed" }));
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.connectionRemoveFailed" }) });
-        }
-    }
-
-
-    async function refreshModels() {
-        try {
-            setModels(getAvailableModels(await client.refreshAiModels(), settings?.connections ?? []));
-        } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.modelsLoadFailed" }) });
-        }
-    }
-
-
     async function savePublishingSettings(next: PublishingSettings) {
         setPublishingSettings(next);
 
@@ -302,10 +154,31 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
     else if (settings && section === "keyBindings")
         sectionContent = <KeyBindingSettings general={general} saveGeneral={saveGeneral} overrides={keyBindingOverrides} save={saveKeyBindingOverrides} />;
     else if (settings && section === "ai")
-        sectionContent = <AiSettingsSection settings={settings} preferences={preferences} appModel={appModel} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
-            setEnvironmentName(value);
-            setConnectionError(undefined);
-        }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} onAddConnection={() => void addConnection()} onAddManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} onSetConnectionActive={(connectionId, active) => void setConnectionActive(connectionId, active)} onRequestConnectionRename={requestManagedConnectionRename} canRenameManagedConnection={Boolean(desktopSettings)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} saveAppModel={saveAppModel} />;
+        sectionContent = <AiSettingsSection
+            settings={settings}
+            preferences={preferences}
+            appModel={appModel}
+            models={ai.models}
+            connectionProvider={ai.connectionProvider}
+            connectionName={ai.connectionName}
+            environmentName={ai.environmentName}
+            managedConnectionName={ai.managedConnectionName}
+            apiKey={ai.apiKey}
+            connectionError={ai.connectionError}
+            setConnectionProvider={ai.setConnectionProvider}
+            setConnectionName={ai.setConnectionName}
+            setEnvironmentName={ai.setEnvironmentName}
+            setManagedConnectionName={ai.setManagedConnectionName}
+            setApiKey={ai.setApiKey}
+            onAddConnection={() => void ai.addConnection()}
+            onAddManagedConnection={desktopSettings ? () => void ai.addManagedConnection() : undefined}
+            onSetConnectionActive={(connectionId, active) => void ai.setConnectionActive(connectionId, active)}
+            onRequestConnectionRename={ai.requestManagedConnectionRename}
+            canRenameManagedConnection={Boolean(desktopSettings)}
+            onRequestConnectionRemoval={ai.setConnectionPendingRemoval}
+            onRefreshModels={() => void ai.refreshModels()}
+            savePreferences={savePreferences}
+            saveAppModel={saveAppModel} />;
     else if (settings && section === "publishing")
         sectionContent = <PublishingSettingsSection publishing={publishingSettings} save={savePublishingSettings} general={general} saveGeneral={saveGeneral} />;
     else if (settings && section === "about")
@@ -315,7 +188,7 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
     return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
         <SettingsContent section={section} settings={settings}>{sectionContent}</SettingsContent>
-        {connectionPendingRemoval && <ConnectionRemovalDialog connection={connectionPendingRemoval} close={() => setConnectionPendingRemoval(undefined)} remove={() => void removeConnection()} />}
-        {connectionPendingRename && <ManagedConnectionRenameDialog label={renamedConnectionLabel} setLabel={setRenamedConnectionLabel} close={() => setConnectionPendingRename(undefined)} save={() => void renameManagedConnection()} />}
+        {ai.connectionPendingRemoval && <ConnectionRemovalDialog connection={ai.connectionPendingRemoval} close={() => ai.setConnectionPendingRemoval(undefined)} remove={() => void ai.removeConnection()} />}
+        {ai.connectionPendingRename && <ManagedConnectionRenameDialog label={ai.renamedConnectionLabel} setLabel={ai.setRenamedConnectionLabel} close={() => ai.setConnectionPendingRename(undefined)} save={() => void ai.renameManagedConnection()} />}
     </main>;
 }
