@@ -85,7 +85,11 @@ async function streamAssistantRequest(request: PreparedAssistantRequest, incomin
         for await (const event of assistant.stream(request, controller.signal))
             writeAssistantEvent(response, event);
     } catch (error) {
-        diagnostics?.write("request.failed", { method: incomingRequest.method ?? "POST", status: error instanceof ApplicationServiceError ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR }, error);
+        const context = {
+            method: incomingRequest.method ?? "POST",
+            status: error instanceof ApplicationServiceError ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR
+        };
+        diagnostics?.write("request.failed", context, error);
 
         if (!controller.signal.aborted)
             writeAssistantEvent(response, { type: "error", requestId: request.requestId, errorCode: getAssistantStreamErrorCode(error), retryable: true });

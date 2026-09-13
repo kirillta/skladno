@@ -79,8 +79,17 @@ export async function withService(engine: EditorialEngine | undefined, run: (bas
         aiSessionContinuationEnabled: storeResponses
     };
     const editorial = new EditorialService(
-        { articles: persistence.articles, sessions: persistence.editorialSessions, styleCorpus: persistence.styleCorpus, artifacts: persistence.editorialArtifacts, factChecks: persistence.factChecks },
-        { engines, sessionContinuationEnabled: storeResponses },
+        {
+            articles: persistence.articles,
+            sessions: persistence.editorialSessions,
+            styleCorpus: persistence.styleCorpus,
+            artifacts: persistence.editorialArtifacts,
+            factChecks: persistence.factChecks
+        },
+        {
+            engines,
+            sessionContinuationEnabled: storeResponses
+        },
         telemetry,
     );
     const services = createApplicationServices({

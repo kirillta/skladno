@@ -107,8 +107,10 @@ async function streamEditorialEvents(response: ServerResponse, editorial: Editor
                 writeEditorialEvent(response, { ...event, requestId: request.requestId });
         }
 
-        if (!completed && !controller.signal.aborted)
-            writeEditorialEvent(response, createEditorialErrorEvent(request.requestId, EDITORIAL_ERROR_CATEGORY.MALFORMED_STREAM, APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE, true));
+        if (!completed && !controller.signal.aborted) {
+            const editorialError = createEditorialErrorEvent(request.requestId, EDITORIAL_ERROR_CATEGORY.MALFORMED_STREAM, APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE, true);
+            writeEditorialEvent(response, editorialError);
+        }
     } catch (error) {
         if (!controller.signal.aborted) {
             const failure = createEditorialError(error);

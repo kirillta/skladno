@@ -48,7 +48,8 @@ export function createLocalService(config: ServerConfig, editorial: EditorialSer
         } catch (error) {
             diagnostics?.write("request.failed", {
                 method: request.method ?? "unknown",
-                status: error instanceof ApplicationServiceError ? error.status : error instanceof ArticleRevisionConflictError || error instanceof ArticleDraftConflictError ? HTTP_STATUS.CONFLICT : HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                status: error instanceof ApplicationServiceError ? error.status : error instanceof ArticleRevisionConflictError
+                    || error instanceof ArticleDraftConflictError ? HTTP_STATUS.CONFLICT : HTTP_STATUS.INTERNAL_SERVER_ERROR,
             }, error);
 
             if (error instanceof ArticleRevisionConflictError) {
