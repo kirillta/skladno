@@ -140,19 +140,19 @@ export function ProposalReviewView({ data, actions }: { data: ProposalReviewData
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     {presentation.changes.length > 0 && <div className="flex items-center gap-1" aria-label={intl.formatMessage({ id: "views.proposalDisplayMode" })}>
-                        <IconButton className={displayMode === "side-by-side" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalSideBySide" })} title={intl.formatMessage({ id: "views.proposalSideBySide" })} aria-pressed={displayMode === "side-by-side"} onClick={() => setDisplayMode("side-by-side")}>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalSideBySide" })} title={intl.formatMessage({ id: "views.proposalSideBySide" })} aria-pressed={displayMode === "side-by-side"} onClick={() => setDisplayMode("side-by-side")}>
                             <SideBySideIcon />
                         </IconButton>
-                        <IconButton className={displayMode === "stacked" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalStacked" })} title={intl.formatMessage({ id: "views.proposalStacked" })} aria-pressed={displayMode === "stacked"} onClick={() => setDisplayMode("stacked")}>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalStacked" })} title={intl.formatMessage({ id: "views.proposalStacked" })} aria-pressed={displayMode === "stacked"} onClick={() => setDisplayMode("stacked")}>
                             <StackedDiffIcon />
                         </IconButton>
-                        <IconButton className={highlightChanges ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.proposalHighlight" })} title={intl.formatMessage({ id: "views.proposalHighlight" })} aria-pressed={highlightChanges} onClick={() => setHighlightChanges((current) => !current)}>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalHighlight" })} title={intl.formatMessage({ id: "views.proposalHighlight" })} aria-pressed={highlightChanges} onClick={() => setHighlightChanges((current) => !current)}>
                             <HighlightChangesIcon />
                         </IconButton>
                     </div>}
                     {presentation.changes.length > 1 && <nav className="flex gap-2" aria-label={intl.formatMessage({ id: "views.changeNavigation" })}>
-                        <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "views.previousChange" })} title={intl.formatMessage({ id: "views.previousChange" })} onClick={() => moveChange(-1)}><ChevronRightIcon className="size-4 rotate-180" /></Button>
-                        <Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "views.nextChange" })} title={intl.formatMessage({ id: "views.nextChange" })} onClick={() => moveChange(1)}><ChevronRightIcon className="size-4" /></Button>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.previousChange" })} title={intl.formatMessage({ id: "views.previousChange" })} onClick={() => moveChange(-1)}><ChevronRightIcon className="size-4 rotate-180" /></IconButton>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.nextChange" })} title={intl.formatMessage({ id: "views.nextChange" })} onClick={() => moveChange(1)}><ChevronRightIcon className="size-4" /></IconButton>
                     </nav>}
                     <Button variant="secondary" disabled={accepted || stale || presentation.changes.length === 0} onClick={rejectAll}>{intl.formatMessage({ id: "views.rejectAll" })}</Button>
                     <Button variant="secondary" disabled={accepted || stale || presentation.changes.length === 0} onClick={() => void acceptAll()}>{intl.formatMessage({ id: "views.acceptAll" })}</Button>

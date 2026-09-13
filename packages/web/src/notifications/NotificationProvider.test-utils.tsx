@@ -19,7 +19,9 @@ export function renderNotifications() {
     let notifications: Notifications | undefined;
     render(<IntlProvider locale="en" messages={messages}>
         <NotificationProvider>
-            <NotificationHarness onReady={(value) => { notifications = value; }} />
+            <NotificationHarness onReady={(value) => {
+                notifications = value;
+            }} />
         </NotificationProvider>
     </IntlProvider>);
 

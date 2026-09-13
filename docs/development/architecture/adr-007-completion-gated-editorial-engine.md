@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-21
-- Updated: 2026-09-07
+- Updated: 2026-09-13
 - Scope: AI generation, streaming, provider storage, and generated artifact persistence
 - Depends on: [ADR-001](adr-001-three-layer-server-and-electron.md), [ADR-005](adr-005-article-state-and-consistency.md)
 
@@ -17,6 +17,8 @@ Application services depend on Skladno's `EditorialEngine` contract. Provider SD
 The infrastructure resolver constructs a common SDK Language Model for the active finite provider connection. The adapter consumes the complete provider stream, forwards safe domain events, propagates the request `AbortSignal`, and emits completion only after the stream succeeds and its required text, finish reason, structured output where required, and domain validation are valid. A successful completion receives a local identity; a provider response ID is not required. Failed, cancelled, empty, malformed, or incomplete operations persist no generated artifact.
 
 Infrastructure keeps provider mechanics, Article context bounding, and Assistant `ToolLoopAgent` execution in focused modules. The engine factory constructs capability-specific providers such as `FactCheckProvider` and injects them into the `EditorialEngine`; the engine does not construct unused provider clients for other connections. Supporting adapters for titles, Proposal summaries, and action-intent verification remain separate and share only provider configuration.
+
+Application engine contracts live in `packages/server/src/application/editorial/engine/`. Under `packages/server/src/infrastructure/editorial/`, `engines/` owns engine construction and configured resolution, `adapters/` owns provider and SDK integration, `models/` owns infrastructure request/output types and context helpers, `services/` owns model discovery and capability checks, and `workflows/` owns the fact-check workflow. Add provider mechanics to these infrastructure owners rather than to application contracts or the composition root.
 
 Provider-side response storage is disabled by default where the provider exposes that control. `SKLADNO_AI_SESSION_CONTINUATION=true` opts into eligible same-Article continuation only when the provider adapter supports it. The stored provider token is separate from Skladno's local completion identity and is reused only when Article, connection, provider, and model all match. Fact checks, translations, cross-Article requests, legacy unscoped sessions, and adapters without continuation support start fresh. Provider-specific storage and continuation mechanisms remain inside infrastructure adapters.
 

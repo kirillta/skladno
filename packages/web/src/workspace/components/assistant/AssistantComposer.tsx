@@ -7,7 +7,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { BuiltInSkillId, KeyBindingOverrides } from "@skladno/shared";
 import { KEY_BINDING_COMMAND } from "@skladno/shared";
-import { Button } from "../../../ui/primitives.js";
+import { IconButton } from "../../../ui/primitives.js";
 import { SendIcon, StopIcon } from "../../../ui/icons.js";
 import { getShortcutHint } from "../../../key-bindings/shortcut-hint.js";
 import type { AssistantSelectionScope } from "../../state/assistant-messages-state.js";
@@ -83,9 +83,9 @@ export function AssistantComposer({ state, picker, actions }: { state: Assistant
             </div>
             <div className="flex shrink-0 justify-end">
                 {requestState === "streaming"
-                    ? <Button className="inline-grid size-9 place-items-center !p-0" variant="danger" title={getShortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></Button>
+                    ? <IconButton variant="danger" title={getShortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></IconButton>
                     : <div className="flex">
-                        <Button className="inline-grid size-8 place-items-center rounded-r-none !p-0" variant="quiet" title={getShortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button>
+                        <IconButton className="rounded-r-none" variant="quiet" title={getShortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></IconButton>
                         <AssistantQuickActions context={{ state: requestState, composer }} picker={picker} />
                     </div>}
             </div>

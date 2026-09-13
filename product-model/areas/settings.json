@@ -7,7 +7,7 @@
             "area": "General",
             "title": "Appearance, locale, and date/time/time-zone",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/GeneralSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/application/ports/system-date-time-format-provider.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/GeneralSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/settings/settings-store.ts", "packages/server/src/application/settings/system-date-time-format-provider.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "General Settings persists a System, Light, or Dark appearance preference; the shared resolver maps System to the current device appearance for visual application. It also supports the Interface locale, device-local or explicit IANA time zones, device-local date and time formatting, and explicit date and time formats. Revision History honors saved formatting while generated supporting UI text uses the Interface locale independently of Article language.",
             "persistence": "app_settings.application-general"
         },
@@ -16,7 +16,7 @@
             "area": "General",
             "title": "Optional packaged-app telemetry consent",
             "status": "partial",
-            "owners": ["packages/web/src/settings/components/TelemetrySettingsGroup.tsx", "packages/web/src/workspace/state/article-workspace-state.ts", "packages/web/src/workspace/drafts/draft-checkpoint-telemetry.ts", "packages/electron/src/infrastructure/runtime-settings.ts", "packages/electron/src/infrastructure/telemetry-owner.ts", "packages/electron/src/application/pending-restore.ts", "packages/electron/src/presentation/desktop-telemetry.ts", "packages/electron/src/presentation/desktop-settings.ts", "packages/electron/src/presentation/desktop-update-coordinator.ts", "packages/electron/src/presentation/main.ts", "packages/server/src/application/articles/article-service.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/editorial/editorial-service.ts"],
+            "owners": ["packages/web/src/settings/components/TelemetrySettingsGroup.tsx", "packages/web/src/workspace/state/article-workspace-state.ts", "packages/web/src/workspace/drafts/draft-checkpoint-telemetry.ts", "packages/electron/src/infrastructure/runtime/runtime-settings.ts", "packages/electron/src/infrastructure/telemetry/telemetry-owner.ts", "packages/electron/src/infrastructure/recovery/pending-restore.ts", "packages/electron/src/presentation/telemetry/desktop-telemetry.ts", "packages/electron/src/presentation/settings/desktop-settings.ts", "packages/electron/src/presentation/updates/desktop-update-coordinator.ts", "packages/electron/src/presentation/main.ts", "packages/server/src/application/articles/article-service.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/application/editorial/editorial-service.ts"],
             "contract": "During public beta, the packaged Electron app shows a localized, keyboard-accessible default-on switch for a finite pseudonymous diagnostic and usage event contract, plus an enabled-only copyable Telemetry ID for deletion requests. The server emits one finite terminal event after persisted Assistant or direct Editorial completion, or after their failure/cancellation; staged Assistant work is not counted separately. Proposal acceptance captures consent before Revision persistence and emits only after that persistence succeeds. The workspace batches only actual Draft save/discard persistence attempts that began with telemetry enabled into a 30-second in-memory aggregate; no-op checkpoints are excluded. Electron emits one terminal event for each manual, deletion-protective, restore-recovery, or update-recovery SQLite snapshot, plus finite startup, renderer, and child-process failures when the main process remains alive. Main validates each IPC request and event, includes only trusted platform, architecture, and OS-version fields, keeps identity and consent outside Article data, clears both and all in-memory work on opt-out, and treats missing delivery configuration as disabled. Delivery uses an in-memory cap of 100 events per minute and 100 retained events, expires events after five minutes, retries transient failures once without following redirects, and never blocks editorial work. Browser and development runtimes cannot send telemetry.",
             "persistence": "Electron userData/runtime-settings.json only; it is excluded from SQLite Article data, backups, and restore staging.",
             "limitations": ["A manually inspected opted-in packaged-beta deletion request, payload, dashboard definitions, and packaged Windows acceptance remain release prerequisites."]
@@ -26,7 +26,7 @@
             "area": "Key bindings",
             "title": "Configurable application shortcuts",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/KeyBindingSettings.tsx", "packages/web/src/key-bindings", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts", "packages/server/src/presentation/routes/settings-route.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/KeyBindingSettings.tsx", "packages/web/src/key-bindings", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/settings/settings-store.ts", "packages/server/src/presentation/routes/settings-route.ts"],
             "contract": "Settings can persist command overrides and expose conflict-aware shortcut configuration. The Editorial Assistant also supports choosing Enter or Ctrl+Enter as the send key independently of command overrides.",
             "persistence": "app_settings.application-key-bindings and app_settings.application-general",
             "limitations": ["Complete workspace-action wiring remains tracked separately."]
@@ -45,7 +45,7 @@
             "area": "AI",
             "title": "Default, app, per-skill, reasoning, and favorite-model preferences",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/settings-store.ts"],
+            "owners": ["packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/settings/settings-store.ts"],
             "contract": "Each selected model records its active connection as well as its provider model ID, so duplicate model names remain routable and an OpenCode Zen model can disclose its underlying vendor. Default, app, per-skill, reasoning, and favorite-model preferences apply globally. The optional app model is a separate model preference for Skladno features such as Proposal summaries, titles, and action-intent checks; it falls back to the default model. Authors can save favorite available models, search the available list, and filter it by recognized vendor. Low, medium, and high reasoning-level controls are offered only for selected OpenAI models. Presentation receives Settings through the application service, persistence uses focused repositories, and legacy preferences migrate to their formerly active connection without exposing unknown keys.",
             "persistence": "Editorial preferences persist in app_settings.application-model-preferences; the independent app model persists in app_settings.application-app-model."
         },
@@ -54,7 +54,7 @@
             "area": "AI",
             "title": "Available model list refresh",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/available-models-provider.ts", "packages/server/src/infrastructure/editorial/available-models.ts", "packages/server/src/presentation/routes/settings-route.ts"],
+            "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/AiSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/settings/available-models-provider.ts", "packages/server/src/infrastructure/editorial/services/ai-connection-model-discovery-service.ts", "packages/server/src/presentation/routes/settings-route.ts"],
             "contract": "Opening AI Settings loads the current model lists for every active OpenAI, OpenCode Zen, Anthropic, Google Gemini API, xAI Grok, or DeepSeek connection; authors can refresh them again to retry or retrieve provider changes. Each returned model retains the connection that supplied it. The OpenAI catalog admits only the gpt-5.5 and gpt-5.6 model families; Zen retains its complete returned catalog. A refreshed list is not proof that every Editorial Operation is supported.",
             "persistence": "Server-side provider refresh only; the resulting list is not persisted."
         },
@@ -72,7 +72,7 @@
             "area": "Backups",
             "title": "Browser-selected backup folder, schedule, and retention",
             "status": "implemented",
-            "owners": ["packages/web/src/App.tsx", "packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/web/src/settings/web-backups.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/ports/backup-manager.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/sqlite-backup-manager.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
+            "owners": ["packages/web/src/App.tsx", "packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/web/src/settings/web-backups.ts", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/settings/backup-manager.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/sqlite-backup-manager.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
             "contract": "In supported web browsers, authors explicitly choose a local backup folder. The browser writes consistent SQLite snapshots there, lists compatible snapshots for explicit restore, and reloads after the loopback service safely replaces active data. Daily startup writes at most one automatic snapshot when the previously selected folder remains permitted, and retention removes only automatic snapshots.",
             "persistence": "app_settings.application-backup-policy plus the browser's local folder permission handle; snapshots exclude environment variables and API keys."
         },
@@ -81,7 +81,7 @@
             "area": "Data & backups",
             "title": "Explicit Electron local-data deletion",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/shared/src/settings/settings.ts", "packages/electron/src/presentation/desktop-settings.ts", "packages/electron/src/presentation/main.ts"],
+            "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/shared/src/settings/settings.ts", "packages/electron/src/presentation/settings/desktop-settings.ts", "packages/electron/src/presentation/main.ts"],
             "contract": "In Electron, an author can request deletion of the active resolved Skladno data directory through a no-argument native operation. The native confirmation explains the irreversible scope and always shows a Create a backup before deletion checkbox, checked only when a separate backup directory is configured. A requested backup must succeed before deletion continues. It cancels without changes, closes SQLite and background work before deletion, then exits only after successful removal. The renderer cannot supply a filesystem path.",
             "persistence": "The confirmed active local data directory is removed. Installer and uninstaller behavior remains data-preserving."
         },
@@ -90,7 +90,7 @@
             "area": "Data & backups",
             "title": "Explicit local-backup restoration",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/web/src/settings/web-backups.ts", "packages/shared/src/settings/settings.ts", "packages/server/src/index.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/electron/src/presentation/desktop-settings.ts", "packages/electron/src/application/pending-restore.ts", "packages/electron/src/presentation/main.ts", "packages/server/src/infrastructure/persistence/database.ts"],
+            "owners": ["packages/web/src/settings/components/DataBackupsSettingsSection.tsx", "packages/web/src/settings/web-backups.ts", "packages/shared/src/settings/settings.ts", "packages/server/src/index.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/electron/src/presentation/settings/desktop-settings.ts", "packages/electron/src/infrastructure/recovery/pending-restore.ts", "packages/electron/src/presentation/main.ts", "packages/server/src/infrastructure/persistence/database.ts"],
             "contract": "An author chooses a SQLite snapshot from the configured backup folder and explicitly confirms replacement. Browser restore uploads the selected snapshot only to the loopback service, which closes and reopens the local application before the browser reloads. Electron uses a staged native restart. The renderer cannot provide an active-data path. Skladno retains a recovery snapshot, validates the snapshot before and after replacement, and rolls back once when restored data cannot open.",
             "persistence": "The selected snapshot replaces the active SQLite database only during restart. A private recovery snapshot remains outside the active database."
         },
@@ -99,7 +99,7 @@
             "area": "About",
             "title": "Author-controlled unsigned Windows updates",
             "status": "implemented",
-            "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/web/src/workspace/components/ArticleLibraryPanel.tsx", "packages/electron/src/presentation/desktop-updates.ts"],
+            "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/web/src/workspace/components/ArticleLibraryPanel.tsx", "packages/electron/src/presentation/updates/desktop-updates.ts"],
             "contract": "About Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes automatic checks, a stable-only or prerelease-inclusive channel preference, explicit download, guarded restart, release notes, and recovery guidance. An available update appears in the Article Library utility area and opens About Settings with Updates focused. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
             "persistence": "The desktop runtime file stores the network-permission, automatic-check, and prerelease-channel preferences plus non-content update recovery metadata."
         },
@@ -222,7 +222,7 @@
             "event": "The author cancels deletion, deletes after a native confirmation, or selects backup and deletion.",
             "expected": ["Cancellation leaves the data unchanged.", "A requested backup must complete and be non-empty before deletion proceeds.", "Only the active resolved Skladno data directory is deleted after background work and SQLite close, and Skladno exits after success."],
             "forbidden": ["Deleting an unresolved or broad path.", "Continuing to deletion after backup failure.", "Deleting local author data during ordinary uninstall."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-settings.delete.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/settings/desktop-settings.delete.test.ts" }
         },
         {
             "id": "settings.restore-local-backup",
@@ -232,7 +232,7 @@
             "event": "The author selects a backup and confirms restoration.",
             "expected": ["Cancellation leaves active data unchanged.", "Skladno validates the selected snapshot, retains a recovery snapshot, and opens the restored Articles, Revisions, Draft checkpoints, Assistant history, style data, and Settings after restart or browser reload.", "If restored startup fails, Skladno rolls back to the recovery snapshot once."],
             "forbidden": ["The renderer supplies an active-data path.", "An invalid or incompatible snapshot replaces active data.", "Skladno claims success after a failed replacement or rollback."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/application/pending-restore.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/infrastructure/recovery/pending-restore.test.ts" }
         }
     ]
 }

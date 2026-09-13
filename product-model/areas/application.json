@@ -9,7 +9,7 @@
             "status": "implemented",
             "owners": [
                 "packages/web/src/App.tsx",
-                "packages/web/src/application-client.ts",
+                "packages/web/src/application/client.ts",
                 "packages/server/src/presentation/server.ts",
                 "packages/server/src/index.ts",
                 "packages/server/src/application/settings/application-settings-service.ts",
@@ -28,7 +28,7 @@
             "status": "implemented",
             "owners": [
                 "packages/server/src/presentation/routes/health-route.ts",
-                "packages/web/src/application-client.ts",
+                "packages/web/src/application/client.ts",
                 "packages/web/src/notifications",
                 "packages/electron/src/presentation/preload-bridge.ts",
                 "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts"
@@ -76,7 +76,7 @@
                 "packages/electron/forge.config.js",
                 "packages/server/src/electron.ts",
                 "packages/server/src/local-application.ts",
-                "packages/web/src/desktop-client.ts",
+                "packages/web/src/application/desktop-client.ts",
                 ".github/workflows/electron-windows.yml"
             ],
             "contract": "The unsigned Windows 11 x64 application runs the existing React application in one context-isolated, sandboxed Electron window without a native menu bar. Every former menu action is a configurable Key Binding: workspace actions run in the renderer, and editing, window, close, quit, and update actions cross only as allowlisted native command IDs. CI publishes stable tags as GitHub releases and preview tags as prereleases, each with the installer, RELEASES manifest, and full package. Its Squirrel installer creates Desktop and Start menu shortcuts. The main process composes local application services and exposes only allowlisted typed IPC operations. GitHub release discovery is optional, requires the author's stored network permission, and runs at every startup and then daily while the application remains open; the author chooses stable-only or prerelease-inclusive discovery, while download and restart remain explicit. Restart and update requires a Draft checkpoint and verified SQLite snapshot before native Squirrel apply.",
@@ -122,7 +122,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/application-client.test.ts"
+                "path": "packages/web/src/application/client.test.ts"
             }
         },
         {
@@ -143,7 +143,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/web/src/application-client.test.ts"
+                "path": "packages/web/src/application/client.test.ts"
             }
         },
         {
@@ -208,7 +208,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/electron/src/infrastructure/window-policy.test.ts"
+                "path": "packages/electron/src/infrastructure/window/window-policy.test.ts"
             }
         },
         {
@@ -230,7 +230,7 @@
             ],
             "evidence": {
                 "kind": "automated",
-                "path": "packages/electron/src/application/close-coordinator.test.ts"
+                "path": "packages/electron/src/application/lifecycle/close-coordinator.test.ts"
             }
         },
         {
@@ -284,7 +284,7 @@
             "event": "The desktop coordinator checks release metadata.",
             "expected": ["Only the newest complete compatible release allowed by the stable-only or prerelease-inclusive preference is offered and no download starts before the author requests it."],
             "forbidden": ["Making an update-discovery request without author permission or sending Article content or raw GitHub errors to the renderer."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-updates.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/updates/desktop-updates.test.ts" }
         },
         {
             "id": "application.electron-preview-update-recovery",
@@ -294,7 +294,7 @@
             "event": "The author requests Restart and update.",
             "expected": ["A Draft checkpoint and SQLite snapshot succeed before native apply."],
             "forbidden": ["Applying an update after a failed checkpoint or snapshot."],
-            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/desktop-updates.test.ts" }
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/updates/desktop-updates.test.ts" }
         },
         {
             "id": "application.desktop-shell-layout",

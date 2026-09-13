@@ -44,8 +44,10 @@ test("critical local-first author journeys use deterministic provider output", a
     await expect(page.getByRole("button", { name: /publish/i })).toHaveCount(0);
 
     await page.getByRole("combobox", { name: "Editorial guidance" }).fill("Improve flow");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Flow and clarity" }).click();
     await page.getByRole("button", { name: "Send editorial request" }).click();
-    await expect(page.getByRole("tab", { name: /Proposal/ })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Proposals: Review" })).toBeVisible();
     await page.getByRole("tab", { name: /Proposal/ }).click();
     await expect(page.getByText("Improved fixture note.")).toBeVisible();
 
@@ -60,6 +62,8 @@ test("critical local-first author journeys use deterministic provider output", a
     await expect(page.getByText("Restored Revision").first()).toBeVisible();
 
     await page.getByRole("combobox", { name: "Editorial guidance" }).fill("fact check");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Fact checking" }).click();
     await page.getByRole("button", { name: "Send editorial request" }).click();
     await expect(page.getByRole("tab", { name: /Fact Check/ })).toBeVisible();
     await page.getByRole("tab", { name: /Fact Check/ }).click();

@@ -22,7 +22,7 @@ For TSX changes, inspect in this order:
 1. the owning component or view;
 2. its direct state owner or hook;
 3. the closest focused test;
-4. a shared UI primitive, localization entry, or `application-client` boundary only when the change crosses it;
+4. a shared UI primitive, localization entry, or `application/client.ts` boundary only when the change crosses it;
 5. the parent composition root only when wiring changes.
 
 Search symbols and imports before full reads. A `.tsx` file may combine rendering, state, accessibility, localization, and integration wiring; it is not a reason to scan the feature.
@@ -36,25 +36,28 @@ Paths below are relative to `packages/web/src/workspace`. Use this map as a star
 | Concern | Owner | Focused tests |
 | --- | --- | --- |
 | Composition and shortcuts | `EditorialWorkspace.tsx`, `components/WorkspaceScreen.tsx` | `EditorialWorkspace.settings.test.tsx`, `EditorialWorkspace.layout.test.tsx` |
-| Article loading, Drafts, Revisions, and persistence | `state/article-workspace-state.ts`, `state/article-revisions-state.ts` | `drafts/draft-lifecycle.test.ts`, `EditorialWorkspace.persistence.test.tsx` |
+| Article loading, Drafts, Revisions, and persistence | `state/article-workspace-state.ts`, `state/article-workspace-actions.ts`, `state/article-workspace-articles.ts`, `state/article-revisions-state.ts` | `drafts/draft-lifecycle.test.ts`, `EditorialWorkspace.persistence.test.tsx`, `state/article-revisions-state.test.tsx` |
 | Article creation and Settings entry | `components/ArticleWorkspace.tsx`, `EditorialWorkspace.tsx` | `EditorialWorkspace.creation.test.tsx`, `EditorialWorkspace.settings.test.tsx` |
-| Assistant requests, composer, and stored responses | `state/assistant-messages-state.ts`, `state/editorial-proposal-state.ts`, `components/assistant/AssistantComposer.tsx` | `EditorialWorkspace.assistant-proposals.test.tsx`, `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-composer.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx`, `components/assistant/AssistantTimeline.test.tsx` |
-
-### Focused-suite context snapshot
-
-Issue #192 split the largest test suites by behavior. Counts are source lines before and after the split; the representative context column names the focused test and directly shared helper a reader needs.
-
-| Former suite | Before | Focused suites | After | Representative context |
-| --- | ---: | --- | --- | --- |
-| `server/editorial-integration.test.ts` | 720 | `editorial-integration.requests.test.ts`, `editorial-integration.style-translation.test.ts`, `editorial-integration.findings.test.ts`, `editorial-integration.assistant.test.ts` | 204 / 97 / 92 / 258 | focused suite + `editorial-integration.test-utils.ts` |
-| `web/workspace/EditorialWorkspace.assistant.test.tsx` | 660 | `EditorialWorkspace.assistant-proposals.test.tsx`, `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-composer.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx` | 200 / 153 / 135 / 179 | focused suite + `EditorialWorkspace.test-utils.tsx` |
-| `server/infrastructure/persistence/repositories.test.ts` | 437 | `repositories.assistant-records.test.ts`, `repositories.article-lifecycle.test.ts`, `repositories.storage-and-style.test.ts` | 176 / 145 / 111 | focused suite + `repositories.test-utils.ts` |
-| `web/settings/ApplicationSettings.ai.test.tsx` | 344 | `ApplicationSettings.ai-connections.test.tsx`, `ApplicationSettings.ai-connection-management.test.tsx`, `ApplicationSettings.ai-models.test.tsx` | 197 / 49 / 163 | focused suite + `ApplicationSettings.test-utils.ts` |
-| `web/settings/ApplicationSettings.persistence.test.tsx` | 203 | `ApplicationSettings.backups.test.tsx`, `ApplicationSettings.publishing.test.tsx`, `ApplicationSettings.ai-connection-management.test.tsx` | 95 / 63 / 49 | focused settings behavior + `ApplicationSettings.test-utils.tsx` |
-| `electron/presentation/desktop-settings.test.ts` | 229 | `desktop-settings.backups.test.ts`, `desktop-settings.delete.test.ts` | 49 / 104 | focused suite + `desktop-settings.test-utils.ts` |
-| `web/notifications/NotificationProvider.test.tsx` | 191 | `NotificationProvider.behavior.test.tsx`, `NotificationProvider.errors.test.tsx` | 72 / 45 | focused suite + `NotificationProvider.test-utils.tsx` |
-| `web/settings/ApplicationSettings.general.test.tsx` | 268 | `ApplicationSettings.general.test.tsx`, `ApplicationSettings.updates.test.tsx` | 108 / 75 | focused suite + `ApplicationSettings.test-utils.tsx` |
-| `web/workspace/EditorialWorkspace.lifecycle.test.tsx` | 221 | `EditorialWorkspace.persistence.test.tsx`, `EditorialWorkspace.creation.test.tsx`, `EditorialWorkspace.settings.test.tsx` | 61 / 31 / 58 | focused suite + `EditorialWorkspace.test-utils.tsx` |
-| `server/presentation/server.test.ts` | 306 | `server.article-and-publishing.test.ts`, `server.general-settings.test.ts`, `server.ai-connections.test.ts` | 158 / 95 / 87 | focused suite and its local service setup |
+| Assistant requests, retries, and stream recovery | `state/assistant-messages-state.ts`, `state/assistant-request-state.ts`, `state/assistant-stream-events-state.ts`, `state/assistant-streaming.ts` | `EditorialWorkspace.assistant-requests.test.tsx`, `EditorialWorkspace.assistant-selection.test.tsx` |
+| Assistant composer and stored responses | `components/assistant/AssistantComposer.tsx`, `state/assistant-message-history-state.ts` | `EditorialWorkspace.assistant-composer.test.tsx`, `components/assistant/AssistantTimeline.test.tsx` |
+| Proposal generation, summaries, and decisions | `state/editorial-proposal-state.ts`, `state/editorial-proposal-actions.ts`, `state/editorial-proposal-helpers.ts` | `state/editorial-proposal-state.test.ts`, `EditorialWorkspace.assistant-proposals.test.tsx`, `views/ProposalReviewView.test.tsx` |
+| Findings and translation results | `state/editorial-results-state.ts` | `views/FactCheckView.test.tsx`, `views/TranslationsView.test.tsx`, `EditorialWorkspace.assistant-proposals.test.tsx` |
 | Article header, editor, views, and status bar | `components/ArticleWorkspace.tsx`, `components/WorkspaceViewRouter.tsx` | `EditorialWorkspace.article-controls.test.tsx`, `views/*.test.tsx` |
 | Shell, library, tabs, and panel layout | `components/WorkspaceShell.tsx`, `components/ArticleLibraryPanel.tsx`, `components/WorkspaceTabBar.tsx` | matching `components/*.test.tsx`, `EditorialWorkspace.layout.test.tsx` |
+
+### Other focused entry points
+
+Paths below are relative to the named package's `src` directory. Read the focused suite first and its shared test helper only as needed. File extraction does not require a new test for every helper; keep testing the behavior through its existing caller.
+
+| Package and concern | Owner | Focused tests |
+| --- | --- | --- |
+| Web AI Settings | `settings/use-ai-settings-controller.ts`, `settings/ApplicationSettings.tsx` | `settings/ApplicationSettings.ai-connections.test.tsx`, `settings/ApplicationSettings.ai-connection-management.test.tsx`, `settings/ApplicationSettings.ai-models.test.tsx` |
+| Web general Settings, backups, publishing, and updates | `settings/ApplicationSettings.tsx`, matching `settings/components/` section | matching `settings/ApplicationSettings.general.test.tsx`, `settings/ApplicationSettings.backups.test.tsx`, `settings/ApplicationSettings.publishing.test.tsx`, `settings/ApplicationSettings.updates.test.tsx` |
+| Web notifications | `notifications/NotificationProvider.tsx`, `notifications/NotificationViewport.tsx`, `notifications/notification-duration.ts` | `notifications/NotificationProvider.behavior.test.tsx`, `notifications/NotificationProvider.errors.test.tsx` |
+| Web shared controls | `ui/primitives.tsx` | `ui/primitives.test.tsx` |
+| Shared Assistant contracts | `assistant/assistant.ts`, `assistant/assistant-skills.ts`, `assistant/assistant-events.ts` | `assistant/assistant.test.ts` |
+| Server Assistant capabilities | `application/assistant/capabilities/` | `application/assistant/capabilities/editorial-capability-catalog.test.ts`, `application/assistant/capabilities/assistant-capability-loop.test.ts` |
+| Server editorial integration | `application/editorial/editorial-service.ts`, `application/assistant/assistant-service.ts` | `presentation/editorial-integration.requests.test.ts`, `presentation/editorial-integration.style-translation.test.ts`, `presentation/editorial-integration.findings.test.ts`, `presentation/editorial-integration.assistant.test.ts`, `presentation/editorial-integration.telemetry.test.ts` |
+| Server persistence | `infrastructure/persistence/repositories/` | `infrastructure/persistence/repositories.assistant-records.test.ts`, `infrastructure/persistence/repositories.article-lifecycle.test.ts`, `infrastructure/persistence/repositories.storage-and-style.test.ts` |
+| Server HTTP presentation | `presentation/routes/` | `presentation/server.article-and-publishing.test.ts`, `presentation/server.general-settings.test.ts`, `presentation/server.ai-connections.test.ts` |
+| Electron data Settings | `presentation/settings/desktop-settings.ts` | `presentation/settings/desktop-settings.backups.test.ts`, `presentation/settings/desktop-settings.delete.test.ts` |

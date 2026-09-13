@@ -83,10 +83,10 @@ export function TranslationsView({ data, actions }: { data: TranslationsData; ac
             </div>
             <div className="flex shrink-0 items-center gap-2">
                 {translatedContent && <div className="flex items-center gap-1" aria-label={intl.formatMessage({ id: "views.translationDisplayMode" })}>
-                    <IconButton className={displayMode === "side-by-side" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.translationSideBySide" })} title={intl.formatMessage({ id: "views.translationSideBySide" })} aria-pressed={displayMode === "side-by-side"} onClick={() => setDisplayMode("side-by-side")}>
+                    <IconButton variant="quiet" label={intl.formatMessage({ id: "views.translationSideBySide" })} title={intl.formatMessage({ id: "views.translationSideBySide" })} aria-pressed={displayMode === "side-by-side"} onClick={() => setDisplayMode("side-by-side")}>
                         <SideBySideIcon />
                     </IconButton>
-                    <IconButton className={displayMode === "aligned" ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"} label={intl.formatMessage({ id: "views.translationAligned" })} title={intl.formatMessage({ id: "views.translationAligned" })} aria-pressed={displayMode === "aligned"} onClick={() => setDisplayMode("aligned")}>
+                    <IconButton variant="quiet" label={intl.formatMessage({ id: "views.translationAligned" })} title={intl.formatMessage({ id: "views.translationAligned" })} aria-pressed={displayMode === "aligned"} onClick={() => setDisplayMode("aligned")}>
                         <AlignedParagraphsIcon />
                     </IconButton>
                 </div>}
