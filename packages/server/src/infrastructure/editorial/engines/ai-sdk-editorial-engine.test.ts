@@ -5,13 +5,13 @@ import { AI_PROVIDER, EDITORIAL_OPERATION } from "@skladno/shared";
 import { MockLanguageModelV3 } from "ai/test";
 
 import { EDITORIAL_ENGINE_EVENT } from "../../../application/editorial/engine/editorial-engine-events.js";
-import { AiSdkEditorialEngine, assistantConversationPrompt, assistantStepOptions } from "./ai-sdk-editorial-engine.js";
-import { supportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";
-import { openAiResponsesProviderOptions } from "../adapters/openai-responses.js";
+import { AiSdkEditorialEngine, createAssistantConversationPrompt, getAssistantStepOptions } from "./ai-sdk-editorial-engine.js";
+import { getSupportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";
+import { getOpenAiResponsesProviderOptions } from "../adapters/openai-responses.js";
 
 
 test("keeps previous Assistant output separate from the next Author request", () => {
-    assert.deepEqual(assistantConversationPrompt({
+    assert.deepEqual(createAssistantConversationPrompt({
         article: "Article context",
         history: [
             { role: "author", content: "Previous question" },
@@ -28,25 +28,25 @@ test("keeps previous Assistant output separate from the next Author request", ()
 
 
 test("Responses storage is opt-in and continuation stays scoped to it", () => {
-    assert.deepEqual(openAiResponsesProviderOptions(false, "resp-earlier"), { openai: { store: false } });
-    assert.deepEqual(openAiResponsesProviderOptions(true), { openai: { store: true } });
-    assert.deepEqual(openAiResponsesProviderOptions(true, "resp-earlier"), { openai: { store: true, previousResponseId: "resp-earlier" } });
-    assert.deepEqual(openAiResponsesProviderOptions(false, undefined, "high"), { openai: { store: false, reasoningEffort: "high" } });
+    assert.deepEqual(getOpenAiResponsesProviderOptions(false, "resp-earlier"), { openai: { store: false } });
+    assert.deepEqual(getOpenAiResponsesProviderOptions(true), { openai: { store: true } });
+    assert.deepEqual(getOpenAiResponsesProviderOptions(true, "resp-earlier"), { openai: { store: true, previousResponseId: "resp-earlier" } });
+    assert.deepEqual(getOpenAiResponsesProviderOptions(false, undefined, "high"), { openai: { store: false, reasoningEffort: "high" } });
 });
 
 
 test("supporting text keeps OpenAI reasoning settings without forwarding them to other providers", () => {
-    assert.deepEqual(supportingTextProviderOptions(AI_PROVIDER.OPENAI, "high"), { openai: { store: false, reasoningEffort: "high" } });
-    assert.equal(supportingTextProviderOptions(AI_PROVIDER.ANTHROPIC, "high"), undefined);
+    assert.deepEqual(getSupportingTextProviderOptions(AI_PROVIDER.OPENAI, "high"), { openai: { store: false, reasoningEffort: "high" } });
+    assert.equal(getSupportingTextProviderOptions(AI_PROVIDER.ANTHROPIC, "high"), undefined);
 });
 
 
 test("a resolved skill must call its artifact tool before it can answer", () => {
-    assert.deepEqual(assistantStepOptions(0, ["translate", "inspect_translations"]), {
+    assert.deepEqual(getAssistantStepOptions(0, ["translate", "inspect_translations"]), {
         activeTools: ["translate", "inspect_translations", "find_capabilities", "load_skill"],
         toolChoice: { type: "tool", toolName: "translate" },
     });
-    assert.deepEqual(assistantStepOptions(1, ["translate", "inspect_translations"]), {
+    assert.deepEqual(getAssistantStepOptions(1, ["translate", "inspect_translations"]), {
         activeTools: ["translate", "inspect_translations", "find_capabilities", "load_skill"],
     });
 });

@@ -1,7 +1,7 @@
 import type { ReasoningEffort } from "@skladno/shared";
 
 
-export function openAiResponseId(metadata: unknown): string | undefined {
+export function getOpenAiResponseId(metadata: unknown): string | undefined {
     if (!metadata || typeof metadata !== "object" || !("openai" in metadata))
         return undefined;
 
@@ -13,7 +13,7 @@ export function openAiResponseId(metadata: unknown): string | undefined {
 }
 
 
-export function openAiResponsesProviderOptions(storeResponses: boolean, previousResponseId?: string, reasoningEffort?: ReasoningEffort) {
+export function getOpenAiResponsesProviderOptions(storeResponses: boolean, previousResponseId?: string, reasoningEffort?: ReasoningEffort) {
     return {
         openai: {
             store: storeResponses,
@@ -24,4 +24,4 @@ export function openAiResponsesProviderOptions(storeResponses: boolean, previous
 }
 
 
-export type OpenAiResponsesProviderOptions = ReturnType<typeof openAiResponsesProviderOptions>;
+export type OpenAiResponsesProviderOptions = ReturnType<typeof getOpenAiResponsesProviderOptions>;

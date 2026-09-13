@@ -58,41 +58,41 @@ export interface KeyBindingCommand {
 }
 
 
-function binding(key: string, options: Partial<Omit<KeyBinding, "key">> = {}): KeyBinding {
+function createKeyBinding(key: string, options: Partial<Omit<KeyBinding, "key">> = {}): KeyBinding {
     return { primary: true, shift: false, alt: false, ...options, key };
 }
 
 
 export const keyBindingCommands = [
-    { id: KEY_BINDING_COMMAND.NEW_ARTICLE, category: "general", labelMessageId: "keyBindings.newArticle", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("n"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.SAVE_REVISION, category: "general", labelMessageId: "keyBindings.saveRevision", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("s"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.SEARCH_ARTICLES, category: "general", labelMessageId: "keyBindings.searchArticles", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("f"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.OPEN_SETTINGS, category: "general", labelMessageId: "keyBindings.openSettings", hintMessageId: "keyBindings.generalHint", defaultBinding: binding(","), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.CLOSE_WINDOW, category: "general", labelMessageId: "keyBindings.closeWindow", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("w"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.QUIT, category: "general", labelMessageId: "keyBindings.quit", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("q"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.CHECK_FOR_UPDATES, category: "general", labelMessageId: "keyBindings.checkForUpdates", hintMessageId: "keyBindings.generalHint", defaultBinding: binding("u", { shift: true }), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.UNDO, category: "editing", labelMessageId: "keyBindings.undo", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("z"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.REDO, category: "editing", labelMessageId: "keyBindings.redo", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("y"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.CUT, category: "editing", labelMessageId: "keyBindings.cut", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("x"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.COPY, category: "editing", labelMessageId: "keyBindings.copy", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("c"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.PASTE, category: "editing", labelMessageId: "keyBindings.paste", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("v"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.SELECT_ALL, category: "editing", labelMessageId: "keyBindings.selectAll", hintMessageId: "keyBindings.editingHint", defaultBinding: binding("a"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, category: "workspace", labelMessageId: "keyBindings.toggleFocusMode", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("f", { shift: true }), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, category: "workspace", labelMessageId: "keyBindings.toggleArticleLibrary", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("l", { shift: true }), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, category: "workspace", labelMessageId: "keyBindings.toggleEditorialAssistant", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("a", { shift: true }), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.VIEW_WRITE, category: "workspace", labelMessageId: "keyBindings.viewWrite", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("1"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.VIEW_PROPOSAL, category: "workspace", labelMessageId: "keyBindings.viewProposal", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("2"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.VIEW_REVISIONS, category: "workspace", labelMessageId: "keyBindings.viewRevisions", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("3"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.VIEW_FACT_CHECK, category: "workspace", labelMessageId: "keyBindings.viewFactCheck", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("4"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, category: "workspace", labelMessageId: "keyBindings.viewStyleProfile", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("5"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, category: "workspace", labelMessageId: "keyBindings.viewTranslations", hintMessageId: "keyBindings.workspaceHint", defaultBinding: binding("6"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.ZOOM_IN, category: "window", labelMessageId: "keyBindings.zoomIn", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("+", { shift: true }), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.ZOOM_OUT, category: "window", labelMessageId: "keyBindings.zoomOut", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("-"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.RESET_ZOOM, category: "window", labelMessageId: "keyBindings.resetZoom", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("0"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.NEW_ARTICLE, category: "general", labelMessageId: "keyBindings.newArticle", hintMessageId: "keyBindings.generalHint", defaultBinding: createKeyBinding("n"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.SAVE_REVISION, category: "general", labelMessageId: "keyBindings.saveRevision", hintMessageId: "keyBindings.generalHint", defaultBinding: createKeyBinding("s"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.SEARCH_ARTICLES, category: "general", labelMessageId: "keyBindings.searchArticles", hintMessageId: "keyBindings.generalHint", defaultBinding: createKeyBinding("f"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.OPEN_SETTINGS, category: "general", labelMessageId: "keyBindings.openSettings", hintMessageId: "keyBindings.generalHint", defaultBinding: createKeyBinding(","), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.CLOSE_WINDOW, category: "general", labelMessageId: "keyBindings.closeWindow", hintMessageId: "keyBindings.generalHint", defaultBinding: createKeyBinding("w"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.QUIT, category: "general", labelMessageId: "keyBindings.quit", hintMessageId: "keyBindings.generalHint", defaultBinding: createKeyBinding("q"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.CHECK_FOR_UPDATES, category: "general", labelMessageId: "keyBindings.checkForUpdates", hintMessageId: "keyBindings.generalHint", defaultBinding: createKeyBinding("u", { shift: true }), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.UNDO, category: "editing", labelMessageId: "keyBindings.undo", hintMessageId: "keyBindings.editingHint", defaultBinding: createKeyBinding("z"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.REDO, category: "editing", labelMessageId: "keyBindings.redo", hintMessageId: "keyBindings.editingHint", defaultBinding: createKeyBinding("y"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.CUT, category: "editing", labelMessageId: "keyBindings.cut", hintMessageId: "keyBindings.editingHint", defaultBinding: createKeyBinding("x"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.COPY, category: "editing", labelMessageId: "keyBindings.copy", hintMessageId: "keyBindings.editingHint", defaultBinding: createKeyBinding("c"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.PASTE, category: "editing", labelMessageId: "keyBindings.paste", hintMessageId: "keyBindings.editingHint", defaultBinding: createKeyBinding("v"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.SELECT_ALL, category: "editing", labelMessageId: "keyBindings.selectAll", hintMessageId: "keyBindings.editingHint", defaultBinding: createKeyBinding("a"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, category: "workspace", labelMessageId: "keyBindings.toggleFocusMode", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("f", { shift: true }), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, category: "workspace", labelMessageId: "keyBindings.toggleArticleLibrary", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("l", { shift: true }), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, category: "workspace", labelMessageId: "keyBindings.toggleEditorialAssistant", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("a", { shift: true }), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.VIEW_WRITE, category: "workspace", labelMessageId: "keyBindings.viewWrite", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("1"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.VIEW_PROPOSAL, category: "workspace", labelMessageId: "keyBindings.viewProposal", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("2"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.VIEW_REVISIONS, category: "workspace", labelMessageId: "keyBindings.viewRevisions", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("3"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.VIEW_FACT_CHECK, category: "workspace", labelMessageId: "keyBindings.viewFactCheck", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("4"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.VIEW_STYLE_PROFILE, category: "workspace", labelMessageId: "keyBindings.viewStyleProfile", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("5"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.VIEW_TRANSLATIONS, category: "workspace", labelMessageId: "keyBindings.viewTranslations", hintMessageId: "keyBindings.workspaceHint", defaultBinding: createKeyBinding("6"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.ZOOM_IN, category: "window", labelMessageId: "keyBindings.zoomIn", hintMessageId: "keyBindings.windowHint", defaultBinding: createKeyBinding("+", { shift: true }), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.ZOOM_OUT, category: "window", labelMessageId: "keyBindings.zoomOut", hintMessageId: "keyBindings.windowHint", defaultBinding: createKeyBinding("-"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.RESET_ZOOM, category: "window", labelMessageId: "keyBindings.resetZoom", hintMessageId: "keyBindings.windowHint", defaultBinding: createKeyBinding("0"), scope: "application", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.TOGGLE_FULLSCREEN, category: "window", labelMessageId: "keyBindings.toggleFullscreen", hintMessageId: "keyBindings.windowHint", defaultBinding: { primary: false, shift: false, alt: false, key: "f11" }, scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.MINIMIZE_WINDOW, category: "window", labelMessageId: "keyBindings.minimizeWindow", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("m"), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.TOGGLE_MAXIMIZE, category: "window", labelMessageId: "keyBindings.toggleMaximize", hintMessageId: "keyBindings.windowHint", defaultBinding: binding("m", { shift: true }), scope: "application", allowInEditable: true },
-    { id: KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.sendEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: binding("enter"), scope: "assistant", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.MINIMIZE_WINDOW, category: "window", labelMessageId: "keyBindings.minimizeWindow", hintMessageId: "keyBindings.windowHint", defaultBinding: createKeyBinding("m"), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.TOGGLE_MAXIMIZE, category: "window", labelMessageId: "keyBindings.toggleMaximize", hintMessageId: "keyBindings.windowHint", defaultBinding: createKeyBinding("m", { shift: true }), scope: "application", allowInEditable: true },
+    { id: KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.sendEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: createKeyBinding("enter"), scope: "assistant", allowInEditable: true },
     { id: KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, category: "assistant", labelMessageId: "keyBindings.stopEditorialRequest", hintMessageId: "keyBindings.assistantHint", defaultBinding: { primary: false, shift: false, alt: false, key: "escape" }, scope: "assistant", allowInEditable: false },
 ] as const satisfies readonly KeyBindingCommand[];
 
@@ -120,7 +120,7 @@ export function normalizeKeyBinding(value: unknown): KeyBinding | undefined {
 }
 
 
-export function keyBindingsEqual(left: KeyBinding, right: KeyBinding): boolean {
+export function areKeyBindingsEqual(left: KeyBinding, right: KeyBinding): boolean {
     return left.primary === right.primary && left.shift === right.shift && left.alt === right.alt && left.key === right.key;
 }
 
@@ -137,7 +137,7 @@ export function findKeyBindingConflict(bindings: Record<KeyBindingCommandId, Key
         if (!first)
             continue;
 
-        const duplicate = entries.slice(index + 1).find(([, second]) => second && keyBindingsEqual(first, second));
+        const duplicate = entries.slice(index + 1).find(([, second]) => second && areKeyBindingsEqual(first, second));
         if (duplicate)
             return [firstId, duplicate[0]];
     }

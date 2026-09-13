@@ -3,10 +3,10 @@ import { randomUUID } from "node:crypto";
 export type Row = Record<string, unknown>;
 
 export const createId = () => randomUUID();
-export const now = () => new Date().toISOString();
+export const getCurrentTimestamp = () => new Date().toISOString();
 
 
-export function required(value: string, name: string): string {
+export function requireNonEmpty(value: string, name: string): string {
     if (!value.trim())
         throw new Error(`${name} must not be empty.`);
 

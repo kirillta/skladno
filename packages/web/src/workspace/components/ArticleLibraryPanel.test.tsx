@@ -4,7 +4,7 @@ import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Article, DesktopUpdateClient } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
-import { message } from "../../i18n/test-message.js";
+import { getMessage } from "../../i18n/test-message.js";
 import { ArticleLibraryPanel as RenderArticleLibraryPanel } from "./ArticleLibraryPanel.js";
 
 
@@ -74,7 +74,7 @@ describe("ArticleLibraryPanel", () => {
         expect(otherButton.querySelector("svg")?.classList.contains("transition-transform")).toBe(true);
         expect(screen.getByText("Other Spanish edition").closest("[aria-hidden]")?.classList.contains("grid-rows-[0fr]")).toBe(true);
         expect(sourceButton.compareDocumentPosition(translationButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        await user.type(screen.getByRole("textbox", { name: message("navigation.searchArticles") }), "Other Spanish");
+        await user.type(screen.getByRole("textbox", { name: getMessage("navigation.searchArticles") }), "Other Spanish");
         await user.click(screen.getByRole("button", { name: /Other Spanish edition/ }));
         expect(screen.getByRole("button", { name: /Other Article/ })).toBeTruthy();
         expect(selectArticle).toHaveBeenCalledWith("other-translation");
@@ -91,7 +91,7 @@ describe("ArticleLibraryPanel", () => {
         </IntlProvider>);
 
         const updateButton = await screen.findByRole("button", { name: "Update 0.1.1-preview.1 is available" });
-        expect(updateButton.textContent).not.toContain(message("settings.updates"));
+        expect(updateButton.textContent).not.toContain(getMessage("settings.updates"));
         expect(updateButton.parentElement?.querySelector("span")?.textContent).toBe("EN · Local");
         expect(updateButton.parentElement?.classList.contains("relative")).toBe(true);
         expect(updateButton.classList.contains("absolute")).toBe(true);

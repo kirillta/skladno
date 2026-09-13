@@ -4,14 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { APPLICATION_ERROR, ApplicationClientError, defaultGeneralSettings, type ArticleRevision } from "@skladno/shared";
 
 import { App } from "../App.js";
-import { message } from "../i18n/test-message.js";
-import { article, fakeClient, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
+import { getMessage } from "../i18n/test-message.js";
+import { createArticleFixture, createFakeClient, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
 
 describe("Editorial Workspace assistant requests", () => {
     afterEach(resetWorkspaceTestEnvironment);
 
     it("restores the latest completed translation from local Assistant records", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "translations", selectedArticleId: "one" }));
         client.listAssistantMessages = vi.fn().mockResolvedValue([{
@@ -40,7 +40,7 @@ describe("Editorial Workspace assistant requests", () => {
 
     // product: application.desktop-shell-layout
     it("keeps Assistant conversations isolated to the selected Article", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({
@@ -52,7 +52,7 @@ describe("Editorial Workspace assistant requests", () => {
             view: "write",
             selectedArticleId: "one",
         }));
-        client.listArticles = vi.fn().mockResolvedValue([article("one", "First Article"), article("two", "Second Article")]);
+        client.listArticles = vi.fn().mockResolvedValue([createArticleFixture("one", "First Article"), createArticleFixture("two", "Second Article")]);
         client.listAssistantMessages = vi.fn().mockImplementation(async (articleId: string) => [{
             id: `${articleId}-message`,
             articleId,
@@ -75,7 +75,7 @@ describe("Editorial Workspace assistant requests", () => {
     });
 
     it("keeps Assistant request errors on the Article where they occurred", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({
@@ -87,15 +87,15 @@ describe("Editorial Workspace assistant requests", () => {
             view: "write",
             selectedArticleId: "one",
         }));
-        client.listArticles = vi.fn().mockResolvedValue([article("one", "First Article"), article("two", "Second Article")]);
+        client.listArticles = vi.fn().mockResolvedValue([createArticleFixture("one", "First Article"), createArticleFixture("two", "Second Article")]);
         client.streamAssistantRequest = vi.fn().mockRejectedValue(new Error("connection failed"));
 
         render(<App client={client} />);
 
         await screen.findByRole("heading", { name: "First Article" });
-        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
-        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
 
         expect((await screen.findByRole("alert")).textContent).toContain("complete this editorial request.");
         const errorDetails = screen.getByText("Error details").closest("details");
@@ -110,7 +110,7 @@ describe("Editorial Workspace assistant requests", () => {
     });
 
     it("opens Application Settings after an unavailable AI connection without changing the Article or Workspace View", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "revisions", selectedArticleId: "one" }));
@@ -119,9 +119,9 @@ describe("Editorial Workspace assistant requests", () => {
         render(<App client={client} />);
 
         await screen.findByRole("heading", { name: "First Article" });
-        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
-        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
         await user.click(await screen.findByRole("button", { name: "Open Application Settings" }));
         await user.click(screen.getAllByRole("button", { name: "Back to workspace" })[0]);
 
@@ -131,10 +131,10 @@ describe("Editorial Workspace assistant requests", () => {
     });
 
     it("uses the promoted Revision for every configured translation", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
-        const promoted: ArticleRevision = { ...article("one", "First Article").currentRevision, id: "promoted-revision", content: "Changed Draft" };
-        const source = article("one", "First Article");
+        const promoted: ArticleRevision = { ...createArticleFixture("one", "First Article").currentRevision, id: "promoted-revision", content: "Changed Draft" };
+        const source = createArticleFixture("one", "First Article");
         source.draft = { articleId: source.id, content: promoted.content, baseRevisionId: source.currentRevisionId, version: 1, updatedAt: promoted.createdAt };
         client.listArticles = vi.fn().mockResolvedValue([source]);
         client.getApplicationSettings = vi.fn().mockResolvedValue({ general: { ...defaultGeneralSettings, defaultTranslationLanguages: ["es", "de"] }, connections: [], modelPreferences: { defaultModel: "", skillOverrides: {} }, backupPolicy: { schedule: "off", retention: { mode: "count", count: 7 } }, keyBindingOverrides: {} });
@@ -143,9 +143,9 @@ describe("Editorial Workspace assistant requests", () => {
 
         render(<App client={client} />);
         await screen.findByRole("textbox", { name: "Article draft" });
-        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(screen.getByRole("option", { name: message("assistant.skill.translation.label") }));
-        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.translation.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
 
         await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalledTimes(2));
         expect(vi.mocked(client.streamAssistantRequest).mock.calls.map(([, request]) => request.kind === "new" ? request.scope.baseRevisionId : undefined)).toEqual([promoted.id, promoted.id]);

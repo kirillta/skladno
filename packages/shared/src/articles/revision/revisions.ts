@@ -37,19 +37,19 @@ export interface AcceptProposalInput {
 }
 
 
-export const articleRevisionsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/revisions`;
-export const articleDraftPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/draft`;
+export const createArticleRevisionsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/revisions`;
+export const createArticleDraftPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/draft`;
 export const acceptProposalPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/proposal-acceptances`;
-export const proposalSummariesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/proposal-summaries`;
-export const restoreRevisionPath = (articleId: string, revisionId: string) => `${articleRevisionsPath(articleId)}/${encodeURIComponent(revisionId)}/restorations`;
+export const createProposalSummariesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/proposal-summaries`;
+export const restoreRevisionPath = (articleId: string, revisionId: string) => `${createArticleRevisionsPath(articleId)}/${encodeURIComponent(revisionId)}/restorations`;
 
 
-function lines(content: string): string[] {
+function splitLines(content: string): string[] {
     return content === "" ? [] : content.split("\n");
 }
 
 
-function paragraphRanges(contentLines: string[]): { paragraphs: { start: number; end: number }[]; separators: string[][] } {
+function getParagraphRanges(contentLines: string[]): { paragraphs: { start: number; end: number }[]; separators: string[][] } {
     const paragraphs: { start: number; end: number }[] = [];
     const separators: string[][] = [];
     let index = 0;
@@ -92,8 +92,8 @@ function replacementLines(change: ProposalChange, preserveBlankLines: boolean): 
  * revision remains current; callers must otherwise fall back to whole-proposal review.
  */
 export function createTextProposal(baseContent: string, proposedContent: string): TextProposal {
-    const baseLines = lines(baseContent);
-    const proposalLines = lines(proposedContent);
+    const baseLines = splitLines(baseContent);
+    const proposalLines = splitLines(proposedContent);
     const table = Array.from({ length: baseLines.length + 1 }, () => Array<number>(proposalLines.length + 1).fill(0));
 
     for (let baseIndex = baseLines.length - 1; baseIndex >= 0; baseIndex -= 1) {
@@ -131,8 +131,8 @@ export function createTextProposal(baseContent: string, proposedContent: string)
         if (removed.length === 0 && added.length === 0)
             return;
 
-        const baseParagraphs = paragraphRanges(removed);
-        const proposalParagraphs = paragraphRanges(added);
+        const baseParagraphs = getParagraphRanges(removed);
+        const proposalParagraphs = getParagraphRanges(added);
         const sameParagraphStructure = baseParagraphs.paragraphs.length > 1
             && baseParagraphs.paragraphs.length === proposalParagraphs.paragraphs.length
             && JSON.stringify(baseParagraphs.separators) === JSON.stringify(proposalParagraphs.separators);
@@ -180,7 +180,7 @@ export function createTextProposal(baseContent: string, proposedContent: string)
 
 
 export function applyProposalChanges(proposal: TextProposal, selectedChangeIds: ReadonlySet<string>, preserveBlankLines = false): string {
-    const baseLines = lines(proposal.baseContent);
+    const baseLines = splitLines(proposal.baseContent);
     const result: string[] = [];
     let cursor = 0;
 

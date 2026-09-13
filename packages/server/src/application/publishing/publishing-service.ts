@@ -30,7 +30,7 @@ function isCustomPublishProfile(value: unknown): value is CustomPublishLimitProf
 }
 
 
-function publishingSettings(value: unknown): PublishingSettings | undefined {
+function normalizePublishingSettings(value: unknown): PublishingSettings | undefined {
     if (!isRecord(value) || !isPublishLimitProfileId(value.defaultProfileId) || !Array.isArray(value.customProfiles) || !value.customProfiles.every(isCustomPublishProfile))
         return undefined;
 
@@ -47,12 +47,12 @@ export class PublishingService {
 
 
     getSettings(): PublishingSettings {
-        return publishingSettings(this.store.getSetting(publishLimitProfileSettingKey)?.value) ?? { ...defaultPublishingSettings, customProfiles: [] };
+        return normalizePublishingSettings(this.store.getSetting(publishLimitProfileSettingKey)?.value) ?? { ...defaultPublishingSettings, customProfiles: [] };
     }
 
 
     setSettings(value: unknown): PublishingSettings {
-        const settings = publishingSettings(value);
+        const settings = normalizePublishingSettings(value);
         if (!settings)
             throw new ApplicationServiceError(APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE, HTTP_STATUS.BAD_REQUEST);
 

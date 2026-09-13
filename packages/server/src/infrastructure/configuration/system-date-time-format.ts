@@ -6,7 +6,7 @@ const execFileAsync = promisify(execFile);
 const windowsInternationalKey = "HKCU\\Control Panel\\International";
 
 
-async function windowsInternationalValue(name: "LocaleName" | "sShortDate" | "sTimeFormat"): Promise<string | undefined> {
+async function getWindowsInternationalValue(name: "LocaleName" | "sShortDate" | "sTimeFormat"): Promise<string | undefined> {
     const result = await execFileAsync("reg.exe", ["query", windowsInternationalKey, "/v", name], { windowsHide: true });
     const value = new RegExp(`\\s${name}\\s+REG_SZ\\s+(.+)$`, "m").exec(result.stdout)?.[1]?.trim();
 
@@ -20,9 +20,9 @@ export async function readSystemDateTimeFormat(): Promise<SystemDateTimeFormat> 
 
     try {
         const [locale, datePattern, timePattern] = await Promise.all([
-            windowsInternationalValue("LocaleName"),
-            windowsInternationalValue("sShortDate"),
-            windowsInternationalValue("sTimeFormat"),
+            getWindowsInternationalValue("LocaleName"),
+            getWindowsInternationalValue("sShortDate"),
+            getWindowsInternationalValue("sTimeFormat"),
         ]);
 
         return {

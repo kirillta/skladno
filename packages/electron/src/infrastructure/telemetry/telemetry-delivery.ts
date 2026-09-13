@@ -75,7 +75,7 @@ interface TelemetryDeliveryEnvironment {
 }
 
 
-function configuration(value: { endpoint?: string; projectKey?: string }): DeliveryConfiguration | undefined {
+function parseTelemetryDeliveryConfiguration(value: { endpoint?: string; projectKey?: string }): DeliveryConfiguration | undefined {
     if (!value.endpoint || !value.projectKey)
         return undefined;
 
@@ -111,7 +111,7 @@ export function readTelemetryDelivery(path: string): { endpoint?: string; projec
 }
 
 
-function outboundEvent(event: TelemetryEvent, installationId: string, appVersion: string, osVersion: string): OutboundEvent | undefined {
+function createOutboundTelemetryEvent(event: TelemetryEvent, installationId: string, appVersion: string, osVersion: string): OutboundEvent | undefined {
     if (!isTelemetryEvent(event))
         return undefined;
 
@@ -148,7 +148,7 @@ export function createTelemetryDelivery({ packaged, appVersion, delivery, osVers
     environment?: TelemetryDeliveryEnvironment;
 }): TelemetryDelivery {
     const { fetch: fetchImplementation = fetch, scheduleTimeout = setTimeout, clearScheduledTimeout = clearTimeout, now = Date.now, requestTimeout = requestTimeoutMs } = environment;
-    const deliveryConfiguration = packaged ? configuration(delivery ?? {}) : undefined;
+    const deliveryConfiguration = packaged ? parseTelemetryDeliveryConfiguration(delivery ?? {}) : undefined;
     const supported = Boolean(deliveryConfiguration);
     let state: DeliveryState = {
         generation: 0,
@@ -256,7 +256,7 @@ export function createTelemetryDelivery({ packaged, appVersion, delivery, osVers
         if (state.disposed || !supported || retainedCount() >= queueLimit)
             return false;
 
-        const outbound = outboundEvent(event, installationId, appVersion, osVersion);
+        const outbound = createOutboundTelemetryEvent(event, installationId, appVersion, osVersion);
         if (!outbound || !withinRateLimit())
             return false;
 

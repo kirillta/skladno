@@ -1,7 +1,7 @@
 import type { CreateSourceCitationInput, CreateEditorialArtifactInput, SourceCitation, EditorialArtifact } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { createId, now, required, type Row } from "./repository-utils.js";
+import { createId, getCurrentTimestamp, requireNonEmpty, type Row } from "./repository-utils.js";
 
 
 export class EditorialArtifactsRepository {
@@ -13,8 +13,8 @@ export class EditorialArtifactsRepository {
 
     createEditorialArtifact(input: CreateEditorialArtifactInput): EditorialArtifact {
         const id = input.id ?? createId();
-        const createdAt = now();
-        required(input.kind, "Artifact kind");
+        const createdAt = getCurrentTimestamp();
+        requireNonEmpty(input.kind, "Artifact kind");
         if (!this.database.prepare("SELECT 1 FROM article_revisions WHERE id = ? AND article_id = ?").get(input.revisionId, input.articleId))
             throw new Error("Revision does not belong to this Article.");
 
@@ -31,7 +31,7 @@ export class EditorialArtifactsRepository {
     }
 
 
-    withinTransaction<T>(run: () => T): T {
+    runWithinTransaction<T>(run: () => T): T {
         const savepoint = `editorial_artifacts_${this.transactionId++}`;
         this.database.exec(`SAVEPOINT ${savepoint};`);
         try {
@@ -71,10 +71,10 @@ export class EditorialArtifactsRepository {
 
     createSourceCitation(input: CreateSourceCitationInput): SourceCitation {
         const id = input.id ?? createId();
-        const createdAt = now();
+        const createdAt = getCurrentTimestamp();
         const editorialArtifactId = input.editorialArtifactId;
-        required(input.url, "Citation URL");
-        required(editorialArtifactId ?? "", "Editorial Artifact id");
+        requireNonEmpty(input.url, "Citation URL");
+        requireNonEmpty(editorialArtifactId ?? "", "Editorial Artifact id");
         this.database.prepare("INSERT INTO source_citations (id, editorial_artifact_id, url, title, excerpt, uncertainty, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
             .run(id, editorialArtifactId!, input.url, input.title ?? null, input.excerpt ?? null, input.uncertainty ?? null, createdAt);
 
@@ -91,7 +91,7 @@ export class EditorialArtifactsRepository {
 
 
     createEditorialArtifactWithCitations(input: CreateEditorialArtifactInput, citations: Omit<CreateSourceCitationInput, "editorialArtifactId">[]): EditorialArtifact {
-        return this.withinTransaction(() => {
+        return this.runWithinTransaction(() => {
             const artifact = this.createEditorialArtifact(input);
             for (const citation of citations)
                 this.createSourceCitation({ ...citation, editorialArtifactId: artifact.id });

@@ -1,7 +1,7 @@
 import type { ArticleRevision, GeneralSettings } from "@skladno/shared";
 import { useIntl } from "react-intl";
 import { formatDateTime } from "../../i18n/formatting.js";
-import { characterCount, provenanceMessageId, timelineIcons, timelineKind } from "./revision-history-presentation.js";
+import { getCharacterCount, getProvenanceMessageId, getTimelineKind, timelineIcons } from "./revision-history-presentation.js";
 
 
 export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSelect, generalSettings }: {
@@ -22,8 +22,8 @@ export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSel
         <ol className="min-h-0 flex-1 overflow-y-auto p-2 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             {newestFirst.map((revision) => {
                 const selected = revision.id === selectedRevisionId;
-                const provenance = intl.formatMessage({ id: provenanceMessageId(revision) });
-                const kind = timelineKind(revision);
+                const provenance = intl.formatMessage({ id: getProvenanceMessageId(revision) });
+                const kind = getTimelineKind(revision);
                 const TimelineIcon = timelineIcons[kind];
 
                 return <li key={revision.id} className="relative pl-10 after:absolute after:-bottom-7 after:left-4 after:top-7 after:w-px after:bg-border last:after:hidden">
@@ -32,7 +32,7 @@ export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSel
                     </span>
                     <button className={`w-full rounded-control border p-3 text-left focus:outline-none ${selected ? "border-brand bg-brand-soft" : "border-transparent hover:bg-surface"}`} type="button" aria-pressed={selected} onClick={() => onSelect(revision)}>
                         <span className="block text-sm font-medium text-ink">{provenance}</span>
-                        <span className="mt-1 block text-xs text-muted">{formatRevisionDate(revision.createdAt)} · {intl.formatMessage({ id: "revisions.characterCount" }, { count: intl.formatNumber(characterCount(revision.content)) })}</span>
+                        <span className="mt-1 block text-xs text-muted">{formatRevisionDate(revision.createdAt)} · {intl.formatMessage({ id: "revisions.characterCount" }, { count: intl.formatNumber(getCharacterCount(revision.content)) })}</span>
                     </button>
                 </li>;
             })}

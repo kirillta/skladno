@@ -4,7 +4,7 @@ import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
 
 import { ApplicationSettingsService } from "../../application/settings/application-settings-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
-import { object, readBinary, readJson, writeJson } from "../transport/json.js";
+import { parseObject, readBinary, readJson, writeJson } from "../transport/json.js";
 
 
 export async function handleSettingsSnapshotRoute(response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
@@ -13,12 +13,12 @@ export async function handleSettingsSnapshotRoute(response: ServerResponse, sett
 
 
 export async function handleGeneralSettingsRoute(request: IncomingMessage, response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
-    writeJson(response, HTTP_STATUS.OK, settings.updateGeneral(object(await readJson(request))));
+    writeJson(response, HTTP_STATUS.OK, settings.updateGeneral(parseObject(await readJson(request))));
 }
 
 
 export async function handleBackupPolicyRoute(request: IncomingMessage, response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
-    writeJson(response, HTTP_STATUS.OK, settings.updateBackupPolicy(object(await readJson(request))));
+    writeJson(response, HTTP_STATUS.OK, settings.updateBackupPolicy(parseObject(await readJson(request))));
 }
 
 
@@ -48,12 +48,12 @@ export async function handleRestoreBackupRoute(request: IncomingMessage, respons
 
 
 export async function handleKeyBindingsRoute(request: IncomingMessage, response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
-    writeJson(response, HTTP_STATUS.OK, settings.updateKeyBindingOverrides(object(await readJson(request))));
+    writeJson(response, HTTP_STATUS.OK, settings.updateKeyBindingOverrides(parseObject(await readJson(request))));
 }
 
 
 export async function handleModelPreferencesRoute(request: IncomingMessage, response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
-    writeJson(response, HTTP_STATUS.OK, settings.updateModelPreferences(object(await readJson(request))));
+    writeJson(response, HTTP_STATUS.OK, settings.updateModelPreferences(parseObject(await readJson(request))));
 }
 
 
@@ -63,12 +63,12 @@ export async function handleAppModelRoute(request: IncomingMessage, response: Se
 
 
 export async function handleCreateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, settings: ApplicationSettingsService): Promise<void> {
-    writeJson(response, HTTP_STATUS.CREATED, settings.createAiConnection(object(await readJson(request))));
+    writeJson(response, HTTP_STATUS.CREATED, settings.createAiConnection(parseObject(await readJson(request))));
 }
 
 
 export async function handleSetAiConnectionActiveRoute(request: IncomingMessage, response: ServerResponse, connectionId: string, settings: ApplicationSettingsService): Promise<void> {
-    const value = object(await readJson(request));
+    const value = parseObject(await readJson(request));
     writeJson(response, HTTP_STATUS.OK, settings.setAiConnectionActive(connectionId, value.active === true));
 }
 
@@ -79,7 +79,7 @@ export async function handleTestAiConnectionRoute(response: ServerResponse, conn
 
 
 export async function handleUpdateAiConnectionRoute(request: IncomingMessage, response: ServerResponse, connectionId: string, settings: ApplicationSettingsService): Promise<void> {
-    writeJson(response, HTTP_STATUS.OK, settings.updateAiConnection(connectionId, object(await readJson(request))));
+    writeJson(response, HTTP_STATUS.OK, settings.updateAiConnection(connectionId, parseObject(await readJson(request))));
 }
 
 

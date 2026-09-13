@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { Badge, Button, Select } from "../../ui/primitives.js";
 import { formatDateTime } from "../../i18n/formatting.js";
 import { RevisionArticlePreview } from "../editor/RevisionArticlePreview.js";
-import { characterCount, provenanceMessageId } from "./revision-history-presentation.js";
+import { getCharacterCount, getProvenanceMessageId } from "./revision-history-presentation.js";
 
 
 export function RevisionHistoryDetails({ revisions, selected, currentRevisionId, select, generalSettings }: {
@@ -16,7 +16,7 @@ export function RevisionHistoryDetails({ revisions, selected, currentRevisionId,
     const intl = useIntl();
     const newestFirst = [...revisions].reverse();
     const selectedIsCurrent = selected.id === currentRevisionId;
-    const selectedProvenance = intl.formatMessage({ id: provenanceMessageId(selected) });
+    const selectedProvenance = intl.formatMessage({ id: getProvenanceMessageId(selected) });
     const formatRevisionDate = (createdAt: string) => formatDateTime(createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
 
     return <section className="flex min-w-0 flex-1 flex-col" aria-label={intl.formatMessage({ id: "revisions.articleContent" })}>
@@ -24,13 +24,13 @@ export function RevisionHistoryDetails({ revisions, selected, currentRevisionId,
             <label className="block md:hidden">
                 <span className="text-xs font-semibold text-ink">{intl.formatMessage({ id: "revisions.select" })}</span>
                 <Select className="mt-1" value={selected.id} onChange={(event) => select(revisions.find((revision) => revision.id === event.target.value)!)}>
-                    {newestFirst.map((revision) => <option key={revision.id} value={revision.id}>{intl.formatMessage({ id: provenanceMessageId(revision) })} — {formatRevisionDate(revision.createdAt)}</option>)}
+                    {newestFirst.map((revision) => <option key={revision.id} value={revision.id}>{intl.formatMessage({ id: getProvenanceMessageId(revision) })} — {formatRevisionDate(revision.createdAt)}</option>)}
                 </Select>
             </label>
             <div className="mt-3 flex flex-wrap items-start gap-3 md:mt-0">
                 <div className="min-w-0 flex-1">
                     <p className="text-micro font-semibold uppercase tracking-overline text-muted">{selectedProvenance}</p>
-                    <p className="mt-1 text-xs text-muted">{formatRevisionDate(selected.createdAt)} · {intl.formatMessage({ id: "revisions.characterCount" }, { count: intl.formatNumber(characterCount(selected.content)) })}</p>
+                    <p className="mt-1 text-xs text-muted">{formatRevisionDate(selected.createdAt)} · {intl.formatMessage({ id: "revisions.characterCount" }, { count: intl.formatNumber(getCharacterCount(selected.content)) })}</p>
                     {selected.restoredFromRevisionId && <p className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "revisions.restoredFromEarlier" })}</p>}
                     {selectedIsCurrent && <p className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "revisions.currentExplanation" })}</p>}
                 </div>

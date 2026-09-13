@@ -19,7 +19,7 @@ import { openDatabase } from "../infrastructure/persistence/index.js";
 import { createTestPersistence, type TestPersistence } from "../test-support/test-persistence.js";
 
 
-export async function* noConversation(): AsyncIterable<EditorialEngineEvent> {
+export async function* createEmptyConversationStream(): AsyncIterable<EditorialEngineEvent> {
     yield* [];
 }
 
@@ -41,7 +41,7 @@ export class FixtureEngine implements EditorialEngine {
 
 
     async *streamConversation(): AsyncIterable<EditorialEngineEvent> {
-        yield* noConversation();
+        yield* createEmptyConversationStream();
     }
 }
 

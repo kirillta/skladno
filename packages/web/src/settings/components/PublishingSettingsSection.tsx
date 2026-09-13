@@ -16,7 +16,7 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
     const parsedLimit = Number(limit);
     const valid = Boolean(name.trim()) && Number.isInteger(parsedLimit) && parsedLimit >= 0;
     const profiles = [...publishLimitProfiles, ...publishing.customProfiles];
-    const label = (id: string) => id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS ? intl.formatMessage({ id: "publishing.noRestrictions" }) : id === PUBLISH_LIMIT_PROFILE.LINKEDIN_POST ? intl.formatMessage({ id: "publishing.linkedInPost" }) : id === PUBLISH_LIMIT_PROFILE.LINKEDIN_ARTICLE ? intl.formatMessage({ id: "publishing.linkedInArticle" }) : publishing.customProfiles.find((profile) => profile.id === id)?.name ?? intl.formatMessage({ id: "publishing.default" });
+    const getProfileLabel = (id: string) => id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS ? intl.formatMessage({ id: "publishing.noRestrictions" }) : id === PUBLISH_LIMIT_PROFILE.LINKEDIN_POST ? intl.formatMessage({ id: "publishing.linkedInPost" }) : id === PUBLISH_LIMIT_PROFILE.LINKEDIN_ARTICLE ? intl.formatMessage({ id: "publishing.linkedInArticle" }) : publishing.customProfiles.find((profile) => profile.id === id)?.name ?? intl.formatMessage({ id: "publishing.default" });
 
 
     function addCustomProfile() {
@@ -51,7 +51,7 @@ export function PublishingSettingsSection({ publishing, save, general, saveGener
                     if (isPublishLimitProfileId(value) && profiles.some((profile) => profile.id === value))
                         save({ ...publishing, defaultProfileId: value });
                 }}>
-                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{label(profile.id)}{profile.characterLimit === undefined ? "" : ` (${intl.formatNumber(profile.characterLimit)})`}</option>)}
+                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{getProfileLabel(profile.id)}{profile.characterLimit === undefined ? "" : ` (${intl.formatNumber(profile.characterLimit)})`}</option>)}
                 </Select>
             </SettingRow>
             <div className="mt-6 mb-8">

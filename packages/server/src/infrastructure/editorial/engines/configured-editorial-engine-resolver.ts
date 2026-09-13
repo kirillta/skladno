@@ -11,7 +11,7 @@ import { AiSdkAssistantActionIntentVerifier } from "../adapters/ai-sdk-assistant
 import type { CredentialStore } from "../../../application/settings/credential-store.js";
 import { createProviderModel } from "../adapters/provider-model.js";
 import { EditorialModelCapabilityService } from "../services/editorial-model-capability-service.js";
-import { supportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";
+import { getSupportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";
 
 
 interface ResolvedConnection {
@@ -57,7 +57,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
             ...connection,
             model,
             storeResponses: this.config.aiSessionContinuationEnabled,
-            sourcedResearch: this.modelCapabilities.capabilities(connection.provider, model).sourcedResearch,
+            sourcedResearch: this.modelCapabilities.getCapabilities(connection.provider, model).sourcedResearch,
             ...(reasoningEffort ? { reasoningEffort } : {})
         });
     }
@@ -68,7 +68,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         if (!configuration)
             return undefined;
 
-        return new AiSdkProposalSummaryGeneratorAdapter(createProviderModel(configuration), supportingTextProviderOptions(configuration.provider, configuration.reasoningEffort));
+        return new AiSdkProposalSummaryGeneratorAdapter(createProviderModel(configuration), getSupportingTextProviderOptions(configuration.provider, configuration.reasoningEffort));
     }
 
 
@@ -77,14 +77,14 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         if (!configuration)
             return undefined;
 
-        return new AiSdkArticleTitleGeneratorAdapter(createProviderModel(configuration), supportingTextProviderOptions(configuration.provider, configuration.reasoningEffort));
+        return new AiSdkArticleTitleGeneratorAdapter(createProviderModel(configuration), getSupportingTextProviderOptions(configuration.provider, configuration.reasoningEffort));
     }
 
 
     resolveAssistantActionIntentVerifier() {
         const configuration = this.resolveAppModelConnection();
         return configuration
-            ? new AiSdkAssistantActionIntentVerifier(createProviderModel(configuration), supportingTextProviderOptions(configuration.provider, configuration.reasoningEffort))
+            ? new AiSdkAssistantActionIntentVerifier(createProviderModel(configuration), getSupportingTextProviderOptions(configuration.provider, configuration.reasoningEffort))
             : undefined;
     }
 

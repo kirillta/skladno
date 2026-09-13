@@ -9,8 +9,8 @@ export interface EditorialModelCapabilities {
 
 
 export class EditorialModelCapabilityService {
-    capabilities(provider: AiProvider, model: string): EditorialModelCapabilities {
-        const structuredOutput = this.knownStructuredModel(provider, model);
+    getCapabilities(provider: AiProvider, model: string): EditorialModelCapabilities {
+        const structuredOutput = this.isKnownStructuredModel(provider, model);
 
         return {
             basicTextGeneration: Boolean(model.trim()),
@@ -22,7 +22,7 @@ export class EditorialModelCapabilityService {
 
     /** Discovery never proves operation support; manual model IDs may use only basic text generation. */
     supportsOperation(provider: AiProvider, model: string, operation: EditorialOperation): boolean {
-        const capabilities = this.capabilities(provider, model);
+        const capabilities = this.getCapabilities(provider, model);
         if (operation === EDITORIAL_OPERATION.FACT_CHECK)
             return capabilities.sourcedResearch;
 
@@ -33,7 +33,7 @@ export class EditorialModelCapabilityService {
     }
 
 
-    private knownStructuredModel(provider: AiProvider, model: string): boolean {
+    private isKnownStructuredModel(provider: AiProvider, model: string): boolean {
         const id = model.replace(/^opencode\//, "");
 
         switch (provider) {

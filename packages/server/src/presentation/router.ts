@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 
-function routeParameters(path: RegExp | string, pathname: string): string[] | undefined {
+function getRouteParameters(path: RegExp | string, pathname: string): string[] | undefined {
     if (typeof path === "string")
         return path === pathname ? [] : undefined;
 
@@ -28,7 +28,7 @@ export class Router {
             if (route.method !== request.method)
                 continue;
 
-            const parameters = routeParameters(route.path, pathname);
+            const parameters = getRouteParameters(route.path, pathname);
             if (!parameters)
                 continue;
 

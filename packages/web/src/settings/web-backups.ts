@@ -42,7 +42,7 @@ class WebBackupError extends Error {
 }
 
 
-export function webBackupErrorMessageId(error: unknown, fallback: WebBackupMessageId): WebBackupMessageId {
+export function getWebBackupErrorMessageId(error: unknown, fallback: WebBackupMessageId): WebBackupMessageId {
     if (!(error instanceof WebBackupError))
         return fallback;
 
@@ -50,12 +50,12 @@ export function webBackupErrorMessageId(error: unknown, fallback: WebBackupMessa
 }
 
 
-function filename(kind: BackupKind): string {
+function createBackupFilename(kind: BackupKind): string {
     return `skladno-${kind}-${new Date().toISOString().replaceAll(/[:.]/g, "-")}.sqlite`;
 }
 
 
-function picker(): (() => Promise<BackupDirectoryHandle>) | undefined {
+function getBackupFolderPicker(): (() => Promise<BackupDirectoryHandle>) | undefined {
     const choose = (window as Window & { showDirectoryPicker?: () => Promise<BackupDirectoryHandle> }).showDirectoryPicker;
     return choose ? () => choose.call(window) : undefined;
 }
@@ -94,7 +94,7 @@ async function saveFolder(folder: BackupDirectoryHandle): Promise<void> {
 }
 
 
-async function writableFolder(requestPermission: boolean): Promise<BackupDirectoryHandle> {
+async function getWritableFolder(requestPermission: boolean): Promise<BackupDirectoryHandle> {
     const folder = await readFolder();
     if (!folder)
         throw new WebBackupError("folder-required");
@@ -123,7 +123,7 @@ async function retainAutomaticBackups(folder: BackupDirectoryHandle, policy: Bac
 
 
 export async function chooseBackupFolder(): Promise<string> {
-    const choose = picker();
+    const choose = getBackupFolderPicker();
     if (!choose)
         throw new WebBackupError("folder-picker-unsupported");
 
@@ -139,13 +139,13 @@ export async function chooseBackupFolder(): Promise<string> {
 }
 
 
-export async function selectedBackupFolderName(): Promise<string | undefined> {
+export async function getSelectedBackupFolderName(): Promise<string | undefined> {
     return (await readFolder())?.name;
 }
 
 
 export async function listWebBackups(): Promise<string[]> {
-    const folder = await writableFolder(false);
+    const folder = await getWritableFolder(false);
     const names: string[] = [];
     for await (const entry of folder.values()) {
         if (entry.kind === "file" && entry.name.endsWith(".sqlite"))
@@ -160,7 +160,7 @@ export async function restoreWebBackup(client: BackupClient, name: string): Prom
     if (!client.restoreBackup || !name.endsWith(".sqlite") || name.includes("/") || name.includes("\\"))
         throw new WebBackupError("restore-unavailable");
 
-    const folder = await writableFolder(false);
+    const folder = await getWritableFolder(false);
     const backup = await (await folder.getFileHandle(name)).getFile();
     await client.restoreBackup(backup);
 }
@@ -170,8 +170,8 @@ export async function saveWebBackup(client: BackupClient, kind: BackupKind, poli
     if (!client.createBackup)
         throw new WebBackupError("backup-unavailable");
 
-    const folder = await writableFolder(requestPermission);
-    const name = filename(kind);
+    const folder = await getWritableFolder(requestPermission);
+    const name = createBackupFilename(kind);
     const file = await folder.getFileHandle(name, { create: true });
     const writer = await file.createWritable();
     try {

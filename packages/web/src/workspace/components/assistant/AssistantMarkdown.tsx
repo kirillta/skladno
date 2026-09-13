@@ -20,12 +20,12 @@ function isSafeLink(value: string): boolean {
 }
 
 
-function descendants(node: LexicalNode): LexicalNode[] {
+function getDescendants(node: LexicalNode): LexicalNode[] {
     if (!$isElementNode(node))
         return [];
 
     const children: LexicalNode[] = node.getChildren();
-    return children.flatMap((child) => [child, ...descendants(child)]);
+    return children.flatMap((child) => [child, ...getDescendants(child)]);
 }
 
 
@@ -35,7 +35,7 @@ function MarkdownContent({ content }: { content: string }) {
     useEffect(() => {
         editor.update(() => {
             importArticleMarkdown(content);
-            for (const node of descendants($getRoot())) {
+            for (const node of getDescendants($getRoot())) {
                 if ($isLinkNode(node) && !isSafeLink(node.getURL()))
                     node.replace($createTextNode(node.getTextContent()));
             }

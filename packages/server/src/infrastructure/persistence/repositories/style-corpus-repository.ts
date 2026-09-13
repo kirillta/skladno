@@ -1,10 +1,10 @@
 import type { CreateStyleCorpusItemInput, StyleCorpus, StyleCorpusItem, StyleProfile, StyleTrait } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { createId, now, required, type Row } from "./repository-utils.js";
+import { createId, getCurrentTimestamp, requireNonEmpty, type Row } from "./repository-utils.js";
 
 
-function profileFor(items: { id: string; content: string }[], rules: string, version: number): StyleProfile {
+function createStyleProfile(items: { id: string; content: string }[], rules: string, version: number): StyleProfile {
     const content = items.map((item) => item.content).join("\n");
     const sentences = content.split(/[.!?]+/).map((sentence) => sentence.trim()).filter(Boolean);
     const words = content.match(/[\p{L}\p{N}]+(?:['’][\p{L}]+)?/gu) ?? [];
@@ -62,12 +62,12 @@ function profileFor(items: { id: string; content: string }[], rules: string, ver
         phrasesToAvoid,
         contributorIds: items.map((item) => item.id),
         rules,
-        updatedAt: now()
+        updatedAt: getCurrentTimestamp()
     };
 }
 
 
-function excerpt(content: string): string {
+function createExcerpt(content: string): string {
     const compact = content.trim().replace(/\s+/g, " ");
     return compact.length <= 180 ? compact : `${compact.slice(0, 177)}…`;
 }
@@ -95,7 +95,7 @@ export class StyleCorpusRepository {
                 name: String(row.name),
                 characterCount: String(row.content).length,
                 wordCount: String(row.content).match(/[\p{L}\p{N}]+/gu)?.length ?? 0,
-                excerpt: excerpt(String(row.content)),
+                excerpt: createExcerpt(String(row.content)),
                 createdAt: String(row.created_at),
                 updatedAt: String(row.updated_at),
                 included: Number(row.included) === 1,
@@ -114,9 +114,9 @@ export class StyleCorpusRepository {
 
 
     addStyleCorpusItem(input: CreateStyleCorpusItemInput & { name: string; origin?: "manual" | "import" | "article-revision"; articleId?: string; revisionId?: string }): StyleCorpus {
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         const materialId = createId();
-        this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(materialId, required(input.name, "Corpus item name"), required(input.content, "Corpus item content"), timestamp, timestamp);
+        this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(materialId, requireNonEmpty(input.name, "Corpus item name"), requireNonEmpty(input.content, "Corpus item content"), timestamp, timestamp);
         this.database.prepare("INSERT INTO style_corpus_items (author_material_id, created_at, origin, article_id, revision_id) VALUES (?, ?, ?, ?, ?)").run(materialId, timestamp, input.origin ?? "manual", input.articleId ?? null, input.revisionId ?? null);
 
         return this.getStyleCorpus();
@@ -132,7 +132,7 @@ export class StyleCorpusRepository {
 
 
     setStyleCorpusRules(rules: string): StyleCorpus {
-        this.database.prepare("UPDATE style_corpus_settings SET rules = ?, updated_at = ? WHERE id = 1").run(rules, now());
+        this.database.prepare("UPDATE style_corpus_settings SET rules = ?, updated_at = ? WHERE id = 1").run(rules, getCurrentTimestamp());
         return this.getStyleCorpus();
     }
 
@@ -144,7 +144,7 @@ export class StyleCorpusRepository {
 
         const rules = String((this.database.prepare("SELECT rules FROM style_corpus_settings WHERE id = 1").get() as Row).rules);
         const version = Number((this.database.prepare("SELECT COALESCE(MAX(version), 0) + 1 AS version FROM style_profile_versions").get() as Row).version);
-        const profile = profileFor(rows.map((row) => ({ id: String(row.id), content: String(row.content) })), rules, version);
+        const profile = createStyleProfile(rows.map((row) => ({ id: String(row.id), content: String(row.content) })), rules, version);
         this.database.prepare("INSERT INTO style_profile_versions (version, profile_json, created_at) VALUES (?, ?, ?)").run(version, JSON.stringify(profile), profile.updatedAt);
 
         return this.getStyleCorpus();
@@ -162,7 +162,7 @@ export class StyleCorpusRepository {
 
     setArticleStyleRules(articleId: string, rules: string): string {
         this.database.prepare("INSERT INTO article_style_rules (article_id, rules, updated_at) VALUES (?, ?, ?) ON CONFLICT(article_id) DO UPDATE SET rules = excluded.rules, updated_at = excluded.updated_at")
-            .run(articleId, rules, now());
+            .run(articleId, rules, getCurrentTimestamp());
 
         return rules;
     }

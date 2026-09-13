@@ -9,7 +9,7 @@ import {
     type Article,
     type HealthResponse,
     type ArticleDraft,
-    articleStyleCorpusSnapshotPath, articleStyleRulesPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath,
+    createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath,
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
     publishSettingsPath,
@@ -26,7 +26,7 @@ import {
     type AiConnection,
     type AvailableAiModel,
 } from "@skladno/shared";
-import { applicationClientError } from "./http/client-transport.js";
+import { createApplicationClientError } from "./http/client-transport.js";
 import { HttpArticleClient } from "./http/article-client.js";
 
 export type { EditorialWorkspaceClient } from "@skladno/shared";
@@ -119,17 +119,17 @@ export class HttpApplicationClient extends HttpArticleClient implements Editoria
 
 
     async getArticleStyleRules(articleId: string): Promise<string> {
-        return (await this.request<{ rules: string }>(articleStyleRulesPath(articleId))).rules;
+        return (await this.request<{ rules: string }>(createArticleStyleRulesPath(articleId))).rules;
     }
 
 
     async setArticleStyleRules(articleId: string, rules: string): Promise<string> {
-        return (await this.request<{ rules: string }>(articleStyleRulesPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ rules }) })).rules;
+        return (await this.request<{ rules: string }>(createArticleStyleRulesPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ rules }) })).rules;
     }
 
 
     async addArticleRevisionStyleCorpusItem(articleId: string, revisionId: string): Promise<StyleCorpus> {
-        return this.request<StyleCorpus>(articleStyleCorpusSnapshotPath(articleId, revisionId), { method: HTTP_METHOD.POST });
+        return this.request<StyleCorpus>(createArticleStyleCorpusSnapshotPath(articleId, revisionId), { method: HTTP_METHOD.POST });
     }
 
 
@@ -164,7 +164,7 @@ export class HttpApplicationClient extends HttpArticleClient implements Editoria
             const payload = typeof body === "object" && body !== null && "error" in body
                 ? (body as { error: unknown }).error
                 : undefined;
-            throw applicationClientError(payload, response.status);
+            throw createApplicationClientError(payload, response.status);
         }
 
         return body as T;

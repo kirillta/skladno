@@ -6,7 +6,7 @@ import type { DesktopSettingsClient } from "@skladno/shared";
 
 import type { EditorialWorkspaceClient } from "../application/client.js";
 import { messages } from "../i18n/messages.js";
-import { message } from "../i18n/test-message.js";
+import { getMessage } from "../i18n/test-message.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
 import { resetApplicationSettingsTestEnvironment, settingsSnapshot } from "./ApplicationSettings.test-utils.js";
@@ -33,7 +33,7 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
         const connectionName = screen.getByPlaceholderText("For example, Personal AI");
         const environmentName = screen.getByPlaceholderText("For example, AI_API_KEY");
 
@@ -46,7 +46,7 @@ describe("ApplicationSettings AI", () => {
                 getData: () => "AI_API_KEY",
             },
         });
-        await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.addConnectionButton") }));
 
         await waitFor(() => expect(addAiConnection).toHaveBeenCalledWith({
             provider: "openai",
@@ -72,11 +72,11 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.provider") }), "opencode");
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
+        await user.selectOptions(screen.getByRole("combobox", { name: getMessage("settings.provider") }), "opencode");
         await user.type(screen.getByPlaceholderText("For example, Personal AI"), "OpenCode Zen");
         await user.type(screen.getByPlaceholderText("For example, AI_API_KEY"), "AI_API_KEY");
-        await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.addConnectionButton") }));
 
         await waitFor(() => expect(addAiConnection).toHaveBeenCalledWith({ provider: "opencode", label: "OpenCode Zen", environmentVariableName: "AI_API_KEY" }));
     });
@@ -105,15 +105,15 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
         expect(screen.queryByPlaceholderText("Paste your API key")).toBeNull();
         expect(screen.queryByPlaceholderText("For example, AI_API_KEY")).toBeNull();
-        expect(screen.queryByRole("combobox", { name: message("settings.provider") })).toBeNull();
-        await user.click(screen.getByRole("button", { name: message("settings.apiKey") }));
-        expect(screen.getByRole("combobox", { name: message("settings.provider") })).toBeTruthy();
+        expect(screen.queryByRole("combobox", { name: getMessage("settings.provider") })).toBeNull();
+        await user.click(screen.getByRole("button", { name: getMessage("settings.apiKey") }));
+        expect(screen.getByRole("combobox", { name: getMessage("settings.provider") })).toBeTruthy();
         await user.type(screen.getByPlaceholderText("For example, Personal AI"), "Personal AI");
         await user.type(screen.getByPlaceholderText("Paste your API key"), "<REDACTED>");
-        await user.click(screen.getByRole("button", { name: message("settings.addApiKeyButton") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.addApiKeyButton") }));
 
         await waitFor(() => expect(addManagedAiConnection).toHaveBeenCalledWith({ provider: "openai", label: "Personal AI", apiKey: "<REDACTED>" }));
         expect(screen.queryByDisplayValue("<REDACTED>")).toBeNull();
@@ -131,15 +131,15 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
         expect(screen.getAllByText("DeepSeek")).not.toHaveLength(0);
-        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.provider") }), "anthropic");
+        await user.selectOptions(screen.getByRole("combobox", { name: getMessage("settings.provider") }), "anthropic");
         await user.type(screen.getByPlaceholderText("For example, Personal AI"), "Personal Claude");
         await user.type(screen.getByPlaceholderText("For example, AI_API_KEY"), "ANTHROPIC_API_KEY");
-        await user.click(screen.getByRole("button", { name: message("settings.addConnectionButton") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.addConnectionButton") }));
 
         await waitFor(() => expect(addAiConnection).toHaveBeenCalledWith({ provider: "anthropic", label: "Personal Claude", environmentVariableName: "ANTHROPIC_API_KEY" }));
-        expect(screen.getByText(message("settings.providerLimitations"))).toBeTruthy();
+        expect(screen.getByText(getMessage("settings.providerLimitations"))).toBeTruthy();
     });
 
     it("renames a managed connection through the desktop credential client", async () => {
@@ -159,12 +159,12 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.click(screen.getByRole("button", { name: message("settings.renameConnectionShort") }));
-        const input = screen.getByRole("textbox", { name: message("settings.connectionName") });
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.renameConnectionShort") }));
+        const input = screen.getByRole("textbox", { name: getMessage("settings.connectionName") });
         await user.clear(input);
         await user.type(input, "Work AI");
-        await user.click(screen.getByRole("button", { name: message("settings.saveConnectionName") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.saveConnectionName") }));
 
         await waitFor(() => expect(renameManagedAiConnection).toHaveBeenCalledWith(connection.id, "Work AI"));
         expect(screen.getByText("Work AI")).toBeTruthy();
@@ -183,12 +183,12 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.click(screen.getByRole("button", { name: message("settings.renameConnectionShort") }));
-        const input = screen.getByRole("textbox", { name: message("settings.connectionName") });
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.renameConnectionShort") }));
+        const input = screen.getByRole("textbox", { name: getMessage("settings.connectionName") });
         await user.clear(input);
         await user.type(input, "Work AI");
-        await user.click(screen.getByRole("button", { name: message("settings.saveConnectionName") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.saveConnectionName") }));
 
         await waitFor(() => expect(updateAiConnection).toHaveBeenCalledWith(connection.id, { label: "Work AI", environmentVariableName: "AI_API_KEY" }));
         expect(screen.getByText("Work AI")).toBeTruthy();

@@ -1,4 +1,4 @@
-export function boundedArticleContext(content: string): string {
+export function getBoundedArticleContext(content: string): string {
     const maximumCharacters = 24_000;
     if (content.length <= maximumCharacters)
         return content;

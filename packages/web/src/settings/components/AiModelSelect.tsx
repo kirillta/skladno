@@ -39,12 +39,12 @@ const skillMessages: Record<"talking_points" | "narrative_draft" | "flow_and_cla
 type ModelVendor = Exclude<AiProvider, "opencode"> | "other";
 
 
-function modelLabel(model: string): string {
+function getModelLabel(model: string): string {
     return model.replace(/^(gpt|o)-?([\d.]+)(?:-(mini|nano))?$/i, (_match, family: string, version: string, size?: string) => `${family.toUpperCase() === "GPT" ? "GPT" : family.toLowerCase()}-${version}${size ? ` ${size}` : ""}`);
 }
 
 
-function modelProvider(model: string, connectionProvider: AiProvider): AiProvider {
+function getModelProvider(model: string, connectionProvider: AiProvider): AiProvider {
     if (connectionProvider !== AI_PROVIDER.OPENCODE)
         return connectionProvider;
 
@@ -68,7 +68,7 @@ function modelProvider(model: string, connectionProvider: AiProvider): AiProvide
 }
 
 
-function modelVendor(provider: AiProvider): ModelVendor {
+function getModelVendor(provider: AiProvider): ModelVendor {
     return provider === AI_PROVIDER.OPENCODE ? "other" : provider;
 }
 
@@ -124,12 +124,12 @@ interface ModelSelectProps { value: string; models: AvailableAiModel[]; favorite
 function ModelSelect({ value, models, favorites, placeholder, allowEmpty = false, disabled, label, "aria-describedby": describedBy, onChange, onFavoritesChange }: ModelSelectProps) {
     const intl = useIntl();
     const [query, setQuery] = useState(""); const [vendor, setVendor] = useState<ModelVendor | "favorites">(AI_PROVIDER.OPENAI); const [open, setOpen] = useState(false); const [opensUpward, setOpensUpward] = useState(false);
-    const select = useRef<HTMLDetailsElement>(null); const search = useRef<HTMLInputElement>(null); const selectedModel = models.find((model) => model.id === value || model.model === value); const selectedLabel = selectedModel ? modelLabel(selectedModel.model) : placeholder;
-    const vendorTabs: ModelVendor[] = [AI_PROVIDER.OPENAI, AI_PROVIDER.ANTHROPIC, AI_PROVIDER.GOOGLE, AI_PROVIDER.XAI, AI_PROVIDER.DEEPSEEK, "other"]; const availableVendors = vendorTabs.filter((item) => models.some((model) => modelVendor(model.provider) === item)); const sourceVendor = selectedModel ? modelVendor(selectedModel.provider) : availableVendors[0] ?? AI_PROVIDER.OPENAI; const tabs: (ModelVendor | "favorites")[] = ["favorites", ...availableVendors]; const normalizedQuery = query.toLocaleLowerCase();
+    const select = useRef<HTMLDetailsElement>(null); const search = useRef<HTMLInputElement>(null); const selectedModel = models.find((model) => model.id === value || model.model === value); const selectedLabel = selectedModel ? getModelLabel(selectedModel.model) : placeholder;
+    const vendorTabs: ModelVendor[] = [AI_PROVIDER.OPENAI, AI_PROVIDER.ANTHROPIC, AI_PROVIDER.GOOGLE, AI_PROVIDER.XAI, AI_PROVIDER.DEEPSEEK, "other"]; const availableVendors = vendorTabs.filter((item) => models.some((model) => getModelVendor(model.provider) === item)); const sourceVendor = selectedModel ? getModelVendor(selectedModel.provider) : availableVendors[0] ?? AI_PROVIDER.OPENAI; const tabs: (ModelVendor | "favorites")[] = ["favorites", ...availableVendors]; const normalizedQuery = query.toLocaleLowerCase();
     const visibleModels = models.filter((model) => {
-        const matchesVendor = vendor === "favorites" ? favorites.includes(model.id) || favorites.includes(model.model) : modelVendor(model.provider) === vendor; return modelLabel(model.model).toLocaleLowerCase().includes(normalizedQuery) && (normalizedQuery.length > 0 || (vendor === AI_PROVIDER.OPENAI && !selectedModel) || matchesVendor);
+        const matchesVendor = vendor === "favorites" ? favorites.includes(model.id) || favorites.includes(model.model) : getModelVendor(model.provider) === vendor; return getModelLabel(model.model).toLocaleLowerCase().includes(normalizedQuery) && (normalizedQuery.length > 0 || (vendor === AI_PROVIDER.OPENAI && !selectedModel) || matchesVendor);
     });
-    const vendorLabel = (item: ModelVendor | "favorites") => intl.formatMessage({ id: item === "favorites" ? "settings.favoriteModels" : item === "other" ? "settings.modelVendor.other" : providerMessages[item] });
+    const getVendorLabel = (item: ModelVendor | "favorites") => intl.formatMessage({ id: item === "favorites" ? "settings.favoriteModels" : item === "other" ? "settings.modelVendor.other" : providerMessages[item] });
     const close = () => setOpen(false);
     useEffect(() => {
         const closeOnOutsideMouseDown = (event: MouseEvent) => {
@@ -141,7 +141,7 @@ function ModelSelect({ value, models, favorites, placeholder, allowEmpty = false
         setVendor((current) => current === "favorites" ? current : sourceVendor);
     }, [sourceVendor]);
     if (disabled)
-        return <div aria-label={label} aria-describedby={describedBy} aria-disabled="true" className="flex min-h-10 w-full items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink opacity-55">{selectedModel && <ProviderIcon provider={modelProvider(selectedModel.model, selectedModel.provider)} viaProvider={selectedModel.provider} />}<span className="truncate">{selectedLabel}</span><ChevronDownIcon className="absolute right-3 size-4 text-muted" /></div>;
+        return <div aria-label={label} aria-describedby={describedBy} aria-disabled="true" className="flex min-h-10 w-full items-center gap-2 rounded-control border border-border bg-surface-raised px-3 py-2 pr-10 text-sm leading-5 text-ink opacity-55">{selectedModel && <ProviderIcon provider={getModelProvider(selectedModel.model, selectedModel.provider)} viaProvider={selectedModel.provider} />}<span className="truncate">{selectedLabel}</span><ChevronDownIcon className="absolute right-3 size-4 text-muted" /></div>;
 
     return <details ref={select} open={open} className="group relative" onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -154,7 +154,7 @@ function ModelSelect({ value, models, favorites, placeholder, allowEmpty = false
                 setOpensUpward(window.innerHeight - event.currentTarget.getBoundingClientRect().bottom < 272);
                 setOpen(!open);
             }}
-        >{selectedModel && <ProviderIcon provider={modelProvider(selectedModel.model, selectedModel.provider)} viaProvider={selectedModel.provider} />}
+        >{selectedModel && <ProviderIcon provider={getModelProvider(selectedModel.model, selectedModel.provider)} viaProvider={selectedModel.provider} />}
             <span className="truncate">{selectedLabel}</span>
             <ChevronDownIcon className="absolute right-3 size-4 text-muted transition-transform group-open:rotate-180" />
         </summary>
@@ -169,7 +169,7 @@ function ModelSelect({ value, models, favorites, placeholder, allowEmpty = false
             </div>
             <div className="mt-1 grid h-52 grid-cols-[3rem_minmax(0,1fr)]">
                 <div className="flex min-h-0 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto border-r border-border [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" role="tablist" aria-label={intl.formatMessage({ id: "settings.modelVendorFilters" })} aria-orientation="vertical">
-                    {tabs.map((item) => <button key={item} type="button" role="tab" title={vendorLabel(item)} aria-label={vendorLabel(item)} aria-selected={vendor === item} className={`flex size-9 shrink-0 items-center justify-center rounded-control focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${vendor === item ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"}`} onClick={() => setVendor(item)}>
+                    {tabs.map((item) => <button key={item} type="button" role="tab" title={getVendorLabel(item)} aria-label={getVendorLabel(item)} aria-selected={vendor === item} className={`flex size-9 shrink-0 items-center justify-center rounded-control focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${vendor === item ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"}`} onClick={() => setVendor(item)}>
                         {item === "favorites" ? <StarIcon className="size-4" />
                             : <ProviderMark provider={item === "other"
                                 ? AI_PROVIDER.OPENCODE : item} className={item === AI_PROVIDER.OPENAI ? "size-6" : "size-4"} />}
@@ -183,10 +183,10 @@ function ModelSelect({ value, models, favorites, placeholder, allowEmpty = false
                         <button type="button" role="option" aria-selected={model.id === value || model.model === value} className="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-control px-2 text-left text-sm hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={() => {
                             onChange(model.id); close();
                         }}>
-                            <ProviderIcon provider={modelProvider(model.model, model.provider)} viaProvider={model.provider} />
-                            <span className="truncate">{modelLabel(model.model)}</span>
+                            <ProviderIcon provider={getModelProvider(model.model, model.provider)} viaProvider={model.provider} />
+                            <span className="truncate">{getModelLabel(model.model)}</span>
                         </button>
-                        <IconButton label={intl.formatMessage({ id: (favorites.includes(model.id) || favorites.includes(model.model)) ? "settings.removeFavoriteModel" : "settings.addFavoriteModel" }, { model: modelLabel(model.model) })} aria-pressed={favorites.includes(model.id) || favorites.includes(model.model)} className={favorites.includes(model.id) || favorites.includes(model.model) ? "text-brand" : undefined} onClick={() => onFavoritesChange((favorites.includes(model.id) || favorites.includes(model.model)) ? favorites.filter((favorite) => favorite !== model.id && favorite !== model.model) : [...favorites, model.id])}>
+                        <IconButton label={intl.formatMessage({ id: (favorites.includes(model.id) || favorites.includes(model.model)) ? "settings.removeFavoriteModel" : "settings.addFavoriteModel" }, { model: getModelLabel(model.model) })} aria-pressed={favorites.includes(model.id) || favorites.includes(model.model)} className={favorites.includes(model.id) || favorites.includes(model.model) ? "text-brand" : undefined} onClick={() => onFavoritesChange((favorites.includes(model.id) || favorites.includes(model.model)) ? favorites.filter((favorite) => favorite !== model.id && favorite !== model.model) : [...favorites, model.id])}>
                             <StarIcon className={favorites.includes(model.id) || favorites.includes(model.model) ? "size-4 fill-current" : "size-4"} />
                         </IconButton>
                     </div>)}
@@ -206,4 +206,4 @@ export function ModelAndReasoning({ model, effort, onEffortChange, "aria-describ
 }
 
 
-export { modelProvider, providerMessages, skillMessages };
+export { getModelProvider, providerMessages, skillMessages };

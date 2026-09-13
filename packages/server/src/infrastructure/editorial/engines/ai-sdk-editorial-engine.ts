@@ -14,12 +14,12 @@ import { protectArticleSpans, restoreProtectedSpans } from "../../../application
 import { authorControlInstruction, createEditorialMessages } from "../../../application/editorial/workflow-prompt.js";
 import { streamFactCheck } from "../workflows/fact-check-workflow.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
-import { boundedArticleContext } from "../models/editorial-context.js";
-import { aiSdkGenerationOptions, continuationToken, editorialProviderOptions, isAcceptedFinish, providerError } from "../adapters/ai-sdk-provider.js";
+import { getBoundedArticleContext } from "../models/editorial-context.js";
+import { createAiSdkGenerationOptions, getContinuationToken, getEditorialProviderOptions, isAcceptedFinish, createProviderError } from "../adapters/ai-sdk-provider.js";
 import { AiSdkAssistantExecutor } from "../adapters/ai-sdk-assistant-executor.js";
-import { styleReview, styleReviewSchema, translationSchema } from "../models/ai-sdk-editorial-output.js";
+import { mapStyleReview, styleReviewSchema, translationSchema } from "../models/ai-sdk-editorial-output.js";
 
-export { assistantConversationPrompt, assistantStepOptions } from "../adapters/ai-sdk-assistant.js";
+export { createAssistantConversationPrompt, getAssistantStepOptions } from "../adapters/ai-sdk-assistant.js";
 
 
 interface AiSdkEditorialEngineOptions {
@@ -53,7 +53,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                     throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
                 yield* streamFactCheck({
-                    request: { article: boundedArticleContext(request.article), reusableFactFindings: request.reusableFactFindings },
+                    request: { article: getBoundedArticleContext(request.article), reusableFactFindings: request.reusableFactFindings },
                     signal,
                     provider,
                 });
@@ -73,7 +73,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
             const modelMessage = createEditorialMessages({
                 operation: request.operation,
-                article: boundedArticleContext(request.article),
+                article: getBoundedArticleContext(request.article),
                 articleSelection: request.articleSelection,
                 authorContext: request.authorContext,
                 skillId: request.skillId,
@@ -86,7 +86,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             if (error instanceof EditorialEngineError || signal.aborted)
                 throw error;
 
-            throw providerError(error, Boolean(request.previousResponseId));
+            throw createProviderError(error, Boolean(request.previousResponseId));
         }
     }
 
@@ -100,7 +100,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         if (request.article)
             messages.push({
                 role: "system",
-                content: `${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`
+                content: `${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${getBoundedArticleContext(request.article)}`
             });
 
         for (const turn of request.history.slice(-12))
@@ -114,7 +114,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             if (error instanceof EditorialEngineError || signal.aborted)
                 throw error;
 
-            throw providerError(error, false);
+            throw createProviderError(error, false);
         }
     }
 
@@ -124,7 +124,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
     }
 
 
-    private generationOptions({ messages, signal, previousResponseId }: { messages: ModelMessage[]; signal: AbortSignal; previousResponseId?: string }) {
+    private createGenerationOptions({ messages, signal, previousResponseId }: { messages: ModelMessage[]; signal: AbortSignal; previousResponseId?: string }) {
         const instructions: SystemModelMessage[] = [];
         const promptMessages: ModelMessage[] = [];
         for (const message of messages) {
@@ -135,10 +135,10 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         }
 
         return {
-            ...aiSdkGenerationOptions({
+            ...createAiSdkGenerationOptions({
                 model: this.options.languageModel,
                 signal,
-                providerOptions: editorialProviderOptions({
+                providerOptions: getEditorialProviderOptions({
                     provider: this.options.provider,
                     storeResponses: this.options.storeResponses,
                     previousResponseId,
@@ -152,7 +152,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
 
 
     private async *streamProposal(messages: ModelMessage[], signal: AbortSignal, previousResponseId?: string): AsyncIterable<EditorialEngineEvent> {
-        const result = streamText(this.generationOptions({ messages, signal, previousResponseId }));
+        const result = streamText(this.createGenerationOptions({ messages, signal, previousResponseId }));
         let text = "";
         let finished = false;
 
@@ -163,7 +163,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             }
 
             if (part.type === "error")
-                throw providerError(part.error, Boolean(previousResponseId));
+                throw createProviderError(part.error, Boolean(previousResponseId));
 
             if (part.type === "finish" && isAcceptedFinish(part.finishReason))
                 finished = true;
@@ -172,7 +172,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
         }
 
-        const token = continuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: (await result.finalStep).providerMetadata });
+        const token = getContinuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: (await result.finalStep).providerMetadata });
         if (!finished || !text.trim())
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
 
@@ -185,10 +185,10 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
         const result = await generateText({
-            ...this.generationOptions({
+            ...this.createGenerationOptions({
                 messages: createEditorialMessages({
                     operation: request.operation,
-                    article: boundedArticleContext(request.article),
+                    article: getBoundedArticleContext(request.article),
                     authorContext: request.authorContext,
                     styleProfile: request.styleProfile,
                     articleStyleRules: request.articleStyleRules,
@@ -202,13 +202,13 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         if (!result.output || !isAcceptedFinish(result.finishReason))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-        const token = continuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: result.providerMetadata });
+        const token = getContinuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: result.providerMetadata });
         yield {
             type: EDITORIAL_ENGINE_EVENT.COMPLETED,
             responseId: randomUUID(),
             ...(token ? { continuationToken: token } : {}),
             text: result.output.proposal,
-            styleReview: styleReview(result.output, request.styleProfile, request.articleStyleRules),
+            styleReview: mapStyleReview(result.output, request.styleProfile, request.articleStyleRules),
         };
     }
 
@@ -218,7 +218,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         if (!targetLanguage)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-        const protectedArticle = protectArticleSpans(boundedArticleContext(request.article));
+        const protectedArticle = protectArticleSpans(getBoundedArticleContext(request.article));
         const protectedTitle = protectArticleSpans(request.articleTitle ?? "");
         const editorialMessage = createEditorialMessages({
             operation: request.operation,
@@ -228,7 +228,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             targetLanguage
         });
         const result = await generateText({
-            ...this.generationOptions({
+            ...this.createGenerationOptions({
                 messages: editorialMessage,
                 signal,
             }),
@@ -243,7 +243,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
         if (!text || title === undefined)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-        const token = continuationToken({
+        const token = getContinuationToken({
             provider: this.options.provider,
             storeResponses: this.options.storeResponses,
             metadata: result.providerMetadata

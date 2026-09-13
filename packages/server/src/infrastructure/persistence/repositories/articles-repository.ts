@@ -4,10 +4,10 @@ import type { SqliteDatabase } from "../database.js";
 import { ArticleDraftConflictError } from "../../../application/articles/article-draft-conflict-error.js";
 import { ArticleRevisionConflictError } from "../../../application/articles/article-revision-conflict-error.js";
 import { deleteArticle, reorderPinnedArticles, setArticleArchived, setArticlePinned } from "./article-library-operations.js";
-import { articleNotFound, invalidArticleRequest, requireArticleTitle, revisionNotFound, unsupportedPublishingProfile } from "./article-repository-errors.js";
-import { articleFromRow, articleSelect } from "./article-record-mappers.js";
+import { throwArticleNotFound, throwInvalidArticleRequest, requireArticleTitle, throwRevisionNotFound, throwUnsupportedPublishingProfile } from "./article-repository-errors.js";
+import { mapArticleFromRow, articleSelect } from "./article-record-mappers.js";
 import { getArticleRevision, insertArticleRevision, listArticleRevisions } from "./article-revision-queries.js";
-import { createId, now, type Row } from "./repository-utils.js";
+import { createId, getCurrentTimestamp, type Row } from "./repository-utils.js";
 
 
 export class ArticlesRepository {
@@ -17,17 +17,17 @@ export class ArticlesRepository {
     createArticle(input: CreateArticleInput): Article {
         const language = input.language;
         if (language !== undefined && !isArticleLanguage(language))
-            invalidArticleRequest();
+            throwInvalidArticleRequest();
 
         if (input.publishingProfileId !== undefined && !isPublishLimitProfileId(input.publishingProfileId))
-            unsupportedPublishingProfile();
+            throwUnsupportedPublishingProfile();
 
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         const articleId = input.id ?? createId();
         const revisionId = createId();
         const sourceArticleId = input.sourceArticleId;
         if (input.sourceRevisionId && (!sourceArticleId || !this.database.prepare("SELECT 1 FROM article_revisions WHERE id = ? AND article_id = ?").get(input.sourceRevisionId, sourceArticleId)))
-            invalidArticleRequest();
+            throwInvalidArticleRequest();
 
         this.database.exec("BEGIN IMMEDIATE;");
         try {
@@ -48,26 +48,26 @@ export class ArticlesRepository {
 
 
     listArticles(): Article[] {
-        return (this.database.prepare(`${articleSelect} ORDER BY CASE WHEN d.updated_at IS NOT NULL AND d.updated_at > a.updated_at THEN d.updated_at ELSE a.updated_at END DESC, a.id ASC`).all() as Row[]).map(articleFromRow);
+        return (this.database.prepare(`${articleSelect} ORDER BY CASE WHEN d.updated_at IS NOT NULL AND d.updated_at > a.updated_at THEN d.updated_at ELSE a.updated_at END DESC, a.id ASC`).all() as Row[]).map(mapArticleFromRow);
     }
 
 
     getArticle(articleId: string): Article | undefined {
         const row = this.database.prepare(`${articleSelect} WHERE a.id = ?`).get(articleId) as Row | undefined;
-        return row && articleFromRow(row);
+        return row && mapArticleFromRow(row);
     }
 
 
     updateArticle(articleId: string, input: UpdateArticleInput): Article {
         if (!this.getArticle(articleId))
-            articleNotFound();
+            throwArticleNotFound();
 
         const language = input.language;
         if (language !== undefined && !isArticleLanguage(language))
-            invalidArticleRequest();
+            throwInvalidArticleRequest();
 
         if (input.publishingProfileId !== undefined && !isPublishLimitProfileId(input.publishingProfileId))
-            unsupportedPublishingProfile();
+            throwUnsupportedPublishingProfile();
 
         const assignments: string[] = [];
         const values: string[] = [];
@@ -88,7 +88,7 @@ export class ArticlesRepository {
         }
 
         assignments.push("updated_at = ?");
-        values.push(now(), articleId);
+        values.push(getCurrentTimestamp(), articleId);
         this.database.prepare(`UPDATE articles SET ${assignments.join(", ")} WHERE id = ?`).run(...values);
 
         return this.getArticle(articleId)!;
@@ -130,7 +130,7 @@ export class ArticlesRepository {
         try {
             const current = this.getArticle(articleId);
             if (!current)
-                articleNotFound();
+                throwArticleNotFound();
 
             if (current.currentRevisionId !== input.baseRevisionId)
                 throw new ArticleRevisionConflictError(current);
@@ -139,7 +139,7 @@ export class ArticlesRepository {
             if (existing?.version !== input.expectedDraftVersion)
                 throw new ArticleDraftConflictError(current, existing);
 
-            const timestamp = now();
+            const timestamp = getCurrentTimestamp();
             const version = (existing?.version ?? 0) + 1;
             this.database.prepare("INSERT INTO article_drafts (article_id, content, base_revision_id, version, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(article_id) DO UPDATE SET content = excluded.content, base_revision_id = excluded.base_revision_id, version = excluded.version, updated_at = excluded.updated_at")
                 .run(articleId, input.content, input.baseRevisionId, version, timestamp);
@@ -158,7 +158,7 @@ export class ArticlesRepository {
         try {
             const current = this.getArticle(articleId);
             if (!current)
-                articleNotFound();
+                throwArticleNotFound();
 
             if (current.draft?.version !== expectedDraftVersion)
                 throw new ArticleDraftConflictError(current, current.draft);
@@ -180,12 +180,12 @@ export class ArticlesRepository {
 
     acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision {
         const revisionId = createId();
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
             const current = this.getArticle(articleId);
             if (!current)
-                articleNotFound();
+                throwArticleNotFound();
 
             if (current.currentRevisionId !== input.baseRevisionId)
                 throw new ArticleRevisionConflictError(current);
@@ -209,12 +209,12 @@ export class ArticlesRepository {
 
     saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision {
         const revisionId = createId();
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
             const current = this.getArticle(articleId);
             if (!current)
-                articleNotFound();
+                throwArticleNotFound();
 
             if (current.currentRevisionId !== input.baseRevisionId)
                 throw new ArticleRevisionConflictError(current);
@@ -247,12 +247,12 @@ export class ArticlesRepository {
 
     restoreRevision(articleId: string, historicalRevisionId: string): ArticleRevision {
         const revisionId = createId();
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
             const historical = this.getRevision(articleId, historicalRevisionId);
             if (!historical)
-                revisionNotFound();
+                throwRevisionNotFound();
 
             insertArticleRevision(this.database, {
                 revisionId,
@@ -274,10 +274,10 @@ export class ArticlesRepository {
 
     appendArticleRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision {
         if (!this.getArticle(articleId))
-            articleNotFound();
+            throwArticleNotFound();
 
         const revisionId = createId();
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
 
         this.database.exec("BEGIN IMMEDIATE;");
 

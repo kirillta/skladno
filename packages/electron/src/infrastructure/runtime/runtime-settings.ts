@@ -40,8 +40,8 @@ export function readRuntimeSettings(path: string): RuntimeSettings {
             ...(typeof record.priorVersion === "string" ? { priorVersion: record.priorVersion } : {}),
             ...(typeof record.recoverySnapshotPath === "string" ? { recoverySnapshotPath: record.recoverySnapshotPath } : {}),
             ...(typeof record.startupSuccess === "boolean" ? { startupSuccess: record.startupSuccess } : {}),
-            ...(pendingRestore(record.pendingRestore) ? { pendingRestore: pendingRestore(record.pendingRestore) } : {}),
-            ...(telemetry(record.telemetry) ? { telemetry: telemetry(record.telemetry) } : {}),
+            ...(parsePendingRestore(record.pendingRestore) ? { pendingRestore: parsePendingRestore(record.pendingRestore) } : {}),
+            ...(parseTelemetrySettings(record.telemetry) ? { telemetry: parseTelemetrySettings(record.telemetry) } : {}),
         };
     } catch {
         return {};
@@ -49,7 +49,7 @@ export function readRuntimeSettings(path: string): RuntimeSettings {
 }
 
 
-function telemetry(value: unknown): RuntimeSettings["telemetry"] | undefined {
+function parseTelemetrySettings(value: unknown): RuntimeSettings["telemetry"] | undefined {
     if (!value || typeof value !== "object" || Array.isArray(value))
         return undefined;
 
@@ -64,7 +64,7 @@ function telemetry(value: unknown): RuntimeSettings["telemetry"] | undefined {
 }
 
 
-function pendingRestore(value: unknown): RuntimeSettings["pendingRestore"] | undefined {
+function parsePendingRestore(value: unknown): RuntimeSettings["pendingRestore"] | undefined {
     if (!value || typeof value !== "object" || Array.isArray(value))
         return undefined;
 

@@ -24,7 +24,7 @@ function parseBounds(value: unknown): Electron.Rectangle | undefined {
 }
 
 
-function intersects(first: Electron.Rectangle, second: Electron.Rectangle): boolean {
+function areRectanglesIntersecting(first: Electron.Rectangle, second: Electron.Rectangle): boolean {
     return first.x < second.x + second.width
         && first.x + first.width > second.x
         && first.y < second.y + second.height
@@ -32,9 +32,9 @@ function intersects(first: Electron.Rectangle, second: Electron.Rectangle): bool
 }
 
 
-export function safeWindowBounds(stored: unknown, displays: readonly Electron.Rectangle[]): Electron.Rectangle {
+export function getSafeWindowBounds(stored: unknown, displays: readonly Electron.Rectangle[]): Electron.Rectangle {
     const bounds = parseBounds(stored);
-    if (bounds && displays.some((display) => intersects(bounds, display)))
+    if (bounds && displays.some((display) => areRectanglesIntersecting(bounds, display)))
         return bounds;
 
     const display = displays[0];
@@ -55,9 +55,9 @@ export function safeWindowBounds(stored: unknown, displays: readonly Electron.Re
 
 export function readWindowBounds(path: string, displays: readonly Electron.Rectangle[]): Electron.Rectangle {
     try {
-        return safeWindowBounds(JSON.parse(readFileSync(path, "utf8")), displays);
+        return getSafeWindowBounds(JSON.parse(readFileSync(path, "utf8")), displays);
     } catch {
-        return safeWindowBounds(undefined, displays);
+        return getSafeWindowBounds(undefined, displays);
     }
 }
 

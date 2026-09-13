@@ -6,7 +6,7 @@ import type { EditorialEngineEvent } from "../application/editorial/engine/edito
 import type { AssistantActionIntentVerifier } from "../application/editorial/assistant-action-intent-verifier.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
 import { EditorialEngineError } from "../application/editorial/engine/editorial-engine-error.js";
-import { CapabilityFixtureEngine, FixtureEngine, noConversation, withService } from "./editorial-integration.test-utils.js";
+import { CapabilityFixtureEngine, FixtureEngine, createEmptyConversationStream, withService } from "./editorial-integration.test-utils.js";
 
 // Product scenarios: editorial-workflows.assistant-request-proposal, editorial-workflows.proposal-operations-remain-separate
 test("assistant requests persist a revision-bound proposal and splice only the selected Markdown", async () => {
@@ -261,7 +261,7 @@ test("assistant streams include a stable failure code", async () => {
         async *stream(): AsyncIterable<EditorialEngineEvent> {
             throw new EditorialEngineError("network", "OpenAI could not be reached. Check your connection and API settings, then retry.");
         },
-        streamConversation: noConversation,
+        streamConversation: createEmptyConversationStream,
     };
 
     await withService(engine, async (baseUrl, repositories) => {

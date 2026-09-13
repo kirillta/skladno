@@ -36,7 +36,7 @@ function redact(value: unknown, environmentValues: Set<string>, seen = new WeakS
 }
 
 
-function errorContext(error: unknown): Record<string, string | number> {
+function createErrorContext(error: unknown): Record<string, string | number> {
     if (!error || typeof error !== "object")
         return {};
 
@@ -51,7 +51,7 @@ function errorContext(error: unknown): Record<string, string | number> {
 }
 
 
-function write(writer: DiagnosticWriter, event: DiagnosticEvent, context: Record<string, unknown>, environmentValues: Set<string>): void {
+function writeDiagnostic(writer: DiagnosticWriter, event: DiagnosticEvent, context: Record<string, unknown>, environmentValues: Set<string>): void {
     try {
         writer(`${JSON.stringify(redact({ timestamp: new Date().toISOString(), event, ...context }, environmentValues))}\n`);
     } catch {
@@ -72,7 +72,7 @@ export function createLocalDiagnostics({
     return {
         write(event: DiagnosticEvent, context: Record<string, unknown> = {}, error?: unknown): void {
             const environmentValues = new Set(Object.values(environment).filter((value): value is string => Boolean(value)));
-            write(event.endsWith("failed") ? stderr : stdout, event, { ...context, ...errorContext(error) }, environmentValues);
+            writeDiagnostic(event.endsWith("failed") ? stderr : stdout, event, { ...context, ...createErrorContext(error) }, environmentValues);
         },
     };
 }

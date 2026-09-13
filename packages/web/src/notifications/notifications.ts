@@ -47,7 +47,7 @@ export const MAX_VISIBLE_NOTIFICATIONS = 3;
 const NOTIFICATION_FADE_OUT_DURATION = 6_000;
 
 
-export function notificationDuration(tone: NotificationTone, durationMs: number | null | undefined): number | null {
+export function getNotificationDuration(tone: NotificationTone, durationMs: number | null | undefined): number | null {
     if (durationMs !== undefined)
         return durationMs;
 

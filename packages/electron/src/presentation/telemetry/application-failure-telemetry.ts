@@ -1,7 +1,7 @@
 import type { TelemetryEvent } from "@skladno/shared";
 
 
-export function applicationFailureEvent(source: "renderer" | "child_process", reason: string): TelemetryEvent | undefined {
+export function createApplicationFailureEvent(source: "renderer" | "child_process", reason: string): TelemetryEvent | undefined {
     switch (reason) {
         case "crashed":
         case "killed":

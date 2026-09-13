@@ -7,7 +7,7 @@ import {
 } from "@skladno/shared";
 
 
-export function applicationClientError(payload: unknown, status: number): ApplicationClientError {
+export function createApplicationClientError(payload: unknown, status: number): ApplicationClientError {
     if (payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string") {
         const error = payload as ApplicationErrorPayload;
         return new ApplicationClientError(error.code, error.parameters, status);

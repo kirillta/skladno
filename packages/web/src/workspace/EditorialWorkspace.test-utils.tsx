@@ -46,7 +46,7 @@ export function TestEditorialAssistantPanel(props: {
 }
 
 
-export function article(id: string, title: string): Article {
+export function createArticleFixture(id: string, title: string): Article {
     const revision: ArticleRevision = { id: `${id}-revision`, articleId: id, content: "Draft", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" } };
     return { id, title, createdAt: revision.createdAt, updatedAt: revision.createdAt, currentRevisionId: revision.id, currentRevision: revision };
 }
@@ -57,11 +57,11 @@ export function renderLocalized(element: ReactElement) {
 }
 
 
-export function fakeClient(): EditorialWorkspaceClient {
-    const created = article("new", "New Article");
+export function createFakeClient(): EditorialWorkspaceClient {
+    const created = createArticleFixture("new", "New Article");
     return {
         getHealth: vi.fn(),
-        listArticles: vi.fn().mockResolvedValue([article("one", "First Article")]),
+        listArticles: vi.fn().mockResolvedValue([createArticleFixture("one", "First Article")]),
         createArticle: vi.fn().mockResolvedValue(created),
         updateArticle: vi.fn(),
         deleteArticle: vi.fn(),

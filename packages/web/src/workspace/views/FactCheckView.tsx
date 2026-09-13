@@ -65,7 +65,7 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
         if (finding.occurrenceId && eligible.some((item) => item.occurrenceId === finding.occurrenceId))
             toggle(finding.occurrenceId);
     };
-    const resolutionMessage = (resolution: NonNullable<FactCheckFinding["resolution"]>) => intl.formatMessage({ id: `views.factResolution.${resolution}` as never });
+    const getResolutionMessage = (resolution: NonNullable<FactCheckFinding["resolution"]>) => intl.formatMessage({ id: `views.factResolution.${resolution}` as never });
     const revisionLabel = (revisionId: string) => intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: reusedRevisionNumbers?.[revisionId] ?? revisionNumber ?? "—" });
 
     return <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col">
@@ -99,7 +99,7 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <Status compact label={intl.formatMessage({ id: `views.factStatus.${finding.status}` })} tone={tone[finding.status]}>
                             {finding.importance && <span className="ml-2">{intl.formatMessage({ id: "views.factImportance" }, { importance: finding.importance })}</span>}
-                            {finding.resolution && <span className="ml-2">{resolutionMessage(finding.resolution)}</span>}
+                            {finding.resolution && <span className="ml-2">{getResolutionMessage(finding.resolution)}</span>}
                         </Status>
                         {!finding.resolution
                             && !isStale(finding)

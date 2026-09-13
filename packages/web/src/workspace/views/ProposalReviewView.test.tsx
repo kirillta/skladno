@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
-import { message } from "../../i18n/test-message.js";
+import { getMessage } from "../../i18n/test-message.js";
 import { ProposalReviewView as RenderProposalReviewView } from "./ProposalReviewView.js";
 
 type ProposalReviewViewTestProps = Parameters<typeof RenderProposalReviewView>[0]["data"] & Parameters<typeof RenderProposalReviewView>[0]["actions"];
@@ -31,7 +31,7 @@ describe("ProposalReviewView", () => {
         expect(screen.getByText("Clarifies the opening statement.")).toBeTruthy();
         expect(screen.getAllByText("Original").length).toBeGreaterThan(0);
         expect(screen.getAllByText("Proposed").length).toBeGreaterThan(0);
-        expect(screen.getByText(message("views.preservationWarnings")).compareDocumentPosition(screen.getByRole("heading", { name: message("views.proposalReview") })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByText(getMessage("views.preservationWarnings")).compareDocumentPosition(screen.getByRole("heading", { name: getMessage("views.proposalReview") })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it("workspace.proposal.stale-blocked warns before the review controls while blocking acceptance", () => {
@@ -49,14 +49,14 @@ describe("ProposalReviewView", () => {
         </IntlProvider>);
 
         const warning = screen.getByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.");
-        const heading = screen.getByRole("heading", { name: message("views.proposalReview") });
+        const heading = screen.getByRole("heading", { name: getMessage("views.proposalReview") });
 
         expect(warning.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         expect(screen.getByText("Complete proposal · 2 changes")).toBeTruthy();
-        expect(screen.getByRole("button", { name: message("views.acceptAll") }).hasAttribute("disabled")).toBe(true);
-        expect(screen.getByRole("button", { name: message("views.rejectAll") }).hasAttribute("disabled")).toBe(true);
-        expect(screen.getByRole("button", { name: message("views.reviewCurrentArticle") })).toBeTruthy();
-        fireEvent.click(screen.getByRole("button", { name: message("views.dismissProposal") }));
+        expect(screen.getByRole("button", { name: getMessage("views.acceptAll") }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("button", { name: getMessage("views.rejectAll") }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("button", { name: getMessage("views.reviewCurrentArticle") })).toBeTruthy();
+        fireEvent.click(screen.getByRole("button", { name: getMessage("views.dismissProposal") }));
         expect(dismissProposal).toHaveBeenCalledOnce();
     });
 
@@ -72,8 +72,8 @@ describe("ProposalReviewView", () => {
             }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} dismissProposal={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
-        expect(screen.getByRole("button", { name: message("views.previousChange") }).querySelector("svg")).toBeTruthy();
-        expect(screen.getByRole("button", { name: message("views.nextChange") }).querySelector("svg")).toBeTruthy();
+        expect(screen.getByRole("button", { name: getMessage("views.previousChange") }).querySelector("svg")).toBeTruthy();
+        expect(screen.getByRole("button", { name: getMessage("views.nextChange") }).querySelector("svg")).toBeTruthy();
     });
 
     it("applies exact-text highlights to both layouts", () => {
@@ -85,16 +85,16 @@ describe("ProposalReviewView", () => {
             }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} dismissProposal={vi.fn()} warningsDismissed dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
-        const sideBySide = screen.getByRole("button", { name: message("views.proposalSideBySide") });
-        const stacked = screen.getByRole("button", { name: message("views.proposalStacked") });
-        const highlight = screen.getByRole("button", { name: message("views.proposalHighlight") });
+        const sideBySide = screen.getByRole("button", { name: getMessage("views.proposalSideBySide") });
+        const stacked = screen.getByRole("button", { name: getMessage("views.proposalStacked") });
+        const highlight = screen.getByRole("button", { name: getMessage("views.proposalHighlight") });
         expect(sideBySide.getAttribute("aria-pressed")).toBe("true");
 
         fireEvent.click(stacked);
         expect(stacked.getAttribute("aria-pressed")).toBe("true");
-        expect(screen.getByLabelText(message("ui.proposedChange")).className).toContain("bg-canvas");
-        expect(screen.getByText(message("ui.original"))).toBeTruthy();
-        expect(screen.getByText(message("ui.proposed"))).toBeTruthy();
+        expect(screen.getByLabelText(getMessage("ui.proposedChange")).className).toContain("bg-canvas");
+        expect(screen.getByText(getMessage("ui.original"))).toBeTruthy();
+        expect(screen.getByText(getMessage("ui.proposed"))).toBeTruthy();
 
         fireEvent.click(highlight);
 
@@ -121,10 +121,10 @@ describe("ProposalReviewView", () => {
             }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={rejectAll} dismissProposal={dismissProposal} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
         </IntlProvider>);
 
-        fireEvent.click(screen.getByRole("button", { name: message("views.rejectAll") }));
+        fireEvent.click(screen.getByRole("button", { name: getMessage("views.rejectAll") }));
 
         expect(rejectAll).toHaveBeenCalledOnce();
         expect(dismissProposal).not.toHaveBeenCalled();
-        expect(screen.getByRole("heading", { name: message("views.proposalReview") })).toBeTruthy();
+        expect(screen.getByRole("heading", { name: getMessage("views.proposalReview") })).toBeTruthy();
     });
 });

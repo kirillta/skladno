@@ -1,7 +1,7 @@
 import { isDateFormatPreference, isThemePreference, isTimeFormatPreference, isTimeZonePreference, type DesktopTelemetryClient, type GeneralSettings } from "@skladno/shared";
 import { useIntl } from "react-intl";
 import { catalogByLocale, installedLocaleCatalogs } from "../../i18n/catalogs.js";
-import { formatDate, formatDateTime, formatTime, formatTimeZoneLabel, systemTimeZone, timeZoneOptions } from "../../i18n/formatting.js";
+import { formatDate, formatDateTime, formatTime, formatTimeZoneLabel, getSystemTimeZone, getTimeZoneOptions } from "../../i18n/formatting.js";
 import { Select, Button } from "../../ui/primitives.js";
 import { SettingRow } from "./SettingRow.js";
 import { TelemetrySettingsGroup } from "./TelemetrySettingsGroup.js";
@@ -86,8 +86,8 @@ export function GeneralSettingsSection({ general, save, applyTheme, telemetry }:
                     if (isTimeZonePreference(value))
                         void save({ ...general, timeZone: value });
                 }}>
-                    <option value="system">{intl.formatMessage({ id: "settings.systemTimeZone" }, { timeZone: systemTimeZone() ? formatTimeZoneLabel(systemTimeZone()!) : intl.formatMessage({ id: "settings.localTimeZone" }) })}</option>
-                    {timeZoneOptions(general.timeZone).map((timeZone) => <option key={timeZone.value} value={timeZone.value}>{timeZone.label}</option>)}
+                    <option value="system">{intl.formatMessage({ id: "settings.systemTimeZone" }, { timeZone: getSystemTimeZone() ? formatTimeZoneLabel(getSystemTimeZone()!) : intl.formatMessage({ id: "settings.localTimeZone" }) })}</option>
+                    {getTimeZoneOptions(general.timeZone).map((timeZone) => <option key={timeZone.value} value={timeZone.value}>{timeZone.label}</option>)}
                 </Select>
             </SettingRow>
         </section>

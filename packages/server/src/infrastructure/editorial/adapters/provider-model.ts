@@ -20,18 +20,18 @@ export interface ProviderModelConfiguration {
 const openCodeZenBaseUrl = "https://opencode.ai/zen/v1";
 
 
-function openCodeZenModelId(model: string): string {
+function getOpenCodeZenModelId(model: string): string {
     return model.startsWith("opencode/") ? model.slice("opencode/".length) : model;
 }
 
 
-function unsupportedOpenCodeZenModel(): never {
+function throwUnsupportedOpenCodeZenModel(): never {
     throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_OPERATION_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
 }
 
 
 function createOpenCodeZenModel(config: ProviderModelConfiguration): LanguageModel {
-    const model = openCodeZenModelId(config.model);
+    const model = getOpenCodeZenModelId(config.model);
     if (model.startsWith("gpt-") || model.startsWith("grok-") || model.startsWith("muse-spark"))
         return createOpenAI({ apiKey: config.apiKey, baseURL: openCodeZenBaseUrl }).responses(model);
 
@@ -44,7 +44,7 @@ function createOpenCodeZenModel(config: ProviderModelConfiguration): LanguageMod
     if (["deepseek", "minimax", "glm", "kimi", "big-pickle", "mimo", "ling", "nemotron"].some((prefix) => model.startsWith(prefix)))
         return createOpenAICompatible({ apiKey: config.apiKey, baseURL: openCodeZenBaseUrl, name: "opencode" })(model);
 
-    return unsupportedOpenCodeZenModel();
+    return throwUnsupportedOpenCodeZenModel();
 }
 
 

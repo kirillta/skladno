@@ -5,12 +5,12 @@ import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { getDesktopTelemetryClient } from "../../application/desktop-client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 import { createDraftCheckpointTelemetry } from "../drafts/draft-checkpoint-telemetry.js";
-import { draftPresentationState, hasUncommittedDraftChanges, hydrateDraftLifecycle, type DraftPresentationState } from "../drafts/draft-lifecycle.js";
+import { getDraftPresentationState, hasUncommittedDraftChanges, hydrateDraftLifecycle, type DraftPresentationState } from "../drafts/draft-lifecycle.js";
 import { useDraftLifecycle } from "../drafts/useDraftLifecycle.js";
 import { createArticleWorkspaceActions } from "./article-workspace-actions.js";
 import { sortArticlesByActivity, withoutDraft } from "./article-workspace-articles.js";
 
-export { articleContentForWorkspace, sortArticlesByActivity } from "./article-workspace-articles.js";
+export { getArticleContentForWorkspace, sortArticlesByActivity } from "./article-workspace-articles.js";
 
 
 export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelectedArticleId: string | undefined, setPersistedSelectedArticleId: (articleId: string | undefined) => void) {
@@ -232,7 +232,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
             scheduleCheckpoint(selectedArticleId, value);
         },
         state, message,
-        saveState: selectedDraft ? draftPresentationState(selectedDraft) : "saved" as DraftPresentationState,
+        saveState: selectedDraft ? getDraftPresentationState(selectedDraft) : "saved" as DraftPresentationState,
         save, retry: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(), flushSelected: () => selectedArticleId ? checkpoint(selectedArticleId) : Promise.resolve(), discardDraft,
         hasUncommittedChanges: Boolean(selectedArticle && selectedDraft && hasUncommittedDraftChanges(selectedDraft, selectedArticle.currentRevision.content)),
         conflict: selectedDraft?.conflict, comparisonArticleId,

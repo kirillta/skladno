@@ -7,7 +7,7 @@ function hasWordListMetadata(node: HTMLElement): boolean {
 }
 
 
-function wordListType(node: HTMLElement): "bullet" | "number" | undefined {
+function getWordListType(node: HTMLElement): "bullet" | "number" | undefined {
     const tag = node.tagName.toLowerCase();
     if (!WORD_PASTE.listCandidateElementNames.has(tag))
         return undefined;
@@ -56,7 +56,7 @@ function convertWordLists(document: Document) {
         if (converted.has(candidate))
             continue;
 
-        const type = wordListType(candidate);
+        const type = getWordListType(candidate);
         if (!type)
             continue;
 
@@ -68,7 +68,7 @@ function convertWordLists(document: Document) {
         candidate.before(list);
 
         let current: HTMLElement | null = candidate;
-        while (current && wordListType(current) === type) {
+        while (current && getWordListType(current) === type) {
             converted.add(current);
             const next: HTMLElement | null = current.nextElementSibling instanceof HTMLElement
                 ? current.nextElementSibling

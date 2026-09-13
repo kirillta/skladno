@@ -35,6 +35,6 @@ const electronCatalogs = {
 } satisfies Record<InterfaceLocale, ElectronMessages>;
 
 
-export function electronMessagesFor(locale: InterfaceLocale = defaultInterfaceLocale): ElectronMessages {
+export function getElectronMessagesFor(locale: InterfaceLocale = defaultInterfaceLocale): ElectronMessages {
     return electronCatalogs[locale];
 }

@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { App } from "../App.js";
-import { message } from "../i18n/test-message.js";
-import { fakeClient, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
+import { getMessage } from "../i18n/test-message.js";
+import { createFakeClient, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
 
 
 // Product scenarios: cross-cutting.accessible-workspace-separators
@@ -23,12 +23,12 @@ describe("Editorial Workspace layout", () => {
         }));
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
         const user = userEvent.setup();
-        render(<App client={fakeClient()} />);
+        render(<App client={createFakeClient()} />);
 
         await screen.findByRole("heading", { name: "First Article" });
 
-        const libraryResize = screen.getByRole("separator", { name: message("navigation.resizeArticleLibrary") });
-        const assistantResize = screen.getByRole("separator", { name: message("assistant.resize") });
+        const libraryResize = screen.getByRole("separator", { name: getMessage("navigation.resizeArticleLibrary") });
+        const assistantResize = screen.getByRole("separator", { name: getMessage("assistant.resize") });
         const main = libraryResize.closest("main")!;
 
         expect(main.firstElementChild?.tagName).toBe("SECTION");

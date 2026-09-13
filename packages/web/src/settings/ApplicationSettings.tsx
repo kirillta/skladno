@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { aiModelPreferenceId, AI_PROVIDER, defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type AiProvider, type AppModelPreference, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
+import { getAiModelPreferenceId, AI_PROVIDER, defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type AiProvider, type AppModelPreference, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application/client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
@@ -17,11 +17,11 @@ import { PublishingSettingsSection } from "./components/PublishingSettingsSectio
 import type { SettingsSection } from "./settings-sections.js";
 
 
-function availableModels(value: unknown, connections: AiConnection[]): AvailableAiModel[] {
+function getAvailableModels(value: unknown, connections: AiConnection[]): AvailableAiModel[] {
     const fallback = connections.find((connection) => connection.active !== false);
     return Array.isArray(value) ? value.flatMap((item): AvailableAiModel[] => {
         if (typeof item === "string" && fallback)
-            return [{ id: aiModelPreferenceId(fallback.id, item), model: item, connectionId: fallback.id, provider: fallback.provider }];
+            return [{ id: getAiModelPreferenceId(fallback.id, item), model: item, connectionId: fallback.id, provider: fallback.provider }];
 
         return item && typeof item === "object" && typeof (item as AvailableAiModel).id === "string" && typeof (item as AvailableAiModel).model === "string"
             ? [item as AvailableAiModel]
@@ -93,7 +93,7 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
         if (section !== "ai" || !settings?.connections.some((connection) => connection.active !== false))
             return;
 
-        void client.refreshAiModels().then((loaded) => setModels(availableModels(loaded, settings.connections))).catch((error) => {
+        void client.refreshAiModels().then((loaded) => setModels(getAvailableModels(loaded, settings.connections))).catch((error) => {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.modelsLoadFailed" }) });
         });
     }, [client, intl, notifyError, section, settings?.connections]);
@@ -277,7 +277,7 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
 
     async function refreshModels() {
         try {
-            setModels(availableModels(await client.refreshAiModels(), settings?.connections ?? []));
+            setModels(getAvailableModels(await client.refreshAiModels(), settings?.connections ?? []));
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "settings.modelsLoadFailed" }) });
         }

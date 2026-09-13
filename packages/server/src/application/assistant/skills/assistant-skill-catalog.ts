@@ -1,6 +1,6 @@
 import type { AssistantSkillReference, AssistantSkillSummary } from "@skladno/shared";
 
-import { builtInSkillPackages, builtInSkillSummary, type AssistantSkillPackage } from "./built-in-skill-packages.js";
+import { builtInSkillPackages, getBuiltInSkillSummary, type AssistantSkillPackage } from "./built-in-skill-packages.js";
 
 
 export interface AssistantSkillSource {
@@ -10,15 +10,15 @@ export interface AssistantSkillSource {
 }
 
 
-function sameReference(left: AssistantSkillReference, right: AssistantSkillReference): boolean {
+function areSkillReferencesEqual(left: AssistantSkillReference, right: AssistantSkillReference): boolean {
     return left.source === right.source && left.id === right.id && left.version === right.version;
 }
 
 
 export const builtInSkillSource: AssistantSkillSource = {
     id: "built-in",
-    summaries: () => builtInSkillPackages.map(builtInSkillSummary),
-    load: (reference) => builtInSkillPackages.find((skillPackage) => sameReference(skillPackage.reference, reference)),
+    summaries: () => builtInSkillPackages.map(getBuiltInSkillSummary),
+    load: (reference) => builtInSkillPackages.find((skillPackage) => areSkillReferencesEqual(skillPackage.reference, reference)),
 };
 
 
@@ -34,7 +34,7 @@ export class AssistantSkillCatalog {
     load(references: readonly AssistantSkillReference[]): AssistantSkillPackage[] {
         const loaded: AssistantSkillPackage[] = [];
         for (const reference of references) {
-            if (loaded.some((skillPackage) => sameReference(skillPackage.reference, reference)))
+            if (loaded.some((skillPackage) => areSkillReferencesEqual(skillPackage.reference, reference)))
                 continue;
 
             const source = this.sources.find((candidate) => candidate.id === reference.source);

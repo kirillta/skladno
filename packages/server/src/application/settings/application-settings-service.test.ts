@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { aiModelPreferenceId, type AiConnection } from "@skladno/shared";
+import { getAiModelPreferenceId, type AiConnection } from "@skladno/shared";
 
 import { ApplicationSettingsService } from "./application-settings-service.js";
 
 
-function service(records: Map<string, unknown>, list: (connection: AiConnection) => Promise<string[]> = async () => []) {
+function createSettingsService(records: Map<string, unknown>, list: (connection: AiConnection) => Promise<string[]> = async () => []) {
     return new ApplicationSettingsService(
         {
             getSetting: (key) => records.has(key) ? { key, value: records.get(key), updatedAt: "now" } : undefined,
@@ -24,7 +24,7 @@ function service(records: Map<string, unknown>, list: (connection: AiConnection)
 
 test("allows more than one connection to use the same environment-variable key", () => {
     const records = new Map<string, unknown>();
-    const settings = service(records);
+    const settings = createSettingsService(records);
 
     settings.createAiConnection({ provider: "openai", label: "OpenAI", environmentVariableName: "AI_API_KEY" });
     settings.createAiConnection({ provider: "opencode", label: "OpenCode Zen", environmentVariableName: "AI_API_KEY" });
@@ -45,11 +45,11 @@ test("migrates legacy model preferences to a connection-bound selection", async 
         }],
         ["application-model-preferences", { defaultModel: "gpt-5.6", textGenerationModel: "gpt-5.6-mini", textGenerationReasoningEffort: "low", skillOverrides: { talking_points: "gpt-5.6-mini" } }],
     ]);
-    const settings = service(records);
+    const settings = createSettingsService(records);
 
-    assert.equal((await settings.getSnapshot()).modelPreferences.defaultModel, aiModelPreferenceId("openai", "gpt-5.6"));
-    assert.deepEqual(records.get("application-model-preferences"), { defaultModel: aiModelPreferenceId("openai", "gpt-5.6"), skillOverrides: { talking_points: aiModelPreferenceId("openai", "gpt-5.6-mini") } });
-    assert.deepEqual(records.get("application-app-model"), { model: aiModelPreferenceId("openai", "gpt-5.6-mini"), reasoningEffort: "low" });
+    assert.equal((await settings.getSnapshot()).modelPreferences.defaultModel, getAiModelPreferenceId("openai", "gpt-5.6"));
+    assert.deepEqual(records.get("application-model-preferences"), { defaultModel: getAiModelPreferenceId("openai", "gpt-5.6"), skillOverrides: { talking_points: getAiModelPreferenceId("openai", "gpt-5.6-mini") } });
+    assert.deepEqual(records.get("application-app-model"), { model: getAiModelPreferenceId("openai", "gpt-5.6-mini"), reasoningEffort: "low" });
 });
 
 
@@ -59,10 +59,10 @@ test("returns models from every active connection and preserves their route", as
         { id: "zen", provider: "opencode", label: "OpenCode Zen", credentialSource: { kind: "environment-variable", environmentVariableName: "OPENCODE_API_KEY" }, active: true, status: "connected" },
         { id: "paused", provider: "anthropic", label: "Anthropic", credentialSource: { kind: "environment-variable", environmentVariableName: "ANTHROPIC_API_KEY" }, active: false, status: "connected" },
     ] }]]);
-    const settings = service(records, async (connection: AiConnection) => connection.id === "openai" ? ["gpt-5.6"] : ["claude-sonnet"]);
+    const settings = createSettingsService(records, async (connection: AiConnection) => connection.id === "openai" ? ["gpt-5.6"] : ["claude-sonnet"]);
 
     assert.deepEqual(await settings.listAiModels(), [
-        { id: aiModelPreferenceId("openai", "gpt-5.6"), model: "gpt-5.6", connectionId: "openai", provider: "openai" },
-        { id: aiModelPreferenceId("zen", "claude-sonnet"), model: "claude-sonnet", connectionId: "zen", provider: "opencode" },
+        { id: getAiModelPreferenceId("openai", "gpt-5.6"), model: "gpt-5.6", connectionId: "openai", provider: "openai" },
+        { id: getAiModelPreferenceId("zen", "claude-sonnet"), model: "claude-sonnet", connectionId: "zen", provider: "opencode" },
     ]);
 });

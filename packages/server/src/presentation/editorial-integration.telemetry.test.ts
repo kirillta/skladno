@@ -4,7 +4,7 @@ import { EDITORIAL_OPERATION, HTTP_METHOD, restoreRevisionPath, type TelemetryEv
 import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
 import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
-import { FixtureEngine, noConversation, withService } from "./editorial-integration.test-utils.js";
+import { FixtureEngine, createEmptyConversationStream, withService } from "./editorial-integration.test-utils.js";
 
 // Product scenarios: settings.telemetry-consent
 test("server records one private-content-free terminal event for each explicit AI operation", async () => {
@@ -64,7 +64,7 @@ test("a cancelled direct Editorial operation records one cancellation", async ()
             yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial" };
             await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
         },
-        streamConversation: noConversation,
+        streamConversation: createEmptyConversationStream,
     };
 
     await withService(engine, async (baseUrl, repositories) => {

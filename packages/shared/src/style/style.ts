@@ -1,8 +1,8 @@
 export const styleCorpusPath = "/api/style-corpus";
 export const styleCorpusRulesPath = `${styleCorpusPath}/rules`;
 export const styleCorpusRebuildPath = `${styleCorpusPath}/rebuild`;
-export const articleStyleRulesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/style-rules`;
-export const articleStyleCorpusSnapshotPath = (articleId: string, revisionId: string) => `/api/articles/${encodeURIComponent(articleId)}/revisions/${encodeURIComponent(revisionId)}/style-corpus-snapshot`;
+export const createArticleStyleRulesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/style-rules`;
+export const createArticleStyleCorpusSnapshotPath = (articleId: string, revisionId: string) => `/api/articles/${encodeURIComponent(articleId)}/revisions/${encodeURIComponent(revisionId)}/style-corpus-snapshot`;
 
 
 export interface StyleTrait {

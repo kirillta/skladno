@@ -1,4 +1,4 @@
-import { keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, type KeyBindingCommandId, type KeyBindingOverrides, type KeyBindingScope } from "@skladno/shared";
+import { keyBindingCommands, areKeyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, type KeyBindingCommandId, type KeyBindingOverrides, type KeyBindingScope } from "@skladno/shared";
 
 
 export interface KeyBindingEvent {
@@ -25,7 +25,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 
-export function eventKeyBinding(event: Pick<KeyBindingEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey">) {
+export function getEventKeyBinding(event: Pick<KeyBindingEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey">) {
     return normalizeKeyBinding({ primary: event.ctrlKey || event.metaKey, shift: event.shiftKey, alt: event.altKey, key: event.key });
 }
 
@@ -55,14 +55,14 @@ export class KeyBindingDispatcher {
         if (event.repeat || event.isComposing)
             return false;
 
-        const binding = eventKeyBinding(event);
+        const binding = getEventKeyBinding(event);
         if (!binding)
             return false;
 
         const resolved = resolveKeyBindings(this.overrides);
         const matches = (candidate: typeof keyBindingCommands[number]) => {
             const candidateBinding = resolved[candidate.id];
-            return candidateBinding != null && keyBindingsEqual(candidateBinding, binding);
+            return candidateBinding != null && areKeyBindingsEqual(candidateBinding, binding);
         };
         let command = keyBindingCommands.find((candidate) => candidate.scope === scope && matches(candidate));
 

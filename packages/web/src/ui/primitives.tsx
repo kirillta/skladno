@@ -15,7 +15,7 @@ const toneClasses: Record<Tone, string> = {
 };
 
 
-export function notificationClasses(tone: Tone): string {
+export function getNotificationClasses(tone: Tone): string {
     return {
         info: "border-info bg-info-soft text-info",
         success: "border-success bg-success-soft text-success",

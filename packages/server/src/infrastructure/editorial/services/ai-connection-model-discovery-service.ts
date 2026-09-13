@@ -15,7 +15,7 @@ const modelsEndpoints: Record<AiProvider, string> = {
 const editorialModelFamilies = ["gpt-5.5", "gpt-5.6", "gpt-6"];
 
 
-function requestOptions(provider: AiProvider, apiKey: string): RequestInit {
+function createModelDiscoveryRequestOptions(provider: AiProvider, apiKey: string): RequestInit {
     if (provider === AI_PROVIDER.ANTHROPIC)
         return { headers: { "anthropic-version": "2023-06-01", "x-api-key": apiKey } };
 
@@ -31,7 +31,7 @@ function normalizeModelId(id: string, provider: AiProvider): string {
 }
 
 
-function modelIds(body: unknown, provider: AiProvider): string[] {
+function getModelIds(body: unknown, provider: AiProvider): string[] {
     if (!body || typeof body !== "object")
         return [];
 
@@ -60,12 +60,12 @@ export class AiConnectionModelDiscoveryService {
         if (!apiKey)
             throw new ApplicationServiceError(APPLICATION_ERROR.ENVIRONMENT_VARIABLE_UNAVAILABLE, HTTP_STATUS.BAD_REQUEST);
 
-        const response = await fetchImplementation(modelsEndpoints[provider], requestOptions(provider, apiKey));
+        const response = await fetchImplementation(modelsEndpoints[provider], createModelDiscoveryRequestOptions(provider, apiKey));
         if (!response.ok)
             throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_VERIFICATION_FAILED, HTTP_STATUS.BAD_REQUEST);
 
         try {
-            const models = modelIds(await response.json(), provider);
+            const models = getModelIds(await response.json(), provider);
             return provider === AI_PROVIDER.OPENAI
                 ? this.filterOpenAiEditorialModels(models)
                 : [...new Set(models)].sort();

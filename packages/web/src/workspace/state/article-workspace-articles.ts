@@ -1,13 +1,13 @@
 import type { Article } from "@skladno/shared";
 
 
-function articleActivityTimestamp(article: Article): string {
+function getArticleActivityTimestamp(article: Article): string {
     return article.draft && article.draft.updatedAt > article.updatedAt ? article.draft.updatedAt : article.updatedAt;
 }
 
 
 export function sortArticlesByActivity(articles: Article[]): Article[] {
-    return [...articles].sort((first, second) => articleActivityTimestamp(second).localeCompare(articleActivityTimestamp(first)) || first.id.localeCompare(second.id));
+    return [...articles].sort((first, second) => getArticleActivityTimestamp(second).localeCompare(getArticleActivityTimestamp(first)) || first.id.localeCompare(second.id));
 }
 
 
@@ -18,6 +18,6 @@ export function withoutDraft(article: Article): Omit<Article, "draft"> {
 }
 
 
-export function articleContentForWorkspace(article: Article): string {
+export function getArticleContentForWorkspace(article: Article): string {
     return article.draft?.baseRevisionId === article.currentRevisionId ? article.draft.content : article.currentRevision.content;
 }

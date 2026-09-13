@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
 import type { FactCheckService } from "../../application/editorial/fact-checking/fact-check-service.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
-import { object, readJson, string, writeJson } from "../transport/json.js";
+import { parseObject, parseString, readJson, writeJson } from "../transport/json.js";
 
 const resolutions = new Set(["corrected_or_removed", "accepted_as_written", "evidence_accepted"]);
 
@@ -13,8 +13,8 @@ export function listFactChecksRoute(response: ServerResponse, articleId: string,
 
 
 export async function resolveFactCheckRoute(request: IncomingMessage, response: ServerResponse, articleId: string, occurrenceId: string, factChecks: FactCheckService): Promise<void> {
-    const body = object(await readJson(request));
-    const resolution = string(body.resolution, "resolution");
+    const body = parseObject(await readJson(request));
+    const resolution = parseString(body.resolution, "resolution");
     if (!resolutions.has(resolution))
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 

@@ -8,10 +8,10 @@ import { EDITORIAL_ENGINE_ERROR } from "../../application/editorial/engine/edito
 import { EDITORIAL_ENGINE_EVENT } from "../../application/editorial/engine/editorial-engine-events.js";
 import { EditorialEngineError } from "../../application/editorial/engine/editorial-engine-error.js";
 import { isEditorialOperation } from "../../application/editorial/workflow-prompt.js";
-import { object, readJson, string } from "../transport/json.js";
+import { parseObject, readJson, parseString } from "../transport/json.js";
 
 
-function errorEvent(requestId: string, code: Extract<EditorialEvent, { type: "error" }>["code"], errorCode: ApplicationErrorCode, retryable: boolean): EditorialEvent {
+function createEditorialErrorEvent(requestId: string, code: Extract<EditorialEvent, { type: "error" }>["code"], errorCode: ApplicationErrorCode, retryable: boolean): EditorialEvent {
     return { type: "error", requestId, code, errorCode, retryable };
 }
 
@@ -22,15 +22,15 @@ function writeEditorialEvent(response: ServerResponse, event: EditorialEvent): v
 
 
 async function readEditorialRequest(request: IncomingMessage, articleId: string): Promise<EditorialServiceRequest> {
-    const body = object(await readJson(request));
-    const operation = string(body.operation, "operation");
+    const body = parseObject(await readJson(request));
+    const operation = parseString(body.operation, "operation");
 
     return {
         articleId,
-        requestId: string(body.requestId, "requestId"),
+        requestId: parseString(body.requestId, "requestId"),
         operation: operation as EditorialOperation,
-        authorContext: body.authorContext === undefined ? "" : string(body.authorContext, "authorContext"),
-        ...(body.targetLanguage === undefined ? {} : { targetLanguage: string(body.targetLanguage, "targetLanguage") }),
+        authorContext: body.authorContext === undefined ? "" : parseString(body.authorContext, "authorContext"),
+        ...(body.targetLanguage === undefined ? {} : { targetLanguage: parseString(body.targetLanguage, "targetLanguage") }),
     };
 }
 
@@ -49,7 +49,7 @@ function rejectUnsupportedOperation(response: ServerResponse, request: Editorial
     if (isEditorialOperation(request.operation))
         return false;
 
-    writeEditorialEvent(response, errorEvent(request.requestId, EDITORIAL_ERROR_CATEGORY.PROVIDER, APPLICATION_ERROR.EDITORIAL_OPERATION_UNSUPPORTED, false));
+    writeEditorialEvent(response, createEditorialErrorEvent(request.requestId, EDITORIAL_ERROR_CATEGORY.PROVIDER, APPLICATION_ERROR.EDITORIAL_OPERATION_UNSUPPORTED, false));
     response.end();
 
     return true;
@@ -60,14 +60,14 @@ function rejectMissingTargetLanguage(response: ServerResponse, request: Editoria
     if (request.operation !== EDITORIAL_OPERATION.TRANSLATION || request.targetLanguage?.trim())
         return false;
 
-    writeEditorialEvent(response, errorEvent(request.requestId, EDITORIAL_ERROR_CATEGORY.INVALID_OUTPUT, APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, false));
+    writeEditorialEvent(response, createEditorialErrorEvent(request.requestId, EDITORIAL_ERROR_CATEGORY.INVALID_OUTPUT, APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, false));
     response.end();
 
     return true;
 }
 
 
-function editorialError(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
+function createEditorialError(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
     if (error instanceof ApplicationServiceError && error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING)
         return { category: EDITORIAL_ERROR_CATEGORY.CONFIGURATION, errorCode: error.code };
 
@@ -108,11 +108,11 @@ async function streamEditorialEvents(response: ServerResponse, editorial: Editor
         }
 
         if (!completed && !controller.signal.aborted)
-            writeEditorialEvent(response, errorEvent(request.requestId, EDITORIAL_ERROR_CATEGORY.MALFORMED_STREAM, APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE, true));
+            writeEditorialEvent(response, createEditorialErrorEvent(request.requestId, EDITORIAL_ERROR_CATEGORY.MALFORMED_STREAM, APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE, true));
     } catch (error) {
         if (!controller.signal.aborted) {
-            const failure = editorialError(error);
-            writeEditorialEvent(response, errorEvent(request.requestId, failure.category, failure.errorCode, true));
+            const failure = createEditorialError(error);
+            writeEditorialEvent(response, createEditorialErrorEvent(request.requestId, failure.category, failure.errorCode, true));
         }
     }
 }

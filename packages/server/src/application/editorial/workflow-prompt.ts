@@ -25,19 +25,19 @@ export const authorControlInstruction = "Do not claim that you saved or changed 
 const commonGuardrails = `Preserve the author's claims, numbers, URLs, code, technical terms, requested tone, intent, and existing Markdown formatting. Do not invent facts, examples, or sources. Return only a valid Markdown proposed full-text article. This is a proposal for author review. ${authorControlInstruction}`;
 
 
-function authorGuidance(authorContext: string): string {
+function createAuthorGuidance(authorContext: string): string {
     return authorContext.trim() || "No additional author guidance was provided.";
 }
 
 
-function styleTraits(profile: StyleProfile): string {
+function formatStyleTraits(profile: StyleProfile): string {
     return profile.traits
         .map((trait) => `- ${trait.id}: ${trait.label} (${trait.evidence})`)
         .join("\n");
 }
 
 
-function numberedRules(rules: string, prefix: string): string {
+function formatNumberedRules(rules: string, prefix: string): string {
     return rules.split("\n").map((rule) => rule.trim()).filter(Boolean).map((rule, index) => `- ${prefix}-${index + 1}: ${rule}`).join("\n") || "None.";
 }
 
@@ -47,7 +47,7 @@ export function isEditorialOperation(value: string): value is EditorialOperation
 }
 
 
-function talkingPointsPrompt(input: EditorialPromptInput): ModelMessage[] {
+function createTalkingPointsPrompt(input: EditorialPromptInput): ModelMessage[] {
     const authorMessage = input.authorContext.trim();
     const source = input.articleSelection ? input.article.trim() : authorMessage || input.article.trim();
     let sourceLabel = "Article content";
@@ -74,7 +74,7 @@ function talkingPointsPrompt(input: EditorialPromptInput): ModelMessage[] {
 }
 
 
-function narrativeDraftPrompt(input: EditorialPromptInput): ModelMessage[] {
+function createNarrativeDraftPrompt(input: EditorialPromptInput): ModelMessage[] {
     const authorMessage = input.authorContext.trim();
     const sourceLabel = input.articleSelection ? "Article selection" : "Article content";
     const authorDirection = authorMessage ? `\n\nAuthor message (highest-priority direction and supplementary material):\n${authorMessage}` : "";
@@ -98,7 +98,7 @@ function narrativeDraftPrompt(input: EditorialPromptInput): ModelMessage[] {
 }
 
 
-function thesisToNarrativePrompt(input: EditorialPromptInput): ModelMessage[] {
+function createThesisToNarrativePrompt(input: EditorialPromptInput): ModelMessage[] {
     return [
         {
             role: "system",
@@ -106,13 +106,13 @@ function thesisToNarrativePrompt(input: EditorialPromptInput): ModelMessage[] {
         },
         {
             role: "user",
-            content: `Workflow: thesis to narrative. Turn the current article text into a coherent technical-article narrative. Keep the author's meaning and make the structure clear without adding unsupported material.\n\nCurrent article:\n${input.article}\n\nAuthor guidance or theses:\n${authorGuidance(input.authorContext)}`
+            content: `Workflow: thesis to narrative. Turn the current article text into a coherent technical-article narrative. Keep the author's meaning and make the structure clear without adding unsupported material.\n\nCurrent article:\n${input.article}\n\nAuthor guidance or theses:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
 
 
-function styleReviewPrompt(input: EditorialPromptInput): ModelMessage[] {
+function createStyleReviewPrompt(input: EditorialPromptInput): ModelMessage[] {
     if (!input.styleProfile)
         throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
@@ -123,13 +123,13 @@ function styleReviewPrompt(input: EditorialPromptInput): ModelMessage[] {
         },
         {
             role: "user",
-            content: `Workflow: style review. Compare the current draft against this compact, locally derived author-style profile. The raw corpus is not available to you. Identify only concrete, material divergences. Produce one conservative full-text proposal; all findings must cite supplied trait or rule IDs.\n\nCurrent article:\n${input.article}\n\nCorpus confidence: ${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters). Treat low confidence as tentative.\n\nSupplied corpus traits:\n${styleTraits(input.styleProfile)}\n\nGlobal rules:\n${numberedRules(input.styleProfile.rules, "global-rule")}\n\nThis Article rules:\n${numberedRules(input.articleStyleRules ?? "", "article-rule")}\n\nAuthor guidance:\n${authorGuidance(input.authorContext)}`
+            content: `Workflow: style review. Compare the current draft against this compact, locally derived author-style profile. The raw corpus is not available to you. Identify only concrete, material divergences. Produce one conservative full-text proposal; all findings must cite supplied trait or rule IDs.\n\nCurrent article:\n${input.article}\n\nCorpus confidence: ${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters). Treat low confidence as tentative.\n\nSupplied corpus traits:\n${formatStyleTraits(input.styleProfile)}\n\nGlobal rules:\n${formatNumberedRules(input.styleProfile.rules, "global-rule")}\n\nThis Article rules:\n${formatNumberedRules(input.articleStyleRules ?? "", "article-rule")}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
 
 
-function translationPrompt(input: EditorialPromptInput): ModelMessage[] {
+function createTranslationPrompt(input: EditorialPromptInput): ModelMessage[] {
     if (!input.targetLanguage?.trim())
         throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 
@@ -140,13 +140,13 @@ function translationPrompt(input: EditorialPromptInput): ModelMessage[] {
         },
         {
             role: "user",
-            content: `Workflow: translation. Translate the complete article into ${input.targetLanguage.trim()}. Translate the Article title and body in the same response. Return the translation and metadata through the requested structured response.\n\nCurrent Article title:\n${input.articleTitle ?? ""}\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${authorGuidance(input.authorContext)}`
+            content: `Workflow: translation. Translate the complete article into ${input.targetLanguage.trim()}. Translate the Article title and body in the same response. Return the translation and metadata through the requested structured response.\n\nCurrent Article title:\n${input.articleTitle ?? ""}\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
 
 
-function flowRevisionPrompt(input: EditorialPromptInput): ModelMessage[] {
+function createFlowRevisionPrompt(input: EditorialPromptInput): ModelMessage[] {
     return [
         {
             role: "system",
@@ -154,7 +154,7 @@ function flowRevisionPrompt(input: EditorialPromptInput): ModelMessage[] {
         },
         {
             role: "user",
-            content: `Workflow: flow revision. Revise the current article as a complete article to improve structure, transitions, and readability. Keep its meaning intact; do not summarize it or turn it into feedback.\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${authorGuidance(input.authorContext)}`
+            content: `Workflow: flow revision. Revise the current article as a complete article to improve structure, transitions, and readability. Keep its meaning intact; do not summarize it or turn it into feedback.\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
@@ -162,19 +162,19 @@ function flowRevisionPrompt(input: EditorialPromptInput): ModelMessage[] {
 
 export function createEditorialMessages(input: EditorialPromptInput): ModelMessage[] {
     if (input.skillId === BUILT_IN_SKILL.TALKING_POINTS)
-        return talkingPointsPrompt(input);
+        return createTalkingPointsPrompt(input);
 
     if (input.skillId === BUILT_IN_SKILL.NARRATIVE_DRAFT)
-        return narrativeDraftPrompt(input);
+        return createNarrativeDraftPrompt(input);
 
     if (input.operation === EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)
-        return thesisToNarrativePrompt(input);
+        return createThesisToNarrativePrompt(input);
 
     if (input.operation === EDITORIAL_OPERATION.STYLE_REVIEW)
-        return styleReviewPrompt(input);
+        return createStyleReviewPrompt(input);
 
     if (input.operation === EDITORIAL_OPERATION.TRANSLATION)
-        return translationPrompt(input);
+        return createTranslationPrompt(input);
 
-    return flowRevisionPrompt(input);
+    return createFlowRevisionPrompt(input);
 }

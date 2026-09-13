@@ -1,19 +1,19 @@
 import type { ArticleRevision } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { revisionFromRow } from "./article-record-mappers.js";
+import { mapRevisionFromRow } from "./article-record-mappers.js";
 import type { Row } from "./repository-utils.js";
 
 
 export function listArticleRevisions(database: SqliteDatabase, articleId: string): ArticleRevision[] {
-    return (database.prepare("SELECT * FROM article_revisions WHERE article_id = ? ORDER BY created_at ASC, id ASC").all(articleId) as Row[]).map(revisionFromRow);
+    return (database.prepare("SELECT * FROM article_revisions WHERE article_id = ? ORDER BY created_at ASC, id ASC").all(articleId) as Row[]).map(mapRevisionFromRow);
 }
 
 
 export function getArticleRevision(database: SqliteDatabase, articleId: string, revisionId: string): ArticleRevision | undefined {
     const row = database.prepare("SELECT * FROM article_revisions WHERE id = ? AND article_id = ?").get(revisionId, articleId) as Row | undefined;
 
-    return row && revisionFromRow(row);
+    return row && mapRevisionFromRow(row);
 }
 
 

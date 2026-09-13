@@ -3,10 +3,10 @@ import { AI_PROVIDER, type AiProvider, type ReasoningEffort } from "@skladno/sha
 
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
-import { openAiResponseId, openAiResponsesProviderOptions, type OpenAiResponsesProviderOptions } from "./openai-responses.js";
+import { getOpenAiResponseId, getOpenAiResponsesProviderOptions, type OpenAiResponsesProviderOptions } from "./openai-responses.js";
 
 
-export function providerError(error: unknown, hadPreviousResponseId: boolean): EditorialEngineError {
+export function createProviderError(error: unknown, hadPreviousResponseId: boolean): EditorialEngineError {
     const message = error instanceof Error ? error.message : EDITORIAL_ENGINE_ERROR.PROVIDER;
     if (hadPreviousResponseId && /previous[_ ]response|response.*not found|not found/i.test(message))
         return new EditorialEngineError(EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED, EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED);
@@ -26,7 +26,7 @@ export function isAcceptedFinish(reason: string): boolean {
 export type SupportingTextProviderOptions = OpenAiResponsesProviderOptions | undefined;
 
 
-export function aiSdkGenerationOptions({ model, signal, providerOptions }: { model: LanguageModel; signal: AbortSignal; providerOptions?: SupportingTextProviderOptions }) {
+export function createAiSdkGenerationOptions({ model, signal, providerOptions }: { model: LanguageModel; signal: AbortSignal; providerOptions?: SupportingTextProviderOptions }) {
     return {
         model,
         abortSignal: signal,
@@ -36,22 +36,22 @@ export function aiSdkGenerationOptions({ model, signal, providerOptions }: { mod
 }
 
 
-export function supportingTextProviderOptions(provider: AiProvider, reasoningEffort?: ReasoningEffort): SupportingTextProviderOptions {
+export function getSupportingTextProviderOptions(provider: AiProvider, reasoningEffort?: ReasoningEffort): SupportingTextProviderOptions {
     return provider === AI_PROVIDER.OPENAI
-        ? openAiResponsesProviderOptions(false, undefined, reasoningEffort)
+        ? getOpenAiResponsesProviderOptions(false, undefined, reasoningEffort)
         : undefined;
 }
 
 
-export function editorialProviderOptions({ provider, storeResponses, previousResponseId, reasoningEffort }: { provider: AiProvider; storeResponses: boolean; previousResponseId?: string; reasoningEffort?: ReasoningEffort }): SupportingTextProviderOptions {
+export function getEditorialProviderOptions({ provider, storeResponses, previousResponseId, reasoningEffort }: { provider: AiProvider; storeResponses: boolean; previousResponseId?: string; reasoningEffort?: ReasoningEffort }): SupportingTextProviderOptions {
     return provider === AI_PROVIDER.OPENAI
-        ? openAiResponsesProviderOptions(storeResponses, previousResponseId, reasoningEffort)
+        ? getOpenAiResponsesProviderOptions(storeResponses, previousResponseId, reasoningEffort)
         : undefined;
 }
 
 
-export function continuationToken({ provider, storeResponses, metadata }: { provider: AiProvider; storeResponses: boolean; metadata: unknown }): string | undefined {
+export function getContinuationToken({ provider, storeResponses, metadata }: { provider: AiProvider; storeResponses: boolean; metadata: unknown }): string | undefined {
     return provider === AI_PROVIDER.OPENAI && storeResponses
-        ? openAiResponseId(metadata)
+        ? getOpenAiResponseId(metadata)
         : undefined;
 }

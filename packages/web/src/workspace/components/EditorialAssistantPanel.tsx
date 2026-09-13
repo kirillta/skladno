@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState, type KeyboardEventHandler } from "react";
 import { useIntl, type IntlShape } from "react-intl";
-import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, keyBindingsEqual, resolveKeyBindings, type AssistantCapabilityActivity, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
+import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, areKeyBindingsEqual, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, resolveKeyBindings, type AssistantCapabilityActivity, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
-import { eventKeyBinding, type KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
-import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
+import { getEventKeyBinding, type KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
+import { getShortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { AssistantComposer, type AssistantComposerValue } from "./assistant/AssistantComposer.js";
 import { AssistantTimeline } from "./assistant/AssistantTimeline.js";
 import { skillMessages } from "./assistant/assistant-messages.js";
@@ -14,7 +14,7 @@ import type { AssistantSelectionScope, StreamedAssistantMessage } from "../state
 type AssistantState = "idle" | "streaming" | "error";
 
 
-function skillAliasKey(skill: BuiltInSkillId) {
+function getSkillAliasKey(skill: BuiltInSkillId) {
     switch (skill) {
         case BUILT_IN_SKILL.TALKING_POINTS:
             return "talkingPoints";
@@ -32,7 +32,7 @@ function skillAliasKey(skill: BuiltInSkillId) {
 }
 
 
-function slashQueryAt(guidance: string, caretOffset: number): { start: number; query: string } | undefined {
+function getSlashQueryAt(guidance: string, caretOffset: number): { start: number; query: string } | undefined {
     const start = guidance.lastIndexOf("/", caretOffset - 1);
     if (start < 0 || (start > 0 && !/\s/.test(guidance[start - 1] ?? "")))
         return undefined;
@@ -65,7 +65,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
     const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0) && (!selection || !selectedSkill || builtInSkillScopeCompatibility[selectedSkill].includes("selection"));
     const availableSkills = builtInSkills;
     const pickerSkills = slashRange === undefined ? availableSkills : availableSkills.filter((skill) => {
-        const aliases = intl.formatMessage({ id: `assistant.skill.${skillAliasKey(skill)}.aliases` });
+        const aliases = intl.formatMessage({ id: `assistant.skill.${getSkillAliasKey(skill)}.aliases` });
         const query = slashQuery.toLocaleLowerCase();
 
         return !query
@@ -128,7 +128,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
         setSelectedSkill(value.selectedSkill);
         setSkillOffset(value.skillOffset);
         setCaretOffset(value.caretOffset);
-        const slash = slashQueryAt(value.guidance, value.caretOffset);
+        const slash = getSlashQueryAt(value.guidance, value.caretOffset);
         if (slash) {
             setQuickActionsOpen(true);
             setActiveSkillIndex(0);
@@ -155,8 +155,8 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
             const configuredSendBinding = Object.prototype.hasOwnProperty.call(shortcutOverrides, KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST)
                 ? resolveKeyBindings(shortcutOverrides)[KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST]
                 : undefined;
-            const currentBinding = eventKeyBinding(event);
-            const isConfiguredShortcut = configuredSendBinding !== undefined && configuredSendBinding !== null && currentBinding !== undefined && keyBindingsEqual(configuredSendBinding, currentBinding);
+            const currentBinding = getEventKeyBinding(event);
+            const isConfiguredShortcut = configuredSendBinding !== undefined && configuredSendBinding !== null && currentBinding !== undefined && areKeyBindingsEqual(configuredSendBinding, currentBinding);
             if (isConfiguredShortcut)
                 return;
 
@@ -266,7 +266,7 @@ export function EditorialAssistantPanel({ data, actions, layout }: { data: Edito
         <header className="flex min-h-18 items-center border-b border-border px-5">
             <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="ml-3 text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2>
-            <Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.collapse" }), KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}>
+            <Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" title={getShortcutHint(intl.formatMessage({ id: "assistant.collapse" }), KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}>
                 <ChevronRightIcon className="size-3" />
             </Button>
         </header>

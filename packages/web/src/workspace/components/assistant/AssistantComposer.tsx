@@ -9,7 +9,7 @@ import type { BuiltInSkillId, KeyBindingOverrides } from "@skladno/shared";
 import { KEY_BINDING_COMMAND } from "@skladno/shared";
 import { Button } from "../../../ui/primitives.js";
 import { SendIcon, StopIcon } from "../../../ui/icons.js";
-import { shortcutHint } from "../../../key-bindings/shortcut-hint.js";
+import { getShortcutHint } from "../../../key-bindings/shortcut-hint.js";
 import type { AssistantSelectionScope } from "../../state/assistant-messages-state.js";
 import { AssistantQuickActions, SelectionChip } from "./AssistantComposerActions.js";
 import { AssistantSkillTagNode } from "./AssistantSkillTagNode.js";
@@ -83,9 +83,9 @@ export function AssistantComposer({ state, picker, actions }: { state: Assistant
             </div>
             <div className="flex shrink-0 justify-end">
                 {requestState === "streaming"
-                    ? <Button className="inline-grid size-9 place-items-center !p-0" variant="danger" title={shortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></Button>
+                    ? <Button className="inline-grid size-9 place-items-center !p-0" variant="danger" title={getShortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></Button>
                     : <div className="flex">
-                        <Button className="inline-grid size-8 place-items-center rounded-r-none !p-0" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button>
+                        <Button className="inline-grid size-8 place-items-center rounded-r-none !p-0" variant="quiet" title={getShortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button>
                         <AssistantQuickActions context={{ state: requestState, composer }} picker={picker} />
                     </div>}
             </div>

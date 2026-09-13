@@ -31,7 +31,7 @@ export interface ElectronContextBridge {
 }
 
 
-function clientError(error: ElectronIpcError): Error {
+function createClientError(error: ElectronIpcError): Error {
     if (error.code === "revision_conflict" && error.article)
         return new ArticleRevisionConflictError(error.article);
 
@@ -42,7 +42,7 @@ function clientError(error: ElectronIpcError): Error {
 }
 
 
-function abortError(): Error {
+function createAbortError(): Error {
     return new DOMException("The Electron application request was aborted.", "AbortError");
 }
 
@@ -66,7 +66,7 @@ function createStream(
     signal?: AbortSignal,
 ): Promise<void> {
     if (signal?.aborted)
-        return Promise.reject(abortError());
+        return Promise.reject(createAbortError());
 
     return new Promise<void>((resolve, reject) => {
         let settled = false;
@@ -94,7 +94,7 @@ function createStream(
 
             if (payload.event.type === "error") {
                 const parameters = "parameters" in payload.event ? payload.event.parameters : undefined;
-                settle(clientError({ code: payload.event.errorCode, status: 500, ...(parameters ? { parameters } : {}) }));
+                settle(createClientError({ code: payload.event.errorCode, status: 500, ...(parameters ? { parameters } : {}) }));
 
                 return;
             }
@@ -124,7 +124,7 @@ function createStream(
             settled = true;
             ipcRenderer.send(ELECTRON_IPC_CHANNEL.cancel, { streamId: subscription.request.streamId });
             cleanup();
-            reject(abortError());
+            reject(createAbortError());
         };
 
         ipcRenderer.on(ELECTRON_IPC_CHANNEL.streamEvent, listener);
@@ -138,7 +138,7 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
     async function invoke<Method extends ElectronApplicationMethod>(method: Method, ...args: ElectronApplicationOperationMap[Method]["args"]): Promise<ElectronApplicationOperationMap[Method]["result"]> {
         const response = await ipcRenderer.invoke(ELECTRON_IPC_CHANNEL.invoke, { method, args } as ElectronInvokeRequest) as ElectronInvokeResult<Method>;
         if (!response.ok)
-            throw clientError(response.error);
+            throw createClientError(response.error);
 
         return response.value;
     }

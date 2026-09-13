@@ -39,7 +39,7 @@ test("Assistant execution loads Skills from its catalog", async () => {
     const loop = new AssistantCapabilityLoop({
         assistant: { setExecution: () => undefined }, engines: {},
         capabilities: {
-            definitions: () => [], discover: () => [], read: () => undefined, action: () => ({ items: [], rules: "", status: "empty" }),
+            getDefinitions: () => [], discover: () => [], read: () => undefined, executeAction: () => ({ items: [], rules: "", status: "empty" }),
             stream: async function* () {
                 return;
             },

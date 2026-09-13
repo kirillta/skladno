@@ -1,7 +1,7 @@
 import { REVISION_PROVENANCE_KIND, resolveBuiltInSkillId, type AssistantCapabilityExecution, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId, type ProposalAcceptance } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { createId, now, parseObject, type Row } from "./repository-utils.js";
+import { createId, getCurrentTimestamp, parseObject, type Row } from "./repository-utils.js";
 
 const roles: readonly AssistantMessageRole[] = ["assistant", "author", "system"];
 const kinds: readonly AssistantMessageKind[] = ["greeting", "message", "response", "status"];
@@ -22,7 +22,7 @@ export class AssistantRepository {
         if (exists)
             return;
 
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         this.database.prepare("INSERT INTO assistant_messages (id, article_id, role, kind, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
             .run(createId(), articleId, "assistant", "greeting", "completed", timestamp, timestamp);
     }
@@ -47,9 +47,9 @@ export class AssistantRepository {
             ORDER BY assistant_messages.created_at, assistant_messages.id
         `).all(articleId) as Row[];
 
-        const acceptances = this.proposalAcceptances(articleId);
+        const acceptances = this.getProposalAcceptances(articleId);
         return rows.map((row) => {
-            const message = this.toMessage(row);
+            const message = this.mapMessageFromRow(row);
             const acceptance = message.editorialArtifactId ? acceptances.get(message.editorialArtifactId) : undefined;
             return acceptance ? { ...message, proposalAcceptance: acceptance } : message;
         });
@@ -60,7 +60,7 @@ export class AssistantRepository {
         if (this.database.prepare("SELECT 1 FROM assistant_requests WHERE id = ?").get(input.id))
             throw new Error("Assistant request already exists.");
 
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
             this.database.prepare("INSERT INTO assistant_requests (id, article_id, base_revision_id, scope_json, explicit_skill_id, target_language, status, retry_of_request_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
@@ -78,20 +78,20 @@ export class AssistantRepository {
 
 
     setAuthorMessage(requestId: string, content: string): void {
-        this.database.prepare("UPDATE assistant_messages SET content = ?, updated_at = ? WHERE request_id = ? AND role = 'author'").run(content, now(), requestId);
+        this.database.prepare("UPDATE assistant_messages SET content = ?, updated_at = ? WHERE request_id = ? AND role = 'author'").run(content, getCurrentTimestamp(), requestId);
     }
 
 
     resolveRequest(requestId: string, skillId: BuiltInSkillId | undefined, source: AssistantSkillSource | undefined): void {
         this.database.prepare("UPDATE assistant_requests SET resolved_skill_id = ?, skill_source = ?, updated_at = ? WHERE id = ?")
-            .run(skillId ?? null, source ?? null, now(), requestId);
+            .run(skillId ?? null, source ?? null, getCurrentTimestamp(), requestId);
         this.database.prepare("UPDATE assistant_messages SET skill_id = ?, updated_at = ? WHERE request_id = ? AND role = 'author'")
-            .run(skillId ?? null, now(), requestId);
+            .run(skillId ?? null, getCurrentTimestamp(), requestId);
     }
 
 
     setExecution(requestId: string, capability: string, status: "started" | "completed" | "failed" | "cancelled" = "started"): void {
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         this.database.prepare("UPDATE assistant_requests SET capability_name = ?, updated_at = ? WHERE id = ?").run(capability, timestamp, requestId);
         if (status === "started") {
             this.database.prepare("INSERT INTO assistant_capability_executions (request_id, capability_name, status, base_revision_id, started_at) SELECT id, ?, 'started', base_revision_id, ? FROM assistant_requests WHERE id = ?")
@@ -124,19 +124,19 @@ export class AssistantRepository {
 
 
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         const messageId = createId();
         return this.completeRun(() => {
             this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, proposal_content, skill_id, response_kind, editorial_artifact_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 .run(messageId, input.articleId, input.requestId, "assistant", "response", "completed", input.content, input.proposalContent ?? null, input.skillId ?? null, input.responseKind, input.editorialArtifactId ?? null, timestamp, timestamp);
             this.database.prepare("UPDATE assistant_requests SET status = 'completed', updated_at = ? WHERE id = ?").run(timestamp, input.requestId);
-            return this.toMessage(this.database.prepare("SELECT * FROM assistant_messages WHERE id = ?").get(messageId) as Row);
+            return this.mapMessageFromRow(this.database.prepare("SELECT * FROM assistant_messages WHERE id = ?").get(messageId) as Row);
         });
     }
 
 
     failRequest(requestId: string, status: "failed" | "cancelled", errorCode: string): void {
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         this.database.exec("BEGIN IMMEDIATE;");
         try {
             const request = this.getRequest(requestId);
@@ -203,7 +203,7 @@ export class AssistantRepository {
     }
 
 
-    private toMessage(row: Row): AssistantMessage {
+    private mapMessageFromRow(row: Row): AssistantMessage {
         const role = String(row.role) as AssistantMessageRole;
         const kind = String(row.kind) as AssistantMessageKind;
         const status = String(row.status) as AssistantMessageStatus;
@@ -226,7 +226,7 @@ export class AssistantRepository {
         const selectionText = role === "author" && requestScope?.kind === "selection" && typeof row.request_revision_content === "string"
             ? String(row.request_revision_content).slice(requestScope.startOffset, requestScope.endOffset)
             : undefined;
-        const artifactContent = this.artifactContent(row.artifact_content);
+        const artifactContent = this.parseArtifactContent(row.artifact_content);
         const proposalContent = row.proposal_content === null || row.proposal_content === undefined
             ? artifactContent?.proposal
             : String(row.proposal_content);
@@ -249,7 +249,7 @@ export class AssistantRepository {
     }
 
 
-    private proposalAcceptances(articleId: string): Map<string, ProposalAcceptance> {
+    private getProposalAcceptances(articleId: string): Map<string, ProposalAcceptance> {
         const rows = this.database.prepare("SELECT id, provenance_json FROM article_revisions WHERE article_id = ? ORDER BY created_at, id").all(articleId) as Row[];
         const acceptances = new Map<string, ProposalAcceptance>();
         for (const row of rows) {
@@ -271,7 +271,7 @@ export class AssistantRepository {
     }
 
 
-    private artifactContent(value: unknown): { proposal?: string; translation?: NonNullable<AssistantMessage["translation"]>; proposalSummaries?: import("@skladno/shared").ProposalChangeSummary[]; proposalSummaryLocale?: string } | undefined {
+    private parseArtifactContent(value: unknown): { proposal?: string; translation?: NonNullable<AssistantMessage["translation"]>; proposalSummaries?: import("@skladno/shared").ProposalChangeSummary[]; proposalSummaryLocale?: string } | undefined {
         if (typeof value !== "string")
             return undefined;
 

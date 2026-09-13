@@ -20,7 +20,7 @@ import { EditorialCapabilityCatalog } from "./assistant/capabilities/editorial-c
 import { AssistantCapabilityLoop } from "./assistant/capabilities/assistant-capability-loop.js";
 import { AssistantCompletion } from "./assistant/completion/assistant-completion.js";
 import { AssistantRequestPreparation } from "./assistant/requests/assistant-request-preparation.js";
-import { conversationHistory } from "./assistant/requests/conversation-history.js";
+import { getConversationHistory } from "./assistant/requests/conversation-history.js";
 import { AssistantSkillCatalog, builtInSkillSource } from "./assistant/skills/assistant-skill-catalog.js";
 import type { EditorialService } from "./editorial/editorial-service.js";
 import type { TelemetryObserver } from "./telemetry/telemetry-observer.js";
@@ -70,7 +70,7 @@ export function createApplicationServices({ stores, settings, integration = {} }
         : undefined;
     const skills = new AssistantSkillCatalog([builtInSkillSource]);
     const preparation = new AssistantRequestPreparation({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, engines: stores.engines, capabilities });
-    const capabilityLoop = new AssistantCapabilityLoop({ assistant: stores.assistant, engines: stores.engines, capabilities, skills, conversationHistory: (articleId, limit) => conversationHistory(stores.assistant, articleId, limit) });
+    const capabilityLoop = new AssistantCapabilityLoop({ assistant: stores.assistant, engines: stores.engines, capabilities, skills, conversationHistory: (articleId, limit) => getConversationHistory(stores.assistant, articleId, limit) });
     const completion = new AssistantCompletion({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, artifacts: stores.artifacts, factChecks, capabilities });
 
     return {

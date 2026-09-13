@@ -27,7 +27,7 @@ function isCheckpointResult(value: unknown, requestId: string): value is Electro
 }
 
 
-function checkpointResult(value: unknown, requestId: string): ElectronCheckpointResult | undefined {
+function parseCheckpointResult(value: unknown, requestId: string): ElectronCheckpointResult | undefined {
     if (typeof value !== "string")
         return undefined;
 
@@ -55,7 +55,7 @@ ipcRenderer.on(ELECTRON_LIFECYCLE_CHANNEL.prepareClose, (_event, payload: unknow
         if (!(event instanceof CustomEvent))
             return;
 
-        const result = checkpointResult(event.detail, payload.requestId);
+        const result = parseCheckpointResult(event.detail, payload.requestId);
         if (!result)
             return;
 

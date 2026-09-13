@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { HTTP_STATUS } from "@skladno/shared";
 
 import type { ProposalSummaryService } from "../../application/editorial/proposals/proposal-summary-service.js";
-import { object, readJson, writeJson } from "../transport/json.js";
+import { parseObject, readJson, writeJson } from "../transport/json.js";
 
 
 export async function summarizeProposalRoute(request: IncomingMessage, response: ServerResponse, articleId: string, summaries: ProposalSummaryService): Promise<void> {
@@ -13,5 +13,5 @@ export async function summarizeProposalRoute(request: IncomingMessage, response:
             controller.abort();
     });
 
-    writeJson(response, HTTP_STATUS.OK, await summaries.summarize(articleId, object(await readJson(request)), controller.signal));
+    writeJson(response, HTTP_STATUS.OK, await summaries.summarize(articleId, parseObject(await readJson(request)), controller.signal));
 }

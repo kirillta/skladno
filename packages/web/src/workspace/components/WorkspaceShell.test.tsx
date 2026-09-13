@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
-import { message } from "../../i18n/test-message.js";
+import { getMessage } from "../../i18n/test-message.js";
 import { WorkspaceShell as RenderWorkspaceShell } from "./WorkspaceShell.js";
 
 // Product scenarios: workspace.shell.responsive-collapse, workspace.shell.focus-mode
@@ -119,8 +119,8 @@ describe("WorkspaceShell", () => {
         renderShell();
 
         const main = screen.getByRole("main");
-        const libraryResize = screen.getByRole("separator", { name: message("navigation.resizeArticleLibrary") });
-        const assistantResize = screen.getByRole("separator", { name: message("assistant.resize") });
+        const libraryResize = screen.getByRole("separator", { name: getMessage("navigation.resizeArticleLibrary") });
+        const assistantResize = screen.getByRole("separator", { name: getMessage("assistant.resize") });
 
         expect(main.firstElementChild?.textContent).toContain("Article Workspace");
         expect(screen.getByLabelText("Article Library Panel")).toBeTruthy();
@@ -143,15 +143,15 @@ describe("WorkspaceShell", () => {
             assistantWidth: 384,
         });
 
-        expect(screen.getByRole("separator", { name: message("assistant.resize") })).toBeTruthy();
+        expect(screen.getByRole("separator", { name: getMessage("assistant.resize") })).toBeTruthy();
 
         setViewportWidth(1280);
-        expect(screen.queryByRole("separator", { name: message("assistant.resize") })).toBeNull();
+        expect(screen.queryByRole("separator", { name: getMessage("assistant.resize") })).toBeNull();
         expect(screen.getByLabelText("Editorial Assistant Panel").textContent).toContain("Assistant");
-        expect(screen.getByRole("separator", { name: message("navigation.resizeArticleLibrary") })).toBeTruthy();
+        expect(screen.getByRole("separator", { name: getMessage("navigation.resizeArticleLibrary") })).toBeTruthy();
 
         setViewportWidth(1440);
-        expect(screen.getByRole("separator", { name: message("assistant.resize") })).toBeTruthy();
+        expect(screen.getByRole("separator", { name: getMessage("assistant.resize") })).toBeTruthy();
         view.unmount();
     });
 
@@ -163,7 +163,7 @@ describe("WorkspaceShell", () => {
         fireEvent.click(screen.getByRole("button", { name: "Expand Assistant" }));
 
         expect(screen.getByRole("button", { name: "Collapse Assistant" })).toBeTruthy();
-        const assistantResize = screen.getByRole("separator", { name: message("assistant.resize") });
+        const assistantResize = screen.getByRole("separator", { name: getMessage("assistant.resize") });
         expect(assistantResize.getAttribute("aria-valuenow")).toBe("360");
         expect(assistantResize.getAttribute("aria-valuemax")).toBe("360");
 
@@ -172,7 +172,7 @@ describe("WorkspaceShell", () => {
         const overlay = screen.getByLabelText("Editorial Assistant Panel").parentElement;
         expect(overlay?.dataset.responsiveOverlay).toBe("true");
         expect(overlay?.className).toContain("border-border-strong");
-        expect(screen.queryByRole("separator", { name: message("assistant.resize") })).toBeNull();
+        expect(screen.queryByRole("separator", { name: getMessage("assistant.resize") })).toBeNull();
     });
 
 
@@ -183,8 +183,8 @@ describe("WorkspaceShell", () => {
             assistantWidth: 384,
         });
 
-        expect(screen.queryByRole("separator", { name: message("assistant.resize") })).toBeNull();
-        expect(screen.queryByRole("separator", { name: message("navigation.resizeArticleLibrary") })).toBeNull();
+        expect(screen.queryByRole("separator", { name: getMessage("assistant.resize") })).toBeNull();
+        expect(screen.queryByRole("separator", { name: getMessage("navigation.resizeArticleLibrary") })).toBeNull();
         expect(screen.getByLabelText("Article Library Panel").textContent).toContain("Library");
     });
 

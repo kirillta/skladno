@@ -2,7 +2,7 @@ import type { KeyboardEvent } from "react";
 import type { KeyBindingOverrides } from "@skladno/shared";
 import { Tab, TabList } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
-import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
+import { getShortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { workspaceViewDefinitions, type WorkspaceView } from "../workspace-views.js";
 
 
@@ -61,7 +61,7 @@ export function WorkspaceTabBar({ view, setView, badges = {}, shortcutOverrides 
                 aria-label={accessibleName}
                 selected={view === item.id}
                 tabIndex={view === item.id ? 0 : -1}
-                title={shortcutHint(accessibleName, item.command, shortcutOverrides)}
+                title={getShortcutHint(accessibleName, item.command, shortcutOverrides)}
                 onClick={() => setView(item.id)}
                 onKeyDown={(event) => handleKeyDown(event, index)}>
                 {label}

@@ -20,7 +20,7 @@ export const translationSchema = z.object({
 });
 
 
-export function styleReview(value: z.infer<typeof styleReviewSchema>, profile: StyleProfile, articleRules = ""): StyleReview {
+export function mapStyleReview(value: z.infer<typeof styleReviewSchema>, profile: StyleProfile, articleRules = ""): StyleReview {
     const availableTraits = new Set([
         ...profile.traits.map((trait) => trait.id),
         ...profile.rules.split("\n").filter(Boolean).map((_rule, index) => `global-rule-${index + 1}`),

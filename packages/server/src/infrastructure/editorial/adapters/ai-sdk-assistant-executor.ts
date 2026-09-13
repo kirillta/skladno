@@ -7,8 +7,8 @@ import type { EditorialEngineEvent } from "../../../application/editorial/engine
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
 import { EDITORIAL_ENGINE_EVENT } from "../../../application/editorial/engine/editorial-engine-events.js";
 import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
-import { assistantConversationPrompt, assistantStepOptions, createAssistantTools } from "./ai-sdk-assistant.js";
-import { continuationToken, editorialProviderOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
+import { createAssistantConversationPrompt, getAssistantStepOptions, createAssistantTools } from "./ai-sdk-assistant.js";
+import { getContinuationToken, getEditorialProviderOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
 
 
 interface AiSdkAssistantExecutorOptions {
@@ -27,7 +27,7 @@ export class AiSdkAssistantExecutor {
         const state = { activeCapabilities: request.initialActiveCapabilities };
         const execute = (capability: string, input: Readonly<Record<string, string>>) => this.executeCapability(request, signal, state, capability, input);
         const agent = this.createAgent(request, createAssistantTools(request, execute), state);
-        const result = await agent.stream({ prompt: assistantConversationPrompt(request), abortSignal: signal });
+        const result = await agent.stream({ prompt: createAssistantConversationPrompt(request), abortSignal: signal });
         let text = "";
         for await (const delta of result.textStream) {
             text += delta;
@@ -39,7 +39,7 @@ export class AiSdkAssistantExecutor {
         if (!text.trim() || signal.aborted || !isAcceptedFinish(finalStep.finishReason) || (steps.length >= 6 && finalStep.finishReason === "tool-calls"))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
 
-        const token = continuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: finalStep.providerMetadata });
+        const token = getContinuationToken({ provider: this.options.provider, storeResponses: this.options.storeResponses, metadata: finalStep.providerMetadata });
         yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), ...(token ? { continuationToken: token } : {}), text };
     }
 
@@ -58,8 +58,8 @@ export class AiSdkAssistantExecutor {
 
 
     private createAgent(request: EditorialAssistantRequest, tools: ToolSet, state: { activeCapabilities?: readonly string[] }) {
-        const activeTools = () => state.activeCapabilities ? [...state.activeCapabilities, "load_skill"] : ["find_capabilities", "load_skill"];
-        const providerOptions = editorialProviderOptions(this.options);
+        const getActiveTools = () => state.activeCapabilities ? [...state.activeCapabilities, "load_skill"] : ["find_capabilities", "load_skill"];
+        const providerOptions = getEditorialProviderOptions(this.options);
 
         return new ToolLoopAgent<never, ToolSet>({
             model: this.options.languageModel,
@@ -70,8 +70,8 @@ export class AiSdkAssistantExecutor {
                 ...request.instructions,
             ].join("\n\n"),
             tools,
-            activeTools: activeTools(),
-            prepareStep: ({ stepNumber }) => assistantStepOptions(stepNumber, state.activeCapabilities),
+            activeTools: getActiveTools(),
+            prepareStep: ({ stepNumber }) => getAssistantStepOptions(stepNumber, state.activeCapabilities),
             stopWhen: isStepCount(6),
             telemetry: { isEnabled: false },
             ...(providerOptions ? { providerOptions } : {}),

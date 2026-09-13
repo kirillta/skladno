@@ -4,15 +4,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AssistantEvent } from "@skladno/shared";
 
 import { App } from "../App.js";
-import { message } from "../i18n/test-message.js";
-import { article, fakeClient, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
+import { getMessage } from "../i18n/test-message.js";
+import { createArticleFixture, createFakeClient, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
 
 describe("Editorial Workspace assistant", () => {
     afterEach(resetWorkspaceTestEnvironment);
 
     // Product scenarios: editorial-workflows.assistant-streaming-block-handoff, workspace.proposal.accepted-restart
     it("reveals stable streaming blocks and hands review output to one result card", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
         let emit: ((event: AssistantEvent) => void) | undefined;
@@ -28,9 +28,9 @@ describe("Editorial Workspace assistant", () => {
 
         render(<App client={client} />);
         await screen.findByRole("heading", { name: "First Article" });
-        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
-        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
         await waitFor(() => expect(emit).toBeDefined());
         expect(await screen.findByRole("article", { name: "Talking points" })).toBeTruthy();
 
@@ -57,7 +57,7 @@ describe("Editorial Workspace assistant", () => {
     });
 
     it("restores the latest completed Proposal Review from local Assistant records", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
         const telemetry = { getTelemetryConsent: vi.fn(), setTelemetryConsent: vi.fn(), beginTelemetryCapture: vi.fn().mockResolvedValue(7), captureTelemetry: vi.fn().mockResolvedValue(undefined) };
         window.skladnoTelemetry = telemetry;
@@ -89,7 +89,7 @@ describe("Editorial Workspace assistant", () => {
 
         expect(await screen.findByText("Replacement · Change 1 of 1")).toBeTruthy();
         expect(screen.getByText("Improved Draft")).toBeTruthy();
-        await user.click(screen.getByRole("button", { name: message("views.acceptAll") }));
+        await user.click(screen.getByRole("button", { name: getMessage("views.acceptAll") }));
 
         await waitFor(() => expect(client.acceptProposal).toHaveBeenCalledWith("one", {
             baseRevisionId: "one-revision",
@@ -103,8 +103,8 @@ describe("Editorial Workspace assistant", () => {
 
     // Product scenarios: workspace.proposal.accepted-restart
     it("restores an accepted Proposal as accepted after restart", async () => {
-        const client = fakeClient();
-        const accepted = article("one", "First Article");
+        const client = createFakeClient();
+        const accepted = createArticleFixture("one", "First Article");
         accepted.currentRevisionId = "accepted-revision";
         accepted.currentRevision = {
             id: accepted.currentRevisionId,
@@ -137,14 +137,14 @@ describe("Editorial Workspace assistant", () => {
         expect(screen.queryByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.")).toBeNull();
         expect(screen.getByText("Accepted")).toBeTruthy();
         expect(screen.getByText("Rejected")).toBeTruthy();
-        expect(screen.getByRole("button", { name: message("views.acceptAll") }).hasAttribute("disabled")).toBe(true);
-        expect(screen.getByRole("tab", { name: message("workspace.tabs.proposal") })).toBeTruthy();
+        expect(screen.getByRole("button", { name: getMessage("views.acceptAll") }).hasAttribute("disabled")).toBe(true);
+        expect(screen.getByRole("tab", { name: getMessage("workspace.tabs.proposal") })).toBeTruthy();
     });
 
 
     it("keeps an unaccepted Proposal stale when a different Proposal changed the Revision", async () => {
-        const client = fakeClient();
-        const articleWithDifferentAcceptance = article("one", "First Article");
+        const client = createFakeClient();
+        const articleWithDifferentAcceptance = createArticleFixture("one", "First Article");
         articleWithDifferentAcceptance.currentRevisionId = "accepted-revision";
         articleWithDifferentAcceptance.currentRevision = {
             id: articleWithDifferentAcceptance.currentRevisionId,
@@ -179,7 +179,7 @@ describe("Editorial Workspace assistant", () => {
 
 
     it("keeps the current Workspace View when an Assistant request prepares a Proposal", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "write", selectedArticleId: "one" }));
@@ -190,9 +190,9 @@ describe("Editorial Workspace assistant", () => {
         render(<App client={client} />);
 
         await screen.findByRole("heading", { name: "First Article" });
-        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
-        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
 
         await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalled());
         expect(screen.getByRole("tab", { name: "Write" }).getAttribute("aria-selected")).toBe("true");

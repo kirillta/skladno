@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
-import { findKeyBindingConflict, formatKeyBinding, isAssistantSendMode, KEY_BINDING_COMMAND, keyBindingCommands, keyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, type GeneralSettings, type KeyBindingCommandId, type KeyBindingOverrides } from "@skladno/shared";
+import { findKeyBindingConflict, formatKeyBinding, isAssistantSendMode, KEY_BINDING_COMMAND, keyBindingCommands, areKeyBindingsEqual, normalizeKeyBinding, resolveKeyBindings, type GeneralSettings, type KeyBindingCommandId, type KeyBindingOverrides } from "@skladno/shared";
 import { useIntl } from "react-intl";
 import { Banner, Button, Select } from "../../ui/primitives.js";
 import { SettingRow, SettingsGroup } from "./SettingRow.js";
@@ -62,7 +62,7 @@ export function KeyBindingSettings({ overrides, save, general, saveGeneral }: { 
             {keyBindingCommands.filter((command) => command.category === category && command.id !== KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST).map((command) => {
                 const override = overrides[command.id];
                 const isOverridden = Object.prototype.hasOwnProperty.call(overrides, command.id)
-                    && (override === null || (override !== undefined && !keyBindingsEqual(override, command.defaultBinding)));
+                    && (override === null || (override !== undefined && !areKeyBindingsEqual(override, command.defaultBinding)));
                 const listening = recording === command.id;
                 return <SettingRow key={command.id} headingLevel={3} label={intl.formatMessage({ id: command.labelMessageId })} hint={intl.formatMessage({ id: command.hintMessageId })}>
                     <div className="flex flex-wrap items-center gap-2">

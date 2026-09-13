@@ -13,7 +13,7 @@ import type { AssistantStore } from "../assistant-store.js";
 import type { EditorialCapabilityCatalog } from "../capabilities/editorial-capability-catalog.js";
 
 
-function completedContent(request: PreparedAssistantRequest, text: string): string {
+function getCompletedContent(request: PreparedAssistantRequest, text: string): string {
     if (request.scope.kind !== "selection" || !request.completedCapability || request.completedCapability === EDITORIAL_CAPABILITY.FACT_CHECK)
         return text;
 
@@ -21,7 +21,7 @@ function completedContent(request: PreparedAssistantRequest, text: string): stri
 }
 
 
-export function responseKind(capability?: string): AssistantResponseKind {
+export function getResponseKind(capability?: string): AssistantResponseKind {
     switch (capability) {
         case EDITORIAL_CAPABILITY.FACT_CHECK:
             return "findings_prepared";
@@ -59,11 +59,11 @@ export class AssistantCompletion {
             throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
 
         const metadataChanged = this.applyPendingActions(request);
-        const content = completedContent(request, event.text);
-        const kind = responseKind(request.completedCapability);
+        const content = getCompletedContent(request, event.text);
+        const kind = getResponseKind(request.completedCapability);
         const artifact = this.createCompletionArtifact(request, event, content);
 
-        const result = this.completionResult(request, event, content, artifact.factCheck, metadataChanged);
+        const result = this.getCompletionResult(request, event, content, artifact.factCheck, metadataChanged);
         const input = {
             requestId: request.requestId,
             articleId: request.articleId,
@@ -83,7 +83,7 @@ export class AssistantCompletion {
         let metadataChanged = false;
         for (const action of request.pendingActions) {
             this.dependencies.capabilities!
-                .action(action.capability, {
+                .executeAction(action.capability, {
                     articleId: request.articleId,
                     baseRevisionId: request.scope.baseRevisionId,
                     authorizedActions: request.authorizedActions
@@ -109,7 +109,7 @@ export class AssistantCompletion {
             ...(request.resolvedSkillId ? { resolvedSkillId: request.resolvedSkillId } : {}),
             capability: request.completedCapability,
             ...(request.explicitSkillId ? { skillSource: "explicit" } : {}),
-            authorGuidance: request.authorMessage,
+            createAuthorGuidance: request.authorMessage,
             scope: request.scope,
             responseId: event.responseId,
             proposal: content,
@@ -143,7 +143,7 @@ export class AssistantCompletion {
     }
 
 
-    private completionResult(request: PreparedAssistantRequest, event: CompletionEvent, content: string, factCheck: FactCheck | undefined, metadataChanged: boolean): AssistantEditorialResult | undefined {
+    private getCompletionResult(request: PreparedAssistantRequest, event: CompletionEvent, content: string, factCheck: FactCheck | undefined, metadataChanged: boolean): AssistantEditorialResult | undefined {
         if (!request.completedCapability && !metadataChanged)
             return undefined;
 

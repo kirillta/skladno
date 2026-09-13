@@ -7,9 +7,9 @@ import { defaultGeneralSettings } from "@skladno/shared";
 
 import { App } from "../App.js";
 import { messages } from "../i18n/messages.js";
-import { message } from "../i18n/test-message.js";
+import { getMessage } from "../i18n/test-message.js";
 import { requestedTranslationLanguages } from "./state/assistant-messages-state.js";
-import { article, fakeClient, renderLocalized, resetWorkspaceTestEnvironment, TestEditorialAssistantPanel as EditorialAssistantPanel } from "./EditorialWorkspace.test-utils.js";
+import { createArticleFixture, createFakeClient, renderLocalized, resetWorkspaceTestEnvironment, TestEditorialAssistantPanel as EditorialAssistantPanel } from "./EditorialWorkspace.test-utils.js";
 
 describe("Editorial Workspace assistant", () => {
     afterEach(resetWorkspaceTestEnvironment);
@@ -27,15 +27,15 @@ describe("Editorial Workspace assistant", () => {
 
         expect(selectionChip.textContent).toContain("The first selected s…");
         expect(selectionChip.getAttribute("title")).toBe(selection.preview);
-        expect(within(selectionChip).getByRole("button", { name: message("assistant.clearArticleSelection") })).toBeTruthy();
+        expect(within(selectionChip).getByRole("button", { name: getMessage("assistant.clearArticleSelection") })).toBeTruthy();
     });
 
 
     it("keeps selected Article text while moving to the composer and drops it when cleared", async () => {
-        const client = fakeClient();
+        const client = createFakeClient();
         const user = userEvent.setup();
         Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
-        const source = article("one", "First Article");
+        const source = createArticleFixture("one", "First Article");
         source.draft = { articleId: source.id, content: source.currentRevision.content, baseRevisionId: source.currentRevisionId, version: 1, updatedAt: source.updatedAt };
         client.listArticles = vi.fn().mockResolvedValue([source]);
         client.saveArticleDraft = vi.fn().mockResolvedValue(source.draft);
@@ -50,18 +50,18 @@ describe("Editorial Workspace assistant", () => {
         selection.setBaseAndExtent(text!, 0, text!, 1);
         fireEvent(document, new Event("selectionchange"));
         fireEvent.mouseUp(editor);
-        expect(await screen.findByLabelText(message("assistant.articleSelection"))).toBeTruthy();
+        expect(await screen.findByLabelText(getMessage("assistant.articleSelection"))).toBeTruthy();
         await new Promise((resolve) => setTimeout(resolve, 0));
-        expect(screen.getByLabelText(message("assistant.articleSelection"))).toBeTruthy();
+        expect(screen.getByLabelText(getMessage("assistant.articleSelection"))).toBeTruthy();
 
-        await user.click(screen.getByRole("combobox", { name: message("assistant.guidance") }));
-        expect(screen.getByLabelText(message("assistant.articleSelection"))).toBeTruthy();
+        await user.click(screen.getByRole("combobox", { name: getMessage("assistant.guidance") }));
+        expect(screen.getByLabelText(getMessage("assistant.articleSelection"))).toBeTruthy();
 
-        await user.click(screen.getByRole("button", { name: message("assistant.clearArticleSelection") }));
-        await waitFor(() => expect(screen.queryByLabelText(message("assistant.articleSelection"))).toBeNull());
-        await user.click(screen.getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(screen.getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
-        await user.click(screen.getByRole("button", { name: message("assistant.send") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.clearArticleSelection") }));
+        await waitFor(() => expect(screen.queryByLabelText(getMessage("assistant.articleSelection"))).toBeNull());
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
 
         await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalled());
         expect(vi.mocked(client.streamAssistantRequest).mock.calls[0]?.[1]).toMatchObject({ scope: { kind: "article" } });
@@ -72,16 +72,16 @@ describe("Editorial Workspace assistant", () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} />);
-        await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));
-        await user.click(within(panel.container).getByRole("option", { name: message("assistant.skill.talkingPoints.label") }));
+        await user.click(within(panel.container).getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(within(panel.container).getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
         expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy();
 
         panel.rerender(<IntlProvider locale="en" messages={messages}><EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} language="Portuguese" assistantMessages={[]} selection={{ articleId: "one", fingerprint: "fingerprint", preview: "Selected Article text", startOffset: 0, endOffset: 21 }} clearSelection={vi.fn()} /></IntlProvider>);
 
         await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy());
-        await user.click(within(panel.container).getByRole("button", { name: message("assistant.quickActions") }));
-        expect(within(panel.container).getByRole("option", { name: message("assistant.skill.narrativeDraft.label") })).toBeTruthy();
-        await user.click(within(panel.container).getByRole("button", { name: message("assistant.send") }));
+        await user.click(within(panel.container).getByRole("button", { name: getMessage("assistant.quickActions") }));
+        expect(within(panel.container).getByRole("option", { name: getMessage("assistant.skill.narrativeDraft.label") })).toBeTruthy();
+        await user.click(within(panel.container).getByRole("button", { name: getMessage("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("", "talking_points", undefined, 0);
     });
@@ -108,14 +108,14 @@ describe("Editorial Workspace assistant", () => {
 
         try {
             const panel = renderLocalized(<AssistantPanelHarness />);
-            const timeline = () => panel.container.querySelector<HTMLElement>("[aria-live='polite']")!;
+            const getTimelineElement = () => panel.container.querySelector<HTMLElement>("[aria-live='polite']")!;
 
-            expect(timeline().scrollTop).toBe(640);
+            expect(getTimelineElement().scrollTop).toBe(640);
 
-            await user.click(within(panel.container).getByRole("button", { name: message("assistant.collapse") }));
-            await user.click(within(panel.container).getByRole("button", { name: message("assistant.expand") }));
+            await user.click(within(panel.container).getByRole("button", { name: getMessage("assistant.collapse") }));
+            await user.click(within(panel.container).getByRole("button", { name: getMessage("assistant.expand") }));
 
-            expect(timeline().scrollTop).toBe(640);
+            expect(getTimelineElement().scrollTop).toBe(640);
         } finally {
             if (scrollHeight)
                 Object.defineProperty(HTMLElement.prototype, "scrollHeight", scrollHeight);

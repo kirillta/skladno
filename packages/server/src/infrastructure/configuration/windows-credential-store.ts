@@ -16,12 +16,12 @@ export class WindowsCredentialStore implements CredentialStore {
 
 
     get(connectionId: string): string | undefined {
-        return this.entry(connectionId)?.getPassword() ?? undefined;
+        return this.getCredentialEntry(connectionId)?.getPassword() ?? undefined;
     }
 
 
     set(connectionId: string, value: string): void {
-        const entry = this.entry(connectionId);
+        const entry = this.getCredentialEntry(connectionId);
         if (!entry)
             throw new ApplicationServiceError(APPLICATION_ERROR.MANAGED_CREDENTIALS_UNAVAILABLE, HTTP_STATUS.BAD_REQUEST);
 
@@ -30,7 +30,7 @@ export class WindowsCredentialStore implements CredentialStore {
 
 
     delete(connectionId: string): void {
-        const entry = this.entry(connectionId);
+        const entry = this.getCredentialEntry(connectionId);
         if (!entry)
             throw new ApplicationServiceError(APPLICATION_ERROR.MANAGED_CREDENTIALS_UNAVAILABLE, HTTP_STATUS.BAD_REQUEST);
 
@@ -38,7 +38,7 @@ export class WindowsCredentialStore implements CredentialStore {
     }
 
 
-    private entry(connectionId: string): Entry | undefined {
+    private getCredentialEntry(connectionId: string): Entry | undefined {
         return this.available() ? new Entry(service, connectionId) : undefined;
     }
 }

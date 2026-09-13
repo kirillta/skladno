@@ -1,7 +1,7 @@
 import type { FactCheck } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { now, type Row } from "./repository-utils.js";
+import { getCurrentTimestamp, type Row } from "./repository-utils.js";
 
 
 export class FactChecksRepository {
@@ -10,7 +10,7 @@ export class FactChecksRepository {
 
     saveFactCheckRun(artifactId: string, articleId: string, revisionId: string): void {
         this.database.prepare("INSERT INTO fact_check_runs (editorial_artifact_id, article_id, revision_id, created_at) VALUES (?, ?, ?, ?)")
-            .run(artifactId, articleId, revisionId, now());
+            .run(artifactId, articleId, revisionId, getCurrentTimestamp());
     }
 
 
@@ -25,7 +25,7 @@ export class FactChecksRepository {
                 }
             })
             .map((check) => ({ ...check, findings: check.findings.map((finding) => {
-                const resolution = finding.occurrenceId ? this.resolution(finding.occurrenceId) : undefined;
+                const resolution = finding.occurrenceId ? this.getFindingResolution(finding.occurrenceId) : undefined;
                 return resolution ? { ...finding, resolution } : finding;
             }) }));
     }
@@ -33,11 +33,11 @@ export class FactChecksRepository {
 
     resolveFactCheckFinding(occurrenceId: string, resolution: "corrected_or_removed" | "accepted_as_written" | "evidence_accepted"): void {
         this.database.prepare("INSERT INTO fact_check_resolutions (occurrence_id, resolution, updated_at) VALUES (?, ?, ?) ON CONFLICT(occurrence_id) DO UPDATE SET resolution = excluded.resolution, updated_at = excluded.updated_at")
-            .run(occurrenceId, resolution, now());
+            .run(occurrenceId, resolution, getCurrentTimestamp());
     }
 
 
-    private resolution(occurrenceId: string): "corrected_or_removed" | "accepted_as_written" | "evidence_accepted" | undefined {
+    private getFindingResolution(occurrenceId: string): "corrected_or_removed" | "accepted_as_written" | "evidence_accepted" | undefined {
         const row = this.database.prepare("SELECT resolution FROM fact_check_resolutions WHERE occurrence_id = ?").get(occurrenceId) as Row | undefined;
         return row?.resolution as "corrected_or_removed" | "accepted_as_written" | "evidence_accepted" | undefined;
     }

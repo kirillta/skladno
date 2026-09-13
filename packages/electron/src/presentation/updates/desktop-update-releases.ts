@@ -16,7 +16,7 @@ export interface Release {
 const releaseVersion = /^v?(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+)(\.security)?)?$/;
 
 
-function versionParts(value: string): number[] | undefined {
+function parseVersionParts(value: string): number[] | undefined {
     const match = releaseVersion.exec(value);
     if (!match)
         return undefined;
@@ -26,9 +26,9 @@ function versionParts(value: string): number[] | undefined {
 }
 
 
-function newerThan(candidate: string, current: string): boolean {
-    const left = versionParts(candidate);
-    const right = versionParts(current);
+function isNewerThan(candidate: string, current: string): boolean {
+    const left = parseVersionParts(candidate);
+    const right = parseVersionParts(current);
     if (!left || !right)
         return false;
 
@@ -70,7 +70,7 @@ export function updatePreferences(settings: RuntimeSettings, currentVersion: str
 }
 
 
-export function newestCompatibleRelease(payload: unknown, currentVersion: string, settings: RuntimeSettings): Release | undefined {
+export function getNewestCompatibleRelease(payload: unknown, currentVersion: string, settings: RuntimeSettings): Release | undefined {
     if (!Array.isArray(payload))
         return undefined;
 
@@ -82,11 +82,11 @@ export function newestCompatibleRelease(payload: unknown, currentVersion: string
             && item.assets.some((asset) => /-full\.nupkg$/i.test(asset.name))
         );
 
-    return candidates.sort((first, second) => newerThan(first.tag_name, second.tag_name) ? -1 : 1).find((item) => newerThan(item.tag_name, currentVersion));
+    return candidates.sort((first, second) => isNewerThan(first.tag_name, second.tag_name) ? -1 : 1).find((item) => isNewerThan(item.tag_name, currentVersion));
 }
 
 
-export function availableUpdateState(release: Release, currentVersion: string, settings: RuntimeSettings): Extract<DesktopUpdateState, { kind: "available" | "downloading" | "ready" }> {
+export function getAvailableUpdateState(release: Release, currentVersion: string, settings: RuntimeSettings): Extract<DesktopUpdateState, { kind: "available" | "downloading" | "ready" }> {
     const match = releaseVersion.exec(release.tag_name)!;
     return {
         kind: "available",

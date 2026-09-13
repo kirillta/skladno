@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { useEffect, useState } from "react";
 import { Button, Select } from "../../ui/primitives.js";
 import { SettingRow, SettingsGroup } from "./SettingRow.js";
-import { chooseBackupFolder, listWebBackups, restoreWebBackup, saveWebBackup, selectedBackupFolderName, webBackupErrorMessageId } from "../web-backups.js";
+import { chooseBackupFolder, getSelectedBackupFolderName, getWebBackupErrorMessageId, listWebBackups, restoreWebBackup, saveWebBackup } from "../web-backups.js";
 
 
 export function DataBackupsSettingsSection({ client, backupPolicy, save }: { client: EditorialWorkspaceClient; backupPolicy: BackupPolicy; save: (next: BackupPolicy) => Promise<void> }) {
@@ -22,7 +22,7 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
         if (desktop)
             void desktop.getLocations().then((locations) => setFolderName(locations.backupDirectory), () => undefined);
         else
-            void selectedBackupFolderName().then((name) => {
+            void getSelectedBackupFolderName().then((name) => {
                 setFolderName(name);
                 if (name)
                     void listWebBackups().then(setRestoreNames, () => undefined);
@@ -36,13 +36,13 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
                 setFolderStatus(intl.formatMessage({ id: "settings.backupFolderSelected" }, { folderName: name }));
                 if (!desktop)
                     void listWebBackups().then(setRestoreNames, () => undefined);
-            }, (error) => setFolderStatus(intl.formatMessage({ id: webBackupErrorMessageId(error, "settings.backupFolderFailed") })))}>{intl.formatMessage({ id: "settings.chooseBackupFolder" })}</Button>
+            }, (error) => setFolderStatus(intl.formatMessage({ id: getWebBackupErrorMessageId(error, "settings.backupFolderFailed") })))}>{intl.formatMessage({ id: "settings.chooseBackupFolder" })}</Button>
             {desktop && folderName && <Button variant="quiet" onClick={() => void desktop.revealBackupDirectory()}>{intl.formatMessage({ id: "settings.revealBackupFolder" })}</Button>}</div>
             </SettingRow>
             <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.createBackup" })} hint={intl.formatMessage({ id: "settings.createBackupHint" })} status={backupStatus ?? (creating ? intl.formatMessage({ id: "settings.backupCreating" }) : undefined)}>
                 <Button disabled={!folderName} state={creating ? "loading" : "default"} onClick={() => {
                     setCreating(true);
-                    void (desktop ? desktop.createNativeBackup().then((backup) => backup.path.split(/[\\/]/).at(-1) ?? backup.path) : saveWebBackup(client, "manual", backupPolicy)).then((name) => setBackupStatus(intl.formatMessage({ id: "settings.backupCreated" }, { name })), (error) => setBackupStatus(intl.formatMessage({ id: webBackupErrorMessageId(error, "settings.backupCreateFailed") }))).finally(() => setCreating(false));
+                    void (desktop ? desktop.createNativeBackup().then((backup) => backup.path.split(/[\\/]/).at(-1) ?? backup.path) : saveWebBackup(client, "manual", backupPolicy)).then((name) => setBackupStatus(intl.formatMessage({ id: "settings.backupCreated" }, { name })), (error) => setBackupStatus(intl.formatMessage({ id: getWebBackupErrorMessageId(error, "settings.backupCreateFailed") }))).finally(() => setCreating(false));
                 }}>{intl.formatMessage({ id: "settings.createBackup" })}</Button>
             </SettingRow>
             <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.restoreBackup" })} hint={intl.formatMessage({ id: "settings.restoreBackupHint" })} status={restoreStatus}>
@@ -59,7 +59,7 @@ export function DataBackupsSettingsSection({ client, backupPolicy, save }: { cli
                             if (!restoreName || !window.confirm(intl.formatMessage({ id: "settings.restoreBackupConfirm" }, { name: restoreName })))
                                 return;
 
-                            void restoreWebBackup(client, restoreName).then(() => window.location.reload(), (error) => setRestoreStatus(intl.formatMessage({ id: webBackupErrorMessageId(error, "settings.restoreBackupFailed") })));
+                            void restoreWebBackup(client, restoreName).then(() => window.location.reload(), (error) => setRestoreStatus(intl.formatMessage({ id: getWebBackupErrorMessageId(error, "settings.restoreBackupFailed") })));
                         }}>{intl.formatMessage({ id: "settings.restoreBackup" })}
                         </Button>
                     </div>

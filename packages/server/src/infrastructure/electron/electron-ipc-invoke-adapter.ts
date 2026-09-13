@@ -11,7 +11,7 @@ function isFactCheckResolution(value: unknown): value is NonNullable<import("@sk
 }
 
 
-function errorPayload(error: unknown): ElectronIpcError {
+function createErrorPayload(error: unknown): ElectronIpcError {
     if (error instanceof ArticleRevisionConflictError)
         return { code: APPLICATION_ERROR.REVISION_CONFLICT, status: HTTP_STATUS.CONFLICT, article: error.article };
 
@@ -25,7 +25,7 @@ function errorPayload(error: unknown): ElectronIpcError {
 }
 
 
-function validInvokeRequest(value: unknown): value is ElectronInvokeRequest {
+function isValidInvokeRequest(value: unknown): value is ElectronInvokeRequest {
     if (!value || typeof value !== "object")
         return false;
 
@@ -90,12 +90,12 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
 
 
 export async function invokeElectronApplication(request: unknown, services: ApplicationServices, now: () => string): Promise<ElectronInvokeResult> {
-    if (!validInvokeRequest(request))
+    if (!isValidInvokeRequest(request))
         return { ok: false, error: { code: APPLICATION_ERROR.INVALID_REQUEST, status: HTTP_STATUS.BAD_REQUEST } };
 
     try {
         return { ok: true, value: await invokeApplicationMethod(request.method, request.args, services, now) } as ElectronInvokeResult;
     } catch (error) {
-        return { ok: false, error: errorPayload(error) };
+        return { ok: false, error: createErrorPayload(error) };
     }
 }

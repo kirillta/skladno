@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { KeyBindingDispatcher } from "./dispatcher.js";
 
 
-function event(key: string, options: Partial<Parameters<KeyBindingDispatcher["dispatch"]>[0]> = {}) {
+function createKeyboardEvent(key: string, options: Partial<Parameters<KeyBindingDispatcher["dispatch"]>[0]> = {}) {
     return { key, ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, repeat: false, isComposing: false, target: null, preventDefault: vi.fn(), ...options };
 }
 
@@ -13,7 +13,7 @@ describe("KeyBindingDispatcher", () => {
         const dispatcher = new KeyBindingDispatcher();
         const handler = vi.fn();
         dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, handler);
-        const keydown = event("s");
+        const keydown = createKeyboardEvent("s");
 
         expect(dispatcher.dispatch(keydown)).toBe(true);
         expect(handler).toHaveBeenCalledOnce();
@@ -25,9 +25,9 @@ describe("KeyBindingDispatcher", () => {
         const handler = vi.fn();
         dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, handler);
 
-        expect(dispatcher.dispatch(event("x"))).toBe(false);
-        expect(dispatcher.dispatch(event("s", { isComposing: true }))).toBe(false);
-        expect(dispatcher.dispatch(event("s", { repeat: true }))).toBe(false);
+        expect(dispatcher.dispatch(createKeyboardEvent("x"))).toBe(false);
+        expect(dispatcher.dispatch(createKeyboardEvent("s", { isComposing: true }))).toBe(false);
+        expect(dispatcher.dispatch(createKeyboardEvent("s", { repeat: true }))).toBe(false);
         expect(handler).not.toHaveBeenCalled();
     });
 
@@ -37,10 +37,10 @@ describe("KeyBindingDispatcher", () => {
         const unregister = dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, handler);
         dispatcher.setOverrides({ [KEY_BINDING_COMMAND.SAVE_REVISION]: { primary: true, shift: false, alt: false, key: "k" } });
 
-        expect(dispatcher.dispatch(event("s"))).toBe(false);
-        expect(dispatcher.dispatch(event("k"))).toBe(true);
+        expect(dispatcher.dispatch(createKeyboardEvent("s"))).toBe(false);
+        expect(dispatcher.dispatch(createKeyboardEvent("k"))).toBe(true);
         unregister();
-        expect(dispatcher.dispatch(event("k"))).toBe(false);
+        expect(dispatcher.dispatch(createKeyboardEvent("k"))).toBe(false);
     });
 
     it("retains a newer handler when an older registration is cleaned up", () => {
@@ -51,7 +51,7 @@ describe("KeyBindingDispatcher", () => {
         dispatcher.register(KEY_BINDING_COMMAND.SAVE_REVISION, newHandler);
         removeOld();
 
-        expect(dispatcher.dispatch(event("s"))).toBe(true);
+        expect(dispatcher.dispatch(createKeyboardEvent("s"))).toBe(true);
         expect(oldHandler).not.toHaveBeenCalled();
         expect(newHandler).toHaveBeenCalledOnce();
     });
@@ -63,7 +63,7 @@ describe("KeyBindingDispatcher", () => {
         const composer = document.createElement("div");
         composer.contentEditable = "true";
 
-        expect(dispatcher.dispatch(event("v", { target: composer }), "assistant")).toBe(true);
+        expect(dispatcher.dispatch(createKeyboardEvent("v", { target: composer }), "assistant")).toBe(true);
         expect(paste).toHaveBeenCalledOnce();
     });
 });

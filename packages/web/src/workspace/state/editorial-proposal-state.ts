@@ -16,12 +16,12 @@ import {
 } from "@skladno/shared";
 import { ApplicationClientError } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application/client.js";
-import { errorMessageId } from "../../i18n/errors.js";
+import { getErrorMessageId } from "../../i18n/errors.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 import { getDesktopTelemetryClient } from "../../application/desktop-client.js";
 import { beginBestEffortTelemetryCapture, captureBestEffortTelemetry } from "../telemetry.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
-import { providerLanguageName } from "./editorial-language.js";
+import { getProviderLanguageName } from "./editorial-language.js";
 import { useEditorialResults } from "./editorial-results-state.js";
 export { withFindingFreshness } from "./editorial-results-state.js";
 
@@ -168,7 +168,7 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
         if (event.type === "error") {
             setState("error");
-            setMessage(intl.formatMessage({ id: errorMessageId(event.errorCode) }, event.parameters));
+            setMessage(intl.formatMessage({ id: getErrorMessageId(event.errorCode) }, event.parameters));
         }
     }
 
@@ -196,12 +196,12 @@ export function useEditorialProposal(client: EditorialWorkspaceClient, workspace
 
             controller.current = new AbortController();
 
-            await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}) }, (event) => handleEditorialEvent(event, article.id, content, revisionId, operation, correctedFindingIds), controller.current.signal);
+            await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: getProviderLanguageName(targetLanguage) } : {}) }, (event) => handleEditorialEvent(event, article.id, content, revisionId, operation, correctedFindingIds), controller.current.signal);
         } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {
                 setState("error");
                 if (error instanceof ApplicationClientError)
-                    setMessage(intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters));
+                    setMessage(intl.formatMessage({ id: getErrorMessageId(error.code) }, error.parameters));
                 else
                     setMessage(intl.formatMessage({ id: "errors.editorialRequestFailed" }));
             }

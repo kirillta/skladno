@@ -8,7 +8,7 @@ export function configureSystemDateTimeFormat(value: SystemDateTimeFormat | unde
 }
 
 
-function timeOptions(timeFormat: TimeFormatPreference): Intl.DateTimeFormatOptions {
+function getTimeFormatOptions(timeFormat: TimeFormatPreference): Intl.DateTimeFormatOptions {
     let hourCycle: "h12" | "h23" | undefined;
     if (timeFormat === "12-hour")
         hourCycle = "h12";
@@ -23,22 +23,22 @@ function timeOptions(timeFormat: TimeFormatPreference): Intl.DateTimeFormatOptio
 }
 
 
-export function systemLocale(): string {
+export function getSystemLocale(): string {
     return configuredSystemDateTimeFormat?.locale || Intl.DateTimeFormat().resolvedOptions().locale;
 }
 
 
-export function systemTimeZone(): string | undefined {
+export function getSystemTimeZone(): string | undefined {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
 }
 
 
 export function resolveTimeZone(timeZone: TimeZonePreference = "system"): string | undefined {
-    return timeZone === "system" ? systemTimeZone() : timeZone;
+    return timeZone === "system" ? getSystemTimeZone() : timeZone;
 }
 
 
-function dateParts(value: string | Date, timeZone: TimeZonePreference): Record<"year" | "month" | "day", string> {
+function getDateParts(value: string | Date, timeZone: TimeZonePreference): Record<"year" | "month" | "day", string> {
     const resolvedTimeZone = resolveTimeZone(timeZone);
     const parts = new Intl.DateTimeFormat("en", {
         year: "numeric",
@@ -53,23 +53,23 @@ function dateParts(value: string | Date, timeZone: TimeZonePreference): Record<"
 }
 
 
-function numericDateParts(value: string | Date, timeZone: TimeZonePreference): Record<"year" | "month" | "day", number> {
-    return Object.fromEntries(Object.entries(dateParts(value, timeZone)).map(([key, part]) => [key, Number(part)])) as Record<"year" | "month" | "day", number>;
+function getNumericDateParts(value: string | Date, timeZone: TimeZonePreference): Record<"year" | "month" | "day", number> {
+    return Object.fromEntries(Object.entries(getDateParts(value, timeZone)).map(([key, part]) => [key, Number(part)])) as Record<"year" | "month" | "day", number>;
 }
 
 
-function systemDate(value: string | Date, timeZone: TimeZonePreference): string {
+function formatSystemDate(value: string | Date, timeZone: TimeZonePreference): string {
     const pattern = configuredSystemDateTimeFormat?.datePattern;
     const resolvedTimeZone = resolveTimeZone(timeZone);
     if (!pattern)
-        return new Intl.DateTimeFormat(systemLocale(), {
+        return new Intl.DateTimeFormat(getSystemLocale(), {
             year: "numeric",
             month: "numeric",
             day: "numeric",
             ...(resolvedTimeZone ? { timeZone: resolvedTimeZone } : {}),
         }).format(new Date(value));
 
-    const { year, month, day } = numericDateParts(value, timeZone);
+    const { year, month, day } = getNumericDateParts(value, timeZone);
     return pattern
         .replace(/yyyy/g, String(year).padStart(4, "0"))
         .replace(/yy/g, String(year % 100).padStart(2, "0"))
@@ -82,9 +82,9 @@ function systemDate(value: string | Date, timeZone: TimeZonePreference): string 
 
 export function formatDate(value: string | Date, dateFormat: DateFormatPreference = "system", timeZone: TimeZonePreference = "system"): string {
     if (dateFormat === "system")
-        return systemDate(value, timeZone);
+        return formatSystemDate(value, timeZone);
 
-    const { year, month, day } = dateParts(value, timeZone);
+    const { year, month, day } = getDateParts(value, timeZone);
     if (dateFormat === "day-first")
         return `${day}/${month}/${year}`;
 
@@ -98,12 +98,12 @@ export function formatDate(value: string | Date, dateFormat: DateFormatPreferenc
 }
 
 
-function systemTime(value: string | Date, timeZone: TimeZonePreference): string {
+function formatSystemTime(value: string | Date, timeZone: TimeZonePreference): string {
     const pattern = configuredSystemDateTimeFormat?.timePattern;
     const resolvedTimeZone = resolveTimeZone(timeZone);
     if (!pattern)
-        return new Intl.DateTimeFormat(systemLocale(), {
-            ...timeOptions("system"),
+        return new Intl.DateTimeFormat(getSystemLocale(), {
+            ...getTimeFormatOptions("system"),
             ...(resolvedTimeZone ? { timeZone: resolvedTimeZone } : {}),
         }).format(new Date(value));
 
@@ -136,16 +136,16 @@ function systemTime(value: string | Date, timeZone: TimeZonePreference): string 
 export function formatTime(value: string | Date, locale: string, timeFormat: TimeFormatPreference = "system", timeZone: TimeZonePreference = "system"): string {
     const resolvedTimeZone = resolveTimeZone(timeZone);
     if (timeFormat === "system")
-        return systemTime(value, timeZone);
+        return formatSystemTime(value, timeZone);
 
     return new Intl.DateTimeFormat(locale, {
-        ...timeOptions(timeFormat),
+        ...getTimeFormatOptions(timeFormat),
         ...(resolvedTimeZone ? { timeZone: resolvedTimeZone } : {}),
     }).format(new Date(value));
 }
 
 
-function timeZoneOffset(timeZone: string, date: Date): string {
+function getTimeZoneOffset(timeZone: string, date: Date): string {
     const name = new Intl.DateTimeFormat("en", {
         timeZone,
         timeZoneName: "longOffset",
@@ -159,7 +159,7 @@ function timeZoneOffset(timeZone: string, date: Date): string {
 }
 
 
-function timeZoneCity(timeZone: string): string {
+function getTimeZoneCity(timeZone: string): string {
     if (timeZone === "UTC")
         return "Coordinated Universal Time";
 
@@ -168,7 +168,7 @@ function timeZoneCity(timeZone: string): string {
 
 
 export function formatTimeZoneLabel(timeZone: string, date = new Date()): string {
-    return `(${timeZoneOffset(timeZone, date)}) ${timeZoneCity(timeZone)}`;
+    return `(${getTimeZoneOffset(timeZone, date)}) ${getTimeZoneCity(timeZone)}`;
 }
 
 
@@ -178,9 +178,9 @@ export interface TimeZoneOption {
 }
 
 
-export function timeZoneOptions(selectedTimeZone: TimeZonePreference = "system", date = new Date()): TimeZoneOption[] {
+export function getTimeZoneOptions(selectedTimeZone: TimeZonePreference = "system", date = new Date()): TimeZoneOption[] {
     const supported = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
-    const required = ["UTC", systemTimeZone(), selectedTimeZone === "system" ? undefined : selectedTimeZone]
+    const required = ["UTC", getSystemTimeZone(), selectedTimeZone === "system" ? undefined : selectedTimeZone]
         .filter((value): value is string => Boolean(value) && isTimeZonePreference(value));
 
     return [...new Set([...required, ...supported])]

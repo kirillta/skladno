@@ -3,12 +3,12 @@ import { REVISION_PROVENANCE_KIND, type ArticleRevision } from "@skladno/shared"
 import { ArticleIcon, RevisionAiIcon, RevisionManualIcon, RevisionRestoreIcon } from "../../ui/icons.js";
 
 
-export function characterCount(content: string): number {
+export function getCharacterCount(content: string): number {
     return Array.from(content).length;
 }
 
 
-export function provenanceMessageId(revision: ArticleRevision): "revisions.initial" | "revisions.author" | "revisions.acceptedProposal" | "revisions.restored" | "revisions.saved" {
+export function getProvenanceMessageId(revision: ArticleRevision): "revisions.initial" | "revisions.author" | "revisions.acceptedProposal" | "revisions.restored" | "revisions.saved" {
     if (revision.restoredFromRevisionId || revision.provenance.kind === REVISION_PROVENANCE_KIND.RESTORE)
         return "revisions.restored";
 
@@ -28,7 +28,7 @@ export function provenanceMessageId(revision: ArticleRevision): "revisions.initi
 export type RevisionTimelineKind = "initial" | "manual" | "ai" | "restored";
 
 
-export function timelineKind(revision: ArticleRevision): RevisionTimelineKind {
+export function getTimelineKind(revision: ArticleRevision): RevisionTimelineKind {
     if (revision.restoredFromRevisionId || revision.provenance.kind === REVISION_PROVENANCE_KIND.RESTORE)
         return "restored";
 

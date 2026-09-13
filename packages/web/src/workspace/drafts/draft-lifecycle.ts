@@ -97,7 +97,7 @@ export function hydrateDraftLifecycle(article: Article): DraftLifecycleState {
 }
 
 
-export function draftPresentationState(state: DraftLifecycleState): DraftPresentationState {
+export function getDraftPresentationState(state: DraftLifecycleState): DraftPresentationState {
     if (state.phase === "clean")
         return "saved";
 

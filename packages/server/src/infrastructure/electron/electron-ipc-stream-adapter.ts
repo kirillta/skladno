@@ -16,7 +16,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 
-function validAssistantRequest(value: unknown): value is Extract<ElectronStreamRequest, { kind: "assistant" }>["input"] {
+function isValidAssistantRequest(value: unknown): value is Extract<ElectronStreamRequest, { kind: "assistant" }>["input"] {
     if (!isRecord(value) || typeof value.requestId !== "string" || typeof value.authorMessage !== "string" || !isRecord(value.scope))
         return false;
 
@@ -36,7 +36,7 @@ function validAssistantRequest(value: unknown): value is Extract<ElectronStreamR
 }
 
 
-function validEditorialRequest(value: unknown): value is Extract<ElectronStreamRequest, { kind: "editorial" }>["input"] {
+function isValidEditorialRequest(value: unknown): value is Extract<ElectronStreamRequest, { kind: "editorial" }>["input"] {
     return isRecord(value)
         && typeof value.requestId === "string"
         && typeof value.operation === "string"
@@ -46,15 +46,15 @@ function validEditorialRequest(value: unknown): value is Extract<ElectronStreamR
 }
 
 
-function validStreamRequest(value: unknown): value is ElectronStreamRequest {
+function isValidStreamRequest(value: unknown): value is ElectronStreamRequest {
     if (!isRecord(value) || typeof value.streamId !== "string" || !value.streamId || typeof value.articleId !== "string")
         return false;
 
     if (value.kind === "assistant")
-        return validAssistantRequest(value.input);
+        return isValidAssistantRequest(value.input);
 
     if (value.kind === "editorial")
-        return validEditorialRequest(value.input);
+        return isValidEditorialRequest(value.input);
 
     return false;
 }
@@ -65,14 +65,14 @@ function send(event: ElectronIpcMainEvent, value: ElectronStreamEvent): void {
 }
 
 
-function assistantErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE | typeof APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED {
+function getAssistantErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE | typeof APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED {
     return error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
         ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
         : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;
 }
 
 
-function editorialFailure(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
+function createEditorialFailure(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
     if (error instanceof ApplicationServiceError && error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING)
         return { category: EDITORIAL_ERROR_CATEGORY.CONFIGURATION, errorCode: error.code };
 
@@ -104,7 +104,7 @@ async function streamAssistant(event: ElectronIpcMainEvent, request: Extract<Ele
             send(event, { streamId: request.streamId, kind: "assistant", event: item });
     } catch (error) {
         if (!controller.signal.aborted)
-            send(event, { streamId: request.streamId, kind: "assistant", event: { type: "error", requestId: input.requestId, errorCode: assistantErrorCode(error), retryable: true } });
+            send(event, { streamId: request.streamId, kind: "assistant", event: { type: "error", requestId: input.requestId, errorCode: getAssistantErrorCode(error), retryable: true } });
     }
 }
 
@@ -152,7 +152,7 @@ async function streamEditorial(event: ElectronIpcMainEvent, request: Extract<Ele
             });
     } catch (error) {
         if (!controller.signal.aborted) {
-            const failure = editorialFailure(error);
+            const failure = createEditorialFailure(error);
             send(event, { streamId: request.streamId, kind: "editorial", event: { type: "error", requestId, code: failure.category, errorCode: failure.errorCode, retryable: true } });
         }
     }
@@ -165,7 +165,7 @@ export function registerElectronStreamAdapters(ipcMain: ElectronIpcMain, service
             controllers.get(payload.streamId)?.abort();
     });
     ipcMain.on(ELECTRON_IPC_CHANNEL.stream, (event, payload) => {
-        if (!validStreamRequest(payload))
+        if (!isValidStreamRequest(payload))
             return;
 
         const controller = new AbortController();

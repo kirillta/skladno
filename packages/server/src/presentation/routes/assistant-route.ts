@@ -6,17 +6,17 @@ import { EDITORIAL_ENGINE_ERROR } from "../../application/editorial/engine/edito
 import { EditorialEngineError } from "../../application/editorial/engine/editorial-engine-error.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
-import { object, readJson, string, writeJson } from "../transport/json.js";
+import { parseObject, parseString, readJson, writeJson } from "../transport/json.js";
 
 
-function writeEvent(response: ServerResponse, event: AssistantEvent): void {
+function writeAssistantEvent(response: ServerResponse, event: AssistantEvent): void {
     response.write(`event: assistant\ndata: ${JSON.stringify(event)}\n\n`);
 }
 
 
-function scope(value: unknown): AssistantRequestScope {
-    const candidate = object(value);
-    const baseRevisionId = string(candidate.baseRevisionId, "scope.baseRevisionId");
+function getAssistantRequestScope(value: unknown): AssistantRequestScope {
+    const candidate = parseObject(value);
+    const baseRevisionId = parseString(candidate.baseRevisionId, "scope.baseRevisionId");
     if (candidate.kind === "article")
         return { kind: "article", baseRevisionId };
 
@@ -33,19 +33,19 @@ function scope(value: unknown): AssistantRequestScope {
 
 
 function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequest {
-    const requestId = string(body.requestId, "requestId");
+    const requestId = parseString(body.requestId, "requestId");
     if (body.kind === "retry")
-        return { kind: "retry", requestId, retryOfRequestId: string(body.retryOfRequestId, "retryOfRequestId") };
+        return { kind: "retry", requestId, retryOfRequestId: parseString(body.retryOfRequestId, "retryOfRequestId") };
 
     if (body.kind !== "new" && body.kind !== undefined)
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-    const explicitSkillValue = body.explicitSkillId === undefined ? undefined : string(body.explicitSkillId, "explicitSkillId");
+    const explicitSkillValue = body.explicitSkillId === undefined ? undefined : parseString(body.explicitSkillId, "explicitSkillId");
     const explicitSkillId = explicitSkillValue && resolveBuiltInSkillId(explicitSkillValue);
     if (explicitSkillValue && !explicitSkillId)
         throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
 
-    const targetLanguage = body.targetLanguage === undefined ? undefined : string(body.targetLanguage, "targetLanguage");
+    const targetLanguage = body.targetLanguage === undefined ? undefined : parseString(body.targetLanguage, "targetLanguage");
     const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
     if (skillOffset !== undefined && (!explicitSkillValue || !Number.isInteger(skillOffset) || skillOffset < 0 || skillOffset > String(body.authorMessage ?? "").length))
         throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
@@ -53,8 +53,8 @@ function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequ
     return {
         kind: "new",
         requestId,
-        authorMessage: string(body.authorMessage, "authorMessage"),
-        scope: scope(body.scope),
+        authorMessage: parseString(body.authorMessage, "authorMessage"),
+        scope: getAssistantRequestScope(body.scope),
         ...(explicitSkillId ? { explicitSkillId } : {}),
         ...(skillOffset === undefined ? {} : { skillOffset }),
         ...(targetLanguage ? { targetLanguage } : {}),
@@ -62,7 +62,7 @@ function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequ
 }
 
 
-function startResponseStream(response: ServerResponse): AbortController {
+function createAssistantResponseStream(response: ServerResponse): AbortController {
     response.writeHead(HTTP_STATUS.OK, { "cache-control": "no-cache, no-transform", connection: "keep-alive", "content-type": "text/event-stream; charset=utf-8" });
     const controller = new AbortController();
 
@@ -70,7 +70,7 @@ function startResponseStream(response: ServerResponse): AbortController {
 }
 
 
-function streamErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE | typeof APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED {
+function getAssistantStreamErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE | typeof APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED {
     return error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
         ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
         : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;
@@ -78,17 +78,17 @@ function streamErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STR
 
 
 async function streamAssistantRequest(request: PreparedAssistantRequest, incomingRequest: IncomingMessage, response: ServerResponse, assistant: AssistantService, diagnostics?: LocalDiagnostics): Promise<void> {
-    const controller = startResponseStream(response);
+    const controller = createAssistantResponseStream(response);
     incomingRequest.once("aborted", () => controller.abort());
     response.once("close", () => controller.abort());
     try {
         for await (const event of assistant.stream(request, controller.signal))
-            writeEvent(response, event);
+            writeAssistantEvent(response, event);
     } catch (error) {
         diagnostics?.write("request.failed", { method: incomingRequest.method ?? "POST", status: error instanceof ApplicationServiceError ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR }, error);
 
         if (!controller.signal.aborted)
-            writeEvent(response, { type: "error", requestId: request.requestId, errorCode: streamErrorCode(error), retryable: true });
+            writeAssistantEvent(response, { type: "error", requestId: request.requestId, errorCode: getAssistantStreamErrorCode(error), retryable: true });
     }
 
     response.end();
@@ -101,7 +101,7 @@ export function listAssistantMessagesRoute(response: ServerResponse, articleId: 
 
 
 export async function createAssistantRequestRoute(request: IncomingMessage, response: ServerResponse, articleId: string, assistant: AssistantService, diagnostics?: LocalDiagnostics): Promise<void> {
-    const input = readAssistantRequest(object(await readJson(request)));
+    const input = readAssistantRequest(parseObject(await readJson(request)));
     const prepared = assistant.prepare({ ...input, articleId });
     await streamAssistantRequest(prepared, request, response, assistant, diagnostics);
 }

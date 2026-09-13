@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aiModelPreferenceId } from "@skladno/shared";
+import { getAiModelPreferenceId } from "@skladno/shared";
 
 import { ConfiguredEditorialEngineResolver, resolveAppModelConfiguration } from "./configured-editorial-engine-resolver.js";
 import type { ServerConfig } from "../../configuration/config.js";
@@ -45,7 +45,7 @@ test("routes a selected model through the active connection that supplied it", (
                     { id: "openai", provider: "openai", label: "OpenAI", credentialSource: { kind: "environment-variable", environmentVariableName: "OPENAI_API_KEY" }, active: true, status: "connected" },
                     { id: "zen", provider: "opencode", label: "OpenCode Zen", credentialSource: { kind: "environment-variable", environmentVariableName: "OPENCODE_API_KEY" }, active: true, status: "connected" },
                 ] } }
-                : { key, updatedAt: "now", value: { defaultModel: aiModelPreferenceId("zen", "claude-sonnet"), skillOverrides: {} } },
+                : { key, updatedAt: "now", value: { defaultModel: getAiModelPreferenceId("zen", "claude-sonnet"), skillOverrides: {} } },
             saveSetting: () => ({ key: "", value: undefined, updatedAt: "now" }),
         },
     );

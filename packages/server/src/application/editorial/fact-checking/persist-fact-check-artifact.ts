@@ -25,7 +25,7 @@ export function persistFactCheckArtifact(input: {
         }),
     };
 
-    const artifact = input.artifacts.withinTransaction(() => {
+    const artifact = input.artifacts.runWithinTransaction(() => {
         const created = input.artifacts.createEditorialArtifact({
             articleId: input.articleId,
             revisionId: input.revisionId,

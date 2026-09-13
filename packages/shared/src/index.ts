@@ -26,7 +26,7 @@ export {
     type ElectronCheckpointResult,
     type ElectronPrepareCloseRequest,
 } from "./application/desktop/electron-lifecycle.js";
-export { electronMessagesFor, type ElectronMessages } from "./application/desktop/electron-messages.js";
+export { getElectronMessagesFor, type ElectronMessages } from "./application/desktop/electron-messages.js";
 export { desktopShellCommands, isDesktopShellCommand, type DesktopShellClient, type DesktopShellCommand } from "./application/desktop/desktop-shell.js";
 export { isDesktopUpdateState, type DesktopUpdateClient, type DesktopUpdateState } from "./application/desktop/desktop-updates.js";
 export { HTTP_METHOD, HTTP_STATUS } from "./transport/http.js";
@@ -61,7 +61,7 @@ export {
     INTERFACE_LOCALE,
     isAssistantSendMode,
     isAiProvider,
-    aiModelPreferenceId,
+    getAiModelPreferenceId,
     parseAiModelPreferenceId,
     isDateFormatPreference,
     isThemePreference,
@@ -98,7 +98,7 @@ export {
     formatKeyBinding,
     isKeyBindingCommandId,
     keyBindingCommands,
-    keyBindingsEqual,
+    areKeyBindingsEqual,
     normalizeKeyBinding,
     resolveKeyBindings,
     type KeyBinding,
@@ -113,9 +113,9 @@ export {
     EDITORIAL_OPERATION,
     EDITORIAL_ERROR_CATEGORY,
     FACT_CHECK_STATUS,
-    editorialPath,
-    factCheckResolutionPath,
-    factChecksPath,
+    createEditorialPath,
+    createFactCheckResolutionPath,
+    createFactChecksPath,
     type EditorialClient,
     type EditorialCompletedEvent,
     type EditorialErrorEvent,
@@ -137,8 +137,8 @@ export {
     styleCorpusPath,
     styleCorpusRulesPath,
     styleCorpusRebuildPath,
-    articleStyleRulesPath,
-    articleStyleCorpusSnapshotPath,
+    createArticleStyleRulesPath,
+    createArticleStyleCorpusSnapshotPath,
     type CreateStyleCorpusItemInput,
     type StyleCorpus,
     type StyleCorpusClient,
@@ -152,9 +152,9 @@ export {
     acceptProposalPath,
     applyProposalChanges,
     createTextProposal,
-    proposalSummariesPath,
-    articleRevisionsPath,
-    articleDraftPath,
+    createProposalSummariesPath,
+    createArticleRevisionsPath,
+    createArticleDraftPath,
     restoreRevisionPath,
     type AcceptProposalInput,
     type ProposalChange,
@@ -189,12 +189,12 @@ export type {
     UpdateMaterialInput,
     EditorialArtifact,
 } from "./persistence/index.js";
-export { articlesPath, articleArchivePath, articlePinPath, pinnedArticleOrderPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./articles/workspace/workspace.js";
+export { articlesPath, createArticleArchivePath, createArticlePinPath, pinnedArticleOrderPath, ArticleDraftConflictError, ArticleRevisionConflictError, type ArticleLibraryClient } from "./articles/workspace/workspace.js";
 export {
     ASSISTANT_EVENT,
     BUILT_IN_SKILL,
-    assistantMessagesPath,
-    assistantRequestsPath,
+    createAssistantMessagesPath,
+    createAssistantRequestsPath,
     builtInSkills,
     builtInSkillScopeCompatibility,
     isAssistantEvent,

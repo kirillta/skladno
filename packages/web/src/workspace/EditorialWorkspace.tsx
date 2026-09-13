@@ -11,17 +11,17 @@ import { RestoreRevisionDialog as ExtractedRestoreRevisionDialog } from "./compo
 import { WorkspaceScreen } from "./components/WorkspaceScreen.js";
 import { useWorkspaceLayout, type WorkspaceLayoutState } from "./state/useWorkspaceLayout.js";
 import { useWorkspaceGeneralSettings } from "./state/useWorkspaceGeneralSettings.js";
-import { useArticleWorkspace, articleContentForWorkspace, sortArticlesByActivity, type ArticleWorkspaceState } from "./state/article-workspace-state.js";
+import { useArticleWorkspace, getArticleContentForWorkspace, sortArticlesByActivity, type ArticleWorkspaceState } from "./state/article-workspace-state.js";
 import { useArticleRevisions, type ArticleRevisionsState } from "./state/article-revisions-state.js";
 import { useEditorialProposal, type EditorialProposalState } from "./state/editorial-proposal-state.js";
 import { useStyleCorpus, type StyleCorpusState } from "./state/style-corpus-state.js";
-import { assistantSelectionScope, useAssistantMessages, type AssistantMessagesState, type AssistantSelectionScope } from "./state/assistant-messages-state.js";
+import { getAssistantSelectionScope, useAssistantMessages, type AssistantMessagesState, type AssistantSelectionScope } from "./state/assistant-messages-state.js";
 import type { AssistantSelectionSnapshot } from "./editor/ArticleEditorPlugins.js";
 import { usePublishing, type PublishingState } from "./state/publishing-state.js";
 
 export type { DraftConflict, DraftPresentationState as SaveState } from "./drafts/draft-lifecycle.js";
 export type { WorkspaceView } from "./workspace-views.js";
-export { articleContentForWorkspace, sortArticlesByActivity };
+export { getArticleContentForWorkspace, sortArticlesByActivity };
 export type { ArticleWorkspaceState, ArticleRevisionsState, EditorialProposalState, StyleCorpusState, PublishingState, WorkspaceLayoutState, AssistantMessagesState };
 
 
@@ -239,7 +239,7 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
                     return;
                 }
 
-                void assistantSelectionScope(workspace.selectedArticle.id, snapshot).then((selection) => {
+                void getAssistantSelectionScope(workspace.selectedArticle.id, snapshot).then((selection) => {
                     if (version === assistantSelectionVersion.current)
                         setAssistantSelection(selection);
                 });

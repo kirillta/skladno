@@ -1,10 +1,10 @@
 import type { CreateMaterialInput, Material, UpdateMaterialInput } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { createId, now, required, type Row } from "./repository-utils.js";
+import { createId, getCurrentTimestamp, requireNonEmpty, type Row } from "./repository-utils.js";
 
 
-function material(row: Row): Material {
+function mapMaterialFromRow(row: Row): Material {
     return {
         id: String(row.id),
         name: String(row.name),
@@ -20,10 +20,10 @@ export class MaterialsRepository {
 
 
     createMaterial(input: CreateMaterialInput): Material {
-        const timestamp = now();
+        const timestamp = getCurrentTimestamp();
         const materialId = input.id ?? createId();
         this.database.prepare("INSERT INTO author_materials (id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
-            .run(materialId, required(input.name, "Material name"), input.content, timestamp, timestamp);
+            .run(materialId, requireNonEmpty(input.name, "Material name"), input.content, timestamp, timestamp);
 
         return this.getMaterial(materialId)!;
     }
@@ -31,12 +31,12 @@ export class MaterialsRepository {
 
     getMaterial(materialId: string): Material | undefined {
         const row = this.database.prepare("SELECT * FROM author_materials WHERE id = ?").get(materialId) as Row | undefined;
-        return row && material(row);
+        return row && mapMaterialFromRow(row);
     }
 
 
     listMaterials(): Material[] {
-        return (this.database.prepare("SELECT * FROM author_materials ORDER BY created_at, id").all() as Row[]).map(material);
+        return (this.database.prepare("SELECT * FROM author_materials ORDER BY created_at, id").all() as Row[]).map(mapMaterialFromRow);
     }
 
 
@@ -56,7 +56,7 @@ export class MaterialsRepository {
             return existing;
 
         this.database.prepare("UPDATE author_materials SET name = ?, content = ?, updated_at = ? WHERE id = ?")
-            .run(input.name === undefined ? existing.name : required(input.name, "Material name"), input.content ?? existing.content, now(), materialId);
+            .run(input.name === undefined ? existing.name : requireNonEmpty(input.name, "Material name"), input.content ?? existing.content, getCurrentTimestamp(), materialId);
 
         return this.getMaterial(materialId)!;
     }

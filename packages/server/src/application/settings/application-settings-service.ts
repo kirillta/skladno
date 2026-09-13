@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, aiModelPreferenceId, AI_PROVIDER, HTTP_STATUS, isAiProvider, parseAiModelPreferenceId, type AiConnection, type AiProvider, type AppModelPreference, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
+import { APPLICATION_ERROR, getAiModelPreferenceId, AI_PROVIDER, HTTP_STATUS, isAiProvider, parseAiModelPreferenceId, type AiConnection, type AiProvider, type AppModelPreference, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { AvailableModelsProvider } from "./available-models-provider.js";
@@ -6,7 +6,7 @@ import type { BackupManager } from "./backup-manager.js";
 import type { SettingsStore } from "./settings-store.js";
 import type { SystemDateTimeFormatProvider } from "./system-date-time-format-provider.js";
 import type { CredentialStore } from "./credential-store.js";
-import { aiConnections, appModel, backupPolicy, environmentVariableName, generalSettings, keyBindingOverrides, modelPreferences, requestedKeyBindingOverrides } from "./application-settings-normalizers.js";
+import { getEnvironmentVariableName, normalizeAiConnections, normalizeAppModel, normalizeBackupPolicy, normalizeGeneralSettings, normalizeModelPreferences, normalizeRequestedKeyBindingOverrides, normalizeStoredKeyBindingOverrides } from "./application-settings-normalizers.js";
 
 
 export class ApplicationSettingsService {
@@ -21,17 +21,17 @@ export class ApplicationSettingsService {
 
 
     async getSnapshot(): Promise<ApplicationSettingsSnapshot> {
-        const connections = aiConnections(this.settings.getSetting("application-ai-connections")?.value);
+        const connections = normalizeAiConnections(this.settings.getSetting("application-ai-connections")?.value);
         const rawPreferences = this.settings.getSetting("application-model-preferences")?.value;
         const legacyPreferences = rawPreferences && typeof rawPreferences === "object" && !Array.isArray(rawPreferences)
             ? (rawPreferences as { byConnection?: unknown }).byConnection
             : undefined;
         const preferences = legacyPreferences && typeof legacyPreferences === "object" && !Array.isArray(legacyPreferences)
-            ? modelPreferences((legacyPreferences as Record<string, unknown>)[connections.activeConnectionId ?? ""], connections.activeConnectionId)
-            : modelPreferences(rawPreferences, connections.activeConnectionId);
+            ? normalizeModelPreferences((legacyPreferences as Record<string, unknown>)[connections.activeConnectionId ?? ""], connections.activeConnectionId)
+            : normalizeModelPreferences(rawPreferences, connections.activeConnectionId);
         const appModelRecord = this.settings.getSetting("application-app-model");
-        const savedAppModel = appModel(appModelRecord?.value, connections.activeConnectionId);
-        const legacyAppModel = appModelRecord ? undefined : appModel(rawPreferences, connections.activeConnectionId);
+        const savedAppModel = normalizeAppModel(appModelRecord?.value, connections.activeConnectionId);
+        const legacyAppModel = appModelRecord ? undefined : normalizeAppModel(rawPreferences, connections.activeConnectionId);
 
         const selectedAppModel = savedAppModel ?? legacyAppModel;
 
@@ -46,19 +46,19 @@ export class ApplicationSettingsService {
             this.settings.saveSetting("application-app-model", legacyAppModel);
 
         return {
-            general: generalSettings(this.settings.getSetting("application-general")?.value),
+            general: normalizeGeneralSettings(this.settings.getSetting("application-general")?.value),
             systemDateTimeFormat: await this.dateTimeFormat.read(),
             connections: connections.connections,
             modelPreferences: preferences,
             ...(selectedAppModel ? { appModel: selectedAppModel } : {}),
-            backupPolicy: backupPolicy(this.settings.getSetting("application-backup-policy")?.value),
-            keyBindingOverrides: keyBindingOverrides(this.settings.getSetting("application-key-bindings")?.value),
+            backupPolicy: normalizeBackupPolicy(this.settings.getSetting("application-backup-policy")?.value),
+            keyBindingOverrides: normalizeStoredKeyBindingOverrides(this.settings.getSetting("application-key-bindings")?.value),
         };
     }
 
 
     updateGeneral(value: unknown): GeneralSettings {
-        const normalized = generalSettings(value, true);
+        const normalized = normalizeGeneralSettings(value, true);
         this.settings.saveSetting("application-general", normalized);
 
         return normalized;
@@ -66,7 +66,7 @@ export class ApplicationSettingsService {
 
 
     updateBackupPolicy(value: unknown): BackupPolicy {
-        const normalized = backupPolicy(value);
+        const normalized = normalizeBackupPolicy(value);
         this.settings.saveSetting("application-backup-policy", normalized);
 
         return normalized;
@@ -82,7 +82,7 @@ export class ApplicationSettingsService {
 
 
     updateKeyBindingOverrides(value: unknown): KeyBindingOverrides {
-        const normalized = requestedKeyBindingOverrides(value);
+        const normalized = normalizeRequestedKeyBindingOverrides(value);
         this.settings.saveSetting("application-key-bindings", normalized);
 
         return normalized;
@@ -90,7 +90,7 @@ export class ApplicationSettingsService {
 
 
     updateModelPreferences(value: unknown): ModelPreferences {
-        const normalized = modelPreferences(value);
+        const normalized = normalizeModelPreferences(value);
         this.settings.saveSetting("application-model-preferences", normalized);
 
         return normalized;
@@ -98,7 +98,7 @@ export class ApplicationSettingsService {
 
 
     updateAppModel(value: unknown): AppModelPreference | null {
-        const normalized = appModel(value);
+        const normalized = normalizeAppModel(value);
         this.settings.saveSetting("application-app-model", normalized ?? null);
 
         return normalized ?? null;
@@ -106,13 +106,13 @@ export class ApplicationSettingsService {
 
 
     createAiConnection(value: { provider?: unknown; label?: unknown; environmentVariableName?: unknown }): AiConnection {
-        const saved = aiConnections(this.settings.getSetting("application-ai-connections")?.value);
-        const requestedName = environmentVariableName(value.environmentVariableName);
+        const saved = normalizeAiConnections(this.settings.getSetting("application-ai-connections")?.value);
+        const requestedName = getEnvironmentVariableName(value.environmentVariableName);
 
         const connection: AiConnection = {
             id: this.createConnectionId(),
-            provider: this.provider(value.provider),
-            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.providerLabel(this.provider(value.provider)),
+            provider: this.getProvider(value.provider),
+            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.getProviderLabel(this.getProvider(value.provider)),
             credentialSource: { kind: "environment-variable", environmentVariableName: requestedName }, active: true, status: "unchecked"
         };
         saved.connections.push(connection);
@@ -126,11 +126,11 @@ export class ApplicationSettingsService {
         if (!this.credentialStore?.available() || typeof value.apiKey !== "string" || !value.apiKey.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        const provider = this.provider(value.provider);
+        const provider = this.getProvider(value.provider);
         const connection: AiConnection = {
             id: this.createConnectionId(),
             provider,
-            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.providerLabel(provider),
+            label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : this.getProviderLabel(provider),
             credentialSource: { kind: "managed" },
             active: true,
             status: "unchecked"
@@ -144,7 +144,7 @@ export class ApplicationSettingsService {
 
         this.credentialStore.set(connection.id, value.apiKey);
         try {
-            const saved = aiConnections(this.settings.getSetting("application-ai-connections")?.value);
+            const saved = normalizeAiConnections(this.settings.getSetting("application-ai-connections")?.value);
             saved.connections.push({ ...connection, status: "connected", lastCheckedAt: new Date().toISOString() });
             this.settings.saveSetting("application-ai-connections", { connections: saved.connections });
 
@@ -190,7 +190,7 @@ export class ApplicationSettingsService {
         const updated = {
             ...connection,
             label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : connection.label,
-            credentialSource: { kind: "environment-variable" as const, environmentVariableName: environmentVariableName(value.environmentVariableName) },
+            credentialSource: { kind: "environment-variable" as const, environmentVariableName: getEnvironmentVariableName(value.environmentVariableName) },
             status: "unchecked" as const,
             diagnostic: undefined,
             lastCheckedAt: undefined
@@ -226,17 +226,17 @@ export class ApplicationSettingsService {
 
 
     async listAiModels(): Promise<AvailableAiModel[]> {
-        const saved = aiConnections(this.settings.getSetting("application-ai-connections")?.value);
+        const saved = normalizeAiConnections(this.settings.getSetting("application-ai-connections")?.value);
         const lists = await Promise.allSettled(saved.connections.filter((connection) => connection.active).map(async (connection) =>
             (await this.models.list(connection))
-                .map((model) => ({ id: aiModelPreferenceId(connection.id, model), model, connectionId: connection.id, provider: connection.provider }))));
+                .map((model) => ({ id: getAiModelPreferenceId(connection.id, model), model, connectionId: connection.id, provider: connection.provider }))));
 
         return lists.flatMap((result) => result.status === "fulfilled" ? result.value : []);
     }
 
 
     private connectionState(connectionId: string): { saved: { connections: AiConnection[]; activeConnectionId?: string }; index: number; connection: AiConnection } {
-        const saved = aiConnections(this.settings.getSetting("application-ai-connections")?.value);
+        const saved = normalizeAiConnections(this.settings.getSetting("application-ai-connections")?.value);
         const index = saved.connections.findIndex((connection) => connection.id === connectionId);
         if (index < 0)
             throw new ApplicationServiceError(APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
@@ -245,7 +245,7 @@ export class ApplicationSettingsService {
     }
 
 
-    private provider(value: unknown): AiProvider {
+    private getProvider(value: unknown): AiProvider {
         if (value === undefined)
             return AI_PROVIDER.OPENAI;
 
@@ -256,7 +256,7 @@ export class ApplicationSettingsService {
     }
 
 
-    private providerLabel(provider: AiProvider): string {
+    private getProviderLabel(provider: AiProvider): string {
         return {
             [AI_PROVIDER.OPENAI]: "OpenAI",
             [AI_PROVIDER.OPENCODE]: "OpenCode Zen",

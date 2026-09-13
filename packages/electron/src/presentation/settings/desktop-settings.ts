@@ -9,7 +9,7 @@ import { readRuntimeSettings, updateRuntimeSettings } from "../../infrastructure
 import { desktopSettingsChannel } from "./desktop-settings-client.js";
 
 
-function overlaps(first: string, second: string): boolean {
+function areSettingsKeysOverlapping(first: string, second: string): boolean {
     const path = relative(resolve(first), resolve(second));
     return path === "" || (!path.startsWith("..") && !path.includes(":"));
 }
@@ -58,7 +58,7 @@ function createLocalDataDeletion({ dataDirectory, backupDirectory, database, clo
     restart(): void;
     telemetry?: TelemetryCaptureSource;
 }): LocalDataDeletion {
-    const backupAvailable = Boolean(backupDirectory && !overlaps(backupDirectory, dataDirectory) && !overlaps(dataDirectory, backupDirectory));
+    const backupAvailable = Boolean(backupDirectory && !areSettingsKeysOverlapping(backupDirectory, dataDirectory) && !areSettingsKeysOverlapping(dataDirectory, backupDirectory));
 
     return {
         backupAvailable,
@@ -114,7 +114,7 @@ function createNativeBackupRestoration({ runtimePath, backupDirectory, database,
             if (!selected)
                 return { kind: "cancelled" };
 
-            if (!overlaps(backupDirectory, selected))
+            if (!areSettingsKeysOverlapping(backupDirectory, selected))
                 return { kind: "invalid" };
 
             validateDatabaseSnapshot(selected);
@@ -174,7 +174,7 @@ async function chooseBackupDirectory({ runtimePath, dataDirectory, chooseDirecto
     if (!selected)
         return { ok: true, value: undefined };
 
-    if (overlaps(selected, dataDirectory) || overlaps(dataDirectory, selected))
+    if (areSettingsKeysOverlapping(selected, dataDirectory) || areSettingsKeysOverlapping(dataDirectory, selected))
         return { ok: false, error: "invalid_request" };
 
     updateRuntimeSettings(runtimePath, (current) => ({ ...current, backupDirectory: selected }));

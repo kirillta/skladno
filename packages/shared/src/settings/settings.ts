@@ -126,7 +126,7 @@ export interface AvailableAiModel {
 }
 
 
-export function aiModelPreferenceId(connectionId: string, model: string): string {
+export function getAiModelPreferenceId(connectionId: string, model: string): string {
     return JSON.stringify([connectionId, model]);
 }
 

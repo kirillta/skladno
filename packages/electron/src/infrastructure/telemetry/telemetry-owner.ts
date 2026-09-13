@@ -25,7 +25,7 @@ export function createTelemetryOwner({ runtimePath, delivery }: {
         updateRuntimeSettings(runtimePath, (runtime) => ({ ...runtime, telemetry: { consent: "granted", installationId: randomUUID() } }));
 
 
-    function consent(): TelemetryConsent {
+    function getTelemetryConsent(): TelemetryConsent {
         const telemetry = readRuntimeSettings(runtimePath).telemetry;
         return telemetry?.consent === "granted" && delivery.supported && !state.disposed
             ? { enabled: true, supported: true, installationId: telemetry.installationId }
@@ -57,7 +57,7 @@ export function createTelemetryOwner({ runtimePath, delivery }: {
 
     function beginCapture(): (event: TelemetryEvent) => void {
         const currentGeneration = state.generation;
-        if (!consent().enabled)
+        if (!getTelemetryConsent().enabled)
             return () => undefined;
 
         return (event) => {
@@ -68,7 +68,7 @@ export function createTelemetryOwner({ runtimePath, delivery }: {
 
 
     function beginCaptureGeneration(): number | undefined {
-        return consent().enabled ? state.generation : undefined;
+        return getTelemetryConsent().enabled ? state.generation : undefined;
     }
 
 
@@ -79,19 +79,19 @@ export function createTelemetryOwner({ runtimePath, delivery }: {
 
 
     return {
-        getConsent: consent,
+        getConsent: getTelemetryConsent,
         beginCapture,
         beginCaptureGeneration,
         captureAtGeneration,
         setConsent(enabled: boolean): TelemetryConsent {
-            const current = consent();
+            const current = getTelemetryConsent();
             if (!enabled) {
                 if (readRuntimeSettings(runtimePath).telemetry?.consent === "denied")
                     return current;
 
                 updateRuntimeSettings(runtimePath, (runtime) => ({ ...runtime, telemetry: { consent: "denied" } }));
                 stop();
-                return consent();
+                return getTelemetryConsent();
             }
 
             if (current.enabled || !delivery.supported || state.disposed)
@@ -101,7 +101,7 @@ export function createTelemetryOwner({ runtimePath, delivery }: {
             state = { ...state, generation: state.generation + 1 };
             capture({ kind: "app_session_started" });
 
-            return consent();
+            return getTelemetryConsent();
         },
         capture,
         dispose: () => {

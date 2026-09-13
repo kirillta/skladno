@@ -10,7 +10,7 @@ interface ProposalSummaryArtifactStore {
 }
 
 
-function changes(value: unknown): ProposalChange[] {
+function parseProposalChanges(value: unknown): ProposalChange[] {
     if (!Array.isArray(value) || value.length > 50)
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -41,7 +41,7 @@ export class ProposalSummaryService {
         if (typeof input.editorialArtifactId !== "string" || typeof input.interfaceLocale !== "string" || !input.interfaceLocale.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        const requestedChanges = changes(input.changes);
+        const requestedChanges = parseProposalChanges(input.changes);
         const artifact = this.artifacts.getEditorialArtifact(input.editorialArtifactId, articleId);
         if (!artifact)
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);

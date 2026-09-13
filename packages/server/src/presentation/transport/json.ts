@@ -41,7 +41,7 @@ export async function readBinary(request: IncomingMessage): Promise<Uint8Array> 
 }
 
 
-export function object(value: unknown): Record<string, unknown> {
+export function parseObject(value: unknown): Record<string, unknown> {
     if (!value || typeof value !== "object" || Array.isArray(value))
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -49,7 +49,7 @@ export function object(value: unknown): Record<string, unknown> {
 }
 
 
-export function string(value: unknown, _field: string): string {
+export function parseString(value: unknown, _field: string): string {
     void _field;
 
     if (typeof value !== "string")

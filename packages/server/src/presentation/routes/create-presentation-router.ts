@@ -1,4 +1,4 @@
-import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleArchivePath, articleDraftPath, articlePinPath, articleRevisionsPath, articlesPath, articleStyleCorpusSnapshotPath, articleStyleRulesPath, assistantMessagesPath, assistantRequestsPath, backupsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, proposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
+import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantMessagesPath, createAssistantRequestsPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
@@ -18,30 +18,30 @@ import { listFactChecksRoute, resolveFactCheckRoute } from "./fact-check-route.j
 const ROUTE_PARAMETER = "__route_parameter__";
 
 
-function routePattern(path: string): RegExp {
+function createRoutePattern(path: string): RegExp {
     return new RegExp(`^${path.replaceAll(ROUTE_PARAMETER, "([^/]+)")}$`);
 }
 
 
-const ARTICLE_PATH = routePattern(`${articlesPath}/${ROUTE_PARAMETER}`);
-const ARTICLE_ARCHIVE_PATH = routePattern(articleArchivePath(ROUTE_PARAMETER));
-const ARTICLE_PIN_PATH = routePattern(articlePinPath(ROUTE_PARAMETER));
-const ARTICLE_DRAFT_PATH = routePattern(articleDraftPath(ROUTE_PARAMETER));
-const ARTICLE_REVISIONS_PATH = routePattern(articleRevisionsPath(ROUTE_PARAMETER));
-const ARTICLE_PROPOSAL_ACCEPTANCES_PATH = routePattern(acceptProposalPath(ROUTE_PARAMETER));
-const ARTICLE_PROPOSAL_SUMMARIES_PATH = routePattern(proposalSummariesPath(ROUTE_PARAMETER));
-const ARTICLE_RESTORATION_PATH = routePattern(restoreRevisionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
-const ASSISTANT_MESSAGES_PATH = routePattern(assistantMessagesPath(ROUTE_PARAMETER));
-const ASSISTANT_REQUESTS_PATH = routePattern(assistantRequestsPath(ROUTE_PARAMETER));
-const EDITORIAL_PATH = routePattern(editorialPath(ROUTE_PARAMETER));
-const FACT_CHECKS_PATH = routePattern(factChecksPath(ROUTE_PARAMETER));
-const FACT_CHECK_RESOLUTION_PATH = routePattern(factCheckResolutionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
-const STYLE_CORPUS_ITEM_PATH = routePattern(`${styleCorpusPath}/${ROUTE_PARAMETER}`);
-const ARTICLE_STYLE_RULES_PATH = routePattern(articleStyleRulesPath(ROUTE_PARAMETER));
-const ARTICLE_STYLE_CORPUS_SNAPSHOT_PATH = routePattern(articleStyleCorpusSnapshotPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
-const AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}`);
-const ACTIVE_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/active`);
-const TEST_AI_CONNECTION_PATH = routePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/test`);
+const ARTICLE_PATH = createRoutePattern(`${articlesPath}/${ROUTE_PARAMETER}`);
+const ARTICLE_ARCHIVE_PATH = createRoutePattern(createArticleArchivePath(ROUTE_PARAMETER));
+const ARTICLE_PIN_PATH = createRoutePattern(createArticlePinPath(ROUTE_PARAMETER));
+const ARTICLE_DRAFT_PATH = createRoutePattern(createArticleDraftPath(ROUTE_PARAMETER));
+const ARTICLE_REVISIONS_PATH = createRoutePattern(createArticleRevisionsPath(ROUTE_PARAMETER));
+const ARTICLE_PROPOSAL_ACCEPTANCES_PATH = createRoutePattern(acceptProposalPath(ROUTE_PARAMETER));
+const ARTICLE_PROPOSAL_SUMMARIES_PATH = createRoutePattern(createProposalSummariesPath(ROUTE_PARAMETER));
+const ARTICLE_RESTORATION_PATH = createRoutePattern(restoreRevisionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
+const ASSISTANT_MESSAGES_PATH = createRoutePattern(createAssistantMessagesPath(ROUTE_PARAMETER));
+const ASSISTANT_REQUESTS_PATH = createRoutePattern(createAssistantRequestsPath(ROUTE_PARAMETER));
+const EDITORIAL_PATH = createRoutePattern(createEditorialPath(ROUTE_PARAMETER));
+const FACT_CHECKS_PATH = createRoutePattern(createFactChecksPath(ROUTE_PARAMETER));
+const FACT_CHECK_RESOLUTION_PATH = createRoutePattern(createFactCheckResolutionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
+const STYLE_CORPUS_ITEM_PATH = createRoutePattern(`${styleCorpusPath}/${ROUTE_PARAMETER}`);
+const ARTICLE_STYLE_RULES_PATH = createRoutePattern(createArticleStyleRulesPath(ROUTE_PARAMETER));
+const ARTICLE_STYLE_CORPUS_SNAPSHOT_PATH = createRoutePattern(createArticleStyleCorpusSnapshotPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
+const AI_CONNECTION_PATH = createRoutePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}`);
+const ACTIVE_AI_CONNECTION_PATH = createRoutePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/active`);
+const TEST_AI_CONNECTION_PATH = createRoutePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/test`);
 
 
 export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics, restoreBackup?: (snapshot: Uint8Array) => Promise<void>): Router {

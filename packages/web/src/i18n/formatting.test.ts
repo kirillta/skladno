@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { configureSystemDateTimeFormat, formatDate, formatDateTime, formatTime, formatTimeZoneLabel, resolveTimeZone, systemLocale, systemTimeZone, timeZoneOptions } from "./formatting.js";
+import { configureSystemDateTimeFormat, formatDate, formatDateTime, formatTime, formatTimeZoneLabel, getSystemLocale, getSystemTimeZone, getTimeZoneOptions, resolveTimeZone } from "./formatting.js";
 
 
 describe("date and time formatting", () => {
     it("uses device locale and time zone for system preferences", () => {
         const value = "2026-01-01T15:45:00.000Z";
-        const expected = new Intl.DateTimeFormat(systemLocale(), {
+        const expected = new Intl.DateTimeFormat(getSystemLocale(), {
             year: "numeric",
             month: "numeric",
             day: "numeric",
             hour: "2-digit",
             minute: "2-digit",
-            ...(systemTimeZone() ? { timeZone: systemTimeZone() } : {}),
+            ...(getSystemTimeZone() ? { timeZone: getSystemTimeZone() } : {}),
         }).format(new Date(value));
 
-        expect(resolveTimeZone("system")).toBe(systemTimeZone());
+        expect(resolveTimeZone("system")).toBe(getSystemTimeZone());
         expect(formatDateTime(value, "en", "system", "system", "system")).toBe(expected);
     });
 
@@ -59,14 +59,14 @@ describe("date and time formatting", () => {
 
     it("uses human-readable city names and current offsets in time-zone options", () => {
         const date = new Date("2026-01-15T12:00:00.000Z");
-        const options = timeZoneOptions("America/Argentina/Buenos_Aires", date);
+        const options = getTimeZoneOptions("America/Argentina/Buenos_Aires", date);
 
         expect(formatTimeZoneLabel("America/Argentina/Buenos_Aires", date)).toBe("(UTC-03:00) Buenos Aires");
         expect(formatTimeZoneLabel("America/New_York", date)).toBe("(UTC-05:00) New York");
         expect(options.map((option) => option.value)).toContain("UTC");
         expect(options.map((option) => option.value)).toContain("America/Argentina/Buenos_Aires");
         expect(new Set(options.map((option) => option.value)).size).toBe(options.length);
-        if (systemTimeZone())
-            expect(options.map((option) => option.value)).toContain(systemTimeZone());
+        if (getSystemTimeZone())
+            expect(options.map((option) => option.value)).toContain(getSystemTimeZone());
     });
 });

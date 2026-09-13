@@ -31,7 +31,7 @@ function withCatalog(run: (catalog: EditorialCapabilityCatalog, article: import(
 
 
 test("the editorial capability catalog declares only bounded existing application paths", () => withCatalog((catalog, article) => {
-    assert.deepEqual(catalog.definitions(), editorialCapabilityDefinitions);
+    assert.deepEqual(catalog.getDefinitions(), editorialCapabilityDefinitions);
     assert.equal(new Set(editorialCapabilityDefinitions.map((capability) => capability.id)).size, editorialCapabilityDefinitions.length);
     assert.ok(editorialCapabilityDefinitions.every((capability) => capability.allowedContext === "article" && capability.activity && capability.result && capability.retry));
 
@@ -80,19 +80,19 @@ test("classified discovery is bounded and selection scope cannot expose Article 
 
 test("catalog metadata actions change only the named current-Article field", () => withCatalog((catalog, article) => {
     const context = { articleId: article.id, baseRevisionId: article.currentRevisionId, authorizedActions: [EDITORIAL_CAPABILITY.RENAME_ARTICLE] as const };
-    const renamed = catalog.action(EDITORIAL_CAPABILITY.RENAME_ARTICLE, context, { title: "Renamed Catalog" });
+    const renamed = catalog.executeAction(EDITORIAL_CAPABILITY.RENAME_ARTICLE, context, { title: "Renamed Catalog" });
 
     assert.ok("title" in renamed && "currentRevisionId" in renamed);
     assert.equal(renamed.title, "Renamed Catalog");
     assert.equal(renamed.currentRevisionId, article.currentRevisionId);
-    assert.throws(() => catalog.action(EDITORIAL_CAPABILITY.RENAME_ARTICLE, context, { title: "" }), { name: "ApplicationServiceError" });
+    assert.throws(() => catalog.executeAction(EDITORIAL_CAPABILITY.RENAME_ARTICLE, context, { title: "" }), { name: "ApplicationServiceError" });
 }));
 
 
 test("the catalog adds only the current immutable Revision to the Style Corpus", () => withCatalog((catalog, article) => {
     const context = { articleId: article.id, baseRevisionId: article.currentRevisionId };
-    assert.throws(() => catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, context), { name: "ApplicationServiceError" });
-    const corpus = catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, { ...context, authorizedActions: [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS] });
+    assert.throws(() => catalog.executeAction(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, context), { name: "ApplicationServiceError" });
+    const corpus = catalog.executeAction(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, { ...context, authorizedActions: [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS] });
     assert.equal(corpus.items[0]?.revisionId, article.currentRevisionId);
-    assert.throws(() => catalog.action(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, { ...context, authorizedActions: [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS] }), { name: "ApplicationServiceError" });
+    assert.throws(() => catalog.executeAction(EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, { ...context, authorizedActions: [EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS] }), { name: "ApplicationServiceError" });
 }));

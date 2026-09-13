@@ -14,7 +14,7 @@ interface WorkspaceLayoutPreferences {
 }
 
 
-function finiteNumber(value: unknown, fallback: number): number {
+function getFiniteNumber(value: unknown, fallback: number): number {
     return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
@@ -28,8 +28,8 @@ function storedPreferences(value: unknown): WorkspaceLayoutPreferences | undefin
     if (!isRecord(value))
         return undefined;
 
-    const libraryWidth = Math.min(280, Math.max(192, finiteNumber(value.libraryWidth, 208)));
-    const assistantWidth = Math.max(320, finiteNumber(value.assistantWidth, 384));
+    const libraryWidth = Math.min(280, Math.max(192, getFiniteNumber(value.libraryWidth, 208)));
+    const assistantWidth = Math.max(320, getFiniteNumber(value.assistantWidth, 384));
     const libraryCollapsed = value.libraryCollapsed === true;
     const assistantCollapsed = value.assistantCollapsed === true;
     if (value.version === 1)

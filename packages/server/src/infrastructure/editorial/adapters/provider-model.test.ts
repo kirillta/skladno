@@ -7,7 +7,7 @@ import { ApplicationServiceError } from "../../../application/errors/application
 import { createProviderModel } from "./provider-model.js";
 
 
-function modelDetails(candidate: ReturnType<typeof createProviderModel>): { modelId: string; provider: string } {
+function getModelDetails(candidate: ReturnType<typeof createProviderModel>): { modelId: string; provider: string } {
     if (!candidate || typeof candidate !== "object" || !("modelId" in candidate) || !("provider" in candidate) || typeof candidate.modelId !== "string" || typeof candidate.provider !== "string")
         throw new Error("Expected an SDK language model.");
 
@@ -25,7 +25,7 @@ test("creates a direct SDK model for every supported provider", () => {
     ] as const;
 
     for (const [provider, model] of models)
-        assert.equal(modelDetails(createProviderModel({ provider, apiKey: "secret", model })).modelId, model);
+        assert.equal(getModelDetails(createProviderModel({ provider, apiKey: "secret", model })).modelId, model);
 });
 
 
@@ -38,7 +38,7 @@ test("routes Zen models through their documented model protocol", () => {
     ] as const;
 
     for (const [model, provider] of models) {
-        const languageModel = modelDetails(createProviderModel({ provider: AI_PROVIDER.OPENCODE, apiKey: "secret", model: `opencode/${model}` }));
+        const languageModel = getModelDetails(createProviderModel({ provider: AI_PROVIDER.OPENCODE, apiKey: "secret", model: `opencode/${model}` }));
         assert.equal(languageModel.modelId, model);
         assert.equal(languageModel.provider, provider);
     }

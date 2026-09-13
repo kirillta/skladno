@@ -39,6 +39,6 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
 };
 
 
-export function errorMessageId(code: string): MessageId {
+export function getErrorMessageId(code: string): MessageId {
     return errorMessages[code as ApplicationErrorCode] ?? "errors.generic";
 }

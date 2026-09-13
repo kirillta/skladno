@@ -40,7 +40,7 @@ function scheduler() {
 }
 
 
-function event() {
+function createTelemetryEvent() {
     return { kind: "app_failure", source: "startup", failure: "unknown" } as const;
 }
 
@@ -77,7 +77,7 @@ test("telemetry is enabled by default during beta, reports trusted OS version, a
     try {
         const firstIdentity = JSON.parse(readFileSync(runtimePath, "utf8")).telemetry.installationId;
         assert.deepEqual(owner.getConsent(), { enabled: true, supported: true, installationId: firstIdentity });
-        owner.capture(event());
+        owner.capture(createTelemetryEvent());
         await tasks.run();
         const payload = JSON.parse(bodies[0]!) as { batch: { properties: Record<string, unknown> }[] };
         assert.equal(payload.batch[0]?.properties.osVersion, "trusted-os-version");
@@ -112,11 +112,11 @@ test("operations begun without consent and stale generations are not delivered",
     try {
         const disabled = owner.beginCaptureGeneration();
         owner.setConsent(true);
-        owner.captureAtGeneration(event(), disabled);
+        owner.captureAtGeneration(createTelemetryEvent(), disabled);
         const enabled = owner.beginCaptureGeneration();
         owner.setConsent(false);
         owner.setConsent(true);
-        owner.captureAtGeneration(event(), enabled);
+        owner.captureAtGeneration(createTelemetryEvent(), enabled);
         await tasks.run();
         assert.equal(bodies.length, 1);
         assert.doesNotMatch(bodies[0]!, /app_failure/);
@@ -151,15 +151,15 @@ test("delivery retries network failures and rate limits once, then drops permane
         },
     });
     try {
-        owner.capture(event());
+        owner.capture(createTelemetryEvent());
         await tasks.run();
         await tasks.run();
-        owner.capture(event());
+        owner.capture(createTelemetryEvent());
         await tasks.run();
         await tasks.run();
-        owner.capture(event());
+        owner.capture(createTelemetryEvent());
         await tasks.run();
-        owner.capture(event());
+        owner.capture(createTelemetryEvent());
         await tasks.run();
         assert.equal(attempts, 6);
         assert.equal(tasks.size, 0);
@@ -200,12 +200,12 @@ test("delivery expires old events, caps retained event rate, and stops an active
         },
     });
     try {
-        owner.capture(event());
+        owner.capture(createTelemetryEvent());
         currentTime = 5 * 60_000 + 1;
         await tasks.run();
         assert.equal(attempts, 0);
         for (let index = 0; index < 101; index += 1)
-            owner.capture(event());
+            owner.capture(createTelemetryEvent());
 
         await tasks.run();
         assert.equal(attempts, 1);
@@ -241,7 +241,7 @@ test("delivery retries a timed-out request once", async () => {
         },
     });
     try {
-        owner.capture(event());
+        owner.capture(createTelemetryEvent());
         await tasks.run();
         await new Promise((resolve) => setTimeout(resolve, 5));
         await tasks.run();

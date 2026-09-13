@@ -7,7 +7,7 @@ import { useAssistantMessageHistory } from "./assistant-message-history-state.js
 import { useAssistantRequestActions, useAssistantRequestStore } from "./assistant-request-state.js";
 import { useAssistantStreamEvents } from "./assistant-stream-events-state.js";
 
-export { assistantSelectionScope, requestedTranslationLanguages, type AssistantSelectionScope } from "./assistant-selection.js";
+export { getAssistantSelectionScope, requestedTranslationLanguages, type AssistantSelectionScope } from "./assistant-selection.js";
 export type { StreamedAssistantMessage } from "./assistant-streaming.js";
 
 

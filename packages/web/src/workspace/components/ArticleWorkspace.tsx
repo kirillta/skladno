@@ -13,7 +13,7 @@ import { WorkspaceViewRouter } from "./WorkspaceViewRouter.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 import type { GeneralSettings, KeyBindingOverrides } from "@skladno/shared";
 import { KEY_BINDING_COMMAND, PUBLISH_LIMIT_PROFILE } from "@skladno/shared";
-import { shortcutHint } from "../../key-bindings/shortcut-hint.js";
+import { getShortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
 import type { WorkspaceView } from "../workspace-views.js";
 import type { AssistantSelectionSnapshot } from "../editor/ArticleEditorPlugins.js";
@@ -49,7 +49,7 @@ export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceVi
 
     if (!article)
         return <EmptyState title={intl.formatMessage({ id: "navigation.noArticlesYet" })} className="pt-40">
-            <Button title={shortcutHint(intl.formatMessage({ id: "articleWorkspace.create" }), KEY_BINDING_COMMAND.NEW_ARTICLE, shortcutOverrides)} onClick={() => void createBlank()}>{intl.formatMessage({ id: "articleWorkspace.create" })}</Button>
+            <Button title={getShortcutHint(intl.formatMessage({ id: "articleWorkspace.create" }), KEY_BINDING_COMMAND.NEW_ARTICLE, shortcutOverrides)} onClick={() => void createBlank()}>{intl.formatMessage({ id: "articleWorkspace.create" })}</Button>
         </EmptyState>;
 
     const revisionIndex = revisions.revisions.findIndex((revision) => revision.id === article.currentRevisionId);

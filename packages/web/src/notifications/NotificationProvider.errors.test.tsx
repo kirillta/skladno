@@ -1,7 +1,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { APPLICATION_ERROR, ApplicationClientError } from "@skladno/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { errorMessageId } from "../i18n/errors.js";
+import { getErrorMessageId } from "../i18n/errors.js";
 import { renderNotifications } from "./NotificationProvider.test-utils.js";
 
 
@@ -24,7 +24,7 @@ describe("NotificationProvider errors", () => {
 
     it("has a specific message for every application error code", () => {
         for (const code of Object.values(APPLICATION_ERROR))
-            expect(errorMessageId(code)).not.toBe("errors.generic");
+            expect(getErrorMessageId(code)).not.toBe("errors.generic");
     });
 
     it("shows one notification when the same error is reported twice", () => {

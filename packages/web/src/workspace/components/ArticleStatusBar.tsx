@@ -111,14 +111,14 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, save
                     setCopyMenuOpen(false);
                 }, languageMenuId);
             }}>
-                <span>{intl.formatMessage({ id: languageMessageId(language) })}</span>
+                <span>{intl.formatMessage({ id: getLanguageMessageId(language) })}</span>
                 <ChevronDownIcon className={`size-3 transition-transform ${languageMenuOpen ? "rotate-180" : ""}`} />
             </button>
             {languageMenuOpen && <div id={languageMenuId} className="absolute bottom-6 left-0 z-10 w-40 rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} onKeyDown={(event) => handleMenuKeyDown(event, () => {
                 setLanguageMenuOpen(false);
                 languageTrigger.current?.focus();
             })}>
-                {articleLanguages.map((option) => <button key={option} className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitemradio" aria-checked={option === language} onClick={() => void selectLanguage(option)}>{intl.formatMessage({ id: languageMessageId(option) })}</button>)}
+                {articleLanguages.map((option) => <button key={option} className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none" type="button" role="menuitemradio" aria-checked={option === language} onClick={() => void selectLanguage(option)}>{intl.formatMessage({ id: getLanguageMessageId(option) })}</button>)}
             </div>}
         </div>
         <span aria-label={saveLabel} className={`ml-2 inline-flex items-center gap-1 text-xs ${saveTone}`} role="status" title={saveLabel}>
@@ -184,6 +184,6 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, save
 }
 
 
-function languageMessageId(language: string): "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" {
+function getLanguageMessageId(language: string): "languages.english" | "languages.spanish" | "languages.portuguese" | "languages.russian" | "languages.french" | "languages.german" | "languages.italian" {
     return ({ en: "languages.english", es: "languages.spanish", pt: "languages.portuguese", ru: "languages.russian", fr: "languages.french", de: "languages.german", it: "languages.italian" } as const)[language as "en" | "es" | "pt" | "ru" | "fr" | "de" | "it"];
 }

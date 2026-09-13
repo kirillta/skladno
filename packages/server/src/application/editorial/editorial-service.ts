@@ -18,7 +18,7 @@ import { EDITORIAL_ENGINE_EVENT } from "./engine/editorial-engine-events.js";
 import { EditorialEngineError } from "./engine/editorial-engine-error.js";
 import type { EditorialEngineResolver } from "./engine/editorial-engine-resolver.js";
 import type { EditorialServiceRequest } from "./editorial-request.js";
-import { reusableFactFindings } from "./fact-checking/reusable-fact-findings.js";
+import { getReusableFactFindings } from "./fact-checking/reusable-fact-findings.js";
 import { persistFactCheckArtifact } from "./fact-checking/persist-fact-check-artifact.js";
 import type { FactCheckArtifactStore } from "./fact-checking/fact-check-artifact-store.js";
 import type { TelemetryObserver } from "../telemetry/telemetry-observer.js";
@@ -119,7 +119,7 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
 }
 
 
-function engineRequest(request: EditorialServiceRequest, context: EditorialStreamContext, factChecks: FactChecksStore) {
+function createEngineRequest(request: EditorialServiceRequest, context: EditorialStreamContext, factChecks: FactChecksStore) {
     return {
         operation: request.operation,
         article: request.articleContent ?? context.article.currentRevision.content,
@@ -133,12 +133,12 @@ function engineRequest(request: EditorialServiceRequest, context: EditorialStrea
         ...(context.styleProfile ? { articleStyleRules: context.articleStyleRules } : {}),
         ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
         ...(context.previousResponseId ? { previousResponseId: context.previousResponseId } : {}),
-        ...(context.factCheck ? { reusableFactFindings: reusableFactFindings(factChecks, request.articleId) } : {}),
+        ...(context.factCheck ? { reusableFactFindings: getReusableFactFindings(factChecks, request.articleId) } : {}),
     };
 }
 
 
-function artifactKind(operation: EditorialOperation, factCheck: boolean): "fact-check" | "style-review" | "editorial-proposal" {
+function getEditorialArtifactKind(operation: EditorialOperation, factCheck: boolean): "fact-check" | "style-review" | "editorial-proposal" {
     if (factCheck)
         return "fact-check";
 
@@ -146,7 +146,7 @@ function artifactKind(operation: EditorialOperation, factCheck: boolean): "fact-
 }
 
 
-function artifactMetadata(request: EditorialServiceRequest, context: EditorialStreamContext, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>, includeFactCheck = true) {
+function createEditorialArtifactMetadata(request: EditorialServiceRequest, context: EditorialStreamContext, event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>, includeFactCheck = true) {
     return {
         requestId: request.requestId,
         operation: request.operation,
@@ -171,8 +171,8 @@ function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifa
         return artifacts.createEditorialArtifact({
             articleId: request.articleId,
             revisionId: context.article.currentRevisionId,
-            kind: artifactKind(request.operation, context.factCheck),
-            content: JSON.stringify(artifactMetadata(request, context, event)),
+            kind: getEditorialArtifactKind(request.operation, context.factCheck),
+            content: JSON.stringify(createEditorialArtifactMetadata(request, context, event)),
         }).id;
 
     return persistFactCheckArtifact({
@@ -180,7 +180,7 @@ function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifa
         factChecks,
         articleId: request.articleId,
         revisionId: context.article.currentRevisionId,
-        metadata: artifactMetadata(request, context, event, false),
+        metadata: createEditorialArtifactMetadata(request, context, event, false),
         factCheck: event.factCheck!,
     }).artifactId;
 }
@@ -188,7 +188,7 @@ function persistCompletedEditorialOutput(sessions: EditorialSessionStore, artifa
 
 async function* streamEditorialOperation(request: EditorialServiceRequest, context: EditorialStreamContext, factChecks: FactChecksStore, signal: AbortSignal, onCompleted: (event: Extract<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED }>) => string | undefined): AsyncIterable<EditorialEngineEvent> {
     let completed = false;
-    for await (const event of context.engine.stream(engineRequest(request, context, factChecks), signal)) {
+    for await (const event of context.engine.stream(createEngineRequest(request, context, factChecks), signal)) {
         if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED) {
             completed = true;
             const editorialArtifactId = onCompleted(event);

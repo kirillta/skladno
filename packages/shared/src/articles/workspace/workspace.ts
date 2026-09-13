@@ -5,8 +5,8 @@ import type { RevisionClient } from "../revision/revisions.js";
 import type { AssistantClient, AssistantMessage } from "../../assistant/assistant.js";
 
 export const articlesPath = "/api/articles";
-export const articleArchivePath = (articleId: string) => `${articlesPath}/${encodeURIComponent(articleId)}/archive`;
-export const articlePinPath = (articleId: string) => `${articlesPath}/${encodeURIComponent(articleId)}/pin`;
+export const createArticleArchivePath = (articleId: string) => `${articlesPath}/${encodeURIComponent(articleId)}/archive`;
+export const createArticlePinPath = (articleId: string) => `${articlesPath}/${encodeURIComponent(articleId)}/pin`;
 export const pinnedArticleOrderPath = `${articlesPath}/pinned-order`;
 
 

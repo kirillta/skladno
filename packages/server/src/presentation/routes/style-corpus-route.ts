@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { HTTP_STATUS, type CreateStyleCorpusItemInput } from "@skladno/shared";
 
 import { StyleCorpusService } from "../../application/editorial/style/style-corpus-service.js";
-import { object, readJson, string, writeJson } from "../transport/json.js";
+import { parseObject, parseString, readJson, writeJson } from "../transport/json.js";
 
 
 export function handleStyleCorpusRoute(response: ServerResponse, styleCorpus: StyleCorpusService): void {
@@ -11,8 +11,8 @@ export function handleStyleCorpusRoute(response: ServerResponse, styleCorpus: St
 
 
 export async function createStyleCorpusItemRoute(request: IncomingMessage, response: ServerResponse, styleCorpus: StyleCorpusService): Promise<void> {
-    const body = object(await readJson(request));
-    const input: CreateStyleCorpusItemInput = { name: typeof body.name === "string" ? body.name : undefined, content: string(body.content, "content") };
+    const body = parseObject(await readJson(request));
+    const input: CreateStyleCorpusItemInput = { name: typeof body.name === "string" ? body.name : undefined, content: parseString(body.content, "content") };
 
     writeJson(response, HTTP_STATUS.CREATED, await styleCorpus.add(input, new AbortController().signal));
 }
@@ -26,7 +26,7 @@ export function deleteStyleCorpusItemRoute(response: ServerResponse, itemId: str
 
 
 export async function updateStyleCorpusItemRoute(request: IncomingMessage, response: ServerResponse, itemId: string, styleCorpus: StyleCorpusService): Promise<void> {
-    const body = object(await readJson(request));
+    const body = parseObject(await readJson(request));
     if (typeof body.included !== "boolean")
         throw new Error("included must be a boolean.");
 
@@ -35,8 +35,8 @@ export async function updateStyleCorpusItemRoute(request: IncomingMessage, respo
 
 
 export async function updateStyleCorpusRulesRoute(request: IncomingMessage, response: ServerResponse, styleCorpus: StyleCorpusService): Promise<void> {
-    const body = object(await readJson(request));
-    writeJson(response, HTTP_STATUS.OK, styleCorpus.setRules(string(body.rules, "rules")));
+    const body = parseObject(await readJson(request));
+    writeJson(response, HTTP_STATUS.OK, styleCorpus.setRules(parseString(body.rules, "rules")));
 }
 
 
@@ -56,6 +56,6 @@ export function getArticleStyleRulesRoute(response: ServerResponse, articleId: s
 
 
 export async function setArticleStyleRulesRoute(request: IncomingMessage, response: ServerResponse, articleId: string, styleCorpus: StyleCorpusService): Promise<void> {
-    const body = object(await readJson(request));
-    writeJson(response, HTTP_STATUS.OK, { rules: styleCorpus.setArticleRules(articleId, string(body.rules, "rules")) });
+    const body = parseObject(await readJson(request));
+    writeJson(response, HTTP_STATUS.OK, { rules: styleCorpus.setArticleRules(articleId, parseString(body.rules, "rules")) });
 }

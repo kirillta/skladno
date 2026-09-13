@@ -1,9 +1,9 @@
-import { APPLICATION_ERROR, aiModelPreferenceId, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isAiProvider, isAssistantSendMode, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, KEY_BINDING_COMMAND, normalizeKeyBinding, parseAiModelPreferenceId, resolveBuiltInSkillId, resolveKeyBindings, type AiConnection, type AppModelPreference, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
+import { APPLICATION_ERROR, getAiModelPreferenceId, defaultGeneralSettings, defaultInterfaceLocale, findKeyBindingConflict, HTTP_STATUS, INTERFACE_LOCALE, isAiProvider, isAssistantSendMode, isDateFormatPreference, isKeyBindingCommandId, isThemePreference, isTimeFormatPreference, isTimeZonePreference, KEY_BINDING_COMMAND, normalizeKeyBinding, parseAiModelPreferenceId, resolveBuiltInSkillId, resolveKeyBindings, type AiConnection, type AppModelPreference, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 
 
-export function generalSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
+export function normalizeGeneralSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
     const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
     if (rejectInvalidPreferences
         && ((candidate.theme !== undefined && !isThemePreference(candidate.theme))
@@ -30,7 +30,7 @@ export function generalSettings(value: unknown, rejectInvalidPreferences = false
 }
 
 
-export function backupPolicy(value: unknown): BackupPolicy {
+export function normalizeBackupPolicy(value: unknown): BackupPolicy {
     const candidate = value && typeof value === "object" ? value as Partial<BackupPolicy> : {};
     return {
         schedule: candidate.schedule === "daily" ? "daily" : "off",
@@ -74,7 +74,7 @@ function normalizeAiConnection(value: unknown): AiConnection | undefined {
 }
 
 
-export function aiConnections(value: unknown): { connections: AiConnection[]; activeConnectionId?: string } {
+export function normalizeAiConnections(value: unknown): { connections: AiConnection[]; activeConnectionId?: string } {
     const candidate = value && typeof value === "object" ? value as { connections?: unknown; activeConnectionId?: unknown } : {};
     const connections = Array.isArray(candidate.connections) ? candidate.connections.flatMap((connection) => {
         const normalized = normalizeAiConnection(connection);
@@ -87,7 +87,7 @@ export function aiConnections(value: unknown): { connections: AiConnection[]; ac
 }
 
 
-export function environmentVariableName(value: unknown): string {
+export function getEnvironmentVariableName(value: unknown): string {
     if (typeof value !== "string" || !/^[A-Z_][A-Z0-9_]*$/.test(value))
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_ENVIRONMENT_VARIABLE_NAME, HTTP_STATUS.BAD_REQUEST);
 
@@ -95,25 +95,25 @@ export function environmentVariableName(value: unknown): string {
 }
 
 
-function modelPreference(value: unknown, legacyConnectionId?: string): string {
+function normalizeModelPreference(value: unknown, legacyConnectionId?: string): string {
     if (typeof value !== "string" || !value.trim())
         return "";
 
     const normalized = value.trim();
     return parseAiModelPreferenceId(normalized) || !legacyConnectionId
         ? normalized
-        : aiModelPreferenceId(legacyConnectionId, normalized);
+        : getAiModelPreferenceId(legacyConnectionId, normalized);
 }
 
 
-export function appModel(value: unknown, legacyConnectionId?: string): AppModelPreference | undefined {
+export function normalizeAppModel(value: unknown, legacyConnectionId?: string): AppModelPreference | undefined {
     const candidate = value && typeof value === "object" && !Array.isArray(value)
         ? value as { model?: unknown; reasoningEffort?: unknown; appModel?: unknown; textGenerationModel?: unknown; textGenerationReasoningEffort?: unknown }
         : {};
     const nested = candidate.appModel && typeof candidate.appModel === "object" && !Array.isArray(candidate.appModel)
         ? candidate.appModel as { model?: unknown; reasoningEffort?: unknown }
         : undefined;
-    const model = modelPreference(nested?.model ?? candidate.model ?? candidate.textGenerationModel, legacyConnectionId);
+    const model = normalizeModelPreference(nested?.model ?? candidate.model ?? candidate.textGenerationModel, legacyConnectionId);
     const reasoningEffort = nested?.reasoningEffort ?? candidate.reasoningEffort ?? candidate.textGenerationReasoningEffort;
 
     return model
@@ -122,12 +122,12 @@ export function appModel(value: unknown, legacyConnectionId?: string): AppModelP
 }
 
 
-export function modelPreferences(value: unknown, legacyConnectionId?: string): ModelPreferences {
+export function normalizeModelPreferences(value: unknown, legacyConnectionId?: string): ModelPreferences {
     const candidate = value && typeof value === "object" ? value as Partial<ModelPreferences> & { operationOverrides?: unknown } : {};
     const values = candidate.skillOverrides && typeof candidate.skillOverrides === "object" ? candidate.skillOverrides : candidate.operationOverrides;
     const skillOverrides = Object.fromEntries(Object.entries(values ?? {}).flatMap(([skill, model]) => {
         const normalized = resolveBuiltInSkillId(skill);
-        const preference = modelPreference(model, legacyConnectionId);
+        const preference = normalizeModelPreference(model, legacyConnectionId);
         return normalized && preference ? [[normalized, preference]] : [];
     })) as ModelPreferences["skillOverrides"];
 
@@ -139,11 +139,11 @@ export function modelPreferences(value: unknown, legacyConnectionId?: string): M
         return normalized && (effort === "low" || effort === "medium" || effort === "high") ? [[normalized, effort]] : [];
     })) as NonNullable<ModelPreferences["skillReasoningEfforts"]>;
     const favoriteModels = Array.isArray(candidate.favoriteModels)
-        ? [...new Set(candidate.favoriteModels.map((model) => modelPreference(model, legacyConnectionId)).filter(Boolean))]
+        ? [...new Set(candidate.favoriteModels.map((model) => normalizeModelPreference(model, legacyConnectionId)).filter(Boolean))]
         : [];
 
     return {
-        defaultModel: modelPreference(candidate.defaultModel, legacyConnectionId),
+        defaultModel: normalizeModelPreference(candidate.defaultModel, legacyConnectionId),
         ...(reasoningEffort ? { reasoningEffort } : {}),
         skillOverrides,
         ...(Object.keys(skillReasoningEfforts).length > 0 ? { skillReasoningEfforts } : {}),
@@ -197,11 +197,11 @@ function normalizeKeyBindingOverrides(value: unknown, rejectInvalid: boolean): K
 }
 
 
-export function keyBindingOverrides(value: unknown): KeyBindingOverrides {
+export function normalizeStoredKeyBindingOverrides(value: unknown): KeyBindingOverrides {
     return normalizeKeyBindingOverrides(value, false);
 }
 
 
-export function requestedKeyBindingOverrides(value: unknown): KeyBindingOverrides {
+export function normalizeRequestedKeyBindingOverrides(value: unknown): KeyBindingOverrides {
     return normalizeKeyBindingOverrides(value, true);
 }

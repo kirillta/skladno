@@ -2,7 +2,7 @@ import type { CreateEditorialArtifactInput, CreateSourceCitationInput, Editorial
 
 
 export interface AssistantArtifactStore {
-    withinTransaction<T>(run: () => T): T;
+    runWithinTransaction<T>(run: () => T): T;
     createEditorialArtifact(input: CreateEditorialArtifactInput): EditorialArtifact;
     createSourceCitation(input: CreateSourceCitationInput): SourceCitation;
     listEditorialArtifacts(articleId: string): EditorialArtifact[];

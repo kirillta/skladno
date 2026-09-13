@@ -6,7 +6,7 @@ import { defaultGeneralSettings } from "@skladno/shared";
 
 import type { EditorialWorkspaceClient } from "../application/client.js";
 import { messages } from "../i18n/messages.js";
-import { message } from "../i18n/test-message.js";
+import { getMessage } from "../i18n/test-message.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
 import { resetApplicationSettingsTestEnvironment, settingsSnapshot } from "./ApplicationSettings.test-utils.js";
@@ -24,11 +24,11 @@ describe("ApplicationSettings publishing", () => {
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
-        await user.click(await screen.findByRole("button", { name: message("settings.publishing") }));
-        const languages = screen.getByRole("group", { name: message("settings.defaultTranslationLanguages") });
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.publishing") }));
+        const languages = screen.getByRole("group", { name: getMessage("settings.defaultTranslationLanguages") });
         expect(languages.getAttribute("aria-describedby")).toBeTruthy();
-        await user.click(screen.getByRole("checkbox", { name: message("languages.spanish") }));
-        await user.click(screen.getByRole("checkbox", { name: message("languages.german") }));
+        await user.click(screen.getByRole("checkbox", { name: getMessage("languages.spanish") }));
+        await user.click(screen.getByRole("checkbox", { name: getMessage("languages.german") }));
         await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({ ...defaultGeneralSettings, defaultTranslationLanguages: ["es", "de"] }));
     });
 
@@ -43,21 +43,21 @@ describe("ApplicationSettings publishing", () => {
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
-        await user.click(await screen.findByRole("button", { name: message("settings.publishing") }));
-        await user.clear(screen.getByRole("textbox", { name: message("settings.customProfileName") }));
-        await user.type(screen.getByRole("textbox", { name: message("settings.customProfileName") }), "Newsletter");
-        const limit = screen.getByRole("spinbutton", { name: message("settings.customProfileLimit") });
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.publishing") }));
+        await user.clear(screen.getByRole("textbox", { name: getMessage("settings.customProfileName") }));
+        await user.type(screen.getByRole("textbox", { name: getMessage("settings.customProfileName") }), "Newsletter");
+        const limit = screen.getByRole("spinbutton", { name: getMessage("settings.customProfileLimit") });
         await user.clear(limit);
         await user.type(limit, "1200");
-        await user.click(screen.getByRole("button", { name: message("settings.saveCustomProfile") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.saveCustomProfile") }));
         await waitFor(() => expect(setPublishingSettings).toHaveBeenCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Newsletter", characterLimit: 1200 })] })));
-        await user.type(screen.getByRole("textbox", { name: message("settings.customProfileName") }), "Long read");
-        await user.type(screen.getByRole("spinbutton", { name: message("settings.customProfileLimit") }), "5000");
-        await user.click(screen.getByRole("button", { name: message("settings.saveCustomProfile") }));
+        await user.type(screen.getByRole("textbox", { name: getMessage("settings.customProfileName") }), "Long read");
+        await user.type(screen.getByRole("spinbutton", { name: getMessage("settings.customProfileLimit") }), "5000");
+        await user.click(screen.getByRole("button", { name: getMessage("settings.saveCustomProfile") }));
         await waitFor(() => expect(setPublishingSettings).toHaveBeenLastCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Newsletter", characterLimit: 1200 }), expect.objectContaining({ name: "Long read", characterLimit: 5000 })] })));
-        await user.click(screen.getByRole("button", { name: message("settings.removeCustomProfile", { name: "Newsletter" }) }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.removeCustomProfile", { name: "Newsletter" }) }));
         const dialog = screen.getByRole("dialog");
-        await user.click(within(dialog).getByRole("button", { name: message("settings.remove") }));
+        await user.click(within(dialog).getByRole("button", { name: getMessage("settings.remove") }));
         await waitFor(() => expect(setPublishingSettings).toHaveBeenLastCalledWith(expect.objectContaining({ customProfiles: [expect.objectContaining({ name: "Long read", characterLimit: 5000 })] })));
     });
 });

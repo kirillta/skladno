@@ -6,7 +6,7 @@ import { presentProposalReview, type ProposalDecision } from "./proposal-review-
 import { AssistantIcon, ChevronRightIcon, CloseIcon, HighlightChangesIcon, SideBySideIcon, StackedDiffIcon } from "../../ui/icons.js";
 
 
-function highlightedText(original: string, proposed: string) {
+function renderHighlightedText(original: string, proposed: string) {
     const originalTokens = original.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
     const proposedTokens = proposed.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
     // ponytail: quadratic per paragraph; replace with Myers diff if long paragraphs become slow.
@@ -52,7 +52,7 @@ function HighlightedText({ parts, tone }: { parts: { changed: boolean; text: str
 
 
 function ProposalDiff({ original, proposed, layout, decision = "pending", highlight }: { original: string; proposed: string; layout: "columns" | "stacked"; decision?: ProposalDecision; highlight: boolean }) {
-    const highlights = highlight ? highlightedText(original, proposed) : undefined;
+    const highlights = highlight ? renderHighlightedText(original, proposed) : undefined;
     return <Diff layout={layout} state={decision}
         removed={highlights ? <HighlightedText parts={highlights.original} tone="removed" /> : original}
         added={highlights ? <HighlightedText parts={highlights.proposed} tone="added" /> : proposed} />;

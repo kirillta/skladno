@@ -5,8 +5,8 @@ import { FACT_CHECK_STATUS } from "@skladno/shared";
 
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
-import { aiSdkGenerationOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
-import { openAiResponseId, openAiResponsesProviderOptions } from "./openai-responses.js";
+import { createAiSdkGenerationOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
+import { getOpenAiResponseId, getOpenAiResponsesProviderOptions } from "./openai-responses.js";
 import type { FactCheckResearch } from "../models/fact-check-research.js";
 import type { FactCheckFindingDraft } from "../models/fact-check-finding-draft.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
@@ -36,7 +36,7 @@ const findingSchema = z.object({
 interface OpenAIFactCheckProviderOptions {
     client: ReturnType<typeof createOpenAI>;
     model: string;
-    providerOptions: (previousResponseId?: string) => ReturnType<typeof openAiResponsesProviderOptions>;
+    providerOptions: (previousResponseId?: string) => ReturnType<typeof getOpenAiResponsesProviderOptions>;
 }
 
 
@@ -52,11 +52,11 @@ export function createOpenAIFactCheckProvider({ client, model, providerOptions }
 
 async function extractClaims(article: string, signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<{ responseId: string; claims: { claim: string }[] }> {
     const result = await generateText({
-        ...aiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
+        ...createAiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
         prompt: `Extract up to 12 externally verifiable factual claims from this article. Exclude opinions and advice.\n\n${article}`,
         output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12) }) }),
     });
-    const completedResponseId = openAiResponseId(result.providerMetadata);
+    const completedResponseId = getOpenAiResponseId(result.providerMetadata);
     if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
@@ -68,7 +68,7 @@ async function researchClaims(claims: { claim: string }[], signal: AbortSignal, 
     const research: FactCheckResearch[] = [];
     for (const { claim } of claims) {
         const result = await generateText({
-            ...aiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
+            ...createAiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
             prompt: `Research this factual claim using web search. Prefer primary sources, report source URLs, publication dates when available, and brief supporting or contradicting evidence. Do not infer missing evidence.\n\nClaim: ${claim}`,
             tools: { web_search: client.tools.webSearch({ externalWebAccess: true, searchContextSize: "high" }) },
             toolChoice: { type: "tool", toolName: "web_search" },
@@ -83,11 +83,11 @@ async function researchClaims(claims: { claim: string }[], signal: AbortSignal, 
 
 async function evaluateClaims(research: FactCheckResearch[], signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<{ responseId: string; findings: FactCheckFindingDraft[] }> {
     const result = await generateText({
-        ...aiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
+        ...createAiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
         prompt: `Evaluate each article claim using the web-research evidence below. A missing source must be classified as unverifiable. Return only sources actually present in the evidence, with an explicit source-quality rating and uncertainty.\n\n${JSON.stringify(research)}`,
         output: Output.object({ schema: z.object({ findings: z.array(findingSchema) }) }),
     });
-    const completedResponseId = openAiResponseId(result.providerMetadata);
+    const completedResponseId = getOpenAiResponseId(result.providerMetadata);
     if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 

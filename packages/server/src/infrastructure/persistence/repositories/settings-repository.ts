@@ -1,7 +1,7 @@
 import type { AppSetting } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { now, required, type Row } from "./repository-utils.js";
+import { getCurrentTimestamp, requireNonEmpty, type Row } from "./repository-utils.js";
 
 
 export class SettingsRepository {
@@ -9,8 +9,8 @@ export class SettingsRepository {
 
 
     saveSetting(key: string, value: unknown): AppSetting {
-        required(key, "Setting key");
-        const updatedAt = now();
+        requireNonEmpty(key, "Setting key");
+        const updatedAt = getCurrentTimestamp();
         this.database.prepare("INSERT INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at")
             .run(key, JSON.stringify(value), updatedAt);
 

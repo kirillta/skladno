@@ -1,6 +1,6 @@
-export const editorialPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/editorial`;
-export const factChecksPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/fact-checks`;
-export const factCheckResolutionPath = (articleId: string, occurrenceId: string) => `${factChecksPath(articleId)}/${encodeURIComponent(occurrenceId)}/resolution`;
+export const createEditorialPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/editorial`;
+export const createFactChecksPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/fact-checks`;
+export const createFactCheckResolutionPath = (articleId: string, occurrenceId: string) => `${createFactChecksPath(articleId)}/${encodeURIComponent(occurrenceId)}/resolution`;
 
 
 export const EDITORIAL_OPERATION = {

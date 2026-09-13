@@ -21,7 +21,7 @@ import { isValidatedEditorialCapabilityCall } from "./editorial-capability-valid
 export { EDITORIAL_CAPABILITY } from "./editorial-capability-id.js";
 export { EDITORIAL_CAPABILITY_INPUT } from "./editorial-capability-input.js";
 export { editorialCapabilityDefinitions, editorialOperationClassifications, transportEvaluations } from "./editorial-capability-registry.js";
-export { activityForEditorialOperation, capabilityForEditorialOperation, isValidatedEditorialCapabilityCall, validateEditorialCapabilityCoverage } from "./editorial-capability-validation.js";
+export { getActivityForEditorialOperation, getCapabilityForEditorialOperation, isValidatedEditorialCapabilityCall, validateEditorialCapabilityCoverage } from "./editorial-capability-validation.js";
 export type { EditorialCapabilityContext } from "./editorial-capability-context.js";
 export type { EditorialCapabilityDefinition, EditorialCapabilityResultKind } from "./editorial-capability-definition.js";
 export type { EditorialCapabilityDiscoveryResult } from "./editorial-capability-discovery-result.js";
@@ -32,7 +32,7 @@ export type { StreamContext } from "./editorial-stream-context.js";
 export type { TransportEvaluation } from "./transport-evaluation.js";
 
 
-function currentArticle(articles: ArticleService, context: EditorialCapabilityContext): Article {
+function getCurrentArticle(articles: ArticleService, context: EditorialCapabilityContext): Article {
     const article = articles.getArticle(context.articleId);
     if (!article)
         throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
@@ -44,7 +44,7 @@ function currentArticle(articles: ArticleService, context: EditorialCapabilityCo
 }
 
 
-function operationFor(input: StreamContext): EditorialOperation {
+function getEditorialOperationFor(input: StreamContext): EditorialOperation {
     switch (input.capability) {
         case EDITORIAL_CAPABILITY.GENERATE_PROPOSAL:
             if (input.operation === EDITORIAL_OPERATION.THESIS_TO_NARRATIVE || input.operation === EDITORIAL_OPERATION.FLOW_REVISION)
@@ -66,14 +66,14 @@ function operationFor(input: StreamContext): EditorialOperation {
 }
 
 
-function words(value: string): readonly string[] {
+function splitIntoWords(value: string): readonly string[] {
     return value.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((word) => word.length > 1);
 }
 
 
-function rank(query: string, entry: EditorialOperationClassification): number {
-    const queryWords = new Set(words(query));
-    return words([entry.id, entry.outcome, ...entry.aliases, entry.reason ?? ""].join(" ")).reduce((score, word) => score + (queryWords.has(word) ? 1 : 0), 0);
+function calculateClassificationRank(query: string, entry: EditorialOperationClassification): number {
+    const queryWords = new Set(splitIntoWords(query));
+    return splitIntoWords([entry.id, entry.outcome, ...entry.aliases, entry.reason ?? ""].join(" ")).reduce((score, word) => score + (queryWords.has(word) ? 1 : 0), 0);
 }
 
 
@@ -88,7 +88,7 @@ export class EditorialCapabilityCatalog {
     ) { }
 
 
-    definitions(): readonly EditorialCapabilityDefinition[] {
+    getDefinitions(): readonly EditorialCapabilityDefinition[] {
         return definitions;
     }
 
@@ -100,7 +100,7 @@ export class EditorialCapabilityCatalog {
 
             const definition = definitions.find((candidate) => candidate.id === entry.capability);
             return scope === "article" || definition?.selectionCompatible === true;
-        }).map((entry) => ({ entry, score: rank(query, entry) }))
+        }).map((entry) => ({ entry, score: calculateClassificationRank(query, entry) }))
             .filter(({ score }) => score > 0)
             .sort((left, right) => right.score - left.score || left.entry.id.localeCompare(right.entry.id))
             .slice(0, 10)
@@ -142,23 +142,23 @@ export class EditorialCapabilityCatalog {
                 factChecks: this.factChecks,
             },
             capability,
-            currentArticle(this.articles, context),
+            getCurrentArticle(this.articles, context),
             input,
         );
     }
 
 
-    action(capability: Extract<EditorialCapabilityId, "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext): StyleCorpus;
+    executeAction(capability: Extract<EditorialCapabilityId, "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext): StyleCorpus;
 
 
-    action(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>>): Article | { rules: string } | StyleCorpus;
+    executeAction(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>>): Article | { rules: string } | StyleCorpus;
 
 
-    action(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>> = {}): Article | { rules: string } | StyleCorpus {
+    executeAction(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>> = {}): Article | { rules: string } | StyleCorpus {
         if (!context.authorizedActions?.includes(capability) || !isValidatedEditorialCapabilityCall(capability, input))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        const article = currentArticle(this.articles, context);
+        const article = getCurrentArticle(this.articles, context);
         switch (capability) {
             case EDITORIAL_CAPABILITY.RENAME_ARTICLE:
                 return this.articles.updateArticle(article.id, { title: input.title!.trim() });
@@ -193,10 +193,10 @@ export class EditorialCapabilityCatalog {
         if (!isValidatedEditorialCapabilityCall(input.capability, toolInput))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        currentArticle(this.articles, input.context);
-        const operation = operationFor(input);
+        getCurrentArticle(this.articles, input.context);
+        const operation = getEditorialOperationFor(input);
         const corrections = input.capability === EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS
-            ? this.correctionContext(input.context.articleId, input.findingIds!)
+            ? this.createCorrectionContext(input.context.articleId, input.findingIds!)
             : "";
 
         const request = {
@@ -218,7 +218,7 @@ export class EditorialCapabilityCatalog {
     }
 
 
-    private correctionContext(articleId: string, findingIds: string): string {
+    private createCorrectionContext(articleId: string, findingIds: string): string {
         const selected = new Set(findingIds.split(",").map((id) => id.trim()));
         const findings = this.factChecks.listFactChecks(articleId).flatMap((check) => check.findings).filter((finding) => finding.occurrenceId && selected.has(finding.occurrenceId));
         if (findings.length !== selected.size)

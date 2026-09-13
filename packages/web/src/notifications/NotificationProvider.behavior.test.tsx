@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { message } from "../i18n/test-message.js";
+import { getMessage } from "../i18n/test-message.js";
 import { renderNotifications } from "./NotificationProvider.test-utils.js";
 
 describe("NotificationProvider behavior", () => {
@@ -53,7 +53,7 @@ describe("NotificationProvider behavior", () => {
         const notifications = renderNotifications();
         const onAction = vi.fn();
         notifications.notify({ tone: "error", title: "Could not save", action: { label: "Retry", onAction } });
-        fireEvent.click(screen.getByRole("button", { name: message("draftSave.retry") }));
+        fireEvent.click(screen.getByRole("button", { name: getMessage("draftSave.retry") }));
         expect(onAction).toHaveBeenCalledTimes(1);
         expect(screen.queryByText("Could not save")).toBeNull();
     });
@@ -64,7 +64,7 @@ describe("NotificationProvider behavior", () => {
         notifications.notify({ tone: "error", title: "Save failed" });
         expect(screen.getByRole("status").textContent).toContain("Information");
         expect(screen.getByRole("alert").textContent).toContain("Save failed");
-        const dismiss = screen.getByRole("button", { name: message("notifications.dismiss", { title: "Save failed" }) });
+        const dismiss = screen.getByRole("button", { name: getMessage("notifications.dismiss", { title: "Save failed" }) });
         expect(dismiss.querySelector("svg")?.classList.contains("size-4")).toBe(true);
         expect(dismiss.classList.contains("right-1")).toBe(true);
         expect(dismiss.classList.contains("top-1")).toBe(true);

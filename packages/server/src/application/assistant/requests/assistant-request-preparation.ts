@@ -6,13 +6,13 @@ import type { AssistantStore } from "../assistant-store.js";
 import type { EditorialEngine } from "../../editorial/engine/editorial-engine.js";
 import type { EditorialEngineResolver } from "../../editorial/engine/editorial-engine-resolver.js";
 import type { StyleCorpusStore } from "../../editorial/style/style-corpus-store.js";
-import { capabilityForEditorialOperation, type EditorialCapabilityCatalog } from "../capabilities/editorial-capability-catalog.js";
+import { getCapabilityForEditorialOperation, type EditorialCapabilityCatalog } from "../capabilities/editorial-capability-catalog.js";
 import type { PreparedAssistantRequest } from "./prepared-assistant-request.js";
 import type { ReplayedAssistantRequest } from "./replayed-assistant-request.js";
 import type { AssistantServiceRequest } from "./assistant-service-request.js";
 
 
-function operationFor(skill: BuiltInSkillId): EditorialOperation {
+function getEditorialOperationFor(skill: BuiltInSkillId): EditorialOperation {
     const operations: Record<BuiltInSkillId, EditorialOperation> = {
         talking_points: "thesis_to_narrative",
         narrative_draft: "thesis_to_narrative",
@@ -49,7 +49,7 @@ export class AssistantRequestPreparation {
         if (!article)
             throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 
-        const replay = this.replayInput(request);
+        const replay = this.getReplayInput(request);
         const articleContent = article.currentRevision.content;
         this.validatePreparation(replay, article.currentRevisionId, articleContent);
 
@@ -64,12 +64,12 @@ export class AssistantRequestPreparation {
             capabilityActivities: [],
             pendingActions: [],
             authorizedActions: [],
-            ...(!routing.usesCapabilityLoop && routing.resolvedSkillId ? { completedCapability: capabilityForEditorialOperation(routing.operation) } : {})
+            ...(!routing.usesCapabilityLoop && routing.resolvedSkillId ? { completedCapability: getCapabilityForEditorialOperation(routing.operation) } : {})
         };
     }
 
 
-    private replayInput(request: AssistantServiceRequest): ReplayedAssistantRequest {
+    private getReplayInput(request: AssistantServiceRequest): ReplayedAssistantRequest {
         if (request.kind === "new")
             return request;
 
@@ -105,7 +105,7 @@ export class AssistantRequestPreparation {
 
     private resolveRequestRouting(request: ReplayedAssistantRequest): { resolvedSkillId?: BuiltInSkillId; operation: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
         const resolvedSkillId = request.explicitSkillId;
-        const operation = operationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
+        const operation = getEditorialOperationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
         const engine = this.resolveEngine(operation, resolvedSkillId);
         const usesCapabilityLoop = Boolean(engine.streamAssistant && this.dependencies.capabilities);
 

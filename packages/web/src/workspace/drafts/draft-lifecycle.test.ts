@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import type { Article } from "@skladno/shared";
 import {
-    draftPresentationState,
+    getDraftPresentationState,
     hydrateDraftLifecycle,
     reduceDraftLifecycle,
     type DraftLifecycleState,
@@ -20,7 +20,7 @@ function clean(content = "Saved Article"): DraftLifecycleState {
 }
 
 
-function article(draft?: Article["draft"]): Article {
+function createArticle(draft?: Article["draft"]): Article {
     return {
         id: "article-1",
         title: "Article",
@@ -53,7 +53,7 @@ describe("Draft lifecycle", () => {
             draftVersion: 1,
             generation: 1,
         });
-        expect(draftPresentationState(checkpointed)).toBe("draft-saved");
+        expect(getDraftPresentationState(checkpointed)).toBe("draft-saved");
     });
 
     it("workspace.draft.flush-before-context-change keeps the latest generation ready for an explicit checkpoint", () => {
@@ -99,7 +99,7 @@ describe("Draft lifecycle", () => {
         const conflicted = reduceDraftLifecycle(clean("Local text"), {
             type: "conflicted",
             conflict: {
-                article: article({
+                article: createArticle({
                     articleId: "article-1",
                     content: "Persisted text",
                     baseRevisionId: "revision-1",
@@ -140,7 +140,7 @@ describe("Draft lifecycle", () => {
     });
 
     it("hydrates only a Current Draft and leaves a stale Draft recoverable outside the editing state", () => {
-        const current = hydrateDraftLifecycle(article({
+        const current = hydrateDraftLifecycle(createArticle({
             articleId: "article-1",
             content: "Current Draft",
             baseRevisionId: "revision-1",
@@ -148,7 +148,7 @@ describe("Draft lifecycle", () => {
             updatedAt: "2026-01-02T00:00:00.000Z",
         }));
         const stale = hydrateDraftLifecycle({
-            ...article({
+            ...createArticle({
                 articleId: "article-1",
                 content: "Stale Draft",
                 baseRevisionId: "revision-0",

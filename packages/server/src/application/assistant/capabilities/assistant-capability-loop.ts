@@ -26,7 +26,7 @@ export class AssistantCapabilityLoop {
     constructor(private readonly dependencies: {
         assistant: Pick<AssistantStore, "setExecution">;
         engines: Pick<EditorialEngineResolver, "resolveAssistantActionIntentVerifier">;
-        capabilities?: Pick<EditorialCapabilityCatalog, "definitions" | "discover" | "read" | "action" | "stream">;
+        capabilities?: Pick<EditorialCapabilityCatalog, "getDefinitions" | "discover" | "read" | "executeAction" | "stream">;
         skills: AssistantSkillCatalog;
         conversationHistory: (articleId: string, limit?: number) => ConversationHistory;
     }) { }
@@ -36,9 +36,9 @@ export class AssistantCapabilityLoop {
         if (!request.engine.streamAssistant || !this.dependencies.capabilities)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-        const excerpt = this.articleExcerpt(request);
+        const excerpt = this.getArticleExcerpt(request);
         let primary: CompletionEvent | undefined;
-        const tools = this.capabilityTools(request, excerpt, () => primary, (event) => {
+        const tools = this.createCapabilityTools(request, excerpt, () => primary, (event) => {
             primary = event;
         });
         const skills = this.dependencies.skills.load(this.dependencies.skills.discover().map((skill) => skill.reference));
@@ -67,7 +67,7 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private articleExcerpt(request: PreparedAssistantRequest): string {
+    private getArticleExcerpt(request: PreparedAssistantRequest): string {
         return request.scope.kind === "selection"
             ? request.articleContent.slice(request.scope.startOffset, request.scope.endOffset)
             : request.articleContent;
@@ -88,13 +88,13 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private capabilityTools(request: PreparedAssistantRequest, excerpt: string, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): EditorialAssistantTool[] {
+    private createCapabilityTools(request: PreparedAssistantRequest, excerpt: string, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): EditorialAssistantTool[] {
         if (!this.dependencies.capabilities)
             return [];
 
         const definitions = request.scope.kind === "selection"
-            ? this.dependencies.capabilities.definitions().filter((definition) => definition.execution === "artifact" && definition.selectionCompatible)
-            : this.dependencies.capabilities.definitions();
+            ? this.dependencies.capabilities.getDefinitions().filter((definition) => definition.execution === "artifact" && definition.selectionCompatible)
+            : this.dependencies.capabilities.getDefinitions();
         const tools: EditorialAssistantTool[] = definitions.map((definition) => ({
             capability: definition.id,
             description: definition.activity,

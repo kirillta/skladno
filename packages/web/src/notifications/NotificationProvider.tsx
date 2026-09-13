@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useIntl, type IntlShape } from "react-intl";
 import { ApplicationClientError } from "@skladno/shared";
-import { errorMessageId } from "../i18n/errors.js";
+import { getErrorMessageId } from "../i18n/errors.js";
 import { NotificationViewport } from "./NotificationViewport.js";
-import { MAX_VISIBLE_NOTIFICATIONS, notificationDuration, type NotificationInput, type Notifications, type NotifyErrorOptions, type StoredNotification } from "./notifications.js";
+import { MAX_VISIBLE_NOTIFICATIONS, getNotificationDuration, type NotificationInput, type Notifications, type NotifyErrorOptions, type StoredNotification } from "./notifications.js";
 
 
 const NotificationsContext = createContext<Notifications | undefined>(undefined);
@@ -84,7 +84,7 @@ function useNotificationState(intl: IntlShape) {
             title: input.title,
             message: input.message,
             action: input.action,
-            remainingDurationMs: notificationDuration(input.tone, input.durationMs),
+            remainingDurationMs: getNotificationDuration(input.tone, input.durationMs),
         };
 
         setNotifications((current) => [...current, notification]);
@@ -94,7 +94,7 @@ function useNotificationState(intl: IntlShape) {
     const notifyError = useCallback((error: unknown, options: NotifyErrorOptions = {}) => {
         const title = options.title ?? intl.formatMessage({ id: "notifications.errorTitle" });
         const message = error instanceof ApplicationClientError
-            ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
+            ? intl.formatMessage({ id: getErrorMessageId(error.code) }, error.parameters)
             : options.fallbackMessage ?? intl.formatMessage({ id: "errors.generic" });
         let actionId = "";
         if (options.action) {

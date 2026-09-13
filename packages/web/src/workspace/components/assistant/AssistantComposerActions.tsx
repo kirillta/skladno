@@ -4,7 +4,7 @@ import type { BuiltInSkillId } from "@skladno/shared";
 import { Button } from "../../../ui/primitives.js";
 import { ChevronDownIcon, CloseIcon } from "../../../ui/icons.js";
 import type { AssistantSelectionScope } from "../../state/assistant-messages-state.js";
-import { selectionPreview, skillMessages } from "./assistant-messages.js";
+import { getSelectionPreview, skillMessages } from "./assistant-messages.js";
 import type { AssistantSkillPickerControls } from "./assistant-composer-plugins.js";
 
 
@@ -66,7 +66,7 @@ export function SelectionChip({ selection, clearSelection }: { selection?: Assis
         return null;
 
     return <span data-assistant-composer-decoration className="mx-1 inline-flex h-5 min-h-0 max-w-[calc(100%-0.5rem)] items-center gap-1 align-middle rounded-full border border-border bg-surface px-1.5 text-xs font-semibold text-muted" aria-label={intl.formatMessage({ id: "assistant.articleSelection" })} title={selection.preview}>
-        <span className="relative -top-px max-w-48 truncate">{selectionPreview(selection.preview)}</span>
+        <span className="relative -top-px max-w-48 truncate">{getSelectionPreview(selection.preview)}</span>
         <button type="button" className="inline-grid size-3 min-h-0 place-items-center rounded-full p-0 text-muted hover:bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.clearArticleSelection" })} onClick={clearSelection}><CloseIcon className="size-2" /></button>
     </span>;
 }

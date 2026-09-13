@@ -5,7 +5,7 @@ import type { EditorialEngine } from "../application/editorial/engine/editorial-
 import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
 import { EditorialEngineError } from "../application/editorial/engine/editorial-engine-error.js";
-import { FixtureEngine, noConversation, withService } from "./editorial-integration.test-utils.js";
+import { FixtureEngine, createEmptyConversationStream, withService } from "./editorial-integration.test-utils.js";
 
 // Product scenarios: editorial-workflows.assistant-stream-failure-safe
 test("editorial endpoint streams a typed proposal and saves context only after completion", async () => {
@@ -127,7 +127,7 @@ test("expired provider session is cleared and can be retried as a fresh session"
         async *stream(): AsyncIterable<EditorialEngineEvent> {
             throw new EditorialEngineError("session_expired", "The saved editorial session is no longer available. Retry to start a fresh session.");
         },
-        streamConversation: noConversation,
+        streamConversation: createEmptyConversationStream,
     };
 
     await withService(engine, async (baseUrl, repositories) => {
@@ -150,7 +150,7 @@ test("provider errors are actionable and leave the article unchanged", async () 
         async *stream(): AsyncIterable<EditorialEngineEvent> {
             throw new Error("OpenAI could not complete this request (429). Check your connection and API settings, then retry.");
         },
-        streamConversation: noConversation,
+        streamConversation: createEmptyConversationStream,
     };
 
     await withService(engine, async (baseUrl, repositories) => {
@@ -177,7 +177,7 @@ test("cancelling an editorial stream does not change the article or session", as
             yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial" };
             await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
         },
-        streamConversation: noConversation,
+        streamConversation: createEmptyConversationStream,
     };
 
     await withService(engine, async (baseUrl, repositories) => {

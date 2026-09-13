@@ -3,7 +3,7 @@ import type { Article, ArticleDraft, ArticleRevision } from "@skladno/shared";
 import { parseObject, type Row } from "./repository-utils.js";
 
 
-export function revisionFromRow(row: Row): ArticleRevision {
+export function mapRevisionFromRow(row: Row): ArticleRevision {
     return {
         id: String(row.id),
         articleId: String(row.article_id),
@@ -15,7 +15,7 @@ export function revisionFromRow(row: Row): ArticleRevision {
 }
 
 
-function draftFromRow(row: Row): ArticleDraft | undefined {
+function mapDraftFromRow(row: Row): ArticleDraft | undefined {
     if (!row.draft_article_id)
         return undefined;
 
@@ -29,9 +29,9 @@ function draftFromRow(row: Row): ArticleDraft | undefined {
 }
 
 
-export function articleFromRow(row: Row): Article {
-    const currentRevision = revisionFromRow(row);
-    const currentDraft = draftFromRow(row);
+export function mapArticleFromRow(row: Row): Article {
+    const currentRevision = mapRevisionFromRow(row);
+    const currentDraft = mapDraftFromRow(row);
     return {
         id: String(row.article_id),
         title: String(row.title),

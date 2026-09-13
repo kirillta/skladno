@@ -11,7 +11,7 @@ import {
 import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
-import { targetLanguageId } from "./editorial-language.js";
+import { getTargetLanguageId } from "./editorial-language.js";
 
 
 interface EditorialResult<T> {
@@ -114,7 +114,7 @@ export function useEditorialResults(client: EditorialWorkspaceClient, workspace:
             await workspace.create({
                 title: translation.title ?? article.title,
                 content: translationResult.value.content,
-                language: targetLanguageId(translationResult.value.metadata.targetLanguage),
+                language: getTargetLanguageId(translationResult.value.metadata.targetLanguage),
                 publishingProfileId: isPublishLimitProfileId(article.publishingProfileId)
                     ? article.publishingProfileId
                     : isPublishLimitProfileId(configuredDefaultProfile)

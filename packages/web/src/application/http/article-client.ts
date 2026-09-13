@@ -1,18 +1,18 @@
 import {
     acceptProposalPath,
-    articleArchivePath,
-    articleDraftPath,
-    articlePinPath,
-    articleRevisionsPath,
+    createArticleArchivePath,
+    createArticleDraftPath,
+    createArticlePinPath,
+    createArticleRevisionsPath,
     articlesPath,
-    assistantMessagesPath,
-    assistantRequestsPath,
-    editorialPath,
-    factCheckResolutionPath,
-    factChecksPath,
+    createAssistantMessagesPath,
+    createAssistantRequestsPath,
+    createEditorialPath,
+    createFactCheckResolutionPath,
+    createFactChecksPath,
     HTTP_METHOD,
     pinnedArticleOrderPath,
-    proposalSummariesPath,
+    createProposalSummariesPath,
     restoreRevisionPath,
     type AcceptProposalInput,
     type Article,
@@ -34,7 +34,7 @@ import {
     ApplicationClientError,
 } from "@skladno/shared";
 
-import { applicationClientError, parseAssistantEvent, streamEvents } from "./client-transport.js";
+import { createApplicationClientError, parseAssistantEvent, streamEvents } from "./client-transport.js";
 import { HttpSettingsClient } from "./settings-client.js";
 
 
@@ -60,12 +60,12 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
 
     async setArticleArchived(articleId: string, archived: boolean): Promise<Article[]> {
-        return this.request<Article[]>(articleArchivePath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ archived }) });
+        return this.request<Article[]>(createArticleArchivePath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ archived }) });
     }
 
 
     async setArticlePinned(articleId: string, pinned: boolean): Promise<Article> {
-        return this.request<Article>(articlePinPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ pinned }) });
+        return this.request<Article>(createArticlePinPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ pinned }) });
     }
 
 
@@ -75,22 +75,22 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
 
     async saveArticleDraft(articleId: string, input: SaveArticleDraftInput): Promise<ArticleDraft> {
-        return this.request<ArticleDraft>(articleDraftPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
+        return this.request<ArticleDraft>(createArticleDraftPath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify(input) });
     }
 
 
     async discardArticleDraft(articleId: string, expectedDraftVersion: number): Promise<void> {
-        await this.request<void>(`${articleDraftPath(articleId)}?expectedDraftVersion=${expectedDraftVersion}`, { method: HTTP_METHOD.DELETE });
+        await this.request<void>(`${createArticleDraftPath(articleId)}?expectedDraftVersion=${expectedDraftVersion}`, { method: HTTP_METHOD.DELETE });
     }
 
 
     async saveArticleRevision(articleId: string, input: SaveArticleRevisionInput): Promise<ArticleRevision> {
-        return this.request<ArticleRevision>(articleRevisionsPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+        return this.request<ArticleRevision>(createArticleRevisionsPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 
     async listArticleRevisions(articleId: string): Promise<ArticleRevision[]> {
-        return this.request<ArticleRevision[]>(articleRevisionsPath(articleId));
+        return this.request<ArticleRevision[]>(createArticleRevisionsPath(articleId));
     }
 
 
@@ -100,7 +100,7 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
 
     async summarizeProposal(articleId: string, input: SummarizeProposalInput): Promise<ProposalChangeSummary[]> {
-        return this.request<ProposalChangeSummary[]>(proposalSummariesPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
+        return this.request<ProposalChangeSummary[]>(createProposalSummariesPath(articleId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 
@@ -110,12 +110,12 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
 
     async listAssistantMessages(articleId: string): Promise<AssistantMessage[]> {
-        return this.request<AssistantMessage[]>(assistantMessagesPath(articleId));
+        return this.request<AssistantMessage[]>(createAssistantMessagesPath(articleId));
     }
 
 
     async streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void> {
-        const response = await fetch(`${this.serviceUrl}${assistantRequestsPath(articleId)}`, {
+        const response = await fetch(`${this.serviceUrl}${createAssistantRequestsPath(articleId)}`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
@@ -127,7 +127,7 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
                 ? (body as { error: unknown }).error
                 : undefined;
 
-            throw applicationClientError(payload, response.status);
+            throw createApplicationClientError(payload, response.status);
         }
 
         await streamEvents(response.body, parseAssistantEvent, (event) => {
@@ -140,7 +140,7 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
 
     async streamEditorial(articleId: string, input: StartEditorialRequest, onEvent: (event: EditorialEvent) => void, signal?: AbortSignal): Promise<void> {
-        const response = await fetch(`${this.serviceUrl}${editorialPath(articleId)}`, {
+        const response = await fetch(`${this.serviceUrl}${createEditorialPath(articleId)}`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
@@ -155,11 +155,11 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
 
     async listFactChecks(articleId: string): Promise<FactCheck[]> {
-        return this.request<FactCheck[]>(factChecksPath(articleId));
+        return this.request<FactCheck[]>(createFactChecksPath(articleId));
     }
 
 
     async resolveFactCheckFinding(articleId: string, occurrenceId: string, resolution: NonNullable<FactCheckFinding["resolution"]>): Promise<void> {
-        await this.request<void>(factCheckResolutionPath(articleId, occurrenceId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ resolution }) });
+        await this.request<void>(createFactCheckResolutionPath(articleId, occurrenceId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ resolution }) });
     }
 }

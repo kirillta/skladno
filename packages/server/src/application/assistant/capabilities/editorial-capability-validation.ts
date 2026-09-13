@@ -69,7 +69,7 @@ export function validateEditorialCapabilityCoverage(): void {
 }
 
 
-export function capabilityForEditorialOperation(operation: import("@skladno/shared").EditorialOperation): Extract<EditorialCapabilityId, "generate_proposal" | "fact_check" | "style_review" | "translate"> {
+export function getCapabilityForEditorialOperation(operation: import("@skladno/shared").EditorialOperation): Extract<EditorialCapabilityId, "generate_proposal" | "fact_check" | "style_review" | "translate"> {
     switch (operation) {
         case EDITORIAL_OPERATION.FACT_CHECK:
             return EDITORIAL_CAPABILITY.FACT_CHECK;
@@ -83,6 +83,6 @@ export function capabilityForEditorialOperation(operation: import("@skladno/shar
 }
 
 
-export function activityForEditorialOperation(operation: import("@skladno/shared").EditorialOperation): string {
-    return definitions.find((definition) => definition.id === capabilityForEditorialOperation(operation))?.activity ?? "Preparing editorial work.";
+export function getActivityForEditorialOperation(operation: import("@skladno/shared").EditorialOperation): string {
+    return definitions.find((definition) => definition.id === getCapabilityForEditorialOperation(operation))?.activity ?? "Preparing editorial work.";
 }

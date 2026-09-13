@@ -2,11 +2,11 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { aiModelPreferenceId } from "@skladno/shared";
+import { getAiModelPreferenceId } from "@skladno/shared";
 
 import type { EditorialWorkspaceClient } from "../application/client.js";
 import { messages } from "../i18n/messages.js";
-import { message } from "../i18n/test-message.js";
+import { getMessage } from "../i18n/test-message.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";
 import { ApplicationSettings } from "./ApplicationSettings.js";
 import { resetApplicationSettingsTestEnvironment, settingsSnapshot } from "./ApplicationSettings.test-utils.js";
@@ -27,10 +27,10 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
 
         await waitFor(() => expect(refreshAiModels).toHaveBeenCalledOnce());
-        await user.click(screen.getByRole("button", { name: message("settings.model") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.model") }));
         expect(screen.getAllByRole("option", { name: "GPT-5" })).not.toHaveLength(0);
     });
 
@@ -47,8 +47,8 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.selectOptions(screen.getByRole("combobox", { name: message("settings.reasoningEffort") }), "high");
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
+        await user.selectOptions(screen.getByRole("combobox", { name: getMessage("settings.reasoningEffort") }), "high");
 
         await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith({ defaultModel: "gpt-4.1", skillOverrides: {}, reasoningEffort: "high" }));
     });
@@ -70,14 +70,14 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.selectOptions(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })[1]!, "low");
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
+        await user.selectOptions(screen.getAllByRole("combobox", { name: getMessage("settings.reasoningEffort") })[1]!, "low");
         await waitFor(() => expect(updateAppModel).toHaveBeenCalledWith({ model: "gpt-5.5-mini", reasoningEffort: "low" }));
 
-        await user.click(screen.getByRole("button", { name: message("settings.specificModels") }));
-        expect(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })).toHaveLength(3);
+        await user.click(screen.getByRole("button", { name: getMessage("settings.specificModels") }));
+        expect(screen.getAllByRole("combobox", { name: getMessage("settings.reasoningEffort") })).toHaveLength(3);
         expect(document.getElementById("specific-model-overrides")?.firstElementChild?.classList.contains("overflow-visible")).toBe(true);
-        await user.selectOptions(screen.getAllByRole("combobox", { name: message("settings.reasoningEffort") })[2]!, "high");
+        await user.selectOptions(screen.getAllByRole("combobox", { name: getMessage("settings.reasoningEffort") })[2]!, "high");
         await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ skillReasoningEfforts: { talking_points: "high" } })));
     });
 
@@ -91,21 +91,21 @@ describe("ApplicationSettings AI", () => {
             getApplicationSettings: vi.fn().mockResolvedValue({ ...settingsSnapshot(), connections: [connection, anthropicConnection, openCodeConnection], activeConnectionId: connection.id }),
             getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }),
             refreshAiModels: vi.fn().mockResolvedValue([
-                { id: aiModelPreferenceId(connection.id, "gpt-5"), model: "gpt-5", connectionId: connection.id, provider: connection.provider },
-                { id: aiModelPreferenceId(connection.id, "gpt-5-mini"), model: "gpt-5-mini", connectionId: connection.id, provider: connection.provider },
-                { id: aiModelPreferenceId(anthropicConnection.id, "claude-sonnet"), model: "claude-sonnet", connectionId: anthropicConnection.id, provider: anthropicConnection.provider },
-                { id: aiModelPreferenceId(openCodeConnection.id, "claude-sonnet-4-6"), model: "claude-sonnet-4-6", connectionId: openCodeConnection.id, provider: openCodeConnection.provider },
+                { id: getAiModelPreferenceId(connection.id, "gpt-5"), model: "gpt-5", connectionId: connection.id, provider: connection.provider },
+                { id: getAiModelPreferenceId(connection.id, "gpt-5-mini"), model: "gpt-5-mini", connectionId: connection.id, provider: connection.provider },
+                { id: getAiModelPreferenceId(anthropicConnection.id, "claude-sonnet"), model: "claude-sonnet", connectionId: anthropicConnection.id, provider: anthropicConnection.provider },
+                { id: getAiModelPreferenceId(openCodeConnection.id, "claude-sonnet-4-6"), model: "claude-sonnet-4-6", connectionId: openCodeConnection.id, provider: openCodeConnection.provider },
             ]),
             updateModelPreferences,
         } as unknown as EditorialWorkspaceClient;
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.click(screen.getByRole("button", { name: message("settings.model") }));
-        const listbox = screen.getAllByRole("listbox", { name: message("settings.model") })[0]!;
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.model") }));
+        const listbox = screen.getAllByRole("listbox", { name: getMessage("settings.model") })[0]!;
         const modelPicker = listbox.closest("details")!;
-        expect(within(listbox).queryByRole("option", { name: message("settings.chooseModel") })).toBeNull();
+        expect(within(listbox).queryByRole("option", { name: getMessage("settings.chooseModel") })).toBeNull();
         expect(screen.queryByRole("tab", { name: "All models" })).toBeNull();
         expect(within(modelPicker).queryByRole("tab", { name: "Google Gemini API" })).toBeNull();
         const anthropicTab = within(modelPicker).getByRole("tab", { name: "Anthropic" });
@@ -119,16 +119,16 @@ describe("ApplicationSettings AI", () => {
         expect(within(listbox).queryByRole("option", { name: "claude-sonnet" })).toBeNull();
         await user.click(within(modelPicker).getByRole("tab", { name: "OpenAI" }));
         expect(within(listbox).getByRole("option", { name: "GPT-5 mini" })).toBeTruthy();
-        const search = screen.getAllByRole("textbox", { name: message("settings.searchModels") })[0]!;
+        const search = screen.getAllByRole("textbox", { name: getMessage("settings.searchModels") })[0]!;
         await user.type(search, "gpt");
         expect(within(listbox).getByRole("option", { name: "GPT-5" })).toBeTruthy();
-        await user.click(screen.getByRole("button", { name: message("settings.clearModelSearch") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.clearModelSearch") }));
         expect(search.getAttribute("value")).toBe("");
         await user.type(search, "mini");
-        await user.click(within(listbox).getByRole("button", { name: message("settings.addFavoriteModel", { model: "GPT-5 mini" }) }));
+        await user.click(within(listbox).getByRole("button", { name: getMessage("settings.addFavoriteModel", { model: "GPT-5 mini" }) }));
 
-        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ favoriteModels: [aiModelPreferenceId("connection-1", "gpt-5-mini")] })));
-        const favoritesTab = within(modelPicker).getByRole("tab", { name: message("settings.favoriteModels") });
+        await waitFor(() => expect(updateModelPreferences).toHaveBeenCalledWith(expect.objectContaining({ favoriteModels: [getAiModelPreferenceId("connection-1", "gpt-5-mini")] })));
+        const favoritesTab = within(modelPicker).getByRole("tab", { name: getMessage("settings.favoriteModels") });
         await user.click(favoritesTab);
         expect(favoritesTab.getAttribute("aria-selected")).toBe("true");
         expect(within(listbox).getByRole("option", { name: "GPT-5 mini" })).toBeTruthy();
@@ -147,9 +147,9 @@ describe("ApplicationSettings AI", () => {
 
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
 
-        await user.click(await screen.findByRole("button", { name: message("settings.ai") }));
-        await user.click(screen.getByRole("button", { name: message("settings.model") }));
-        const listbox = screen.getAllByRole("listbox", { name: message("settings.model") })[0]!;
+        await user.click(await screen.findByRole("button", { name: getMessage("settings.ai") }));
+        await user.click(screen.getByRole("button", { name: getMessage("settings.model") }));
+        const listbox = screen.getAllByRole("listbox", { name: getMessage("settings.model") })[0]!;
 
         expect(within(listbox).getByRole("option", { name: "GPT-5" }).querySelector('[data-provider="openai"]')?.tagName).toBe("svg");
         expect(within(listbox).getByRole("option", { name: "GPT-5" }).querySelector('[data-provider="opencode"][data-via-provider="opencode"]')?.tagName).toBe("svg");

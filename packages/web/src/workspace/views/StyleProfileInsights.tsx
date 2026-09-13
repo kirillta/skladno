@@ -42,13 +42,13 @@ interface StyleProfileInsightsActions {
     setArticleRules: (value: string) => void;
     onSaveRules: () => void;
     onSaveArticleRules: () => void;
-    ruleStatus: (draft: string, saved: string) => MessageId;
+    getRuleStatus: (draft: string, saved: string) => MessageId;
 }
 
 
 export function StyleProfileInsights({ data, actions }: { data: StyleProfileInsightsData; actions: StyleProfileInsightsActions }) {
     const { corpus, findings, findingsStale, generalSettings, pendingAction, rules, savedRules, articleRules, savedArticleRules } = data;
-    const { setRules, setArticleRules, onSaveRules, onSaveArticleRules, ruleStatus } = actions;
+    const { setRules, setArticleRules, onSaveRules, onSaveArticleRules, getRuleStatus } = actions;
     const intl = useIntl();
     const [sourcesExpanded, setSourcesExpanded] = useState(false);
     const contributors = corpus?.profile?.contributorIds.map((id) => corpus.items.find((item) => item.id === id)?.name).filter((name): name is string => Boolean(name)) ?? [];
@@ -87,13 +87,13 @@ export function StyleProfileInsights({ data, actions }: { data: StyleProfileInsi
         <TextareaField id="style-profile-global-rules" aria-label={intl.formatMessage({ id: "styleProfile.rules" })} className="min-h-36" placeholder={intl.formatMessage({ id: "styleProfile.rules" })} value={rules} onChange={(event) => setRules(event.target.value)} />
         <div className="mt-3 flex items-center gap-3">
             <Button variant="secondary" state={pendingAction === "rules" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={onSaveRules}>{intl.formatMessage({ id: "styleProfile.saveRules" })}</Button>
-            <p className="text-xs text-muted" role="status">{intl.formatMessage({ id: ruleStatus(rules, savedRules) })}</p>
+            <p className="text-xs text-muted" role="status">{intl.formatMessage({ id: getRuleStatus(rules, savedRules) })}</p>
         </div>
         <h3 className="mb-3 mt-7 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "styleProfile.thisArticle" })}</h3>
         <TextareaField id="style-profile-article-rules" aria-label={intl.formatMessage({ id: "styleProfile.articleRules" })} className="min-h-28" placeholder={intl.formatMessage({ id: "styleProfile.articleRules" })} value={articleRules} onChange={(event) => setArticleRules(event.target.value)} />
         <div className="mt-3 flex items-center gap-3">
             <Button variant="secondary" state={pendingAction === "article-rules" ? "loading" : "default"} disabled={Boolean(pendingAction)} onClick={onSaveArticleRules}>{intl.formatMessage({ id: "styleProfile.saveRules" })}</Button>
-            <p className="text-xs text-muted" role="status">{intl.formatMessage({ id: ruleStatus(articleRules, savedArticleRules) })}</p>
+            <p className="text-xs text-muted" role="status">{intl.formatMessage({ id: getRuleStatus(articleRules, savedArticleRules) })}</p>
         </div>
         {findings && <h3 className="mb-3 mt-7 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "styleProfile.review" })}</h3>}
         {findingsStale && <Banner className="mb-3" tone="warning" role="alert">{intl.formatMessage({ id: "styleProfile.staleReview" })}</Banner>}

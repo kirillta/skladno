@@ -29,11 +29,11 @@ export interface TimedTelemetryCapture {
 }
 
 
-const noTelemetryCapture: TelemetryCapture = () => undefined;
+const createNoTelemetryCapture: TelemetryCapture = () => undefined;
 
 
 export function beginTelemetryCapture(source?: TelemetryCaptureSource): TelemetryCapture {
-    return source?.beginCapture() ?? noTelemetryCapture;
+    return source?.beginCapture() ?? createNoTelemetryCapture;
 }
 
 
@@ -58,7 +58,7 @@ export interface DesktopTelemetryClient {
 }
 
 
-function record(value: unknown): Record<string, unknown> | undefined {
+function parseTelemetryRecord(value: unknown): Record<string, unknown> | undefined {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 }
 
@@ -84,7 +84,7 @@ export function isTelemetryFailureCategory(value: unknown): value is TelemetryFa
 
 
 export function isTelemetryEvent(value: unknown): value is TelemetryEvent {
-    const candidate = record(value);
+    const candidate = parseTelemetryRecord(value);
     if (!candidate || typeof candidate.kind !== "string")
         return false;
 

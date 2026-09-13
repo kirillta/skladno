@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { electronMessagesFor, type TelemetryEvent } from "@skladno/shared";
+import { getElectronMessagesFor, type TelemetryEvent } from "@skladno/shared";
 import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
 
 
@@ -47,7 +47,7 @@ export function setup(response: number, backupChecked = false, backupFails = fal
         } },
         telemetry: { beginCapture: () => (event) => telemetry.push(event) },
         services: {} as never,
-        messages: electronMessagesFor("en"),
+        messages: getElectronMessagesFor("en"),
         chooseDirectory: async () => chooseDirectory?.({ root, dataDirectory }),
         chooseBackupSnapshot: async () => undefined,
         requestCheckpoint: async () => true,

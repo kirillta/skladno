@@ -1,5 +1,5 @@
 import { articleLanguages } from "@skladno/shared";
-import { providerLanguageName } from "./editorial-language.js";
+import { getProviderLanguageName } from "./editorial-language.js";
 
 
 export interface AssistantSelectionScope {
@@ -14,7 +14,7 @@ export interface AssistantSelectionScope {
 export function requestedTranslationLanguages(authorMessage: string, languages: readonly string[]): readonly string[] {
     const unique = [...new Set(languages)];
     const requested = articleLanguages
-        .filter((language) => authorMessage.toLowerCase().includes(providerLanguageName(language).toLowerCase()));
+        .filter((language) => authorMessage.toLowerCase().includes(getProviderLanguageName(language).toLowerCase()));
 
     return requested.length
         ? requested
@@ -28,7 +28,7 @@ export async function fingerprintArticleContent(content: string): Promise<string
 }
 
 
-export async function assistantSelectionScope(articleId: string, snapshot: { markdown: string; preview: string; startOffset: number; endOffset: number }): Promise<AssistantSelectionScope> {
+export async function getAssistantSelectionScope(articleId: string, snapshot: { markdown: string; preview: string; startOffset: number; endOffset: number }): Promise<AssistantSelectionScope> {
     return {
         articleId,
         fingerprint: await fingerprintArticleContent(snapshot.markdown),

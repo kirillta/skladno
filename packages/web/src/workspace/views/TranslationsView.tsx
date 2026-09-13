@@ -3,15 +3,15 @@ import { getPublishingLength, type Article, type PublishLimitProfile, type Trans
 import { AlignedParagraphsIcon, SideBySideIcon } from "../../ui/icons.js";
 import { Banner, Button, EmptyState, IconButton, Tab, TabList } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
-import { providerLanguageName } from "../state/editorial-language.js";
+import { getProviderLanguageName } from "../state/editorial-language.js";
 
 
-function paragraphs(content: string): string[] {
+function splitParagraphs(content: string): string[] {
     return content.split(/\n\s*\n|(?=^\s*(?:#{1,6}\s|[-*+]\s+|\d+\.\s))/m).map((paragraph) => paragraph.trim()).filter(Boolean);
 }
 
 
-function changedProtectedSpans(content: string, protectedSpans: readonly string[]): string[] {
+function getChangedProtectedSpans(content: string, protectedSpans: readonly string[]): string[] {
     const expectedCounts = new Map<string, number>();
     for (const span of protectedSpans)
         expectedCounts.set(span, (expectedCounts.get(span) ?? 0) + 1);
@@ -65,14 +65,14 @@ export function TranslationsView({ data, actions }: { data: TranslationsData; ac
     };
     const source = sourceArticle ?? article;
     const translatedContent = translation?.content ?? (sourceArticle ? article.currentRevision.content : undefined);
-    const targetLanguage = providerLanguageName(translation?.metadata.targetLanguage ?? article.language ?? "");
-    const sourceParagraphs = paragraphs(source.currentRevision.content);
-    const translatedParagraphs = translatedContent ? paragraphs(translatedContent) : [];
+    const targetLanguage = getProviderLanguageName(translation?.metadata.targetLanguage ?? article.language ?? "");
+    const sourceParagraphs = splitParagraphs(source.currentRevision.content);
+    const translatedParagraphs = translatedContent ? splitParagraphs(translatedContent) : [];
     const paragraphCount = Math.max(sourceParagraphs.length, translatedParagraphs.length);
     const publishingGuidance = translatedContent && publishProfile
         ? { length: getPublishingLength(translatedContent, publishProfile), profile: publishProfile }
         : undefined;
-    const protectedSpanWarnings = translation ? changedProtectedSpans(translation.content, translation.metadata.protectedSpans) : [];
+    const protectedSpanWarnings = translation ? getChangedProtectedSpans(translation.content, translation.metadata.protectedSpans) : [];
     const protectedSpansValid = protectedSpanWarnings.length === 0;
 
     return <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-col">
@@ -100,7 +100,7 @@ export function TranslationsView({ data, actions }: { data: TranslationsData; ac
         </TabList>}
         {linkedTranslations.length > 0 && openArticle && <nav className="mt-3 flex items-center gap-2" aria-label={intl.formatMessage({ id: "views.existingTranslations" })}>
             <span className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "views.existingTranslations" })}</span>
-            {linkedTranslations.map((linked) => <Button key={linked.id} variant="quiet" onClick={() => openArticle(linked.id)}>{intl.formatMessage({ id: "views.openTranslation" }, { language: providerLanguageName(linked.language ?? ""), title: linked.title })}</Button>)}
+            {linkedTranslations.map((linked) => <Button key={linked.id} variant="quiet" onClick={() => openArticle(linked.id)}>{intl.formatMessage({ id: "views.openTranslation" }, { language: getProviderLanguageName(linked.language ?? ""), title: linked.title })}</Button>)}
         </nav>}
         {sourceArticle && openArticle && <p className="mt-1 text-xs text-muted">
             {intl.formatMessage({ id: "views.sourceLinkedPrefix" })} <button type="button" className="font-semibold text-brand underline underline-offset-2" onClick={() => openArticle(sourceArticle.id)}>{sourceArticle.title}</button>{article.sourceRevisionNumber ? ` ${intl.formatMessage({ id: "views.sourceLinkedRevision" }, { revisionNumber: article.sourceRevisionNumber })}` : null}

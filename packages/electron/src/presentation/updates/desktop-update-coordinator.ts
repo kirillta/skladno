@@ -2,7 +2,7 @@ import { mkdirSync, renameSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { beginTimedTelemetryCapture, type DesktopUpdateState, type TelemetryCaptureSource } from "@skladno/shared";
 import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings, type RuntimeSettings } from "../../infrastructure/runtime/runtime-settings.js";
-import { availableUpdateState, newestCompatibleRelease, updatePreferences, type Release } from "./desktop-update-releases.js";
+import { getAvailableUpdateState, getNewestCompatibleRelease, updatePreferences, type Release } from "./desktop-update-releases.js";
 
 const releasesUrl = "https://api.github.com/repos/kirillta/skladno/releases";
 const releasesDownloadUrl = "https://github.com/kirillta/skladno/releases/download";
@@ -75,16 +75,16 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
     const { database, dataDirectory, updater, requestCheckpoint, closeApplication, telemetry } = execution;
     const { notify, scheduleTimeout = setTimeout } = presentation;
     let release: Release | undefined;
-    let state: DesktopUpdateState = initialState();
+    let state: DesktopUpdateState = getInitialUpdateState();
 
 
-    function settings(): RuntimeSettings {
+    function readCurrentRuntimeSettings(): RuntimeSettings {
         return readRuntimeSettings(runtimePath);
     }
 
 
-    function initialState(): DesktopUpdateState {
-        const runtime = settings();
+    function getInitialUpdateState(): DesktopUpdateState {
+        const runtime = readCurrentRuntimeSettings();
         if (!supported)
             return { kind: "unsupported", currentVersion, ...updatePreferences(runtime, currentVersion) };
 
@@ -108,7 +108,7 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
         if (state.kind === "unsupported")
             return state;
 
-        const runtime = settings();
+        const runtime = readCurrentRuntimeSettings();
         if (runtime.updateNetworkAccess !== true)
             return setState({
                 kind: "current",
@@ -130,10 +130,10 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
             if (!response.ok || !Array.isArray(payload))
                 throw new Error("Release discovery failed.");
 
-            release = newestCompatibleRelease(payload, currentVersion, runtime);
+            release = getNewestCompatibleRelease(payload, currentVersion, runtime);
             const nextRuntime = updateRuntimeSettings(runtimePath, (current) => ({ ...current, lastUpdateCheckAt: new Date().toISOString() }));
             return release
-                ? setState(availableUpdateState(release, currentVersion, nextRuntime))
+                ? setState(getAvailableUpdateState(release, currentVersion, nextRuntime))
                 : setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, ...updatePreferences(nextRuntime, currentVersion) });
         } catch {
             return setState({
@@ -149,13 +149,13 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
 
     updater.on("update-downloaded", () => {
         if (state.kind === "downloading") {
-            const runtime = { ...settings(), stagedUpdateVersion: state.version };
+            const runtime = { ...readCurrentRuntimeSettings(), stagedUpdateVersion: state.version };
             writeRuntimeSettings(runtimePath, runtime);
             setState({ ...state, kind: "ready" });
         }
     });
     updater.on("error", () => {
-        const runtime = settings();
+        const runtime = readCurrentRuntimeSettings();
         setState({
             kind: "failed",
             currentVersion,
@@ -168,7 +168,7 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
     return {
         getState: () => state,
         setNetworkAccess(enabled: boolean) {
-            const runtime = { ...settings(), updateNetworkAccess: enabled };
+            const runtime = { ...readCurrentRuntimeSettings(), updateNetworkAccess: enabled };
             writeRuntimeSettings(runtimePath, runtime);
             if (state.kind === "unsupported")
                 return setState({ ...state, networkAccess: enabled });
@@ -181,7 +181,7 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
             });
         },
         setAutomaticChecks(enabled: boolean) {
-            const runtime = { ...settings(), automaticUpdateChecks: enabled };
+            const runtime = { ...readCurrentRuntimeSettings(), automaticUpdateChecks: enabled };
             writeRuntimeSettings(runtimePath, runtime);
             if (state.kind === "unsupported")
                 return setState({ ...state, automaticChecks: enabled });
@@ -189,7 +189,7 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
             return setState({ ...state, automaticChecks: enabled });
         },
         setIncludePrereleases(enabled: boolean) {
-            const runtime = { ...settings(), includePrereleaseUpdates: enabled };
+            const runtime = { ...readCurrentRuntimeSettings(), includePrereleaseUpdates: enabled };
             writeRuntimeSettings(runtimePath, runtime);
             if (enabled || !release?.prerelease || state.kind !== "available")
                 return setState({ ...state, includePrereleases: enabled });
@@ -219,32 +219,32 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
 
             try {
                 const snapshot = createUpdateSnapshot(database, join(dataDirectory, "update-recovery"), currentVersion, telemetry);
-                writeRuntimeSettings(runtimePath, { ...settings(), priorVersion: currentVersion, recoverySnapshotPath: snapshot, startupSuccess: false });
+                writeRuntimeSettings(runtimePath, { ...readCurrentRuntimeSettings(), priorVersion: currentVersion, recoverySnapshotPath: snapshot, startupSuccess: false });
                 closeApplication();
                 updater.quitAndInstall();
                 return true;
             } catch {
-                setState({ kind: "failed", currentVersion, error: "apply_failed", ...updatePreferences(settings(), currentVersion) });
+                setState({ kind: "failed", currentVersion, error: "apply_failed", ...updatePreferences(readCurrentRuntimeSettings(), currentVersion) });
                 return false;
             }
         },
         openReleaseNotes: () => state.kind === "available" || state.kind === "downloading" || state.kind === "ready" ? openExternal(state.releaseNotesUrl) : Promise.resolve(),
         openRecoveryGuide: () => openExternal(recoveryGuideUrl),
         schedule() {
-            async function automaticCheck(): Promise<void> {
-                const runtime = settings();
+            async function runAutomaticUpdateCheck(): Promise<void> {
+                const runtime = readCurrentRuntimeSettings();
                 if (state.kind === "unsupported" || runtime.updateNetworkAccess !== true || runtime.automaticUpdateChecks === false)
                     return;
 
                 await checkNow();
-                scheduleTimeout(automaticCheck, automaticUpdateCheckInterval);
+                scheduleTimeout(runAutomaticUpdateCheck, automaticUpdateCheckInterval);
             }
 
 
-            scheduleTimeout(automaticCheck, automaticUpdateCheckInitialDelay);
+            scheduleTimeout(runAutomaticUpdateCheck, automaticUpdateCheckInitialDelay);
         },
         markStartupSuccessful() {
-            const runtime = settings();
+            const runtime = readCurrentRuntimeSettings();
             if (runtime.startupSuccess === false)
                 writeRuntimeSettings(runtimePath, { ...runtime, startupSuccess: true });
         },

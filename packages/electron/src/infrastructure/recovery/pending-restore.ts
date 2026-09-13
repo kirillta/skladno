@@ -8,14 +8,14 @@ import type { PendingRestore } from "./pending-restore-contract.js";
 import { PendingRestoreError } from "./pending-restore-error.js";
 
 
-function sidecars(databasePath: string): string[] {
+function getDatabaseSidecars(databasePath: string): string[] {
     return [`${databasePath}-wal`, `${databasePath}-shm`, `${databasePath}-journal`];
 }
 
 
 function removeDatabase(databasePath: string): void {
     rmSync(databasePath, { force: true });
-    for (const path of sidecars(databasePath))
+    for (const path of getDatabaseSidecars(databasePath))
         rmSync(path, { force: true });
 }
 
@@ -33,7 +33,7 @@ function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath
         validateDatabaseSnapshot(temporary);
         removeDatabase(originalPath);
 
-        for (const path of sidecars(databasePath))
+        for (const path of getDatabaseSidecars(databasePath))
             rmSync(path, { force: true });
 
         originalMoved = existsSync(databasePath);

@@ -43,7 +43,7 @@ function $setBlockType(type: BlockType) {
 }
 
 
-function currentBlock(editor: LexicalEditor): BlockType {
+function getCurrentBlock(editor: LexicalEditor): BlockType {
     let value: BlockType = "paragraph";
     editor.getEditorState().read(() => {
         const selection = $getSelection();
@@ -63,7 +63,7 @@ function currentBlock(editor: LexicalEditor): BlockType {
 }
 
 
-function currentListType(editor: LexicalEditor): ListType | undefined {
+function getCurrentListType(editor: LexicalEditor): ListType | undefined {
     let value: ListType | undefined;
     editor.getEditorState().read(() => {
         const selection = $getSelection();
@@ -108,8 +108,8 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
             setLinkUrl("");
         }
 
-        setBlock(currentBlock(editor));
-        setListType(currentListType(editor));
+        setBlock(getCurrentBlock(editor));
+        setListType(getCurrentListType(editor));
     })), [editor]);
 
     const activate = (action: () => void) => {
@@ -171,7 +171,7 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
     }
 
 
-    const keyNav = (event: KeyboardEvent<HTMLDivElement>) => {
+    const handleKeyNavigation = (event: KeyboardEvent<HTMLDivElement>) => {
         const items = [...event.currentTarget.querySelectorAll<HTMLElement>("a,button,select")];
         const index = items.indexOf(document.activeElement as HTMLElement);
 
@@ -201,7 +201,7 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
     ].join(" ");
 
     return <div className="shrink-0 overflow-x-auto border-b border-border bg-surface-raised px-4 py-1 [scrollbar-width:thin]">
-        <div role="toolbar" aria-label={intl.formatMessage({ id: "editor.formatting" })} onKeyDown={keyNav} className="flex w-max min-w-full items-center gap-1">
+        <div role="toolbar" aria-label={intl.formatMessage({ id: "editor.formatting" })} onKeyDown={handleKeyNavigation} className="flex w-max min-w-full items-center gap-1">
             <select aria-label={intl.formatMessage({ id: "editor.blockStyle" })}
                 value={block}
                 onMouseDown={rememberBlockSelection}

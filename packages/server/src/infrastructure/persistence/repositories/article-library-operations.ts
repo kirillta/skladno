@@ -1,13 +1,13 @@
 import type { Article } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { articleNotFound, invalidArticleRequest } from "./article-repository-errors.js";
+import { throwArticleNotFound, throwInvalidArticleRequest } from "./article-repository-errors.js";
 
 
 type FindArticle = (articleId: string) => Article | undefined;
 
 
-function transaction<T>(database: SqliteDatabase, operation: () => T): T {
+function runInTransaction<T>(database: SqliteDatabase, operation: () => T): T {
     database.exec("BEGIN IMMEDIATE;");
     try {
         const result = operation();
@@ -22,10 +22,10 @@ function transaction<T>(database: SqliteDatabase, operation: () => T): T {
 
 
 export function deleteArticle(database: SqliteDatabase, articleId: string, findArticle: FindArticle): void {
-    transaction(database, () => {
+    runInTransaction(database, () => {
         const current = findArticle(articleId);
         if (!current)
-            articleNotFound();
+            throwArticleNotFound();
 
         if (current.sourceArticleId)
             database.prepare("DELETE FROM articles WHERE id = ?").run(articleId);
@@ -36,10 +36,10 @@ export function deleteArticle(database: SqliteDatabase, articleId: string, findA
 
 
 export function setArticleArchived(database: SqliteDatabase, articleId: string, archived: boolean, findArticle: FindArticle, listArticles: () => Article[]): Article[] {
-    const rootId = transaction(database, () => {
+    const rootId = runInTransaction(database, () => {
         const current = findArticle(articleId);
         if (!current)
-            articleNotFound();
+            throwArticleNotFound();
 
         const rootId = current.sourceArticleId ?? current.id;
         database.prepare("UPDATE articles SET archived = ? WHERE id = ? OR source_article_id = ?").run(Number(archived), rootId, rootId);
@@ -54,10 +54,10 @@ export function setArticleArchived(database: SqliteDatabase, articleId: string, 
 export function setArticlePinned(database: SqliteDatabase, articleId: string, pinned: boolean, findArticle: FindArticle): Article {
     const current = findArticle(articleId);
     if (!current)
-        articleNotFound();
+        throwArticleNotFound();
 
     if (current.sourceArticleId || current.archived)
-        invalidArticleRequest();
+        throwInvalidArticleRequest();
 
     const pinOrder = pinned
         ? Number(database.prepare("SELECT COALESCE(MIN(pin_order), 0) - 1 pin_order FROM articles WHERE source_article_id IS NULL AND pin_order IS NOT NULL").get()?.pin_order)
@@ -71,9 +71,9 @@ export function setArticlePinned(database: SqliteDatabase, articleId: string, pi
 export function reorderPinnedArticles(database: SqliteDatabase, articleIds: string[], listArticles: () => Article[]): Article[] {
     const pinned = database.prepare("SELECT id FROM articles WHERE source_article_id IS NULL AND archived = 0 AND pin_order IS NOT NULL ORDER BY pin_order, id").all().map((row) => String(row.id));
     if (articleIds.length !== pinned.length || new Set(articleIds).size !== articleIds.length || articleIds.some((id) => !pinned.includes(id)))
-        invalidArticleRequest();
+        throwInvalidArticleRequest();
 
-    transaction(database, () => {
+    runInTransaction(database, () => {
         const update = database.prepare("UPDATE articles SET pin_order = ? WHERE id = ?");
         articleIds.forEach((id, index) => update.run(index, id));
     });

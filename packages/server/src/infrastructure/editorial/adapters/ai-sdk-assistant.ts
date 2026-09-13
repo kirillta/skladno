@@ -2,7 +2,7 @@ import { tool, type ModelMessage, type ToolSet } from "ai";
 import { z } from "zod";
 
 import type { EditorialAssistantRequest } from "../../../application/editorial/engine/editorial-assistant-request.js";
-import { boundedArticleContext } from "../models/editorial-context.js";
+import { getBoundedArticleContext } from "../models/editorial-context.js";
 
 type AssistantToolExecutor = (capability: string, input: Readonly<Record<string, string>>) => Promise<unknown>;
 type AssistantTool = EditorialAssistantRequest["tools"][number];
@@ -90,7 +90,7 @@ export function createAssistantTools(request: EditorialAssistantRequest, execute
 }
 
 
-export function assistantStepOptions(stepNumber: number, activeCapabilities?: readonly string[]): { activeTools: string[]; toolChoice?: { type: "tool"; toolName: string } } {
+export function getAssistantStepOptions(stepNumber: number, activeCapabilities?: readonly string[]): { activeTools: string[]; toolChoice?: { type: "tool"; toolName: string } } {
     const activeTools = activeCapabilities ? [...activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
     const requiredCapability = activeCapabilities?.[0];
 
@@ -100,12 +100,12 @@ export function assistantStepOptions(stepNumber: number, activeCapabilities?: re
 }
 
 
-export function assistantConversationPrompt(request: Pick<EditorialAssistantRequest, "article" | "history" | "message" | "scope">): ModelMessage[] {
+export function createAssistantConversationPrompt(request: Pick<EditorialAssistantRequest, "article" | "history" | "message" | "scope">): ModelMessage[] {
     return [
         ...request.history.map((turn): ModelMessage => ({ role: turn.role === "author" ? "user" : "assistant", content: turn.content })),
         {
             role: "user",
-            content: `Author request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${boundedArticleContext(request.article)}`,
+            content: `Author request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${getBoundedArticleContext(request.article)}`,
         },
     ];
 }

@@ -4,13 +4,13 @@ import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultGeneralSettings, type ArticleRevision, type GeneralSettings } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
-import { message } from "../../i18n/test-message.js";
+import { getMessage } from "../../i18n/test-message.js";
 import { RevisionHistoryView } from "./RevisionHistoryView.js";
 
 
 // Product scenarios: workspace.revisions.restore, history-and-publishing.revision-history-browsing
 
-function revision(id: string, content: string, kind: string, createdAt: string, restoredFromRevisionId?: string): ArticleRevision {
+function createArticleRevision(id: string, content: string, kind: string, createdAt: string, restoredFromRevisionId?: string): ArticleRevision {
     return {
         id,
         articleId: "article-one",
@@ -35,8 +35,8 @@ describe("RevisionHistoryView", () => {
 
 
     it("selects the current Revision by default and shows history newest first", () => {
-        const initial = revision("initial", "Initial text", "initial", "2026-01-01T10:00:00.000Z");
-        const current = revision("current", "Current text", "author-draft", "2026-01-02T10:00:00.000Z");
+        const initial = createArticleRevision("initial", "Initial text", "initial", "2026-01-01T10:00:00.000Z");
+        const current = createArticleRevision("current", "Current text", "author-draft", "2026-01-02T10:00:00.000Z");
         const view = renderHistory([initial, current]);
         const buttons = view.container.querySelectorAll("nav button");
 
@@ -45,29 +45,29 @@ describe("RevisionHistoryView", () => {
         expect(screen.getByText("Current text")).toBeTruthy();
         expect(screen.getByText("This is the current Revision.")).toBeTruthy();
         expect(screen.getByText("Current Revision")).toBeTruthy();
-        expect(screen.queryByRole("button", { name: message("revisions.restore") })).toBeNull();
-        expect((screen.getByRole("combobox", { name: message("revisions.select") }) as HTMLSelectElement).value).toBe("current");
+        expect(screen.queryByRole("button", { name: getMessage("revisions.restore") })).toBeNull();
+        expect((screen.getByRole("combobox", { name: getMessage("revisions.select") }) as HTMLSelectElement).value).toBe("current");
     });
 
 
     it("updates only the read-only preview when an earlier Revision is selected and sends it to restore on request", async () => {
         const user = userEvent.setup();
-        const initial = revision("initial", "Initial text", "initial", "2026-01-01T10:00:00.000Z");
-        const current = revision("current", "Current text", "accepted-proposal", "2026-01-02T10:00:00.000Z");
+        const initial = createArticleRevision("initial", "Initial text", "initial", "2026-01-01T10:00:00.000Z");
+        const current = createArticleRevision("current", "Current text", "accepted-proposal", "2026-01-02T10:00:00.000Z");
         const { select } = renderHistory([initial, current]);
 
         await user.click(screen.getAllByRole("button", { name: /Initial Revision/ })[0]!);
 
         expect(screen.getByText("Initial text")).toBeTruthy();
-        expect((screen.getByRole("button", { name: message("revisions.restore") }) as HTMLButtonElement).disabled).toBe(false);
-        await user.click(screen.getByRole("button", { name: message("revisions.restore") }));
+        expect((screen.getByRole("button", { name: getMessage("revisions.restore") }) as HTMLButtonElement).disabled).toBe(false);
+        await user.click(screen.getByRole("button", { name: getMessage("revisions.restore") }));
         expect(select).toHaveBeenCalledWith(initial);
     });
 
 
     it("uses safe localized provenance labels and a quiet empty-content state", () => {
-        const restored = revision("restored", "", "unknown-kind", "2026-01-02T10:00:00.000Z", "initial");
-        const unknown = revision("unknown", "Saved text", "legacy-kind", "2026-01-01T10:00:00.000Z");
+        const restored = createArticleRevision("restored", "", "unknown-kind", "2026-01-02T10:00:00.000Z", "initial");
+        const unknown = createArticleRevision("unknown", "Saved text", "legacy-kind", "2026-01-01T10:00:00.000Z");
         renderHistory([unknown, restored], restored.id);
 
         expect(screen.getAllByText("Restored Revision").length).toBeGreaterThan(0);
@@ -78,10 +78,10 @@ describe("RevisionHistoryView", () => {
 
 
     it("uses distinct timeline icons for initial, manual, AI-assisted, and restored Revisions", () => {
-        const initial = revision("initial", "Initial", "initial", "2026-01-01T10:00:00.000Z");
-        const manual = revision("manual", "Manual", "author-draft", "2026-01-02T10:00:00.000Z");
-        const ai = revision("ai", "AI", "accepted-proposal", "2026-01-03T10:00:00.000Z");
-        const restored = revision("restored", "Restored", "restore", "2026-01-04T10:00:00.000Z", "initial");
+        const initial = createArticleRevision("initial", "Initial", "initial", "2026-01-01T10:00:00.000Z");
+        const manual = createArticleRevision("manual", "Manual", "author-draft", "2026-01-02T10:00:00.000Z");
+        const ai = createArticleRevision("ai", "AI", "accepted-proposal", "2026-01-03T10:00:00.000Z");
+        const restored = createArticleRevision("restored", "Restored", "restore", "2026-01-04T10:00:00.000Z", "initial");
         const view = renderHistory([initial, manual, ai, restored], restored.id);
 
         expect(view.container.querySelector('[data-revision-timeline-icon="initial"]')).toBeTruthy();
@@ -92,7 +92,7 @@ describe("RevisionHistoryView", () => {
 
 
     it("uses the saved time format and time zone preference for Revision timestamps", () => {
-        const initial = revision("initial", "Initial", "initial", "2026-01-01T15:45:00.000Z");
+        const initial = createArticleRevision("initial", "Initial", "initial", "2026-01-01T15:45:00.000Z");
         renderHistory([initial], initial.id, { ...defaultGeneralSettings, timeFormat: "24-hour", timeZone: "America/New_York" });
 
         expect(screen.getAllByText(/10:45/).length).toBeGreaterThan(0);

@@ -3,14 +3,14 @@ import { Button } from "../../../ui/primitives.js";
 import { StatusIcon } from "../../../ui/icons.js";
 import { formatDateTime } from "../../../i18n/formatting.js";
 import { useIntl } from "react-intl";
-import { responseMessages, selectionPreview, skillMessages } from "./assistant-messages.js";
+import { getSelectionPreview, responseMessages, skillMessages } from "./assistant-messages.js";
 import { FactCheckClaims } from "./FactCheckClaims.js";
 import { AssistantMarkdown } from "./AssistantMarkdown.js";
 
 type AssistantView = "proposal" | "fact-check" | "style-profile" | "translations";
 
 
-function messageLabel(message: AssistantMessage, skillId: BuiltInSkillId | undefined, intl: ReturnType<typeof useIntl>) {
+function getMessageLabel(message: AssistantMessage, skillId: BuiltInSkillId | undefined, intl: ReturnType<typeof useIntl>) {
     if (message.responseKind === "proposal_prepared" && skillId === BUILT_IN_SKILL.TALKING_POINTS)
         return intl.formatMessage({ id: "assistant.response.talkingPointsProposal" });
 
@@ -45,7 +45,7 @@ function resolveMessageContent(message: AssistantMessage, intl: ReturnType<typeo
 }
 
 
-function messageView(responseKind: AssistantMessage["responseKind"]): AssistantView | undefined {
+function getMessageView(responseKind: AssistantMessage["responseKind"]): AssistantView | undefined {
     switch (responseKind) {
         case "findings_prepared":
             return "fact-check";
@@ -61,7 +61,7 @@ function messageView(responseKind: AssistantMessage["responseKind"]): AssistantV
 }
 
 
-function statusLabel(status: AssistantMessage["status"], intl: ReturnType<typeof useIntl>) {
+function getStatusLabel(status: AssistantMessage["status"], intl: ReturnType<typeof useIntl>) {
     switch (status) {
         case "failed":
             return intl.formatMessage({ id: "assistant.status.failed" });
@@ -75,7 +75,7 @@ function statusLabel(status: AssistantMessage["status"], intl: ReturnType<typeof
 }
 
 
-function statusTone(status: AssistantMessage["status"]): "warning" | "info" | "success" {
+function getStatusTone(status: AssistantMessage["status"]): "warning" | "info" | "success" {
     if (status === "failed" || status === "cancelled")
         return "warning";
 
@@ -86,7 +86,7 @@ function statusTone(status: AssistantMessage["status"]): "warning" | "info" | "s
 }
 
 
-function viewLabel(view: AssistantView, intl: ReturnType<typeof useIntl>) {
+function getViewLabel(view: AssistantView, intl: ReturnType<typeof useIntl>) {
     if (view === "fact-check" || view === "style-profile")
         return intl.formatMessage({ id: "assistant.viewFindings" });
 
@@ -101,15 +101,15 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
     const intl = useIntl();
     const authorMessage = message.role === "author";
     const skillId = message.skillId ?? (message.requestId ? skillByRequest.get(message.requestId) : undefined);
-    const label = messageLabel(message, skillId, intl);
+    const label = getMessageLabel(message, skillId, intl);
     const content = resolveMessageContent(message, intl);
-    const view = messageView(message.responseKind);
+    const view = getMessageView(message.responseKind);
     const skillOffset = authorMessage && skillId ? Math.min(Math.max(message.skillOffset ?? 0, 0), content?.length ?? 0) : undefined;
     const selectionText = authorMessage ? message.selectionText : undefined;
     const messageContent = content ?? "";
     const retryRequestId = message.requestId;
     const handoffOwnsContent = !authorMessage && Boolean(view);
-    const messageStatusLabel = statusLabel(message.status, intl);
+    const messageStatusLabel = getStatusLabel(message.status, intl);
     const messageDateTime = formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
     const sourceLabel = message.skillSource
         ? intl.formatMessage({ id: message.skillSource === "explicit" ? "assistant.skillSource.explicit" : "assistant.skillSource.inferred" })
@@ -119,7 +119,7 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
         {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
         {(authorMessage && (content || selectionText || skillOffset !== undefined)) && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">
             {selectionText && <span className="mx-1 inline-flex h-5 max-w-[calc(100%-0.5rem)] items-center align-middle rounded-full border border-border bg-surface-raised px-1.5 text-xs font-semibold text-muted" aria-label={intl.formatMessage({ id: "assistant.articleSelection" })} title={selectionText}>
-                <span className="relative -top-px max-w-48 truncate">{selectionPreview(selectionText)}</span>
+                <span className="relative -top-px max-w-48 truncate">{getSelectionPreview(selectionText)}</span>
             </span>}
             {skillOffset === undefined ? messageContent : <>{messageContent.slice(0, skillOffset)}
                 <span className="mx-1 inline-flex h-5 items-center align-middle rounded-full border border-brand/45 bg-surface-raised px-1.5 text-xs font-semibold text-brand">{skillId && intl.formatMessage({ id: skillMessages[skillId] })}</span>
@@ -129,11 +129,11 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
         {!authorMessage && messageContent && !handoffOwnsContent && (message.template || message.kind === "greeting" || message.kind === "status" ? <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">{messageContent}</p> : <AssistantMarkdown content={messageContent} />)}
         {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
         {view && <Button className="mt-3" variant="secondary" onClick={() => openView?.(view)}>
-            {viewLabel(view, intl)}
+            {getViewLabel(view, intl)}
         </Button>}
         {(message.status === "failed" || message.status === "cancelled") && retryRequestId && <Button className="mt-3" variant="secondary" onClick={() => onRetry?.(retryRequestId)}>{intl.formatMessage({ id: "assistant.retry" })}</Button>}
         {!authorMessage && <p className="mt-2 flex items-center gap-1 text-xs text-muted">
-            <StatusIcon className="size-3" tone={statusTone(message.status)} />
+            <StatusIcon className="size-3" tone={getStatusTone(message.status)} />
             <span>{messageStatusLabel}</span>
             {sourceLabel && <span>· {sourceLabel}</span>}
             <span>·</span>

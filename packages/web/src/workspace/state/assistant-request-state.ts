@@ -2,9 +2,9 @@ import { useCallback, useRef, useState, type Dispatch, type MutableRefObject, ty
 import type { IntlShape } from "react-intl";
 import { APPLICATION_ERROR, ApplicationClientError, type AssistantCapabilityActivity, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application/client.js";
-import { errorMessageId } from "../../i18n/errors.js";
+import { getErrorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
-import { providerLanguageName } from "./editorial-language.js";
+import { getProviderLanguageName } from "./editorial-language.js";
 import { fingerprintArticleContent, requestedTranslationLanguages, type AssistantSelectionScope } from "./assistant-selection.js";
 import type { StreamBuffer, StreamedAssistantMessage } from "./assistant-streaming.js";
 
@@ -59,7 +59,7 @@ export function useAssistantRequestStore(): AssistantRequestStore {
 }
 
 
-function aiConnectionUnavailable(error: unknown): boolean {
+function isAiConnectionUnavailable(error: unknown): boolean {
     return error instanceof ApplicationClientError && (error.code === APPLICATION_ERROR.ACTIVE_CONNECTION_REQUIRED
         || error.code === APPLICATION_ERROR.AI_CONNECTION_NOT_FOUND
         || error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING);
@@ -122,11 +122,11 @@ async function recoverRequest({ articleId, error, intl, store, reload, clearStre
     store.setErrorDetailsByArticle((details) => ({
         ...details,
         [articleId]: error instanceof ApplicationClientError
-            ? intl.formatMessage({ id: errorMessageId(error.code) }, error.parameters)
+            ? intl.formatMessage({ id: getErrorMessageId(error.code) }, error.parameters)
             : intl.formatMessage({ id: "errors.editorialRequestFailed" }),
     }));
 
-    store.setAiConnectionUnavailableByArticle((connections) => ({ ...connections, [articleId]: aiConnectionUnavailable(error) }));
+    store.setAiConnectionUnavailableByArticle((connections) => ({ ...connections, [articleId]: isAiConnectionUnavailable(error) }));
     await reload(articleId).catch(() => undefined);
     clearStream(articleId);
 }
@@ -204,7 +204,7 @@ async function requestAssistant(options: AssistantRequestActionsOptions & { auth
                     : { kind: "article", baseRevisionId: revision.id },
                 ...(explicitSkillId ? { explicitSkillId } : {}),
                 ...(skillOffset === undefined ? {} : { skillOffset }),
-                ...(targetLanguage ? { targetLanguage: providerLanguageName(targetLanguage) } : {}),
+                ...(targetLanguage ? { targetLanguage: getProviderLanguageName(targetLanguage) } : {}),
             }, (event) => options.handleAssistantEvent(event, article.id, revision.id, streamedId), options.store.controller.current.signal);
         },
     });

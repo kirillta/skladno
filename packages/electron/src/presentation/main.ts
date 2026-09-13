@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { app, autoUpdater, BrowserWindow, dialog, ipcMain, Menu, net, screen, shell } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter, validateDatabaseSnapshot } from "@skladno/server/electron";
-import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
+import { defaultInterfaceLocale, getElectronMessagesFor } from "@skladno/shared";
 import { requestDraftCheckpoint } from "../application/lifecycle/close-coordinator.js";
 import { applyPendingRestore } from "../infrastructure/recovery/pending-restore.js";
 import { PendingRestoreError } from "../infrastructure/recovery/pending-restore-error.js";
@@ -10,7 +10,7 @@ import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastru
 import { readWindowBounds, writeWindowBounds } from "../infrastructure/window/window-state.js";
 import { createTelemetryOwner } from "../infrastructure/telemetry/telemetry-owner.js";
 import { createTelemetryDelivery, readTelemetryDelivery } from "../infrastructure/telemetry/telemetry-delivery.js";
-import { applicationFailureEvent } from "./telemetry/application-failure-telemetry.js";
+import { createApplicationFailureEvent } from "./telemetry/application-failure-telemetry.js";
 import { registerDesktopSettingsAdapter } from "./settings/desktop-settings.js";
 import { registerDesktopTelemetryAdapter } from "./telemetry/desktop-telemetry.js";
 import { registerDesktopShellAdapter } from "./shell/desktop-shell.js";
@@ -21,7 +21,7 @@ const rendererUrl = "http://localhost:5173";
 let mainWindow: BrowserWindow | undefined;
 let closeApplication: (() => void) | undefined;
 let closing = false;
-let nativeMessages = electronMessagesFor(defaultInterfaceLocale);
+let nativeMessages = getElectronMessagesFor(defaultInterfaceLocale);
 let updates: ReturnType<typeof createDesktopUpdateCoordinator> | undefined;
 let telemetry: ReturnType<typeof createTelemetryOwner> | undefined;
 
@@ -121,7 +121,7 @@ async function createMainWindow(): Promise<void> {
             void shell.openExternal(url);
     });
     window.webContents.on("render-process-gone", (_event, details) => {
-        const failure = applicationFailureEvent("renderer", details.reason);
+        const failure = createApplicationFailureEvent("renderer", details.reason);
         if (failure)
             telemetry?.capture(failure);
     });
@@ -180,7 +180,7 @@ if (squirrelStartup) {
             throw error;
         }
 
-        nativeMessages = electronMessagesFor((await application.services.settings.getSnapshot()).general.interfaceLocale);
+        nativeMessages = getElectronMessagesFor((await application.services.settings.getSnapshot()).general.interfaceLocale);
         const cancelStreams = registerElectronIpcApplicationAdapter(ipcMain, application.services, application.editorial);
         registerDesktopSettingsAdapter({
             ipcMain,
@@ -237,7 +237,7 @@ if (squirrelStartup) {
             { notify: (state) => mainWindow?.webContents.send(desktopUpdatesEvent, state) },
         );
         app.on("child-process-gone", (_event, details) => {
-            const failure = applicationFailureEvent("child_process", details.reason);
+            const failure = createApplicationFailureEvent("child_process", details.reason);
             if (failure)
                 telemetry?.capture(failure);
         });
