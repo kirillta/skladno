@@ -114,7 +114,7 @@ async function recoverRequest({ articleId, error, intl, store, reload, clearStre
         await reload(articleId).catch(() => undefined);
         clearStream(articleId);
         store.setStateByArticle((states) => ({ ...states, [articleId]: "idle" }));
-        
+
         return;
     }
 
@@ -140,6 +140,59 @@ async function runRequest({ articleId, perform, ...options }: AssistantRequestAc
     } catch (error) {
         await recoverRequest({ articleId, error, ...options });
     }
+}
+
+
+type SelectedArticle = NonNullable<ArticleWorkspaceState["selectedArticle"]>;
+
+
+async function performNewAssistantRequest({ options, article, authorMessage, explicitSkillId, targetLanguage, skillOffset }: {
+    options: AssistantRequestActionsOptions;
+    article: SelectedArticle;
+    authorMessage: string;
+    explicitSkillId: BuiltInSkillId | undefined;
+    targetLanguage: string | undefined;
+    skillOffset: number | undefined;
+}) {
+    const saved = await options.workspace.save(article.id);
+    const revision = saved ?? article.currentRevision;
+    clearNewRequestFeedback(options.store, article.id);
+    options.store.setStateByArticle((states) => ({ ...states, [article.id]: "streaming" }));
+    options.store.setFactCheckClaimsByArticle((claims) => ({ ...claims, [article.id]: [] }));
+    options.store.controller.current = new AbortController();
+    const selectionMatchesRevision = options.selection && options.selection.articleId === article.id
+        && options.selection.fingerprint === await fingerprintArticleContent(revision.content);
+
+    if (options.selection && !selectionMatchesRevision)
+        throw new ApplicationClientError("assistant_selection_invalid", undefined, 400);
+
+    const matchingSelection = selectionMatchesRevision ? options.selection : undefined;
+    const requestId = crypto.randomUUID();
+    const streamedId = `streaming-${crypto.randomUUID()}`;
+
+    appendPendingMessage({ store: options.store, articleId: article.id, requestId, authorMessage, explicitSkillId, skillOffset, selection: matchingSelection });
+
+    await options.client.streamAssistantRequest(article.id, {
+        kind: "new", requestId, authorMessage,
+        scope: matchingSelection
+            ? { kind: "selection", baseRevisionId: revision.id, startOffset: matchingSelection.startOffset, endOffset: matchingSelection.endOffset }
+            : { kind: "article", baseRevisionId: revision.id },
+        ...(explicitSkillId ? { explicitSkillId } : {}),
+        ...(skillOffset === undefined ? {} : { skillOffset }),
+        ...(targetLanguage ? { targetLanguage: getProviderLanguageName(targetLanguage) } : {}),
+    }, (event) => options.handleAssistantEvent(event, article.id, revision.id, streamedId), options.store.controller.current.signal);
+}
+
+
+async function performRetryAssistantRequest(options: AssistantRequestActionsOptions & { article: SelectedArticle; retryOfRequestId: string }) {
+    const { article } = options;
+    clearRetryFeedback(options.store, article.id);
+    options.store.setStateByArticle((states) => ({ ...states, [article.id]: "streaming" }));
+    options.store.controller.current = new AbortController();
+    const streamedId = `streaming-${crypto.randomUUID()}`;
+    await options.client.streamAssistantRequest(article.id, {
+        kind: "retry", requestId: crypto.randomUUID(), retryOfRequestId: options.retryOfRequestId,
+    }, (event) => options.handleAssistantEvent(event, article.id, article.currentRevisionId, streamedId), options.store.controller.current.signal);
 }
 
 
@@ -179,35 +232,11 @@ async function requestAssistant(options: AssistantRequestActionsOptions & { auth
         return;
     }
 
+    const perform = () => performNewAssistantRequest({ options, article, authorMessage, explicitSkillId, targetLanguage, skillOffset });
     await runRequest({
         ...options,
         articleId: article.id,
-        perform: async () => {
-            const saved = await workspace.save(article.id);
-            const revision = saved ?? article.currentRevision;
-            clearNewRequestFeedback(options.store, article.id);
-            options.store.setStateByArticle((states) => ({ ...states, [article.id]: "streaming" }));
-            options.store.setFactCheckClaimsByArticle((claims) => ({ ...claims, [article.id]: [] }));
-            options.store.controller.current = new AbortController();
-            const selectionMatchesRevision = options.selection && options.selection.articleId === article.id
-                && options.selection.fingerprint === await fingerprintArticleContent(revision.content);
-            if (options.selection && !selectionMatchesRevision)
-                throw new ApplicationClientError("assistant_selection_invalid", undefined, 400);
-
-            const matchingSelection = selectionMatchesRevision ? options.selection : undefined;
-            const requestId = crypto.randomUUID();
-            const streamedId = `streaming-${crypto.randomUUID()}`;
-            appendPendingMessage({ store: options.store, articleId: article.id, requestId, authorMessage, explicitSkillId, skillOffset, selection: matchingSelection });
-            await options.client.streamAssistantRequest(article.id, {
-                kind: "new", requestId, authorMessage,
-                scope: matchingSelection
-                    ? { kind: "selection", baseRevisionId: revision.id, startOffset: matchingSelection.startOffset, endOffset: matchingSelection.endOffset }
-                    : { kind: "article", baseRevisionId: revision.id },
-                ...(explicitSkillId ? { explicitSkillId } : {}),
-                ...(skillOffset === undefined ? {} : { skillOffset }),
-                ...(targetLanguage ? { targetLanguage: getProviderLanguageName(targetLanguage) } : {}),
-            }, (event) => options.handleAssistantEvent(event, article.id, revision.id, streamedId), options.store.controller.current.signal);
-        },
+        perform,
     });
 }
 
@@ -217,18 +246,11 @@ async function retryAssistant(options: AssistantRequestActionsOptions & { retryO
     if (!article)
         return;
 
+    const perform = () => performRetryAssistantRequest({ ...options, article });
     await runRequest({
         ...options,
         articleId: article.id,
-        perform: async () => {
-            clearRetryFeedback(options.store, article.id);
-            options.store.setStateByArticle((states) => ({ ...states, [article.id]: "streaming" }));
-            options.store.controller.current = new AbortController();
-            const streamedId = `streaming-${crypto.randomUUID()}`;
-            await options.client.streamAssistantRequest(article.id, {
-                kind: "retry", requestId: crypto.randomUUID(), retryOfRequestId: options.retryOfRequestId,
-            }, (event) => options.handleAssistantEvent(event, article.id, article.currentRevisionId, streamedId), options.store.controller.current.signal);
-        },
+        perform,
     });
 }
 
