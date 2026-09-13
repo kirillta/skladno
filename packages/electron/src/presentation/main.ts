@@ -33,7 +33,8 @@ async function loadRenderer(window: BrowserWindow): Promise<void> {
         return;
     }
 
-    for (let attempt = 0; attempt < 40; attempt += 1) {
+    const maxFetchAttempts = 40;
+    for (let attempt = 0; attempt < maxFetchAttempts; attempt += 1) {
         try {
             const response = await fetch(rendererUrl);
             if (response.ok) {
@@ -74,6 +75,7 @@ async function quitFrom(window: BrowserWindow): Promise<void> {
             cancelId: 0,
             noLink: true,
         });
+
         if (response === 0) {
             closing = false;
 
@@ -191,7 +193,10 @@ if (squirrelStartup) {
             services: application.services,
             messages: nativeMessages,
             chooseDirectory: async () => (await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] })).filePaths[0],
-            chooseBackupSnapshot: async (directory) => (await dialog.showOpenDialog({ defaultPath: directory, filters: [{ name: "Skladno backups", extensions: ["sqlite"] }], properties: ["openFile"] })).filePaths[0],
+            chooseBackupSnapshot: async (directory) => (await dialog.showOpenDialog({
+                defaultPath: directory,
+                filters: [{ name: "Skladno backups", extensions: ["sqlite"] }], properties: ["openFile"]
+            })).filePaths[0],
             requestCheckpoint: () => mainWindow ? requestDraftCheckpoint(ipcMain, mainWindow.webContents) : Promise.resolve(false),
             closeApplication: () => {
                 cancelStreams();

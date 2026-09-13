@@ -1,5 +1,3 @@
-
-
 export interface EditorialAssistantTool {
     capability: string;
     description: string;

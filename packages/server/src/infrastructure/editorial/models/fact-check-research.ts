@@ -1,5 +1,3 @@
-
-
 export interface FactCheckResearch {
     claim: string;
     evidence: string;

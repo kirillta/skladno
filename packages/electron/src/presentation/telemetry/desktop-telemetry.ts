@@ -30,7 +30,11 @@ function request(value: unknown): { method: "getConsent" } | { method: "setConse
         return { method: "beginCapture" };
 
     const generation = candidate.generation;
-    if (candidate.method === "capture" && isTelemetryEvent(candidate.event) && (generation === undefined || typeof generation === "number" && Number.isSafeInteger(generation) && generation >= 0) && Object.keys(candidate).every((key) => key === "method" || key === "event" || key === "generation"))
+    if (candidate.method === "capture"
+        && isTelemetryEvent(candidate.event)
+        && (generation === undefined || typeof generation === "number" && Number.isSafeInteger(generation) && generation >= 0)
+        && Object.keys(candidate).every((key) => key === "method" || key === "event" || key === "generation")
+    )
         return { method: "capture", event: candidate.event, ...(generation === undefined ? {} : { generation }) };
 
     return undefined;
@@ -105,6 +109,12 @@ export function createDesktopTelemetryClient(ipcRenderer: Pick<IpcRenderer, "inv
 
             return value;
         },
-        captureTelemetry: (event, generation) => invoke<void>({ method: "capture", event, ...(generation === undefined ? {} : { generation }) }),
+        captureTelemetry: (event, generation) => invoke<void>({
+            method: "capture",
+            event,
+            ...(generation === undefined
+                ? {}
+                : { generation })
+        }),
     };
 }

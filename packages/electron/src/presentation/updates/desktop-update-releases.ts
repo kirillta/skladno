@@ -18,7 +18,11 @@ const releaseVersion = /^v?(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+)(\.security)?)?$
 
 function versionParts(value: string): number[] | undefined {
     const match = releaseVersion.exec(value);
-    return match ? [Number(match[1]), Number(match[2]), Number(match[3]), match[4] ? Number(match[4]) : Number.POSITIVE_INFINITY] : undefined;
+    if (!match)
+        return undefined;
+
+    const previewVersion = match[4] ? Number(match[4]) : Number.POSITIVE_INFINITY;
+    return [Number(match[1]), Number(match[2]), Number(match[3]), previewVersion];
 }
 
 

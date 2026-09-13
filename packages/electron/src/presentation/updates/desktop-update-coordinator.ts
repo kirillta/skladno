@@ -88,7 +88,12 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
         if (!supported)
             return { kind: "unsupported", currentVersion, ...updatePreferences(runtime, currentVersion) };
 
-        return { kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) };
+        return {
+            kind: "current",
+            currentVersion,
+            ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
+            ...updatePreferences(runtime, currentVersion)
+        };
     }
 
 
@@ -105,9 +110,19 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
 
         const runtime = settings();
         if (runtime.updateNetworkAccess !== true)
-            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
+            return setState({
+                kind: "current",
+                currentVersion,
+                ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
+                ...updatePreferences(runtime, currentVersion)
+            });
 
-        setState({ kind: "checking", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
+        setState({
+            kind: "checking",
+            currentVersion,
+            ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
+            ...updatePreferences(runtime, currentVersion)
+        });
 
         try {
             const response = await fetchReleases();
@@ -121,7 +136,13 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
                 ? setState(availableUpdateState(release, currentVersion, nextRuntime))
                 : setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, ...updatePreferences(nextRuntime, currentVersion) });
         } catch {
-            return setState({ kind: "failed", currentVersion, error: "discovery_failed", ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
+            return setState({
+                kind: "failed",
+                currentVersion,
+                error: "discovery_failed",
+                ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
+                ...updatePreferences(runtime, currentVersion)
+            });
         }
     }
 
@@ -135,7 +156,13 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
     });
     updater.on("error", () => {
         const runtime = settings();
-        setState({ kind: "failed", currentVersion, error: state.kind === "downloading" ? "download_failed" : "apply_failed", ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
+        setState({
+            kind: "failed",
+            currentVersion,
+            error: state.kind === "downloading" ? "download_failed" : "apply_failed",
+            ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
+            ...updatePreferences(runtime, currentVersion)
+        });
     });
 
     return {
@@ -146,7 +173,12 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
             if (state.kind === "unsupported")
                 return setState({ ...state, networkAccess: enabled });
 
-            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
+            return setState({
+                kind: "current",
+                currentVersion,
+                ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
+                ...updatePreferences(runtime, currentVersion)
+            });
         },
         setAutomaticChecks(enabled: boolean) {
             const runtime = { ...settings(), automaticUpdateChecks: enabled };
@@ -163,7 +195,12 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
                 return setState({ ...state, includePrereleases: enabled });
 
             release = undefined;
-            return setState({ kind: "current", currentVersion, ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}), ...updatePreferences(runtime, currentVersion) });
+            return setState({
+                kind: "current",
+                currentVersion,
+                ...(runtime.lastUpdateCheckAt ? { lastCheckedAt: runtime.lastUpdateCheckAt } : {}),
+                ...updatePreferences(runtime, currentVersion)
+            });
         },
         checkNow,
         download(): DesktopUpdateState {

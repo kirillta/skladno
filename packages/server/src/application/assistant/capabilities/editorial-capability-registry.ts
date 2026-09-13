@@ -25,15 +25,224 @@ export const editorialOperationClassifications: readonly EditorialOperationClass
 ];
 
 export const editorialCapabilityDefinitions: readonly EditorialCapabilityDefinition[] = [
-    { id: EDITORIAL_CAPABILITY.INSPECT_ARTICLE, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "article", retry: "transient-read", activity: "Reviewing the current Article." }, { id: EDITORIAL_CAPABILITY.INSPECT_LINKED_ARTICLES, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "linked-articles", retry: "transient-read", activity: "Reviewing linked Articles." }, { id: EDITORIAL_CAPABILITY.INSPECT_REVISIONS, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "revisions", retry: "transient-read", activity: "Reviewing Revision history." }, { id: EDITORIAL_CAPABILITY.INSPECT_DRAFT, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "draft", retry: "transient-read", activity: "Reviewing Draft state." }, { id: EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "artifacts", retry: "transient-read", activity: "Reviewing saved editorial work." }, { id: EDITORIAL_CAPABILITY.INSPECT_PROPOSAL_SUMMARY, execution: "read", allowedContext: "article", input: "artifact-id", result: "proposal-summary", retry: "transient-read", activity: "Reviewing Proposal changes." }, { id: EDITORIAL_CAPABILITY.INSPECT_FACT_CHECKS, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "fact-checks", retry: "transient-read", activity: "Reviewing Fact Check findings." }, { id: EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "publishing-guidance", retry: "transient-read", activity: "Reviewing publishing guidance." }, { id: EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "style-corpus", retry: "transient-read", activity: "Reviewing the Style Corpus." }, { id: EDITORIAL_CAPABILITY.INSPECT_ARTICLE_STYLE_RULES, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "style-rules", retry: "transient-read", activity: "Reviewing Article style rules." }, { id: EDITORIAL_CAPABILITY.INSPECT_TRANSLATIONS, execution: "read", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "translations", retry: "transient-read", activity: "Reviewing translations." },
-    { id: EDITORIAL_CAPABILITY.RENAME_ARTICLE, execution: "action", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.TITLE, result: "article", retry: "never", activity: "Renaming the current Article." }, { id: EDITORIAL_CAPABILITY.CHANGE_ARTICLE_LANGUAGE, execution: "action", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.LANGUAGE, result: "article", retry: "never", activity: "Changing the Article language." }, { id: EDITORIAL_CAPABILITY.ASSIGN_PUBLISHING_PROFILE, execution: "action", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.PUBLISHING_PROFILE, result: "article", retry: "never", activity: "Assigning publishing guidance." }, { id: EDITORIAL_CAPABILITY.SET_ARTICLE_STYLE_RULES, execution: "action", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.STYLE_RULES, result: "style-rules", retry: "never", activity: "Updating Article style rules." }, { id: EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, execution: "action", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "style-corpus", retry: "never", activity: "Adding the current Revision to the Style Corpus." }, { id: EDITORIAL_CAPABILITY.REBUILD_STYLE_PROFILE, execution: "action", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.NONE, prerequisite: "style-corpus", result: "style-corpus", retry: "never", activity: "Rebuilding the Style Profile." },
-    { id: EDITORIAL_CAPABILITY.GENERATE_PROPOSAL, execution: "artifact", allowedContext: "article", selectionCompatible: true, input: EDITORIAL_CAPABILITY_INPUT.PROPOSAL_OPERATION, result: "proposal", retry: "never", activity: "Preparing a Proposal." }, { id: EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS, execution: "artifact", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.FINDING_IDS, result: "proposal", retry: "never", activity: "Preparing Finding corrections." }, { id: EDITORIAL_CAPABILITY.FACT_CHECK, execution: "artifact", allowedContext: "article", selectionCompatible: true, input: EDITORIAL_CAPABILITY_INPUT.NONE, result: "fact-check", retry: "never", activity: "Checking facts." }, { id: EDITORIAL_CAPABILITY.STYLE_REVIEW, execution: "artifact", allowedContext: "article", selectionCompatible: true, input: EDITORIAL_CAPABILITY_INPUT.NONE, prerequisite: "style-corpus", result: "style-review", retry: "never", activity: "Reviewing style." }, { id: EDITORIAL_CAPABILITY.TRANSLATE, execution: "artifact", allowedContext: "article", input: EDITORIAL_CAPABILITY_INPUT.TARGET_LANGUAGE, prerequisite: "target-language", result: "translation", retry: "never", activity: "Preparing a translation." },
+    {
+        id: EDITORIAL_CAPABILITY.INSPECT_ARTICLE,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "article",
+        retry: "transient-read",
+        activity: "Reviewing the current Article."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_LINKED_ARTICLES,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "linked-articles",
+        retry: "transient-read",
+        activity: "Reviewing linked Articles."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_REVISIONS,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "revisions",
+        retry: "transient-read",
+        activity: "Reviewing Revision history."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_DRAFT,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "draft",
+        retry: "transient-read",
+        activity: "Reviewing Draft state."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "artifacts",
+        retry: "transient-read",
+        activity: "Reviewing saved editorial work."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_PROPOSAL_SUMMARY,
+        execution: "read",
+        allowedContext: "article",
+        input: "artifact-id",
+        result: "proposal-summary",
+        retry: "transient-read",
+        activity: "Reviewing Proposal changes."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_FACT_CHECKS,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "fact-checks",
+        retry: "transient-read",
+        activity: "Reviewing Fact Check findings."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "publishing-guidance",
+        retry: "transient-read",
+        activity: "Reviewing publishing guidance."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "style-corpus",
+        retry: "transient-read",
+        activity: "Reviewing the Style Corpus."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_ARTICLE_STYLE_RULES,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "style-rules",
+        retry: "transient-read",
+        activity: "Reviewing Article style rules."
+    }, {
+        id: EDITORIAL_CAPABILITY.INSPECT_TRANSLATIONS,
+        execution: "read",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "translations",
+        retry: "transient-read",
+        activity: "Reviewing translations."
+    }, {
+        id: EDITORIAL_CAPABILITY.RENAME_ARTICLE,
+        execution: "action",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.TITLE,
+        result: "article",
+        retry: "never",
+        activity: "Renaming the current Article."
+    }, {
+        id: EDITORIAL_CAPABILITY.CHANGE_ARTICLE_LANGUAGE,
+        execution: "action",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.LANGUAGE,
+        result: "article",
+        retry: "never",
+        activity: "Changing the Article language."
+    }, {
+        id: EDITORIAL_CAPABILITY.ASSIGN_PUBLISHING_PROFILE,
+        execution: "action",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.PUBLISHING_PROFILE,
+        result: "article",
+        retry: "never",
+        activity: "Assigning publishing guidance."
+    }, {
+        id: EDITORIAL_CAPABILITY.SET_ARTICLE_STYLE_RULES,
+        execution: "action",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.STYLE_RULES,
+        result: "style-rules",
+        retry: "never",
+        activity: "Updating Article style rules."
+    }, {
+        id: EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS,
+        execution: "action",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "style-corpus",
+        retry: "never",
+        activity: "Adding the current Revision to the Style Corpus."
+    }, {
+        id: EDITORIAL_CAPABILITY.REBUILD_STYLE_PROFILE,
+        execution: "action",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        prerequisite: "style-corpus",
+        result: "style-corpus",
+        retry: "never",
+        activity: "Rebuilding the Style Profile."
+    }, {
+        id: EDITORIAL_CAPABILITY.GENERATE_PROPOSAL,
+        execution: "artifact",
+        allowedContext: "article",
+        selectionCompatible: true,
+        input: EDITORIAL_CAPABILITY_INPUT.PROPOSAL_OPERATION,
+        result: "proposal",
+        retry: "never",
+        activity: "Preparing a Proposal."
+    }, {
+        id: EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS,
+        execution: "artifact",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.FINDING_IDS,
+        result: "proposal",
+        retry: "never",
+        activity: "Preparing Finding corrections."
+    }, {
+        id: EDITORIAL_CAPABILITY.FACT_CHECK,
+        execution: "artifact",
+        allowedContext: "article",
+        selectionCompatible: true,
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        result: "fact-check",
+        retry: "never",
+        activity: "Checking facts."
+    }, {
+        id: EDITORIAL_CAPABILITY.STYLE_REVIEW,
+        execution: "artifact",
+        allowedContext: "article",
+        selectionCompatible: true,
+        input: EDITORIAL_CAPABILITY_INPUT.NONE,
+        prerequisite: "style-corpus",
+        result: "style-review",
+        retry: "never",
+        activity: "Reviewing style."
+    }, {
+        id: EDITORIAL_CAPABILITY.TRANSLATE,
+        execution: "artifact",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.TARGET_LANGUAGE,
+        prerequisite: "target-language",
+        result: "translation",
+        retry: "never",
+        activity: "Preparing a translation."
+    },
 ];
 
 export const transportEvaluations: readonly TransportEvaluation[] = [
-    { transport: "stream", operation: "proposal.generate" }, { transport: "stream", operation: "fact-check.run" }, { transport: "stream", operation: "translation.prepare" }, { transport: "http", operation: "article.rename" }, { transport: "http", operation: "article.language.change" }, { transport: "http", operation: "article.publishing-profile.assign" }, { transport: "http", operation: "revision.restore" }, { transport: "electron", operation: "article.rename" }, { transport: "electron", operation: "article.language.change" }, { transport: "electron", operation: "article.publishing-profile.assign" }, { transport: "electron", outsideAssistantAuthority: "desktop lifecycle and transport dispatch" },
+    {
+        transport: "stream",
+        operation: "proposal.generate"
+    }, {
+        transport: "stream",
+        operation: "fact-check.run"
+    }, {
+        transport: "stream",
+        operation: "translation.prepare"
+    }, {
+        transport: "http",
+        operation: "article.rename"
+    }, {
+        transport: "http",
+        operation: "article.language.change"
+    }, {
+        transport: "http",
+        operation: "article.publishing-profile.assign"
+    }, {
+        transport: "http",
+        operation: "revision.restore"
+    }, {
+        transport: "electron",
+        operation: "article.rename"
+    }, {
+        transport: "electron",
+        operation: "article.language.change"
+    }, {
+        transport: "electron",
+        operation: "article.publishing-profile.assign"
+    }, {
+        transport: "electron",
+        outsideAssistantAuthority: "desktop lifecycle and transport dispatch"
+    },
 ];
-
-
-
-
