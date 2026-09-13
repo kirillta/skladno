@@ -2,10 +2,30 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
-import { defaultGeneralSettings } from "@skladno/shared";
+import { defaultGeneralSettings, type AssistantCapabilityActivity, type AssistantMessage, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
 import { messages } from "../../../i18n/messages.js";
 import { message } from "../../../i18n/test-message.js";
-import { AssistantTimeline } from "./AssistantTimeline.js";
+import { AssistantTimeline as RenderAssistantTimeline } from "./AssistantTimeline.js";
+
+
+function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, openView, onRetry, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings }: {
+    state: "idle" | "streaming" | "error";
+    message: string;
+    errorDetails?: string;
+    activity?: AssistantCapabilityActivity;
+    factCheckClaims?: FactCheckClaimPreview[];
+    collapsed: boolean;
+    assistantMessages?: AssistantMessage[];
+    streamedMessage?: Parameters<typeof RenderAssistantTimeline>[0]["data"]["streamedMessage"];
+    openView?: Parameters<typeof RenderAssistantTimeline>[0]["actions"]["openView"];
+    onRetry?: Parameters<typeof RenderAssistantTimeline>[0]["actions"]["onRetry"];
+    generalSettings: GeneralSettings;
+    elapsedDuration: string;
+    hasUnavailableAiConnection?: boolean;
+    openSettings?: () => void;
+}) {
+    return <RenderAssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, onRetry, openSettings }} />;
+}
 
 
 describe("AssistantTimeline", () => {

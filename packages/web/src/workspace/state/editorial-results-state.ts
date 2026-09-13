@@ -8,7 +8,7 @@ import {
     type StyleReview,
     type TranslationMetadata,
 } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { targetLanguageId } from "./editorial-language.js";

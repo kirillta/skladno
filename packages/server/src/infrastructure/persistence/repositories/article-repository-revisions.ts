@@ -17,7 +17,7 @@ export function getArticleRevision(database: SqliteDatabase, articleId: string, 
 }
 
 
-export function insertArticleRevision(database: SqliteDatabase, { revisionId, articleId, content, provenance, restoredFromRevisionId, timestamp }: {
+export function insertArticleRevision(database: SqliteDatabase, revision: {
     revisionId: string;
     articleId: string;
     content: string;
@@ -25,6 +25,7 @@ export function insertArticleRevision(database: SqliteDatabase, { revisionId, ar
     restoredFromRevisionId?: string;
     timestamp: string;
 }): void {
+    const { revisionId, articleId, content, provenance, restoredFromRevisionId, timestamp } = revision;
     database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, restored_from_revision_id, created_at) VALUES (?, ?, ?, ?, ?, ?)")
         .run(revisionId, articleId, content, JSON.stringify(provenance), restoredFromRevisionId ?? null, timestamp);
     database.prepare("UPDATE articles SET current_revision_id = ?, updated_at = ? WHERE id = ?")

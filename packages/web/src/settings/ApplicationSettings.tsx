@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 import { aiModelPreferenceId, AI_PROVIDER, defaultGeneralSettings, defaultPublishingSettings, type AiConnection, type AiProvider, type AppModelPreference, type ApplicationSettingsSnapshot, type AvailableAiModel, type BackupPolicy, type GeneralSettings, type KeyBindingOverrides, type ModelPreferences, type PublishingSettings } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../application-client.js";
+import type { EditorialWorkspaceClient } from "../application/client.js";
 import { useIntl } from "react-intl";
 import { useNotifications } from "../notifications/NotificationProvider.js";
-import { getDesktopSettingsClient, getDesktopTelemetryClient } from "../desktop-client.js";
+import { getDesktopSettingsClient, getDesktopTelemetryClient } from "../application/desktop-client.js";
 import { ConnectionRemovalDialog } from "./components/ConnectionRemovalDialog.js";
 import { ManagedConnectionRenameDialog } from "./components/ManagedConnectionRenameDialog.js";
 import { SettingsContent } from "./components/SettingsContent.js";
 import { SettingsNavigation } from "./components/SettingsNavigation.js";
+import { AboutSettingsSection } from "./components/AboutSettingsSection.js";
+import { AiSettingsSection } from "./components/AiSettingsSection.js";
+import { DataBackupsSettingsSection } from "./components/DataBackupsSettingsSection.js";
+import { GeneralSettingsSection } from "./components/GeneralSettingsSection.js";
+import { KeyBindingSettings } from "./components/KeyBindingSettings.js";
+import { PublishingSettingsSection } from "./components/PublishingSettingsSection.js";
 import type { SettingsSection } from "./settings-sections.js";
 
 
@@ -24,7 +30,8 @@ function availableModels(value: unknown, connections: AiConnection[]): Available
 }
 
 
-export function ApplicationSettings({ client, back, initialSection = "general", onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused }: { client: EditorialWorkspaceClient; back: () => void; initialSection?: SettingsSection; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
+export function ApplicationSettings(props: { client: EditorialWorkspaceClient; back: () => void; initialSection?: SettingsSection; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
+    const { client, back, initialSection = "general", onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused } = props;
     const intl = useIntl();
     const { notify, notifyError } = useNotifications();
     const [section, setSection] = useState<SettingsSection>(initialSection);
@@ -289,12 +296,25 @@ export function ApplicationSettings({ client, back, initialSection = "general", 
     }
 
 
-    return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
-        <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
-        <SettingsContent client={client} section={section} settings={settings} general={general} preferences={preferences} appModel={appModel} backupPolicy={backupPolicy} keyBindingOverrides={keyBindingOverrides} publishingSettings={publishingSettings} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} desktopAvailable={Boolean(desktopSettings)} telemetry={telemetry} onThemeApplied={onThemeApplied} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
+    let sectionContent = <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />;
+    if (settings && section === "general")
+        sectionContent = <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} telemetry={telemetry} />;
+    else if (settings && section === "keyBindings")
+        sectionContent = <KeyBindingSettings general={general} saveGeneral={saveGeneral} overrides={keyBindingOverrides} save={saveKeyBindingOverrides} />;
+    else if (settings && section === "ai")
+        sectionContent = <AiSettingsSection settings={settings} preferences={preferences} appModel={appModel} models={models} connectionProvider={connectionProvider} connectionName={connectionName} environmentName={environmentName} managedConnectionName={managedConnectionName} apiKey={apiKey} connectionError={connectionError} setConnectionProvider={setConnectionProvider} setConnectionName={setConnectionName} setEnvironmentName={(value) => {
             setEnvironmentName(value);
             setConnectionError(undefined);
-        }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} saveGeneral={saveGeneral} savePreferences={savePreferences} saveAppModel={saveAppModel} saveBackupPolicy={saveBackupPolicy} saveKeyBindingOverrides={saveKeyBindingOverrides} savePublishingSettings={(next) => void savePublishingSettings(next)} addConnection={() => void addConnection()} addManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} setConnectionActive={(connectionId, active) => void setConnectionActive(connectionId, active)} requestConnectionRename={requestManagedConnectionRename} requestConnectionRemoval={setConnectionPendingRemoval} refreshModels={() => void refreshModels()} />
+        }} setManagedConnectionName={setManagedConnectionName} setApiKey={setApiKey} onAddConnection={() => void addConnection()} onAddManagedConnection={desktopSettings ? () => void addManagedConnection() : undefined} onSetConnectionActive={(connectionId, active) => void setConnectionActive(connectionId, active)} onRequestConnectionRename={requestManagedConnectionRename} canRenameManagedConnection={Boolean(desktopSettings)} onRequestConnectionRemoval={setConnectionPendingRemoval} onRefreshModels={() => void refreshModels()} savePreferences={savePreferences} saveAppModel={saveAppModel} />;
+    else if (settings && section === "publishing")
+        sectionContent = <PublishingSettingsSection publishing={publishingSettings} save={savePublishingSettings} general={general} saveGeneral={saveGeneral} />;
+    else if (settings && section === "about")
+        sectionContent = <AboutSettingsSection />;
+
+
+    return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
+        <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
+        <SettingsContent section={section} settings={settings}>{sectionContent}</SettingsContent>
         {connectionPendingRemoval && <ConnectionRemovalDialog connection={connectionPendingRemoval} close={() => setConnectionPendingRemoval(undefined)} remove={() => void removeConnection()} />}
         {connectionPendingRename && <ManagedConnectionRenameDialog label={renamedConnectionLabel} setLabel={setRenamedConnectionLabel} close={() => setConnectionPendingRename(undefined)} save={() => void renameManagedConnection()} />}
     </main>;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { defaultGeneralSettings, type GeneralSettings } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 
 
 export function useWorkspaceGeneralSettings(client: EditorialWorkspaceClient, screen: "editorial-workspace" | "application-settings") {

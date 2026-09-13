@@ -11,15 +11,24 @@ const tone = {
 const quietScrollbar = "[scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong";
 
 
-export function FactCheckView({ factCheck, revisionNumber, reusedRevisionNumbers, stale, runAgain, resolve, proposeCorrections }: {
+interface FactCheckData {
     factCheck: FactCheck | undefined;
     revisionNumber?: number;
     reusedRevisionNumbers?: Record<string, number>;
     stale: boolean;
+}
+
+
+interface FactCheckActions {
     runAgain: () => void;
     resolve: (findingId: string, resolution: NonNullable<FactCheckFinding["resolution"]>) => Promise<void>;
     proposeCorrections: (findings: FactCheckFinding[]) => void;
-}) {
+}
+
+
+export function FactCheckView({ data, actions }: { data: FactCheckData; actions: FactCheckActions }) {
+    const { factCheck, revisionNumber, reusedRevisionNumbers, stale } = data;
+    const { runAgain, resolve, proposeCorrections } = actions;
     const intl = useIntl();
     const [selected, setSelected] = useState(new Set<string>());
     const [activeFindingId, setActiveFindingId] = useState<string>();

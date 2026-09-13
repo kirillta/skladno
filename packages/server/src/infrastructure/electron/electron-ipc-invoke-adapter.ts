@@ -1,8 +1,8 @@
 import { APPLICATION_ERROR, ELECTRON_APPLICATION_METHOD, HTTP_STATUS, isElectronApplicationMethod, type ElectronApplicationMethod, type ElectronInvokeRequest, type ElectronInvokeResult, type ElectronIpcError } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
-import { ArticleDraftConflictError } from "../../application/errors/article-draft-conflict-error.js";
-import { ArticleRevisionConflictError } from "../../application/errors/article-revision-conflict-error.js";
+import { ArticleDraftConflictError } from "../../application/articles/article-draft-conflict-error.js";
+import { ArticleRevisionConflictError } from "../../application/articles/article-revision-conflict-error.js";
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
 
 

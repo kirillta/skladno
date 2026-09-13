@@ -5,8 +5,7 @@ import { defaultGeneralSettings } from "@skladno/shared";
 
 import { App } from "../App.js";
 import { message } from "../i18n/test-message.js";
-import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
-import { article, fakeClient, renderLocalized, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
+import { article, fakeClient, renderLocalized, resetWorkspaceTestEnvironment, TestEditorialAssistantPanel as EditorialAssistantPanel } from "./EditorialWorkspace.test-utils.js";
 
 
 // Product scenarios: workspace.assistant.quick-action

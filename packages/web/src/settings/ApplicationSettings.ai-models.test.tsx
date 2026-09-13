@@ -4,7 +4,7 @@ import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aiModelPreferenceId } from "@skladno/shared";
 
-import type { EditorialWorkspaceClient } from "../application-client.js";
+import type { EditorialWorkspaceClient } from "../application/client.js";
 import { messages } from "../i18n/messages.js";
 import { message } from "../i18n/test-message.js";
 import { NotificationProvider } from "../notifications/NotificationProvider.js";

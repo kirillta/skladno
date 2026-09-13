@@ -1,8 +1,8 @@
 import { REVISION_PROVENANCE_KIND, isArticleLanguage, isPublishLimitProfileId, type AcceptedChange, type AcceptProposalInput, type CreateArticleInput, type UpdateArticleInput, type Article, type ArticleDraft, type ArticleRevision, type SaveArticleDraftInput, type SaveArticleRevisionInput } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
-import { ArticleDraftConflictError } from "../../../application/errors/article-draft-conflict-error.js";
-import { ArticleRevisionConflictError } from "../../../application/errors/article-revision-conflict-error.js";
+import { ArticleDraftConflictError } from "../../../application/articles/article-draft-conflict-error.js";
+import { ArticleRevisionConflictError } from "../../../application/articles/article-revision-conflict-error.js";
 import { deleteArticle, reorderPinnedArticles, setArticleArchived, setArticlePinned } from "./article-library-repository.js";
 import { articleNotFound, invalidArticleRequest, requireArticleTitle, revisionNotFound, unsupportedPublishingProfile } from "./article-repository-errors.js";
 import { articleFromRow, articleSelect } from "./article-repository-records.js";

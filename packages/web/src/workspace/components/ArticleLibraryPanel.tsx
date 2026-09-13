@@ -31,10 +31,38 @@ function languageCode(language: string | undefined): string {
 }
 
 
-export function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, openSettings, language, dispatcher, shortcutOverrides, remove, setArchived, setPinned, reorderPinned, notifyError }: {
-    articles: Article[]; selectedArticleId: string | undefined; selectArticle: (articleId: string) => void; collapsed: boolean; setCollapsed: (value: boolean) => void; createBlank: () => Promise<unknown>; openStyleProfile: () => void; openSettings: () => void; language: string | undefined; dispatcher?: KeyBindingDispatcher; shortcutOverrides?: KeyBindingOverrides;
-    remove?: (articleId: string) => Promise<void>; setArchived?: (articleId: string, archived: boolean) => Promise<void>; setPinned?: (articleId: string, pinned: boolean) => Promise<void>; reorderPinned?: (articleIds: string[]) => Promise<void>; notifyError?: Notifications["notifyError"];
-}) {
+interface ArticleLibraryData {
+    articles: Article[];
+    selectedArticleId: string | undefined;
+    collapsed: boolean;
+    language: string | undefined;
+}
+
+
+interface ArticleLibraryNavigation {
+    selectArticle: (articleId: string) => void;
+    setCollapsed: (value: boolean) => void;
+    createBlank: () => Promise<unknown>;
+    openStyleProfile: () => void;
+    openSettings: () => void;
+    dispatcher?: KeyBindingDispatcher;
+    shortcutOverrides?: KeyBindingOverrides;
+}
+
+
+interface ArticleLibraryMutations {
+    remove?: (articleId: string) => Promise<void>;
+    setArchived?: (articleId: string, archived: boolean) => Promise<void>;
+    setPinned?: (articleId: string, pinned: boolean) => Promise<void>;
+    reorderPinned?: (articleIds: string[]) => Promise<void>;
+    notifyError?: Notifications["notifyError"];
+}
+
+
+export function ArticleLibraryPanel({ data, navigation, mutations }: { data: ArticleLibraryData; navigation: ArticleLibraryNavigation; mutations: ArticleLibraryMutations }) {
+    const { articles, selectedArticleId, collapsed, language } = data;
+    const { selectArticle, setCollapsed, createBlank, openStyleProfile, openSettings, dispatcher, shortcutOverrides } = navigation;
+    const { remove, setArchived, setPinned, reorderPinned, notifyError } = mutations;
     const intl = useIntl();
     const reportError = notifyError ?? (() => undefined);
     const [query, setQuery] = useState("");

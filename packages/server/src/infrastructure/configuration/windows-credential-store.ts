@@ -2,7 +2,7 @@ import { Entry } from "@napi-rs/keyring";
 import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
-import type { CredentialStore } from "../../application/services/settings/credential-store.js";
+import type { CredentialStore } from "../../application/settings/credential-store.js";
 
 
 const service = "io.github.kirillta.skladno";

@@ -4,7 +4,16 @@ import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
-import { StyleProfileView } from "./StyleProfileView.js";
+import { StyleProfileView as RenderStyleProfileView } from "./StyleProfileView.js";
+
+type StyleProfileViewTestProps = Parameters<typeof RenderStyleProfileView>[0]["data"] & Parameters<typeof RenderStyleProfileView>[0]["actions"];
+
+
+function StyleProfileView(props: StyleProfileViewTestProps) {
+    const { articleId, revisions, corpus, findings, findingsStale, generalSettings, add, remove, setIncluded, setRules, rebuild, getArticleRules, setArticleRules, snapshotArticleRevision } = props;
+    return <RenderStyleProfileView data={{ articleId, revisions, corpus, findings, findingsStale, generalSettings }} actions={{ add, remove, setIncluded, setRules, rebuild, getArticleRules, setArticleRules, snapshotArticleRevision }} />;
+}
+
 
 afterEach(cleanup);
 

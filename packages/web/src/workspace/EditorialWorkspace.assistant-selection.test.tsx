@@ -8,9 +8,8 @@ import { defaultGeneralSettings } from "@skladno/shared";
 import { App } from "../App.js";
 import { messages } from "../i18n/messages.js";
 import { message } from "../i18n/test-message.js";
-import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
 import { requestedTranslationLanguages } from "./state/assistant-messages-state.js";
-import { article, fakeClient, renderLocalized, resetWorkspaceTestEnvironment } from "./EditorialWorkspace.test-utils.js";
+import { article, fakeClient, renderLocalized, resetWorkspaceTestEnvironment, TestEditorialAssistantPanel as EditorialAssistantPanel } from "./EditorialWorkspace.test-utils.js";
 
 describe("Editorial Workspace assistant", () => {
     afterEach(resetWorkspaceTestEnvironment);

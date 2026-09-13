@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 import type { AssistantRequestStore } from "./assistant-request-state.js";
 
 

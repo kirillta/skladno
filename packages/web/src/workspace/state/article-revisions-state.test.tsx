@@ -2,7 +2,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { type Article, type ArticleRevision } from "@skladno/shared";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { messages } from "../../i18n/messages.js";
 import { NotificationProvider } from "../../notifications/NotificationProvider.js";
 import { useArticleRevisions } from "./article-revisions-state.js";

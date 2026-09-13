@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { ArticleDraftConflictError, ArticleRevisionConflictError, type Article, type ArticleRevision } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
-import { getDesktopTelemetryClient } from "../../desktop-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
+import { getDesktopTelemetryClient } from "../../application/desktop-client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 import { createDraftCheckpointTelemetry } from "../drafts/draft-checkpoint-telemetry.js";
 import { draftPresentationState, hasUncommittedDraftChanges, hydrateDraftLifecycle, type DraftPresentationState } from "../drafts/draft-lifecycle.js";

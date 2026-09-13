@@ -77,10 +77,14 @@ function ResizeHandle({ label, value, minimum, maximum, direction = 1, edge = "e
 }
 
 
-export function WorkspaceShell({ children, library, assistant, focusMode, libraryCollapsed, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, assistantOpenRequest, libraryWidth, setLibraryWidth, assistantWidth, setAssistantWidth }: {
+interface WorkspaceShellContent {
     children: ReactNode;
     library: ReactNode;
     assistant: ReactNode;
+}
+
+
+interface WorkspaceShellLayout {
     focusMode: boolean;
     libraryCollapsed: boolean;
     setLibraryCollapsed: (collapsed: boolean) => void;
@@ -91,7 +95,12 @@ export function WorkspaceShell({ children, library, assistant, focusMode, librar
     setLibraryWidth: (width: number) => void;
     assistantWidth: number;
     setAssistantWidth: (width: number) => void;
-}) {
+}
+
+
+export function WorkspaceShell({ content, layout }: { content: WorkspaceShellContent; layout: WorkspaceShellLayout }) {
+    const { children, library, assistant } = content;
+    const { focusMode, libraryCollapsed, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, assistantOpenRequest, libraryWidth, setLibraryWidth, assistantWidth, setAssistantWidth } = layout;
     const intl = useIntl();
     const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
     const [responsiveAssistantExpanded, setResponsiveAssistantExpanded] = useState(false);

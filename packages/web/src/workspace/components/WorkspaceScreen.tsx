@@ -19,7 +19,7 @@ import { Banner, Button } from "../../ui/primitives.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 
 
-export function WorkspaceScreen({ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, runTranslation, dispatcher, shortcutOverrides, openSettings, hasUsableAiConnection, openModelSettings, assistantSelection, onSelectionChange, clearAssistantSelection, overlays }: {
+interface WorkspaceScreenContent {
     layout: WorkspaceLayoutState;
     workspace: ArticleWorkspaceState;
     assistant: AssistantMessagesState;
@@ -28,75 +28,85 @@ export function WorkspaceScreen({ layout, workspace, assistant, editorial, revis
     corpus: StyleCorpusState;
     publishing: PublishingState;
     generalSettings: GeneralSettings;
+}
+
+
+interface WorkspaceScreenActions {
     createBlank: () => Promise<unknown>;
     runFactCheck: () => void;
     runTranslation: () => void;
+    openSettings: () => void;
+    openModelSettings: () => void;
+}
+
+
+interface WorkspaceScreenEnvironment {
     dispatcher: KeyBindingDispatcher;
     shortcutOverrides: KeyBindingOverrides;
-    openSettings: () => void;
     hasUsableAiConnection: boolean | undefined;
-    openModelSettings: () => void;
+    overlays: ReactNode;
+}
+
+
+interface WorkspaceScreenSelection {
     assistantSelection: AssistantSelectionScope | undefined;
     onSelectionChange: (snapshot: AssistantSelectionSnapshot | undefined) => void;
     clearAssistantSelection: () => void;
-    overlays: ReactNode;
+}
+
+
+export function WorkspaceScreen({ content, actions, environment, selection }: {
+    content: WorkspaceScreenContent;
+    actions: WorkspaceScreenActions;
+    environment: WorkspaceScreenEnvironment;
+    selection: WorkspaceScreenSelection;
 }) {
+    const { layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings } = content;
+    const { createBlank, runFactCheck, runTranslation, openSettings, openModelSettings } = actions;
+    const { dispatcher, shortcutOverrides, hasUsableAiConnection, overlays } = environment;
+    const { assistantSelection, onSelectionChange, clearAssistantSelection } = selection;
     const { notifyError } = useNotifications();
     return <WorkspaceShell
-        focusMode={layout.focusMode}
-        libraryCollapsed={layout.libraryCollapsed}
-        setLibraryCollapsed={layout.setLibraryCollapsed}
-        assistantCollapsed={layout.assistantCollapsed}
-        setAssistantCollapsed={layout.setAssistantCollapsed}
-        assistantOpenRequest={layout.assistantOpenRequest}
-        libraryWidth={layout.libraryWidth}
-        setLibraryWidth={layout.setLibraryWidth}
-        assistantWidth={layout.assistantWidth}
-        setAssistantWidth={layout.setAssistantWidth}
-        library={<ArticleLibraryPanel
-            articles={workspace.articles}
-            selectedArticleId={workspace.selectedArticleId}
-            selectArticle={workspace.selectArticle}
-            collapsed={layout.libraryCollapsed}
-            setCollapsed={layout.setLibraryCollapsed}
-            createBlank={createBlank}
-            openStyleProfile={() => layout.setView("style-profile")}
-            openSettings={openSettings}
-            language={workspace.selectedArticle?.language}
-            dispatcher={dispatcher}
-            shortcutOverrides={shortcutOverrides}
-            remove={workspace.remove}
-            setArchived={workspace.setArchived}
-            setPinned={workspace.setPinned}
-            reorderPinned={workspace.reorderPinned}
-            notifyError={notifyError} />}
-        assistant={<EditorialAssistantPanel
-            state={assistant.state}
-            message={assistant.message}
-            errorDetails={assistant.errorDetails}
-            hasUnavailableAiConnection={assistant.hasUnavailableAiConnection}
-            streamedMessage={assistant.streamedMessage}
-            activity={assistant.activity}
-            factCheckClaims={assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true }))}
-            onRequest={assistant.request}
-            onCancel={assistant.cancel}
-            onRetry={assistant.retry}
-            collapsed={layout.assistantCollapsed}
-            setCollapsed={layout.setAssistantCollapsed}
-            translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== workspace.selectedArticle?.language)}
-            assistantMessages={assistant.messages}
-            dispatcher={dispatcher}
-            shortcutOverrides={shortcutOverrides}
-            selection={assistantSelection}
-            openView={layout.setView}
-            generalSettings={generalSettings}
-            openSettings={openSettings}
-            clearSelection={clearAssistantSelection} />}
-    >
-        {hasUsableAiConnection === false && <AiConnectionWarning openModelSettings={openModelSettings} />}
-        <ArticleWorkspace workspace={workspace} layout={layout} editorial={editorial} revisions={revisions} corpus={corpus} publishing={publishing} generalSettings={generalSettings} createBlank={createBlank} runFactCheck={runFactCheck} runTranslation={runTranslation} shortcutOverrides={shortcutOverrides} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection?.preview} />
-        {overlays}
-    </WorkspaceShell>;
+        layout={{
+            focusMode: layout.focusMode,
+            libraryCollapsed: layout.libraryCollapsed,
+            setLibraryCollapsed: layout.setLibraryCollapsed,
+            assistantCollapsed: layout.assistantCollapsed,
+            setAssistantCollapsed: layout.setAssistantCollapsed,
+            assistantOpenRequest: layout.assistantOpenRequest,
+            libraryWidth: layout.libraryWidth,
+            setLibraryWidth: layout.setLibraryWidth,
+            assistantWidth: layout.assistantWidth,
+            setAssistantWidth: layout.setAssistantWidth,
+        }}
+        content={{
+            library: <ArticleLibraryPanel
+                data={{ articles: workspace.articles, selectedArticleId: workspace.selectedArticleId, collapsed: layout.libraryCollapsed, language: workspace.selectedArticle?.language }}
+                navigation={{ selectArticle: workspace.selectArticle, setCollapsed: layout.setLibraryCollapsed, createBlank, openStyleProfile: () => layout.setView("style-profile"), openSettings, dispatcher, shortcutOverrides }}
+                mutations={{ remove: workspace.remove, setArchived: workspace.setArchived, setPinned: workspace.setPinned, reorderPinned: workspace.reorderPinned, notifyError }} />,
+            assistant: <EditorialAssistantPanel
+                data={{
+                    state: assistant.state,
+                    message: assistant.message,
+                    errorDetails: assistant.errorDetails,
+                    hasUnavailableAiConnection: assistant.hasUnavailableAiConnection,
+                    streamedMessage: assistant.streamedMessage,
+                    activity: assistant.activity,
+                    factCheckClaims: assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true })),
+                    translationLanguages: generalSettings.defaultTranslationLanguages.filter((language) => language !== workspace.selectedArticle?.language),
+                    assistantMessages: assistant.messages,
+                    selection: assistantSelection,
+                    generalSettings,
+                }}
+                actions={{ onRequest: assistant.request, onCancel: assistant.cancel, onRetry: assistant.retry, dispatcher, shortcutOverrides, openView: layout.setView, openSettings, clearSelection: clearAssistantSelection }}
+                layout={{ collapsed: layout.assistantCollapsed, setCollapsed: layout.setAssistantCollapsed }} />,
+            children: <>
+                {hasUsableAiConnection === false && <AiConnectionWarning openModelSettings={openModelSettings} />}
+                <ArticleWorkspace state={{ workspace, layout, editorial, revisions, corpus, publishing, generalSettings }} actions={{ createBlank, runFactCheck, runTranslation, shortcutOverrides, onSelectionChange, assistantSelection: assistantSelection?.preview }} />
+                {overlays}
+            </>,
+        }}
+    />;
 }
 
 

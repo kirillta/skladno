@@ -8,7 +8,7 @@ import test from "node:test";
 
 import { aiConnectionsPath, applicationSettingsPath, HTTP_METHOD, HTTP_STATUS } from "@skladno/shared";
 import { createLocalService } from "./server.js";
-import { EditorialService } from "../application/services/editorial/editorial-service.js";
+import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
 import { createTestPersistence } from "../test-support/test-persistence.js";
@@ -23,7 +23,10 @@ test("AI connections share environment-variable names, activate independently, a
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = createTestPersistence(database);
     const engines = { resolve: () => undefined };
-    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, false);
+    const editorial = new EditorialService(
+        { articles: repositories.articles, sessions: repositories.editorialSessions, styleCorpus: repositories.styleCorpus, artifacts: repositories.editorialArtifacts, factChecks: repositories.factChecks },
+        { engines, sessionContinuationEnabled: false },
+    );
     const service = createLocalService({
         host: "127.0.0.1",
         port: 0,
@@ -32,15 +35,8 @@ test("AI connections share environment-variable names, activate independently, a
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
     }, editorial, createApplicationServices({
-        articles: repositories.articles,
-        settings: repositories.settings,
-        styleCorpus: repositories.styleCorpus,
-        assistant: repositories.assistant,
-        artifacts: repositories.editorialArtifacts,
-        engines,
-        dateTimeFormat: testDateTimeFormat,
-        models: testModels,
-        createConnectionId: testConnectionId,
+        stores: { articles: repositories.articles, styleCorpus: repositories.styleCorpus, assistant: repositories.assistant, artifacts: repositories.editorialArtifacts, engines, factChecks: repositories.factChecks },
+        settings: { settings: repositories.settings, dateTimeFormat: testDateTimeFormat, models: testModels, createConnectionId: testConnectionId },
     }));
 
     service.listen(0, "127.0.0.1");

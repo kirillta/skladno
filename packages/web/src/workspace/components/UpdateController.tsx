@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 import type { DesktopUpdateState } from "@skladno/shared";
-import { getDesktopUpdateClient } from "../../desktop-client.js";
+import { getDesktopUpdateClient } from "../../application/desktop-client.js";
 import { UpdateIcon } from "../../ui/icons.js";
 
 

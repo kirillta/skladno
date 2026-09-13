@@ -19,7 +19,7 @@ import type { WorkspaceView } from "../workspace-views.js";
 import type { AssistantSelectionSnapshot } from "../editor/ArticleEditorPlugins.js";
 
 
-export function ArticleWorkspace({ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, createBlank, runFactCheck, runTranslation, shortcutOverrides, onSelectionChange, assistantSelection }: {
+interface ArticleWorkspaceViewState {
     workspace: ArticleWorkspaceState;
     layout: WorkspaceLayoutState;
     editorial: EditorialProposalState;
@@ -27,13 +27,22 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
     corpus: StyleCorpusState;
     publishing: PublishingState;
     generalSettings: GeneralSettings;
+}
+
+
+interface ArticleWorkspaceActions {
     createBlank: () => Promise<unknown>;
     runFactCheck: () => void;
     runTranslation: () => void;
     shortcutOverrides?: KeyBindingOverrides;
     onSelectionChange?: (value: AssistantSelectionSnapshot | undefined) => void;
     assistantSelection?: string;
-}) {
+}
+
+
+export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceViewState; actions: ArticleWorkspaceActions }) {
+    const { workspace, layout, editorial, revisions, corpus, publishing, generalSettings } = state;
+    const { createBlank, runFactCheck, runTranslation, shortcutOverrides, onSelectionChange, assistantSelection } = actions;
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const article = workspace.selectedArticle;
@@ -92,26 +101,13 @@ export function ArticleWorkspace({ workspace, layout, editorial, revisions, corp
             <Button className="ml-auto" variant="secondary" onClick={() => void workspace.retry()}>{intl.formatMessage({ id: "draftSave.retry" })}</Button>
         </Banner>}
         <WorkspaceTabBar view={layout.view} setView={layout.setView} badges={badges} shortcutOverrides={shortcutOverrides} />
-        <WorkspaceViewRouter view={layout.view}
-            article={article}
-            workspace={workspace}
-            editorial={editorial}
-            revisions={revisions}
-            corpus={corpus}
-            generalSettings={generalSettings}
-            publishProfile={publishing.profile}
-            publishProfileLabel={publishProfileLabel}
-            runFactCheck={runFactCheck}
-            runTranslation={runTranslation}
-            onSelectionChange={onSelectionChange}
-            assistantSelection={assistantSelection}
-            proposalWarningsDismissed={layout.proposalWarningsDismissed}
-            dismissProposalWarnings={() => layout.setProposalWarningsDismissed(true)}
-            openWrite={() => layout.setView("write")}
-            openAssistant={() => {
+        <WorkspaceViewRouter
+            content={{ view: layout.view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile: publishing.profile, publishProfileLabel }}
+            actions={{ runFactCheck, runTranslation, onSelectionChange, assistantSelection }}
+            navigation={{ proposalWarningsDismissed: layout.proposalWarningsDismissed, dismissProposalWarnings: () => layout.setProposalWarningsDismissed(true), openWrite: () => layout.setView("write"), openAssistant: () => {
                 layout.setAssistantCollapsed(false);
                 layout.setView("write");
-            }} />
+            }}} />
         <ArticleStatusBar revisionNumber={revisionNumber} language={article.language ?? "en"} setLanguage={async (language) => {
             try {
                 await workspace.updateArticle(article.id, { language });

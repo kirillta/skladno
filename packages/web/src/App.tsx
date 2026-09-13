@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import type { EditorialWorkspaceClient } from "./application-client.js";
-import { createRendererApplicationClient, getDesktopShellClient, getDesktopUpdateClient } from "./desktop-client.js";
+import type { EditorialWorkspaceClient } from "./application/client.js";
+import { createRendererApplicationClient, getDesktopShellClient, getDesktopUpdateClient } from "./application/desktop-client.js";
 import { EditorialWorkspaceProvider } from "./workspace/EditorialWorkspace.js";
 import { I18nProvider } from "./i18n/I18nProvider.js";
 import { NotificationProvider } from "./notifications/NotificationProvider.js";
@@ -81,24 +81,17 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
 
     return <I18nProvider client={client}>
         <NotificationProvider>
-            <EditorialWorkspaceProvider client={client}
-                screen={screen}
-                settingsSection={settingsSection}
-                openSettings={() => {
+            <EditorialWorkspaceProvider
+                context={{ client, screen, settingsSection }}
+                navigation={{ openSettings: () => {
                     setSettingsSection("general");
                     setScreen("application-settings");
-                }}
-                openModelSettings={() => {
+                }, openModelSettings: () => {
                     setSettingsSection("ai");
                     setScreen("application-settings");
-                }}
-                backToWorkspace={() => setScreen("editorial-workspace")}
-                dispatcher={dispatcher}
-                keyBindingOverrides={keyBindingOverrides ?? {}}
-                onKeyBindingsUpdated={setKeyBindingOverrides}
-                onThemeApplied={setTheme}
-                focusUpdates={focusUpdates}
-                onUpdatesFocused={() => setFocusUpdates(false)}
+                }, backToWorkspace: () => setScreen("editorial-workspace") }}
+                bindings={{ dispatcher, keyBindingOverrides: keyBindingOverrides ?? {}, onKeyBindingsUpdated: setKeyBindingOverrides, onThemeApplied: setTheme }}
+                updates={{ focusUpdates, onUpdatesFocused: () => setFocusUpdates(false) }}
             />
         </NotificationProvider>
     </I18nProvider>;

@@ -59,23 +59,32 @@ function ProposalDiff({ original, proposed, layout, decision = "pending", highli
 }
 
 
-export function ProposalReviewView({ review, accepted = false, stale, decisions, summaries, summaryState, setDecision, acceptAll, applyAccepted, rejectAll, dismissProposal, warningsDismissed, dismissWarnings, openWrite, openAssistant }: {
+interface ProposalReviewData {
     review: TextProposal | undefined;
     accepted?: boolean;
     stale: boolean;
     decisions: Record<string, ProposalDecision>;
     summaries?: Record<string, string>;
     summaryState?: "idle" | "loading" | "unavailable";
+    warningsDismissed: boolean;
+}
+
+
+interface ProposalReviewActions {
     setDecision: (id: string, decision: ProposalDecision) => void;
     acceptAll: () => Promise<void>;
     applyAccepted: () => Promise<void>;
     rejectAll: () => void;
     dismissProposal: () => void;
-    warningsDismissed: boolean;
     dismissWarnings: () => void;
     openWrite: () => void;
     openAssistant: () => void;
-}) {
+}
+
+
+export function ProposalReviewView({ data, actions }: { data: ProposalReviewData; actions: ProposalReviewActions }) {
+    const { review, accepted = false, stale, decisions, summaries, summaryState, warningsDismissed } = data;
+    const { setDecision, acceptAll, applyAccepted, rejectAll, dismissProposal, dismissWarnings, openWrite, openAssistant } = actions;
     const intl = useIntl();
     const cards = useRef<(HTMLElement | null)[]>([]);
     const [displayMode, setDisplayMode] = useState<"side-by-side" | "stacked">("side-by-side");

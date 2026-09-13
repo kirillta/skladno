@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { BUILT_IN_SKILL, defaultPublishLimitProfileId, ELECTRON_LIFECYCLE_EVENT, isArticleLanguage, isPublishLimitProfileId, KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../application-client.js";
+import type { EditorialWorkspaceClient } from "../application/client.js";
 import { Banner } from "../ui/primitives.js";
 import { ApplicationSettings } from "../settings/ApplicationSettings.js";
 import { useNotifications } from "../notifications/NotificationProvider.js";
@@ -25,7 +25,39 @@ export { articleContentForWorkspace, sortArticlesByActivity };
 export type { ArticleWorkspaceState, ArticleRevisionsState, EditorialProposalState, StyleCorpusState, PublishingState, WorkspaceLayoutState, AssistantMessagesState };
 
 
-export function EditorialWorkspaceProvider({ client, screen, settingsSection, openSettings, openModelSettings, backToWorkspace, dispatcher, keyBindingOverrides, onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused = () => undefined }: { client: EditorialWorkspaceClient; screen: "editorial-workspace" | "application-settings"; settingsSection: import("../settings/settings-sections.js").SettingsSection; openSettings: () => void; openModelSettings: () => void; backToWorkspace: () => void; dispatcher: KeyBindingDispatcher; keyBindingOverrides: KeyBindingOverrides; onKeyBindingsUpdated: (overrides: KeyBindingOverrides) => void; onThemeApplied: (theme: import("@skladno/shared").ThemePreference) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
+interface EditorialWorkspaceContext {
+    client: EditorialWorkspaceClient;
+    screen: "editorial-workspace" | "application-settings";
+    settingsSection: import("../settings/settings-sections.js").SettingsSection;
+}
+
+
+interface EditorialWorkspaceNavigation {
+    openSettings: () => void;
+    openModelSettings: () => void;
+    backToWorkspace: () => void;
+}
+
+
+interface EditorialWorkspaceBindings {
+    dispatcher: KeyBindingDispatcher;
+    keyBindingOverrides: KeyBindingOverrides;
+    onKeyBindingsUpdated: (overrides: KeyBindingOverrides) => void;
+    onThemeApplied: (theme: import("@skladno/shared").ThemePreference) => void;
+}
+
+
+interface EditorialWorkspaceUpdates {
+    focusUpdates?: boolean;
+    onUpdatesFocused?: () => void;
+}
+
+
+export function EditorialWorkspaceProvider({ context, navigation, bindings, updates = {} }: { context: EditorialWorkspaceContext; navigation: EditorialWorkspaceNavigation; bindings: EditorialWorkspaceBindings; updates?: EditorialWorkspaceUpdates }) {
+    const { client, screen, settingsSection } = context;
+    const { openSettings, openModelSettings, backToWorkspace } = navigation;
+    const { dispatcher, keyBindingOverrides, onKeyBindingsUpdated, onThemeApplied } = bindings;
+    const { focusUpdates = false, onUpdatesFocused = () => undefined } = updates;
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const layout = useWorkspaceLayout();
@@ -191,41 +223,30 @@ export function EditorialWorkspaceProvider({ client, screen, settingsSection, op
     if (screen === "application-settings")
         return <ApplicationSettings client={client} back={backToWorkspace} initialSection={settingsSection} onKeyBindingsUpdated={onKeyBindingsUpdated} onThemeApplied={onThemeApplied} focusUpdates={focusUpdates} onUpdatesFocused={onUpdatesFocused} />;
 
-    return <WorkspaceScreen layout={layout}
-        workspace={workspace}
-        assistant={assistant}
-        editorial={editorial}
-        revisions={revisions}
-        corpus={corpus}
-        publishing={publishing}
-        generalSettings={generalSettings}
-        createBlank={createBlank}
-        runFactCheck={runFactCheck}
-        runTranslation={runTranslation}
-        dispatcher={dispatcher}
-        shortcutOverrides={keyBindingOverrides}
-        openSettings={enterSettings}
-        hasUsableAiConnection={hasUsableAiConnection}
-        openModelSettings={openModelSettings}
-        assistantSelection={assistantSelection}
-        onSelectionChange={(snapshot: AssistantSelectionSnapshot | undefined) => {
-            const version = ++assistantSelectionVersion.current;
-            if (!snapshot || !workspace.selectedArticle) {
-                setAssistantSelection(undefined);
-                return;
-            }
-
-            void assistantSelectionScope(workspace.selectedArticle.id, snapshot).then((selection) => {
-                if (version === assistantSelectionVersion.current)
-                    setAssistantSelection(selection);
-            });
-        }}
-        clearAssistantSelection={() => {
-            assistantSelectionVersion.current += 1;
-            setAssistantSelection(undefined);
-        }}
-        overlays={<>
+    return <WorkspaceScreen
+        content={{ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings }}
+        actions={{ createBlank, runFactCheck, runTranslation, openSettings: enterSettings, openModelSettings }}
+        environment={{ dispatcher, shortcutOverrides: keyBindingOverrides, hasUsableAiConnection, overlays: <>
             <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
             <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
-        </>} />;
+        </> }}
+        selection={{
+            assistantSelection,
+            onSelectionChange: (snapshot: AssistantSelectionSnapshot | undefined) => {
+                const version = ++assistantSelectionVersion.current;
+                if (!snapshot || !workspace.selectedArticle) {
+                    setAssistantSelection(undefined);
+                    return;
+                }
+
+                void assistantSelectionScope(workspace.selectedArticle.id, snapshot).then((selection) => {
+                    if (version === assistantSelectionVersion.current)
+                        setAssistantSelection(selection);
+                });
+            },
+            clearAssistantSelection: () => {
+                assistantSelectionVersion.current += 1;
+                setAssistantSelection(undefined);
+            },
+        }} />;
 }

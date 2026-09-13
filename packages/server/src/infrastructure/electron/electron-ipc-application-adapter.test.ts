@@ -7,7 +7,7 @@ import test from "node:test";
 import { ELECTRON_APPLICATION_METHOD, ELECTRON_IPC_CHANNEL, type ElectronApplicationMethod, type ElectronApplicationOperationMap, type ElectronIpcError, type ElectronInvokeResult } from "@skladno/shared";
 
 import { createApplicationServices } from "../../application/create-application-services.js";
-import { EditorialService } from "../../application/services/editorial/editorial-service.js";
+import { EditorialService } from "../../application/editorial/editorial-service.js";
 import { openDatabase } from "../persistence/index.js";
 import { createTestPersistence } from "../../test-support/test-persistence.js";
 import { registerElectronIpcApplicationAdapter, type ElectronIpcMain, type ElectronIpcMainEvent } from "./electron-ipc-application-adapter.js";
@@ -42,17 +42,13 @@ function createAdapter(): { ipcMain: FakeIpcMain; close: () => void } {
     const persistence = createTestPersistence(database);
     const engines = { resolve: () => undefined };
     const services = createApplicationServices({
-        articles: persistence.articles,
-        settings: persistence.settings,
-        styleCorpus: persistence.styleCorpus,
-        assistant: persistence.assistant,
-        artifacts: persistence.editorialArtifacts,
-        engines,
-        dateTimeFormat: { read: async () => ({ locale: "en" }) },
-        models: { list: async () => [] },
-        createConnectionId: () => "connection",
+        stores: { articles: persistence.articles, styleCorpus: persistence.styleCorpus, assistant: persistence.assistant, artifacts: persistence.editorialArtifacts, engines, factChecks: persistence.factChecks },
+        settings: { settings: persistence.settings, dateTimeFormat: { read: async () => ({ locale: "en" }) }, models: { list: async () => [] }, createConnectionId: () => "connection" },
     });
-    const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, false);
+    const editorial = new EditorialService(
+        { articles: persistence.articles, sessions: persistence.editorialSessions, styleCorpus: persistence.styleCorpus, artifacts: persistence.editorialArtifacts, factChecks: persistence.factChecks },
+        { engines, sessionContinuationEnabled: false },
+    );
     const ipcMain = new FakeIpcMain();
 
     registerElectronIpcApplicationAdapter(ipcMain, services, editorial, () => "2026-08-10T00:00:00.000Z");

@@ -15,10 +15,10 @@ import {
     type TextProposal,
 } from "@skladno/shared";
 import { ApplicationClientError } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
-import { getDesktopTelemetryClient } from "../../desktop-client.js";
+import { getDesktopTelemetryClient } from "../../application/desktop-client.js";
 import { beginBestEffortTelemetryCapture, captureBestEffortTelemetry } from "../telemetry.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName } from "./editorial-language.js";

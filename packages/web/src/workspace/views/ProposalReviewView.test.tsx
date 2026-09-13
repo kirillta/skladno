@@ -3,7 +3,16 @@ import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
-import { ProposalReviewView } from "./ProposalReviewView.js";
+import { ProposalReviewView as RenderProposalReviewView } from "./ProposalReviewView.js";
+
+type ProposalReviewViewTestProps = Parameters<typeof RenderProposalReviewView>[0]["data"] & Parameters<typeof RenderProposalReviewView>[0]["actions"];
+
+
+function ProposalReviewView(props: ProposalReviewViewTestProps) {
+    const { review, accepted, stale, decisions, summaries, summaryState, warningsDismissed, setDecision, acceptAll, applyAccepted, rejectAll, dismissProposal, dismissWarnings, openWrite, openAssistant } = props;
+    return <RenderProposalReviewView data={{ review, accepted, stale, decisions, summaries, summaryState, warningsDismissed }} actions={{ setDecision, acceptAll, applyAccepted, rejectAll, dismissProposal, dismissWarnings, openWrite, openAssistant }} />;
+}
+
 
 // Product scenarios: workspace.proposal.stale-blocked, editorial-workflows.stale-proposal-blocked
 

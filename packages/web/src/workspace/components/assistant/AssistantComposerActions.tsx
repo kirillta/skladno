@@ -8,7 +8,15 @@ import { selectionPreview, skillMessages } from "./assistant-messages.js";
 import type { AssistantSkillPickerControls } from "./assistant-composer-plugins.js";
 
 
-export function AssistantQuickActions({ state, composer, quickActionsOpen, availableSkills, activeSkillIndex, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction }: AssistantSkillPickerControls & { state: "idle" | "streaming" | "error"; composer: RefObject<HTMLDivElement>; setActiveSkillIndex: (value: number) => void }) {
+interface AssistantQuickActionsPicker extends AssistantSkillPickerControls {
+    activeSkillIndex: number;
+    setActiveSkillIndex: (value: number) => void;
+}
+
+
+export function AssistantQuickActions({ context, picker }: { context: { state: "idle" | "streaming" | "error"; composer: RefObject<HTMLDivElement> }; picker: AssistantQuickActionsPicker }) {
+    const { state, composer } = context;
+    const { quickActionsOpen, availableSkills, activeSkillIndex, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction } = picker;
     const intl = useIntl();
     return <div className="relative">
         {quickActionsOpen && <div id="assistant-skill-picker" className="absolute bottom-full right-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised" role="listbox" aria-label={intl.formatMessage({ id: "assistant.quickActions" })}>

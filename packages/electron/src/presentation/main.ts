@@ -3,16 +3,18 @@ import { app, autoUpdater, BrowserWindow, dialog, ipcMain, Menu, net, screen, sh
 import squirrelStartup from "electron-squirrel-startup";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter, validateDatabaseSnapshot } from "@skladno/server/electron";
 import { defaultInterfaceLocale, electronMessagesFor } from "@skladno/shared";
-import { requestDraftCheckpoint } from "../application/close-coordinator.js";
-import { applyPendingRestore, PendingRestoreError } from "../application/pending-restore.js";
-import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window-policy.js";
-import { readWindowBounds, writeWindowBounds } from "../infrastructure/window-state.js";
-import { createTelemetryOwner, readTelemetryDelivery } from "../infrastructure/telemetry-owner.js";
-import { applicationFailureEvent } from "./application-failure-telemetry.js";
-import { registerDesktopSettingsAdapter } from "./desktop-settings.js";
-import { registerDesktopTelemetryAdapter } from "./desktop-telemetry.js";
-import { registerDesktopShellAdapter } from "./desktop-shell.js";
-import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter } from "./desktop-updates.js";
+import { requestDraftCheckpoint } from "../application/lifecycle/close-coordinator.js";
+import { applyPendingRestore } from "../infrastructure/recovery/pending-restore.js";
+import { PendingRestoreError } from "../infrastructure/recovery/pending-restore-error.js";
+import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window/window-policy.js";
+import { readWindowBounds, writeWindowBounds } from "../infrastructure/window/window-state.js";
+import { createTelemetryOwner } from "../infrastructure/telemetry/telemetry-owner.js";
+import { createTelemetryDelivery, readTelemetryDelivery } from "../infrastructure/telemetry/telemetry-delivery.js";
+import { applicationFailureEvent } from "./telemetry/application-failure-telemetry.js";
+import { registerDesktopSettingsAdapter } from "./settings/desktop-settings.js";
+import { registerDesktopTelemetryAdapter } from "./telemetry/desktop-telemetry.js";
+import { registerDesktopShellAdapter } from "./shell/desktop-shell.js";
+import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter } from "./updates/desktop-updates.js";
 
 
 const rendererUrl = "http://localhost:5173";
@@ -157,12 +159,12 @@ if (squirrelStartup) {
         loadServerEnvironment();
         const config = loadServerConfig();
         const runtimePath = join(app.getPath("userData"), "runtime-settings.json");
-        telemetry = createTelemetryOwner({
-            runtimePath,
+        const telemetryDelivery = createTelemetryDelivery({
             packaged: app.isPackaged,
             appVersion: app.getVersion(),
             delivery: app.isPackaged ? readTelemetryDelivery(join(process.resourcesPath, "telemetry.json")) : undefined,
         });
+        telemetry = createTelemetryOwner({ runtimePath, delivery: telemetryDelivery });
         const pendingRestore = applyPendingRestore({ runtimePath, databasePath: config.databasePath, telemetry });
         let application;
         try {
@@ -213,20 +215,22 @@ if (squirrelStartup) {
             application.database.close();
         };
 
-        updates = createDesktopUpdateCoordinator({
-            runtimePath,
-            currentVersion: app.getVersion(),
-            database: application.database,
-            dataDirectory: dirname(config.databasePath),
-            updater: autoUpdater,
-            fetchReleases: () => net.fetch("https://api.github.com/repos/kirillta/skladno/releases"),
-            notify: (state) => mainWindow?.webContents.send(desktopUpdatesEvent, state),
-            requestCheckpoint: () => mainWindow ? requestDraftCheckpoint(ipcMain, mainWindow.webContents) : Promise.resolve(false),
-            closeApplication: () => closeApplication?.(),
-            openExternal: (url) => shell.openExternal(url),
-            supported: app.isPackaged,
-            telemetry,
-        });
+        updates = createDesktopUpdateCoordinator(
+            { runtimePath, currentVersion: app.getVersion(), supported: app.isPackaged },
+            {
+                fetchReleases: () => net.fetch("https://api.github.com/repos/kirillta/skladno/releases"),
+                openExternal: (url) => shell.openExternal(url),
+            },
+            {
+                database: application.database,
+                dataDirectory: dirname(config.databasePath),
+                updater: autoUpdater,
+                requestCheckpoint: () => mainWindow ? requestDraftCheckpoint(ipcMain, mainWindow.webContents) : Promise.resolve(false),
+                closeApplication: () => closeApplication?.(),
+                telemetry,
+            },
+            { notify: (state) => mainWindow?.webContents.send(desktopUpdatesEvent, state) },
+        );
         app.on("child-process-gone", (_event, details) => {
             const failure = applicationFailureEvent("child_process", details.reason);
             if (failure)

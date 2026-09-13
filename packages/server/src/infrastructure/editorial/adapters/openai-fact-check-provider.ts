@@ -3,8 +3,8 @@ import type { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { FACT_CHECK_STATUS } from "@skladno/shared";
 
-import { EDITORIAL_ENGINE_ERROR } from "../../../application/errors/editorial-engine-errors.js";
-import { EditorialEngineError } from "../../../application/errors/editorial-engine-error.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
+import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
 import { aiSdkGenerationOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
 import { openAiResponseId, openAiResponsesProviderOptions } from "./openai-responses.js";
 import type { FactCheckResearch } from "../models/fact-check-research.js";

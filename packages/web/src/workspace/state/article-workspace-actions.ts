@@ -1,6 +1,6 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { ArticleDraftConflictError, ArticleRevisionConflictError, type Article, type UpdateArticleInput } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 import type { Notifications } from "../../notifications/notifications.js";
 import { hydrateDraftLifecycle } from "../drafts/draft-lifecycle.js";
 import { type useDraftLifecycle } from "../drafts/useDraftLifecycle.js";

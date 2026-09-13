@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 import { defaultPublishingSettings, getPublishLimitProfile, getPublishingLength, isPublishLimitProfileId, preparePlainTextForPublishing, type Article, type PublishingSettings } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
 
 

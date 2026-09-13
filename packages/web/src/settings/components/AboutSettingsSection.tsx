@@ -1,5 +1,5 @@
 import { useIntl } from "react-intl";
-import { getDesktopSettingsClient, getDesktopUpdateClient } from "../../desktop-client.js";
+import { getDesktopSettingsClient, getDesktopUpdateClient } from "../../application/desktop-client.js";
 import { SettingsGroup } from "./SettingRow.js";
 import { UpdatesSettingsGroup } from "./UpdatesSettingsGroup.js";
 

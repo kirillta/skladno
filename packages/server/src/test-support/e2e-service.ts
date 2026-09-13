@@ -4,14 +4,14 @@ import { mkdirSync, rmSync } from "node:fs";
 import { EDITORIAL_OPERATION, FACT_CHECK_STATUS } from "@skladno/shared";
 
 import { createApplicationServices } from "../application/create-application-services.js";
-import { EditorialService } from "../application/services/editorial/editorial-service.js";
-import { EditorialEngineError } from "../application/errors/editorial-engine-error.js";
-import type { EditorialConversationRequest } from "../application/models/editorial/editorial-conversation-request.js";
-import type { EditorialEngine } from "../application/services/editorial/editorial-engine.js";
-import type { EditorialEngineEvent } from "../application/models/editorial/editorial-engine-event.js";
-import type { EditorialEngineRequest } from "../application/models/editorial/editorial-engine-request.js";
-import type { EditorialEngineResolver } from "../application/services/editorial/editorial-engine-resolver.js";
-import { EDITORIAL_ENGINE_EVENT } from "../application/models/editorial/editorial-engine-events.js";
+import { EditorialService } from "../application/editorial/editorial-service.js";
+import { EditorialEngineError } from "../application/editorial/engine/editorial-engine-error.js";
+import type { EditorialConversationRequest } from "../application/editorial/engine/editorial-conversation-request.js";
+import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
+import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
+import type { EditorialEngineRequest } from "../application/editorial/engine/editorial-engine-request.js";
+import type { EditorialEngineResolver } from "../application/editorial/engine/editorial-engine-resolver.js";
+import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
 import { loadServerConfig } from "../infrastructure/configuration/config.js";
 import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, SettingsRepository, StyleCorpusRepository, openDatabase } from "../infrastructure/persistence/index.js";
 import { listenForLocalService } from "../infrastructure/lifecycle/service-lifecycle.js";
@@ -110,18 +110,18 @@ const engines: EditorialEngineResolver = { resolve: () => new E2eFixtureEngine()
 
 assistant.seedGreetings();
 const services = createApplicationServices({
-    articles,
-    settings,
-    styleCorpus,
-    assistant,
-    artifacts,
-    engines,
-    dateTimeFormat: { read: async () => ({ locale: "en" }) },
-    models: { list: async () => [] },
-    createConnectionId: randomUUID,
-    factChecks,
+    stores: { articles, styleCorpus, assistant, artifacts, engines, factChecks },
+    settings: {
+        settings,
+        dateTimeFormat: { read: async () => ({ locale: "en" }) },
+        models: { list: async () => [] },
+        createConnectionId: randomUUID,
+    },
 });
-const editorial = new EditorialService(articles, sessions, styleCorpus, artifacts, engines, false, factChecks);
+const editorial = new EditorialService(
+    { articles, sessions, styleCorpus, artifacts, factChecks },
+    { engines, sessionContinuationEnabled: false },
+);
 const service = createLocalService(config, editorial, services);
 
 void listenForLocalService(service, config.port, config.host);

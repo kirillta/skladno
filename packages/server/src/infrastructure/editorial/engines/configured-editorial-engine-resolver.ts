@@ -1,14 +1,14 @@
 import { AI_PROVIDER, parseAiModelPreferenceId, resolveBuiltInSkillId, type AiConnection, type AiProvider, type AppModelPreference, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
 
-import type { EditorialEngineResolver } from "../../../application/services/editorial/editorial-engine-resolver.js";
-import type { EditorialEngine } from "../../../application/services/editorial/editorial-engine.js";
-import type { SettingsStore } from "../../../application/services/settings/settings-store.js";
+import type { EditorialEngineResolver } from "../../../application/editorial/engine/editorial-engine-resolver.js";
+import type { EditorialEngine } from "../../../application/editorial/engine/editorial-engine.js";
+import type { SettingsStore } from "../../../application/settings/settings-store.js";
 import type { ServerConfig } from "../../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
 import { AiSdkProposalSummaryGeneratorAdapter } from "../adapters/ai-sdk-proposal-summary-generator-adaptor.js";
 import { AiSdkArticleTitleGeneratorAdapter } from "../adapters/article-title-generator.js";
 import { AiSdkAssistantActionIntentVerifier } from "../adapters/ai-sdk-assistant-action-intent-verifier.js";
-import type { CredentialStore } from "../../../application/services/settings/credential-store.js";
+import type { CredentialStore } from "../../../application/settings/credential-store.js";
 import { createProviderModel } from "../adapters/provider-model.js";
 import { EditorialModelCapabilityService } from "../services/editorial-model-capability-service.js";
 import { supportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";

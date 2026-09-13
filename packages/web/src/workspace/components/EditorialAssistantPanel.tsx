@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type KeyboardEventHandler } from "react";
 import { useIntl, type IntlShape } from "react-intl";
-import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, keyBindingsEqual, resolveKeyBindings, type Article, type AssistantCapabilityActivity, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
+import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, keyBindingsEqual, resolveKeyBindings, type AssistantCapabilityActivity, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
 import { eventKeyBinding, type KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
@@ -216,32 +216,43 @@ function useElapsedDuration(state: AssistantState, intl: IntlShape) {
 }
 
 
-export function EditorialAssistantPanel({ state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages = [], assistantMessages, streamedMessage, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, openSettings }: {
+interface EditorialAssistantData {
     state: AssistantState;
     message: string;
     errorDetails?: string;
     activity?: AssistantCapabilityActivity;
     factCheckClaims?: FactCheckClaimPreview[];
-    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
-    onCancel: () => void;
-    onRetry?: (requestId: string) => void;
-    collapsed: boolean;
-    setCollapsed: (value: boolean) => void;
-    language?: string;
     translationLanguages?: readonly string[];
     assistantMessages?: AssistantMessage[];
     streamedMessage?: StreamedAssistantMessage;
-    article?: Article;
-    updateArticle?: (articleId: string, input: UpdateArticleInput) => Promise<unknown>;
+    selection?: AssistantSelectionScope;
+    generalSettings?: GeneralSettings;
+    hasUnavailableAiConnection?: boolean;
+}
+
+
+interface EditorialAssistantActions {
+    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
+    onCancel: () => void;
+    onRetry?: (requestId: string) => void;
     dispatcher?: KeyBindingDispatcher;
     shortcutOverrides?: KeyBindingOverrides;
     openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
-    selection?: AssistantSelectionScope;
     clearSelection?: () => void;
-    generalSettings?: GeneralSettings;
-    hasUnavailableAiConnection?: boolean;
     openSettings?: () => void;
-}) {
+}
+
+
+interface EditorialAssistantLayout {
+    collapsed: boolean;
+    setCollapsed: (value: boolean) => void;
+}
+
+
+export function EditorialAssistantPanel({ data, actions, layout }: { data: EditorialAssistantData; actions: EditorialAssistantActions; layout: EditorialAssistantLayout }) {
+    const { state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection } = data;
+    const { onRequest, onCancel, onRetry, dispatcher, shortcutOverrides, openView, clearSelection, openSettings } = actions;
+    const { collapsed, setCollapsed } = layout;
     const intl = useIntl();
     const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {} });
     const elapsedDuration = useElapsedDuration(state, intl);
@@ -259,7 +270,10 @@ export function EditorialAssistantPanel({ state, message, errorDetails, activity
                 <ChevronRightIcon className="size-3" />
             </Button>
         </header>
-        <AssistantTimeline state={state} message={message} errorDetails={errorDetails} activity={activity} factCheckClaims={factCheckClaims} collapsed={collapsed} assistantMessages={assistantMessages} streamedMessage={streamedMessage} openView={openView} onRetry={onRetry} generalSettings={generalSettings} elapsedDuration={elapsedDuration} hasUnavailableAiConnection={hasUnavailableAiConnection} openSettings={openSettings} />
-        <AssistantComposer {...composerState} state={state} selection={selection} onCancel={onCancel} shortcutOverrides={shortcutOverrides} />
+        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, onRetry, openSettings }} />
+        <AssistantComposer
+            state={{ state, canSend: composerState.canSend, guidance: composerState.guidance, selectedSkill: composerState.selectedSkill, skillOffset: composerState.skillOffset, caretOffset: composerState.caretOffset, selection, clearSelection, incompatibleSelectionSkill: composerState.incompatibleSelectionSkill }}
+            picker={{ quickActionsOpen: composerState.quickActionsOpen, availableSkills: composerState.availableSkills, activeSkillIndex: composerState.activeSkillIndex, setQuickActionsOpen: composerState.setQuickActionsOpen, setActiveSkillIndex: composerState.setActiveSkillIndex, selectSkill: composerState.selectSkill, focusQuickAction: composerState.focusQuickAction }}
+            actions={{ send: composerState.send, onCancel, onChange: composerState.onChange, onKeyDown: composerState.onKeyDown, shortcutOverrides }} />
     </aside>;
 }

@@ -1,7 +1,7 @@
 import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, articleArchivePath, articleDraftPath, articlePinPath, articleRevisionsPath, articlesPath, articleStyleCorpusSnapshotPath, articleStyleRulesPath, assistantMessagesPath, assistantRequestsPath, backupsPath, editorialPath, factCheckResolutionPath, factChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, proposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
-import type { EditorialService } from "../../application/services/editorial/editorial-service.js";
+import type { EditorialService } from "../../application/editorial/editorial-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, reorderPinnedArticlesRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, setArticleArchivedRoute, setArticlePinnedRoute, updateArticleRoute } from "./articles-route.js";

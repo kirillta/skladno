@@ -8,7 +8,7 @@ import test from "node:test";
 
 import { backupsPath, HTTP_METHOD, HTTP_STATUS, PUBLISH_LIMIT_PROFILE, publishSettingsPath, type Article } from "@skladno/shared";
 import { createLocalService } from "./server.js";
-import { EditorialService } from "../application/services/editorial/editorial-service.js";
+import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
 import { createLocalDiagnostics } from "../infrastructure/diagnostics/local-diagnostics.js";
@@ -24,7 +24,10 @@ test("article API supports CRUD and revision-aware saves", async () => {
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const repositories = createTestPersistence(database);
     const engines = { resolve: () => undefined };
-    const editorial = new EditorialService(repositories.articles, repositories.editorialSessions, repositories.styleCorpus, repositories.editorialArtifacts, engines, false);
+    const editorial = new EditorialService(
+        { articles: repositories.articles, sessions: repositories.editorialSessions, styleCorpus: repositories.styleCorpus, artifacts: repositories.editorialArtifacts, factChecks: repositories.factChecks },
+        { engines, sessionContinuationEnabled: false },
+    );
     const diagnosticLines: string[] = [];
     const diagnostics = createLocalDiagnostics({
         stdout: (line) => {
@@ -43,15 +46,8 @@ test("article API supports CRUD and revision-aware saves", async () => {
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: false,
     }, editorial, createApplicationServices({
-        articles: repositories.articles,
-        settings: repositories.settings,
-        styleCorpus: repositories.styleCorpus,
-        assistant: repositories.assistant,
-        artifacts: repositories.editorialArtifacts,
-        engines,
-        dateTimeFormat: testDateTimeFormat,
-        models: testModels,
-        createConnectionId: testConnectionId,
+        stores: { articles: repositories.articles, styleCorpus: repositories.styleCorpus, assistant: repositories.assistant, artifacts: repositories.editorialArtifacts, engines, factChecks: repositories.factChecks },
+        settings: { settings: repositories.settings, dateTimeFormat: testDateTimeFormat, models: testModels, createConnectionId: testConnectionId },
     }), diagnostics);
 
     service.listen(0, "127.0.0.1");

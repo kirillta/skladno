@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { createApplicationServices } from "./application/create-application-services.js";
 import type { ApplicationServices } from "./application/application-services.js";
-import { EditorialService } from "./application/services/editorial/editorial-service.js";
+import { EditorialService } from "./application/editorial/editorial-service.js";
 import { loadServerConfig, type ServerConfig } from "./infrastructure/configuration/config.js";
 import { readSystemDateTimeFormat } from "./infrastructure/configuration/system-date-time-format.js";
 import { AiConnectionModelDiscoveryService } from "./infrastructure/editorial/services/ai-connection-model-discovery-service.js";
@@ -35,27 +35,34 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
 
     assistant.seedGreetings();
 
-    const editorial = new EditorialService(articles, editorialSessions, styleCorpus, editorialArtifacts, engines, config.aiSessionContinuationEnabled, factChecks, telemetry);
+    const editorial = new EditorialService(
+        { articles, sessions: editorialSessions, styleCorpus, artifacts: editorialArtifacts, factChecks },
+        { engines, sessionContinuationEnabled: config.aiSessionContinuationEnabled },
+        telemetry,
+    );
     return {
         services: createApplicationServices({
-            articles,
-            settings,
-            styleCorpus,
-            assistant,
-            artifacts: editorialArtifacts,
-            engines,
-            dateTimeFormat: { read: readSystemDateTimeFormat },
-            models: {
-                list: (connection, apiKey) => modelDiscovery.list(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable"
-                    ? process.env[connection.credentialSource.environmentVariableName]
-                    : credentialStore.get(connection.id)))
+            stores: {
+                articles,
+                styleCorpus,
+                assistant,
+                artifacts: editorialArtifacts,
+                engines,
+                factChecks,
             },
-            createConnectionId: randomUUID,
-            factChecks,
-            backups: new SqliteBackupManager(database),
-            credentialStore,
-            editorial,
-            telemetry,
+            settings: {
+                settings,
+                dateTimeFormat: { read: readSystemDateTimeFormat },
+                models: {
+                    list: (connection, apiKey) => modelDiscovery.list(connection, apiKey ?? (connection.credentialSource.kind === "environment-variable"
+                        ? process.env[connection.credentialSource.environmentVariableName]
+                        : credentialStore.get(connection.id)))
+                },
+                createConnectionId: randomUUID,
+                backups: new SqliteBackupManager(database),
+                credentialStore,
+            },
+            integration: { editorial, telemetry },
         }),
         editorial,
         database,

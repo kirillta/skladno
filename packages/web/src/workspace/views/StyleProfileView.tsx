@@ -8,13 +8,17 @@ import { StyleProfileInsights } from "./StyleProfileInsights.js";
 import { StyleProfileSources } from "./StyleProfileSources.js";
 
 
-export function StyleProfileView({ corpus, findings, findingsStale, articleId, revisions = [], generalSettings = defaultGeneralSettings, add, remove, setIncluded, setRules, rebuild, getArticleRules, setArticleRules, snapshotArticleRevision = async () => undefined }: {
+interface StyleProfileViewData {
     corpus: StyleCorpus | undefined;
     findings: StyleReview | undefined;
     findingsStale: boolean;
     articleId: string;
     revisions?: readonly ArticleRevision[];
     generalSettings?: GeneralSettings;
+}
+
+
+interface StyleProfileViewActions {
     add: (name: string | undefined, content: string, origin?: "import") => Promise<void>;
     remove: (id: string) => Promise<void>;
     setIncluded: (id: string, included: boolean) => Promise<void>;
@@ -23,7 +27,12 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, r
     getArticleRules: (articleId: string) => Promise<string>;
     setArticleRules: (articleId: string, rules: string) => Promise<string>;
     snapshotArticleRevision?: (articleId: string, revisionId: string) => Promise<void>;
-}) {
+}
+
+
+export function StyleProfileView({ data, actions }: { data: StyleProfileViewData; actions: StyleProfileViewActions }) {
+    const { corpus, findings, findingsStale, articleId, revisions = [], generalSettings = defaultGeneralSettings } = data;
+    const { add, remove, setIncluded, setRules, rebuild, getArticleRules, setArticleRules, snapshotArticleRevision = async () => undefined } = actions;
     const intl = useIntl();
     const [name, setName] = useState("");
     const [content, setContent] = useState("");
@@ -123,9 +132,9 @@ export function StyleProfileView({ corpus, findings, findingsStale, articleId, r
         </header>
         {corpus?.profile?.confidence === "low" && <Banner className="mb-6" tone="warning">{intl.formatMessage({ id: "styleProfile.lowConfidence" })}</Banner>}
         <div className="grid min-h-0 min-w-0 flex-1 gap-8 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:grid-rows-[minmax(0,1fr)]">
-            <StyleProfileSources corpus={corpus} revisions={selectableRevisions} generalSettings={generalSettings} pendingAction={pendingAction} adding={adding} name={name} content={content} validationFailed={validationFailed} uploadFailed={uploadFailed} setAdding={setAdding} setName={setName} setContent={setContent} onImport={importFile} onSubmit={submit} onRemove={setRemovingId} onSetIncluded={(id, included) => run(`include:${id}`, () => setIncluded(id, included))} onSnapshot={setSnapshotRevisionId} />
-            <StyleProfileInsights corpus={corpus} findings={findings} findingsStale={findingsStale} generalSettings={generalSettings} pendingAction={pendingAction} rules={rules} savedRules={savedRules} articleRules={articleRules} savedArticleRules={savedArticleRules} setRules={setRulesDraft} setArticleRules={setArticleRulesDraft} onSaveRules={() => run("rules", () => setRules(rules), () => setSavedRules(rules))} onSaveArticleRules={() => run("article-rules", () => setArticleRules(articleId, articleRules), () => setSavedArticleRules(articleRules))} ruleStatus={ruleStatus} />
+            <StyleProfileSources data={{ corpus, revisions: selectableRevisions, generalSettings, pendingAction, adding, name, content, validationFailed, uploadFailed }} actions={{ setAdding, setName, setContent, onImport: importFile, onSubmit: submit, onRemove: setRemovingId, onSetIncluded: (id, included) => run(`include:${id}`, () => setIncluded(id, included)), onSnapshot: setSnapshotRevisionId }} />
+            <StyleProfileInsights data={{ corpus, findings, findingsStale, generalSettings, pendingAction, rules, savedRules, articleRules, savedArticleRules }} actions={{ setRules: setRulesDraft, setArticleRules: setArticleRulesDraft, onSaveRules: () => run("rules", () => setRules(rules), () => setSavedRules(rules)), onSaveArticleRules: () => run("article-rules", () => setArticleRules(articleId, articleRules), () => setSavedArticleRules(articleRules)), ruleStatus }} />
         </div>
-        <StyleProfileDialogs removingId={removingId} snapshotRevisionId={snapshotRevisionId} revisions={selectableRevisions} onCloseRemove={() => setRemovingId(undefined)} onConfirmRemove={confirmRemove} onCloseSnapshot={() => setSnapshotRevisionId(undefined)} onSelectSnapshot={setSnapshotRevisionId} onConfirmSnapshot={confirmSnapshot} />
+        <StyleProfileDialogs data={{ removingId, snapshotRevisionId, revisions: selectableRevisions }} actions={{ onCloseRemove: () => setRemovingId(undefined), onConfirmRemove: confirmRemove, onCloseSnapshot: () => setSnapshotRevisionId(undefined), onSelectSnapshot: setSnapshotRevisionId, onConfirmSnapshot: confirmSnapshot }} />
     </div>;
 }

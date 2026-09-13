@@ -2,16 +2,16 @@ import { generateText, Output, streamText, type LanguageModel, type ModelMessage
 import { randomUUID } from "node:crypto";
 import { EDITORIAL_OPERATION, type AiProvider } from "@skladno/shared";
 
-import type { EditorialConversationRequest } from "../../../application/models/editorial/editorial-conversation-request.js";
-import type { EditorialAssistantRequest } from "../../../application/models/editorial/editorial-assistant-request.js";
-import type { EditorialEngine } from "../../../application/services/editorial/editorial-engine.js";
-import type { EditorialEngineEvent } from "../../../application/models/editorial/editorial-engine-event.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../../application/errors/editorial-engine-errors.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../../application/models/editorial/editorial-engine-events.js";
-import { EditorialEngineError } from "../../../application/errors/editorial-engine-error.js";
-import type { EditorialEngineRequest } from "../../../application/models/editorial/editorial-engine-request.js";
-import { protectArticleSpans, restoreProtectedSpans } from "../../../application/helpers/editorial/translation.js";
-import { authorControlInstruction, createEditorialMessages } from "../../../application/helpers/editorial/workflow-prompt.js";
+import type { EditorialConversationRequest } from "../../../application/editorial/engine/editorial-conversation-request.js";
+import type { EditorialAssistantRequest } from "../../../application/editorial/engine/editorial-assistant-request.js";
+import type { EditorialEngine } from "../../../application/editorial/engine/editorial-engine.js";
+import type { EditorialEngineEvent } from "../../../application/editorial/engine/editorial-engine-event.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../../application/editorial/engine/editorial-engine-events.js";
+import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
+import type { EditorialEngineRequest } from "../../../application/editorial/engine/editorial-engine-request.js";
+import { protectArticleSpans, restoreProtectedSpans } from "../../../application/editorial/translation/translation.js";
+import { authorControlInstruction, createEditorialMessages } from "../../../application/editorial/workflow-prompt.js";
 import { streamFactCheck } from "../workflows/fact-check-workflow.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
 import { boundedArticleContext } from "../models/editorial-context.js";

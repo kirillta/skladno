@@ -20,20 +20,29 @@ function changedProtectedSpans(content: string, protectedSpans: readonly string[
 }
 
 
-export function TranslationsView({ article, sourceArticle, linkedTranslations = [], translations = [], stale, create, edit, openArticle, translate, translationLanguages = [], publishProfile, publishProfileLabel }: {
+interface TranslationsData {
     article: Article;
     sourceArticle?: Article;
     linkedTranslations?: readonly Article[];
     translations?: readonly { metadata: TranslationMetadata; content: string; baseRevisionId: string }[];
     stale: boolean;
+    translationLanguages?: readonly string[];
+    publishProfile?: PublishLimitProfile;
+    publishProfileLabel?: string;
+}
+
+
+interface TranslationsActions {
     create: (targetLanguage: string) => Promise<void>;
     edit?: () => void;
     openArticle?: (articleId: string) => void;
     translate: () => void;
-    translationLanguages?: readonly string[];
-    publishProfile?: PublishLimitProfile;
-    publishProfileLabel?: string;
-}) {
+}
+
+
+export function TranslationsView({ data, actions }: { data: TranslationsData; actions: TranslationsActions }) {
+    const { article, sourceArticle, linkedTranslations = [], translations = [], stale, translationLanguages = [], publishProfile, publishProfileLabel } = data;
+    const { create, edit, openArticle, translate } = actions;
     const intl = useIntl();
     const [creating, setCreating] = useState(false);
     const [displayMode, setDisplayMode] = useState<"side-by-side" | "aligned">("side-by-side");

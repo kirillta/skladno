@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { desktopShellCommands, isDesktopShellCommand } from "../application/desktop-shell.js";
+import { desktopShellCommands, isDesktopShellCommand } from "../application/desktop/desktop-shell.js";
 import { KEY_BINDING_COMMAND, findKeyBindingConflict, formatKeyBinding, normalizeKeyBinding, resolveKeyBindings } from "./key-bindings.js";
 
 // Product scenarios: cross-cutting.key-binding-conflicts, settings.key-binding-overrides

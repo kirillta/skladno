@@ -9,7 +9,7 @@ import { AssistantMarkdown } from "./AssistantMarkdown.js";
 import type { StreamedAssistantMessage } from "../../state/assistant-messages-state.js";
 
 
-export function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, openView, onRetry, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings }: {
+interface AssistantTimelineData {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
@@ -18,13 +18,22 @@ export function AssistantTimeline({ state, message, errorDetails, activity, fact
     collapsed: boolean;
     assistantMessages?: AssistantMessage[];
     streamedMessage?: StreamedAssistantMessage;
-    openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
-    onRetry?: (requestId: string) => void;
     generalSettings: GeneralSettings;
     elapsedDuration: string;
     hasUnavailableAiConnection?: boolean;
+}
+
+
+interface AssistantTimelineActions {
+    openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
+    onRetry?: (requestId: string) => void;
     openSettings?: () => void;
-}) {
+}
+
+
+export function AssistantTimeline({ data, actions }: { data: AssistantTimelineData; actions: AssistantTimelineActions }) {
+    const { state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection } = data;
+    const { openView, onRetry, openSettings } = actions;
     const intl = useIntl();
     const timeline = useRef<HTMLDivElement>(null);
     const followStream = useRef(true);

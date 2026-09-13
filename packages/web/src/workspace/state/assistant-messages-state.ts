@@ -1,6 +1,6 @@
 import { useIntl } from "react-intl";
 import type { AssistantEditorialResult } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { type AssistantSelectionScope } from "./assistant-selection.js";
 import { useAssistantMessageHistory } from "./assistant-message-history-state.js";

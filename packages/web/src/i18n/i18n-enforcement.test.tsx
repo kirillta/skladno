@@ -5,7 +5,7 @@ import { publishLimitProfiles, type Article, type ArticleRevision } from "@sklad
 
 import { ArticleHeader } from "../workspace/components/ArticleHeader.js";
 import { ArticleStatusBar } from "../workspace/components/ArticleStatusBar.js";
-import { EditorialAssistantPanel } from "../workspace/components/EditorialAssistantPanel.js";
+import { TestEditorialAssistantPanel as EditorialAssistantPanel } from "../workspace/EditorialWorkspace.test-utils.js";
 import { messages, type MessageId } from "./messages.js";
 
 

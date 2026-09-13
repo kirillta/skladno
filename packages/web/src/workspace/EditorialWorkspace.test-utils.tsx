@@ -1,12 +1,49 @@
 /* eslint-disable project-style/no-production-intl-provider -- This is a test-only render helper. */
 import { cleanup, render } from "@testing-library/react";
-import { defaultGeneralSettings, defaultPublishingSettings, type Article, type ArticleRevision } from "@skladno/shared";
+import { defaultGeneralSettings, defaultPublishingSettings, type Article, type ArticleRevision, type AssistantCapabilityActivity, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
 import { IntlProvider } from "react-intl";
 import type { ReactElement } from "react";
 import { vi } from "vitest";
 
-import type { EditorialWorkspaceClient } from "../application-client.js";
+import type { EditorialWorkspaceClient } from "../application/client.js";
 import { messages } from "../i18n/messages.js";
+import { EditorialAssistantPanel } from "./components/EditorialAssistantPanel.js";
+import type { AssistantSelectionScope, StreamedAssistantMessage } from "./state/assistant-messages-state.js";
+import type { KeyBindingDispatcher } from "../key-bindings/dispatcher.js";
+
+
+export function TestEditorialAssistantPanel(props: {
+    state: "idle" | "streaming" | "error";
+    message: string;
+    errorDetails?: string;
+    activity?: AssistantCapabilityActivity;
+    factCheckClaims?: FactCheckClaimPreview[];
+    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
+    onCancel: () => void;
+    onRetry?: (requestId: string) => void;
+    collapsed: boolean;
+    setCollapsed: (value: boolean) => void;
+    translationLanguages?: readonly string[];
+    assistantMessages?: AssistantMessage[];
+    streamedMessage?: StreamedAssistantMessage;
+    dispatcher?: KeyBindingDispatcher;
+    shortcutOverrides?: KeyBindingOverrides;
+    openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
+    selection?: AssistantSelectionScope;
+    clearSelection?: () => void;
+    generalSettings?: GeneralSettings;
+    hasUnavailableAiConnection?: boolean;
+    openSettings?: () => void;
+    language?: string;
+    article?: Article;
+    updateArticle?: (articleId: string, input: unknown) => Promise<unknown>;
+}) {
+    const { state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages, assistantMessages, streamedMessage, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings, hasUnavailableAiConnection, openSettings } = props;
+    return <EditorialAssistantPanel
+        data={{ state, message, errorDetails, activity, factCheckClaims, translationLanguages, assistantMessages, streamedMessage, selection, generalSettings, hasUnavailableAiConnection }}
+        actions={{ onRequest, onCancel, onRetry, dispatcher, shortcutOverrides, openView, clearSelection, openSettings }}
+        layout={{ collapsed, setCollapsed }} />;
+}
 
 
 export function article(id: string, title: string): Article {

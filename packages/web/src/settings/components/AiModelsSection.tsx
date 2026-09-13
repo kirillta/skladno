@@ -8,7 +8,24 @@ import { SettingRow, SettingsGroup } from "./SettingRow.js";
 import { ModelAndReasoning, skillMessages } from "./AiModelSelect.js";
 
 
-export function AiModelsSection({ preferences, appModel, models, settingsConnections, onRefreshModels, savePreferences, saveAppModel }: { preferences: ModelPreferences; appModel?: AppModelPreference; models: AvailableAiModel[]; settingsConnections: { active?: boolean; provider: AiProvider }[]; onRefreshModels: () => void; savePreferences: (next: ModelPreferences) => Promise<void>; saveAppModel: (next: AppModelPreference | null) => Promise<void> }) {
+interface AiModelsData {
+    preferences: ModelPreferences;
+    appModel?: AppModelPreference;
+    models: AvailableAiModel[];
+    settingsConnections: { active?: boolean; provider: AiProvider }[];
+}
+
+
+interface AiModelsActions {
+    onRefreshModels: () => void;
+    savePreferences: (next: ModelPreferences) => Promise<void>;
+    saveAppModel: (next: AppModelPreference | null) => Promise<void>;
+}
+
+
+export function AiModelsSection({ data, actions }: { data: AiModelsData; actions: AiModelsActions }) {
+    const { preferences, appModel, models, settingsConnections } = data;
+    const { onRefreshModels, savePreferences, saveAppModel } = actions;
     const intl = useIntl(); const [specificModelsOpen, setSpecificModelsOpen] = useState(false); const specificModelsContent = useRef<HTMLDivElement>(null);
     const selectedProvider = (model: string) => model ? models.find((item) => item.id === model || item.model === model)?.provider ?? settingsConnections.find((connection) => connection.active !== false)?.provider : undefined;
     const toggleSpecificModels = () => {

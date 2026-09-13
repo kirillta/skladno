@@ -37,7 +37,32 @@ type AssistantComposerProps = AssistantSkillPickerControls & {
 };
 
 
-export function AssistantComposer({ state, canSend, guidance, selectedSkill, skillOffset, caretOffset, selection, clearSelection, quickActionsOpen, availableSkills, activeSkillIndex, incompatibleSelectionSkill, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onCancel, onChange, onKeyDown, shortcutOverrides }: AssistantComposerProps) {
+interface AssistantComposerState {
+    state: AssistantComposerProps["state"];
+    canSend: boolean;
+    guidance: string;
+    selectedSkill?: BuiltInSkillId;
+    skillOffset: number;
+    caretOffset: number;
+    selection?: AssistantSelectionScope;
+    clearSelection?: () => void;
+    incompatibleSelectionSkill: boolean;
+}
+
+
+interface AssistantComposerActions {
+    send: () => void;
+    onCancel: () => void;
+    onChange: (value: AssistantComposerValue) => void;
+    onKeyDown: KeyboardEventHandler<HTMLDivElement>;
+    shortcutOverrides?: KeyBindingOverrides;
+}
+
+
+export function AssistantComposer({ state, picker, actions }: { state: AssistantComposerState; picker: AssistantSkillPickerControls & { activeSkillIndex: number; setActiveSkillIndex: (value: number) => void }; actions: AssistantComposerActions }) {
+    const { state: requestState, canSend, guidance, selectedSkill, skillOffset, caretOffset, selection, clearSelection, incompatibleSelectionSkill } = state;
+    const { quickActionsOpen, availableSkills, activeSkillIndex, setQuickActionsOpen, selectSkill, focusQuickAction } = picker;
+    const { send, onCancel, onChange, onKeyDown, shortcutOverrides } = actions;
     const intl = useIntl();
     const composer = useRef<HTMLDivElement>(null);
     const value: AssistantComposerValue = { guidance, selectedSkill, skillOffset, caretOffset };
@@ -57,11 +82,11 @@ export function AssistantComposer({ state, canSend, guidance, selectedSkill, ski
                 </LexicalComposer>
             </div>
             <div className="flex shrink-0 justify-end">
-                {state === "streaming"
+                {requestState === "streaming"
                     ? <Button className="inline-grid size-9 place-items-center !p-0" variant="danger" title={shortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></Button>
                     : <div className="flex">
                         <Button className="inline-grid size-8 place-items-center rounded-r-none !p-0" variant="quiet" title={shortcutHint(intl.formatMessage({ id: "assistant.send" }), KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.send" })} disabled={!canSend} onClick={send}><SendIcon className="size-4" /></Button>
-                        <AssistantQuickActions state={state} composer={composer} quickActionsOpen={quickActionsOpen} availableSkills={availableSkills} activeSkillIndex={activeSkillIndex} setQuickActionsOpen={setQuickActionsOpen} setActiveSkillIndex={setActiveSkillIndex} selectSkill={selectSkill} focusQuickAction={focusQuickAction} />
+                        <AssistantQuickActions context={{ state: requestState, composer }} picker={picker} />
                     </div>}
             </div>
         </div>

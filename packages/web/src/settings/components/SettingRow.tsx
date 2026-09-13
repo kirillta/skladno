@@ -1,7 +1,8 @@
 import { cloneElement, isValidElement, useId, type ReactNode } from "react";
 
 
-export function SettingRow({ label, hint, children, status, action, fullWidthAction = false, headingLevel = 2, className }: { label: string; hint: string; children: ReactNode; status?: ReactNode; action?: ReactNode; fullWidthAction?: boolean; headingLevel?: 2 | 3; className?: string }) {
+export function SettingRow(props: { label: string; hint: string; children: ReactNode; status?: ReactNode; action?: ReactNode; fullWidthAction?: boolean; headingLevel?: 2 | 3; className?: string }) {
+    const { label, hint, children, status, action, fullWidthAction = false, headingLevel = 2, className } = props;
     const hintId = useId();
     const Heading = headingLevel === 3 ? "h3" : "h2";
 

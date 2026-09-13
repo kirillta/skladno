@@ -4,15 +4,15 @@ import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EDITORIAL_OPERATION } from "@skladno/shared";
-import type { EditorialEngine } from "../application/services/editorial/editorial-engine.js";
-import type { EditorialEngineEvent } from "../application/models/editorial/editorial-engine-event.js";
-import type { EditorialEngineResolver } from "../application/services/editorial/editorial-engine-resolver.js";
-import { EDITORIAL_ENGINE_EVENT } from "../application/models/editorial/editorial-engine-events.js";
-import type { EditorialEngineRequest } from "../application/models/editorial/editorial-engine-request.js";
-import type { EditorialAssistantRequest } from "../application/models/editorial/editorial-assistant-request.js";
-import type { AssistantActionIntentVerifier } from "../application/services/editorial/assistant-action-intent-verifier.js";
+import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
+import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
+import type { EditorialEngineResolver } from "../application/editorial/engine/editorial-engine-resolver.js";
+import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
+import type { EditorialEngineRequest } from "../application/editorial/engine/editorial-engine-request.js";
+import type { EditorialAssistantRequest } from "../application/editorial/engine/editorial-assistant-request.js";
+import type { AssistantActionIntentVerifier } from "../application/editorial/assistant-action-intent-verifier.js";
 import type { TelemetryObserver } from "../application/telemetry/telemetry-observer.js";
-import { EditorialService } from "../application/services/editorial/editorial-service.js";
+import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
@@ -78,20 +78,20 @@ export async function withService(engine: EditorialEngine | undefined, run: (bas
         aiModel: "gpt-5",
         aiSessionContinuationEnabled: storeResponses
     };
-    const editorial = new EditorialService(persistence.articles, persistence.editorialSessions, persistence.styleCorpus, persistence.editorialArtifacts, engines, storeResponses, persistence.factChecks, telemetry);
-    const services = createApplicationServices({
-        articles: persistence.articles,
-        settings: persistence.settings,
-        styleCorpus: persistence.styleCorpus,
-        assistant: persistence.assistant,
-        artifacts: persistence.editorialArtifacts,
-        engines,
-        dateTimeFormat: { read: async () => ({ locale: "en" }) },
-        models: { list: async () => [] },
-        createConnectionId: () => "test-connection",
-        factChecks: persistence.factChecks,
-        editorial,
+    const editorial = new EditorialService(
+        { articles: persistence.articles, sessions: persistence.editorialSessions, styleCorpus: persistence.styleCorpus, artifacts: persistence.editorialArtifacts, factChecks: persistence.factChecks },
+        { engines, sessionContinuationEnabled: storeResponses },
         telemetry,
+    );
+    const services = createApplicationServices({
+        stores: { articles: persistence.articles, styleCorpus: persistence.styleCorpus, assistant: persistence.assistant, artifacts: persistence.editorialArtifacts, engines, factChecks: persistence.factChecks },
+        settings: {
+            settings: persistence.settings,
+            dateTimeFormat: { read: async () => ({ locale: "en" }) },
+            models: { list: async () => [] },
+            createConnectionId: () => "test-connection",
+        },
+        integration: { editorial, telemetry },
     });
     const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");

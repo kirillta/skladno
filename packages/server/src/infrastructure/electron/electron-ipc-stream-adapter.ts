@@ -2,12 +2,12 @@ import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, ELECT
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
-import type { EditorialService } from "../../application/services/editorial/editorial-service.js";
-import type { EditorialServiceRequest } from "../../application/models/editorial/editorial-request.js";
-import { EDITORIAL_ENGINE_ERROR } from "../../application/errors/editorial-engine-errors.js";
-import { EDITORIAL_ENGINE_EVENT } from "../../application/models/editorial/editorial-engine-events.js";
-import { EditorialEngineError } from "../../application/errors/editorial-engine-error.js";
-import { isEditorialOperation } from "../../application/helpers/editorial/workflow-prompt.js";
+import type { EditorialService } from "../../application/editorial/editorial-service.js";
+import type { EditorialServiceRequest } from "../../application/editorial/editorial-request.js";
+import { EDITORIAL_ENGINE_ERROR } from "../../application/editorial/engine/editorial-engine-errors.js";
+import { EDITORIAL_ENGINE_EVENT } from "../../application/editorial/engine/editorial-engine-events.js";
+import { EditorialEngineError } from "../../application/editorial/engine/editorial-engine-error.js";
+import { isEditorialOperation } from "../../application/editorial/workflow-prompt.js";
 import type { ElectronIpcMain, ElectronIpcMainEvent } from "./electron-ipc-types.js";
 
 

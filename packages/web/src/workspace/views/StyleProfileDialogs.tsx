@@ -3,16 +3,25 @@ import { Button, Dialog, Select } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 
 
-export function StyleProfileDialogs({ removingId, snapshotRevisionId, revisions, onCloseRemove, onConfirmRemove, onCloseSnapshot, onSelectSnapshot, onConfirmSnapshot }: {
+interface StyleProfileDialogData {
     removingId: string | undefined;
     snapshotRevisionId: string | undefined;
     revisions: readonly { revision: ArticleRevision; number: number }[];
+}
+
+
+interface StyleProfileDialogActions {
     onCloseRemove: () => void;
     onConfirmRemove: () => void;
     onCloseSnapshot: () => void;
     onSelectSnapshot: (revisionId: string) => void;
     onConfirmSnapshot: () => void;
-}) {
+}
+
+
+export function StyleProfileDialogs({ data, actions }: { data: StyleProfileDialogData; actions: StyleProfileDialogActions }) {
+    const { removingId, snapshotRevisionId, revisions } = data;
+    const { onCloseRemove, onConfirmRemove, onCloseSnapshot, onSelectSnapshot, onConfirmSnapshot } = actions;
     const intl = useIntl();
 
     return <>{removingId && <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl" open aria-labelledby="remove-style-sample-title" onCancel={(event) => {

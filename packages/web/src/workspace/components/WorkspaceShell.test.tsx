@@ -1,14 +1,34 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
-import { WorkspaceShell } from "./WorkspaceShell.js";
+import { WorkspaceShell as RenderWorkspaceShell } from "./WorkspaceShell.js";
 
 // Product scenarios: workspace.shell.responsive-collapse, workspace.shell.focus-mode
 
 const originalViewportWidth = window.innerWidth;
+
+
+function WorkspaceShell({ children, library, assistant, focusMode, libraryCollapsed, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, assistantOpenRequest, libraryWidth, setLibraryWidth, assistantWidth, setAssistantWidth }: {
+    children: ReactNode;
+    library: ReactNode;
+    assistant: ReactNode;
+    focusMode: boolean;
+    libraryCollapsed: boolean;
+    setLibraryCollapsed: (collapsed: boolean) => void;
+    assistantCollapsed: boolean;
+    setAssistantCollapsed: (collapsed: boolean) => void;
+    assistantOpenRequest: number;
+    libraryWidth: number;
+    setLibraryWidth: (width: number) => void;
+    assistantWidth: number;
+    setAssistantWidth: (width: number) => void;
+}) {
+    return <RenderWorkspaceShell content={{ children, library, assistant }} layout={{ focusMode, libraryCollapsed, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, assistantOpenRequest, libraryWidth, setLibraryWidth, assistantWidth, setAssistantWidth }} />;
+}
 
 
 function setViewportWidth(width: number) {

@@ -5,7 +5,16 @@ import userEvent from "@testing-library/user-event";
 import { publishLimitProfiles, type Article } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
-import { TranslationsView } from "./TranslationsView.js";
+import { TranslationsView as RenderTranslationsView } from "./TranslationsView.js";
+
+type TranslationsViewTestProps = Parameters<typeof RenderTranslationsView>[0]["data"] & Parameters<typeof RenderTranslationsView>[0]["actions"];
+
+
+function TranslationsView(props: TranslationsViewTestProps) {
+    const { article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel, create, edit, openArticle, translate } = props;
+    return <RenderTranslationsView data={{ article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel }} actions={{ create, edit, openArticle, translate }} />;
+}
+
 
 // Product scenarios: workspace.translations.stale-source, history-and-publishing.translation-stale-source
 

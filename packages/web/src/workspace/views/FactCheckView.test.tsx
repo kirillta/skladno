@@ -4,7 +4,16 @@ import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
-import { FactCheckView } from "./FactCheckView.js";
+import { FactCheckView as RenderFactCheckView } from "./FactCheckView.js";
+
+type FactCheckViewTestProps = Parameters<typeof RenderFactCheckView>[0]["data"] & Parameters<typeof RenderFactCheckView>[0]["actions"];
+
+
+function FactCheckView(props: FactCheckViewTestProps) {
+    const { factCheck, revisionNumber, reusedRevisionNumbers, stale, runAgain, resolve, proposeCorrections } = props;
+    return <RenderFactCheckView data={{ factCheck, revisionNumber, reusedRevisionNumbers, stale }} actions={{ runAgain, resolve, proposeCorrections }} />;
+}
+
 
 // product: history-and-publishing.fact-findings-advisory
 

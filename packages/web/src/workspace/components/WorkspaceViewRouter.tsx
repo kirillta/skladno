@@ -14,7 +14,7 @@ import { TranslationsView } from "../views/TranslationsView.js";
 import type { AssistantSelectionSnapshot } from "../editor/ArticleEditorPlugins.js";
 
 
-export function WorkspaceViewRouter({ view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile, publishProfileLabel, runFactCheck, runTranslation, onSelectionChange, assistantSelection, proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant }: {
+interface WorkspaceViewContent {
     view: WorkspaceView;
     article: Article;
     workspace: ArticleWorkspaceState;
@@ -24,22 +24,36 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     generalSettings: GeneralSettings;
     publishProfile: PublishLimitProfile;
     publishProfileLabel: string;
+}
+
+
+interface WorkspaceViewActions {
     runFactCheck: () => void;
     runTranslation: () => void;
     onSelectionChange?: (value: AssistantSelectionSnapshot | undefined) => void;
     assistantSelection?: string;
+}
+
+
+interface WorkspaceViewNavigation {
     proposalWarningsDismissed: boolean;
     dismissProposalWarnings: () => void;
     openWrite: () => void;
     openAssistant: () => void;
-}) {
+}
+
+
+export function WorkspaceViewRouter({ content, actions, navigation }: { content: WorkspaceViewContent; actions: WorkspaceViewActions; navigation: WorkspaceViewNavigation }) {
+    const { view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile, publishProfileLabel } = content;
+    const { runFactCheck, runTranslation, onSelectionChange, assistantSelection } = actions;
+    const { proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant } = navigation;
     const panel = (children: ReactNode) => <section role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" || view === "revisions" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : view === "translations" ? "flex min-h-0 flex-1 flex-col overflow-hidden p-5" : view === "style-profile" ? "min-h-0 flex-1 overflow-hidden p-5" : "min-h-0 flex-1 overflow-y-auto p-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong"}>{children}</section>;
 
     if (view === "write")
         return panel(<ArticleEditorView articleId={article.id} content={workspace.content} setContent={workspace.setContent} onSelectionChange={onSelectionChange} assistantSelection={assistantSelection} />);
 
     if (view === "proposal")
-        return panel(<ProposalReviewView review={editorial.review} accepted={editorial.accepted} stale={editorial.stale} decisions={editorial.decisions} summaries={editorial.proposalSummaries} summaryState={editorial.proposalSummaryState} setDecision={editorial.setDecision} acceptAll={editorial.acceptAll} applyAccepted={editorial.applyAccepted} rejectAll={editorial.rejectAll} dismissProposal={editorial.dismissProposal} warningsDismissed={proposalWarningsDismissed} dismissWarnings={dismissProposalWarnings} openWrite={openWrite} openAssistant={openAssistant} />);
+        return panel(<ProposalReviewView data={{ review: editorial.review, accepted: editorial.accepted, stale: editorial.stale, decisions: editorial.decisions, summaries: editorial.proposalSummaries, summaryState: editorial.proposalSummaryState, warningsDismissed: proposalWarningsDismissed }} actions={{ setDecision: editorial.setDecision, acceptAll: editorial.acceptAll, applyAccepted: editorial.applyAccepted, rejectAll: editorial.rejectAll, dismissProposal: editorial.dismissProposal, dismissWarnings: dismissProposalWarnings, openWrite, openAssistant }} />);
 
     if (view === "revisions")
         return panel(<RevisionHistoryView revisions={revisions.revisions} currentRevisionId={article.currentRevisionId} select={revisions.setCandidate} generalSettings={generalSettings} />);
@@ -47,14 +61,14 @@ export function WorkspaceViewRouter({ view, article, workspace, editorial, revis
     if (view === "fact-check") {
         const revisionNumber = revisions.revisions.findIndex((revision) => revision.id === editorial.factCheck?.reviewedRevisionId);
         const reusedRevisionNumbers = Object.fromEntries(revisions.revisions.map((revision, index) => [revision.id, index + 1]));
-        return panel(<FactCheckView factCheck={editorial.factCheck} revisionNumber={revisionNumber < 0 ? undefined : revisionNumber + 1} reusedRevisionNumbers={reusedRevisionNumbers} stale={editorial.factCheckStale} runAgain={runFactCheck} resolve={editorial.resolveFactCheck} proposeCorrections={editorial.proposeFactCorrections} />);
+        return panel(<FactCheckView data={{ factCheck: editorial.factCheck, revisionNumber: revisionNumber < 0 ? undefined : revisionNumber + 1, reusedRevisionNumbers, stale: editorial.factCheckStale }} actions={{ runAgain: runFactCheck, resolve: editorial.resolveFactCheck, proposeCorrections: editorial.proposeFactCorrections }} />);
     }
 
     if (view === "style-profile")
-        return panel(<StyleProfileView corpus={corpus.corpus} findings={editorial.styleReview} findingsStale={editorial.styleReviewStale} articleId={article.id} revisions={revisions.revisions} generalSettings={generalSettings} add={corpus.add} remove={corpus.remove} setIncluded={corpus.setIncluded} setRules={corpus.setRules} rebuild={corpus.rebuild} getArticleRules={corpus.getArticleRules} setArticleRules={corpus.setArticleRules} snapshotArticleRevision={corpus.snapshotArticleRevision} />);
+        return panel(<StyleProfileView data={{ corpus: corpus.corpus, findings: editorial.styleReview, findingsStale: editorial.styleReviewStale, articleId: article.id, revisions: revisions.revisions, generalSettings }} actions={{ add: corpus.add, remove: corpus.remove, setIncluded: corpus.setIncluded, setRules: corpus.setRules, rebuild: corpus.rebuild, getArticleRules: corpus.getArticleRules, setArticleRules: corpus.setArticleRules, snapshotArticleRevision: corpus.snapshotArticleRevision }} />);
 
     if (view === "translations")
-        return panel(<TranslationsView article={article} sourceArticle={article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined} linkedTranslations={workspace.articles.filter((item) => item.sourceArticleId === article.id)} translations={editorial.translations} stale={editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId)} create={editorial.createTranslation} edit={openWrite} openArticle={workspace.selectArticle} translate={runTranslation} translationLanguages={generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language)} publishProfile={publishProfile} publishProfileLabel={publishProfileLabel} />);
+        return panel(<TranslationsView data={{ article, sourceArticle: article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined, linkedTranslations: workspace.articles.filter((item) => item.sourceArticleId === article.id), translations: editorial.translations, stale: editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId), translationLanguages: generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language), publishProfile, publishProfileLabel }} actions={{ create: editorial.createTranslation, edit: openWrite, openArticle: workspace.selectArticle, translate: runTranslation }} />);
 
     return null;
 }

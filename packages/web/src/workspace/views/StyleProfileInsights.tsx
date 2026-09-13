@@ -24,7 +24,7 @@ const traitDescriptions: Record<string, MessageId> = {
 const quietScrollbar = "[scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong";
 
 
-export function StyleProfileInsights({ corpus, findings, findingsStale, generalSettings, pendingAction, rules, savedRules, articleRules, savedArticleRules, setRules, setArticleRules, onSaveRules, onSaveArticleRules, ruleStatus }: {
+interface StyleProfileInsightsData {
     corpus: StyleCorpus | undefined;
     findings: StyleReview | undefined;
     findingsStale: boolean;
@@ -34,12 +34,21 @@ export function StyleProfileInsights({ corpus, findings, findingsStale, generalS
     savedRules: string;
     articleRules: string;
     savedArticleRules: string;
+}
+
+
+interface StyleProfileInsightsActions {
     setRules: (value: string) => void;
     setArticleRules: (value: string) => void;
     onSaveRules: () => void;
     onSaveArticleRules: () => void;
     ruleStatus: (draft: string, saved: string) => MessageId;
-}) {
+}
+
+
+export function StyleProfileInsights({ data, actions }: { data: StyleProfileInsightsData; actions: StyleProfileInsightsActions }) {
+    const { corpus, findings, findingsStale, generalSettings, pendingAction, rules, savedRules, articleRules, savedArticleRules } = data;
+    const { setRules, setArticleRules, onSaveRules, onSaveArticleRules, ruleStatus } = actions;
     const intl = useIntl();
     const [sourcesExpanded, setSourcesExpanded] = useState(false);
     const contributors = corpus?.profile?.contributorIds.map((id) => corpus.items.find((item) => item.id === id)?.name).filter((name): name is string => Boolean(name)) ?? [];

@@ -9,7 +9,7 @@ import { useIntl } from "react-intl";
 const quietScrollbar = "[scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong";
 
 
-export function StyleProfileSources({ corpus, revisions, generalSettings, pendingAction, adding, name, content, validationFailed, uploadFailed, setAdding, setName, setContent, onImport, onSubmit, onRemove, onSetIncluded, onSnapshot }: {
+interface StyleProfileSourcesData {
     corpus: StyleCorpus | undefined;
     revisions: readonly { revision: ArticleRevision; number: number }[];
     generalSettings: GeneralSettings;
@@ -19,6 +19,10 @@ export function StyleProfileSources({ corpus, revisions, generalSettings, pendin
     content: string;
     validationFailed: boolean;
     uploadFailed: boolean;
+}
+
+
+interface StyleProfileSourcesActions {
     setAdding: (value: boolean | ((previous: boolean) => boolean)) => void;
     setName: (value: string) => void;
     setContent: (value: string) => void;
@@ -27,7 +31,12 @@ export function StyleProfileSources({ corpus, revisions, generalSettings, pendin
     onRemove: (id: string) => void;
     onSetIncluded: (id: string, included: boolean) => void;
     onSnapshot: (revisionId: string | undefined) => void;
-}) {
+}
+
+
+export function StyleProfileSources({ data, actions }: { data: StyleProfileSourcesData; actions: StyleProfileSourcesActions }) {
+    const { corpus, revisions, generalSettings, pendingAction, adding, name, content, validationFailed, uploadFailed } = data;
+    const { setAdding, setName, setContent, onImport, onSubmit, onRemove, onSetIncluded, onSnapshot } = actions;
     const intl = useIntl();
     const upload = useRef<HTMLInputElement>(null);
 

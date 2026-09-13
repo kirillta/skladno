@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { IntlShape } from "react-intl";
 import { APPLICATION_ERROR, ApplicationClientError, type AssistantCapabilityActivity, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
-import type { EditorialWorkspaceClient } from "../../application-client.js";
+import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { errorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import { providerLanguageName } from "./editorial-language.js";

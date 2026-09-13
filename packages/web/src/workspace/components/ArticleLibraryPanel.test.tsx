@@ -5,7 +5,30 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Article, DesktopUpdateClient } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
 import { message } from "../../i18n/test-message.js";
-import { ArticleLibraryPanel } from "./ArticleLibraryPanel.js";
+import { ArticleLibraryPanel as RenderArticleLibraryPanel } from "./ArticleLibraryPanel.js";
+
+
+function ArticleLibraryPanel({ articles, selectedArticleId, selectArticle, collapsed, setCollapsed, createBlank, openStyleProfile, openSettings, language, dispatcher, shortcutOverrides, remove, setArchived, setPinned, reorderPinned, notifyError }: {
+    articles: Article[];
+    selectedArticleId: string | undefined;
+    selectArticle: (articleId: string) => void;
+    collapsed: boolean;
+    setCollapsed: (value: boolean) => void;
+    createBlank: () => Promise<unknown>;
+    openStyleProfile: () => void;
+    openSettings: () => void;
+    language: string | undefined;
+    dispatcher?: Parameters<typeof RenderArticleLibraryPanel>[0]["navigation"]["dispatcher"];
+    shortcutOverrides?: Parameters<typeof RenderArticleLibraryPanel>[0]["navigation"]["shortcutOverrides"];
+    remove?: (articleId: string) => Promise<void>;
+    setArchived?: (articleId: string, archived: boolean) => Promise<void>;
+    setPinned?: (articleId: string, pinned: boolean) => Promise<void>;
+    reorderPinned?: (articleIds: string[]) => Promise<void>;
+    notifyError?: Parameters<typeof RenderArticleLibraryPanel>[0]["mutations"]["notifyError"];
+}) {
+    return <RenderArticleLibraryPanel data={{ articles, selectedArticleId, collapsed, language }} navigation={{ selectArticle, setCollapsed, createBlank, openStyleProfile, openSettings, dispatcher, shortcutOverrides }} mutations={{ remove, setArchived, setPinned, reorderPinned, notifyError }} />;
+}
+
 
 // Product scenarios: workspace.library-management
 

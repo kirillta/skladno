@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EDITORIAL_OPERATION, HTTP_METHOD, type FactCheckFinding } from "@skladno/shared";
-import type { EditorialEngine } from "../application/services/editorial/editorial-engine.js";
-import { EDITORIAL_ENGINE_EVENT } from "../application/models/editorial/editorial-engine-events.js";
+import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
+import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
 import { streamFactCheck } from "../infrastructure/editorial/workflows/fact-check-workflow.js";
 import { type FactCheckFindingDraft } from "../infrastructure/editorial/models/fact-check-finding-draft.js";
 import { type FactCheckProvider } from "../infrastructure/editorial/models/fact-check-provider.js";
