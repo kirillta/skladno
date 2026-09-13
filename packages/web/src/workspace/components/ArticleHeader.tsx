@@ -118,16 +118,16 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, setArchi
                     : <button className="w-full truncate text-left hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.rename" }, { articleTitle: article.title })} onClick={() => setEditingTitle(true)}>{article.title}</button>}
             </h1>
             <div className="flex shrink-0 items-center gap-2 text-xs" aria-label={intl.formatMessage({ id: "articleHeader.metadata" })}>
-                <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: "articleHeader.saveRevision" })} title={getShortcutHint(intl.formatMessage({ id: "articleHeader.saveRevision" }), KEY_BINDING_COMMAND.SAVE_REVISION, shortcutOverrides)} onClick={() => void save().catch(() => undefined)}>
+                <IconButton variant="quiet" label={intl.formatMessage({ id: "articleHeader.saveRevision" })} title={getShortcutHint(intl.formatMessage({ id: "articleHeader.saveRevision" }), KEY_BINDING_COMMAND.SAVE_REVISION, shortcutOverrides)} onClick={() => void save().catch(() => undefined)}>
                     <SaveIcon className="size-4" />
                 </IconButton>
-                <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: article.archived ? "articleHeader.unarchiveArticle" : "articleHeader.archiveArticle" })} title={intl.formatMessage({ id: article.archived ? "articleHeader.unarchiveArticle" : "articleHeader.archiveArticle" })} onClick={() => void archive()}>
+                <IconButton variant="quiet" label={intl.formatMessage({ id: article.archived ? "articleHeader.unarchiveArticle" : "articleHeader.archiveArticle" })} title={intl.formatMessage({ id: article.archived ? "articleHeader.unarchiveArticle" : "articleHeader.archiveArticle" })} onClick={() => void archive()}>
                     <ArchiveIcon className="size-4" />
                 </IconButton>
-                <IconButton className="text-muted hover:bg-danger-soft hover:text-danger" label={intl.formatMessage({ id: "articleHeader.deleteArticle" })} title={intl.formatMessage({ id: "articleHeader.deleteArticle" })} onClick={() => setDeleteConfirmationOpen(true)}>
+                <IconButton variant="danger-quiet" label={intl.formatMessage({ id: "articleHeader.deleteArticle" })} title={intl.formatMessage({ id: "articleHeader.deleteArticle" })} onClick={() => setDeleteConfirmationOpen(true)}>
                     <DeleteIcon className="size-4" />
                 </IconButton>
-                <IconButton className="text-muted hover:bg-brand-soft hover:text-brand" label={intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })} title={getShortcutHint(intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" }), KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, shortcutOverrides)} onClick={() => setFocusMode(!focusMode)}>
+                <IconButton variant="quiet" label={intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" })} title={getShortcutHint(intl.formatMessage({ id: focusMode ? "articleHeader.leaveFocusMode" : "articleHeader.focusMode" }), KEY_BINDING_COMMAND.TOGGLE_FOCUS_MODE, shortcutOverrides)} onClick={() => setFocusMode(!focusMode)}>
                     {focusMode ? <LeaveFocusIcon className="size-4" /> : <FocusIcon className="size-4" />}
                 </IconButton>
 

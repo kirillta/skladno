@@ -6,6 +6,7 @@ import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection,
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text";
 import { useIntl } from "react-intl";
 import { BoldIcon, CodeIcon, ItalicIcon, LinkIcon, ListIcon, NumberedListIcon, StrikeIcon } from "../../ui/icons.js";
+import { IconButton } from "../../ui/primitives.js";
 import { isSupportedArticleLink } from "./paste-constants.js";
 
 
@@ -195,11 +196,6 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
         ["editor.bold", BoldIcon, "bold"], ["editor.italic", ItalicIcon, "italic"], ["editor.strikethrough", StrikeIcon, "strikethrough"], ["editor.codeBlock", CodeIcon, "code"],
     ] as const;
 
-    const formatButtonClass = (active: boolean) => [
-        "grid size-9 place-items-center rounded-control border text-brand transition-colors",
-        active ? "border-brand bg-brand-soft shadow-raised" : "border-transparent hover:bg-brand-soft",
-    ].join(" ");
-
     return <div className="shrink-0 overflow-x-auto border-b border-border bg-surface-raised px-4 py-1 [scrollbar-width:thin]">
         <div role="toolbar" aria-label={intl.formatMessage({ id: "editor.formatting" })} onKeyDown={handleKeyNavigation} className="flex w-max min-w-full items-center gap-1">
             <select aria-label={intl.formatMessage({ id: "editor.blockStyle" })}
@@ -212,32 +208,29 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
                 <option value="quote">{intl.formatMessage({ id: "editor.blockQuote" })}</option>
                 <option value="code">{intl.formatMessage({ id: "editor.codeBlock" })}</option>
             </select>
-            {controls.map(([label, Icon, format]) => <button key={format} type="button" aria-label={intl.formatMessage({ id: label as "editor.bold" | "editor.italic" | "editor.strikethrough" | "editor.codeBlock" })} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextFormat(format)} className={formatButtonClass(formats.has(format))}><Icon /></button>)}
-            <button type="button"
-                aria-label={intl.formatMessage({ id: "editor.link" })}
+            {controls.map(([label, Icon, format]) => <IconButton variant="toolbar" key={format} type="button" label={intl.formatMessage({ id: label as "editor.bold" | "editor.italic" | "editor.strikethrough" | "editor.codeBlock" })} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextFormat(format)}><Icon /></IconButton>)}
+            <IconButton variant="toolbar" type="button"
+                label={intl.formatMessage({ id: "editor.link" })}
                 aria-pressed={linkActive}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => activate(openLink)}
-                className={formatButtonClass(linkActive)}>
+                onClick={() => activate(openLink)}>
                 <LinkIcon />
-            </button>
+            </IconButton>
             {linkUrl && <a href={linkUrl} target="_blank" rel="noreferrer" aria-label={intl.formatMessage({ id: "editor.openLink" }, { url: linkUrl })} className="inline-flex min-h-9 max-w-32 items-center truncate rounded-control px-2 text-xs font-semibold text-brand underline underline-offset-2 hover:bg-brand-soft">{linkUrl}</a>}
-            <button type="button"
-                aria-label={intl.formatMessage({ id: "editor.bulletedList" })}
+            <IconButton variant="toolbar" type="button"
+                label={intl.formatMessage({ id: "editor.bulletedList" })}
                 aria-pressed={listType === "bullet"}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => applyList("bullet")}
-                className={formatButtonClass(listType === "bullet")}>
+                onClick={() => applyList("bullet")}>
                 <ListIcon />
-            </button>
-            <button type="button"
-                aria-label={intl.formatMessage({ id: "editor.numberedList" })}
+            </IconButton>
+            <IconButton variant="toolbar" type="button"
+                label={intl.formatMessage({ id: "editor.numberedList" })}
                 aria-pressed={listType === "number"}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => applyList("number")}
-                className={formatButtonClass(listType === "number")}>
+                onClick={() => applyList("number")}>
                 <NumberedListIcon />
-            </button>
+            </IconButton>
         </div>
     </div>;
 }

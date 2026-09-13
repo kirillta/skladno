@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import type { AssistantCapabilityActivity, AssistantMessage, FactCheckClaimPreview, GeneralSettings } from "@skladno/shared";
-import { Banner, Button } from "../../../ui/primitives.js";
+import { Banner, Button, IconButton } from "../../../ui/primitives.js";
 import { ChevronDownIcon } from "../../../ui/icons.js";
 import { FactCheckClaims } from "./FactCheckClaims.js";
 import { AssistantTimelineMessage } from "./AssistantTimelineMessage.js";
@@ -132,8 +132,8 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
                 </div>
             </Banner>}
         </div>
-        {!atEnd && <Button className="absolute bottom-3 left-1/2 inline-grid size-9 -translate-x-1/2 place-items-center rounded-full bg-surface-raised !p-0 shadow-raised" variant="secondary" aria-label={intl.formatMessage({ id: "assistant.scrollToEnd" })} title={intl.formatMessage({ id: "assistant.scrollToEnd" })} onClick={scrollToEnd}>
+        {!atEnd && <IconButton className="absolute bottom-3 left-1/2 -translate-x-1/2 shadow-raised" variant="secondary" round label={intl.formatMessage({ id: "assistant.scrollToEnd" })} title={intl.formatMessage({ id: "assistant.scrollToEnd" })} onClick={scrollToEnd}>
             <ChevronDownIcon className="size-4" />
-        </Button>}
+        </IconButton>}
     </div>;
 }

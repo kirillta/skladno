@@ -78,9 +78,9 @@ export function AiConnectionsSection(props: Pick<AiSettingsSectionProps, "settin
                         <p className="truncate text-xs text-muted">{getCredentialSourceLabel(connection, intl.formatMessage({ id: "settings.managedCredential" }))}</p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                        {props.onRequestConnectionRename && (getCredentialSource(connection).kind !== "managed" || props.canRenameManagedConnection) && <Button className="!px-2" variant="quiet" onClick={() => props.onRequestConnectionRename?.(connection)}>{intl.formatMessage({ id: "settings.renameConnectionShort" })}</Button>}
-                        <Button className="!px-2" variant="quiet" onClick={() => props.onSetConnectionActive(connection.id, connection.active === false)}>{intl.formatMessage({ id: connection.active === false ? "settings.activateConnectionShort" : "settings.deactivateConnectionShort" })}</Button>
-                        <Button className="!px-2" variant="danger" onClick={() => props.onRequestConnectionRemoval(connection)}>{intl.formatMessage({ id: "settings.removeConnectionShort" })}</Button>
+                        {props.onRequestConnectionRename && (getCredentialSource(connection).kind !== "managed" || props.canRenameManagedConnection) && <Button compact variant="quiet" onClick={() => props.onRequestConnectionRename?.(connection)}>{intl.formatMessage({ id: "settings.renameConnectionShort" })}</Button>}
+                        <Button compact variant="quiet" onClick={() => props.onSetConnectionActive(connection.id, connection.active === false)}>{intl.formatMessage({ id: connection.active === false ? "settings.activateConnectionShort" : "settings.deactivateConnectionShort" })}</Button>
+                        <Button compact variant="danger" onClick={() => props.onRequestConnectionRemoval(connection)}>{intl.formatMessage({ id: "settings.removeConnectionShort" })}</Button>
                     </div>
                 </div>)}
             </div>
