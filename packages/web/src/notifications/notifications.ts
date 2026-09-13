@@ -1,58 +1,16 @@
-export type NotificationTone = "info" | "success" | "warning" | "error";
-
-
-export interface NotificationAction {
-    label: string;
-    onAction: () => void;
-}
-
-
-export interface NotificationInput {
-    tone: NotificationTone;
-    title: string;
-    message?: string;
-    action?: NotificationAction;
-    durationMs?: number | null;
-}
-
-
-export interface NotificationHandle {
-    id: string;
-    dismiss: () => void;
-}
-
-
-export interface NotifyErrorOptions {
-    title?: string;
-    fallbackMessage?: string;
-    action?: NotificationAction;
-}
-
-
 export interface Notifications {
-    notify: (input: NotificationInput) => NotificationHandle;
-    notifyError: (error: unknown, options?: NotifyErrorOptions) => NotificationHandle;
+    notify: (input: {
+        tone: "info" | "success" | "warning" | "error";
+        title: string;
+        message?: string;
+        action?: { label: string; onAction: () => void };
+        durationMs?: number | null;
+    }) => { id: string; dismiss: () => void };
+    notifyError: (error: unknown, options?: {
+        title?: string;
+        fallbackMessage?: string;
+        action?: { label: string; onAction: () => void };
+    }) => { id: string; dismiss: () => void };
     dismiss: (id: string) => void;
     dismissAll: () => void;
-}
-
-
-export interface StoredNotification extends Required<Pick<NotificationInput, "tone" | "title">>, Omit<NotificationInput, "tone" | "title" | "durationMs"> {
-    id: string;
-    remainingDurationMs: number | null;
-}
-
-
-export const MAX_VISIBLE_NOTIFICATIONS = 3;
-const NOTIFICATION_FADE_OUT_DURATION = 6_000;
-
-
-export function getNotificationDuration(tone: NotificationTone, durationMs: number | null | undefined): number | null {
-    if (durationMs !== undefined)
-        return durationMs;
-
-    if (tone === "info" || tone === "success")
-        return NOTIFICATION_FADE_OUT_DURATION;
-
-    return null;
 }

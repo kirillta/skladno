@@ -3,7 +3,13 @@ import { useIntl, type IntlShape } from "react-intl";
 import { ApplicationClientError } from "@skladno/shared";
 import { getErrorMessageId } from "../i18n/errors.js";
 import { NotificationViewport } from "./NotificationViewport.js";
-import { MAX_VISIBLE_NOTIFICATIONS, getNotificationDuration, type NotificationInput, type Notifications, type NotifyErrorOptions, type StoredNotification } from "./notifications.js";
+import { MAX_VISIBLE_NOTIFICATIONS } from "./notification-limit.js";
+import { getNotificationDuration } from "./notification-duration.js";
+import type { StoredNotification } from "./notification-state.js";
+import type { Notifications } from "./notifications.js";
+
+type NotificationInput = Parameters<Notifications["notify"]>[0];
+type NotifyErrorOptions = NonNullable<Parameters<Notifications["notifyError"]>[1]>;
 
 
 const NotificationsContext = createContext<Notifications | undefined>(undefined);

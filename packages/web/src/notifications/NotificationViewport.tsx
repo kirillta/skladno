@@ -1,7 +1,7 @@
 import type { FocusEvent, PointerEvent } from "react";
 import { CloseIcon, StatusIcon } from "../ui/icons.js";
 import { getNotificationClasses } from "../ui/primitives.js";
-import type { StoredNotification } from "./notifications.js";
+import type { StoredNotification } from "./notification-state.js";
 
 
 interface NotificationViewportProps {
