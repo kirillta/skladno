@@ -6,6 +6,17 @@ Skladno is currently in beta.
 
 The Electron app is the primary product. The web app exists mainly for development, so prioritize Electron behavior and compatibility.
 
+## Product decision criteria
+
+Evaluate product, UX, and architecture decisions against these principles:
+
+- Build for Authors who should not need AI infrastructure expertise. Keep setup and everyday use approachable regardless of where the model runs.
+- Judge capabilities by their value to Authors and their writing work. Let Authors' needs guide the product's scope; treat current features as examples, never as a closed list of permitted capabilities.
+- Keep the Author in control of accepted changes and publication, with recoverable work and preserved history. Apply the guarantees in **Always preserve** below.
+- Preserve open-source usability and choice among supported providers and models. Make capability limits clear and keep generalized workflows provider-neutral.
+
+When proposing a change, identify its benefit to Authors and any tradeoff against these principles. Prefer the simplest option that meets the Author's need and preserves Author control.
+
 ## Before changing code
 
 1. Treat the user-provided issue or task as the active scope. Do not infer another issue from repository history.

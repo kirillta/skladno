@@ -2,7 +2,15 @@
 
 > Your ideas, in your voice.
 
-Skladno is a desktop writing workspace for technical Authors. Turn rough notes into an Article, work through difficult passages, check claims, and prepare translations with an AI Editorial Assistant. You decide what to ask for and which changes to keep.
+Skladno is an open-source, local-first desktop writing workspace for Authors. Work with an AI Editorial Assistant on your writing, in your voice. You decide what to ask for and which changes to keep.
+
+## Built around the Author
+
+Skladno is built around Authors' needs and the work that goes into their writing. The Author approves changes, keeps the revision history, and decides when and where to publish.
+
+Skladno aims to make AI assistance approachable without requiring AI infrastructure expertise. To get started today, install the desktop app and connect a supported AI provider with your API key. Choose among supported providers and models to suit your work and budget; available editorial operations depend on the model's capabilities.
+
+Skladno is MIT-licensed, so you can inspect, modify, and share its source. Your Articles stay on your computer; AI requests send the relevant text and context to your chosen provider.
 
 ## Write with help, stay in control
 
@@ -37,6 +45,17 @@ Preview your writing against your publishing preferences and length guidance, th
 ## Install Skladno
 
 Skladno is currently available for **Windows 11 x64**.
+
+Currently supported AI providers:
+
+- OpenAI
+- OpenCode Zen
+- Anthropic
+- Google Gemini API
+- xAI Grok
+- DeepSeek
+
+Through OpenCode Zen, Authors can also use models from additional vendors available in its catalog. Supported editorial operations depend on the chosen model's capabilities.
 
 1. Open the [latest release](https://github.com/kirillta/skladno/releases/latest) and download the setup `.exe` from **Assets**.
 2. Run the installer and open Skladno.
