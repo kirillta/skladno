@@ -59,10 +59,20 @@ export class AssistantCapabilityLoop {
 
         const stream = request.engine.streamAssistant(editorialRequest, signal);
         for await (const event of stream) {
-            if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED && primary)
-                yield primary;
-            else
+            if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED) {
                 yield event;
+                continue;
+            }
+
+            if (primary) {
+                yield primary;
+                continue;
+            }
+
+            if (request.resolvedSkillId)
+                throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
+            yield event;
         }
     }
 
