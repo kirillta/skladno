@@ -111,9 +111,8 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
     const handoffOwnsContent = !authorMessage && Boolean(view);
     const messageStatusLabel = getStatusLabel(message.status, intl);
     const messageDateTime = formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
-    const sourceLabel = message.skillSource
-        ? intl.formatMessage({ id: message.skillSource === "explicit" ? "assistant.skillSource.explicit" : "assistant.skillSource.inferred" })
-        : undefined;
+    const skillUsedLabel = message.skillSource ? intl.formatMessage({ id: "assistant.skillUsed" }) : undefined;
+    const skillTitle = skillId ? intl.formatMessage({ id: skillMessages[skillId] }) : undefined;
 
     return <article className={authorMessage ? "ml-6 rounded-panel border border-brand/45 bg-brand-soft p-3" : "p-0"} aria-label={authorMessage ? label : undefined}>
         {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
@@ -135,7 +134,7 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
         {!authorMessage && <p className="mt-2 flex items-center gap-1 text-xs text-muted">
             <StatusIcon className="size-3" tone={getStatusTone(message.status)} />
             <span>{messageStatusLabel}</span>
-            {sourceLabel && <span>· {sourceLabel}</span>}
+            {skillUsedLabel && <span title={skillTitle}>· {skillUsedLabel}</span>}
             <span>·</span>
             <time>{messageDateTime}</time>
         </p>}

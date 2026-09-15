@@ -102,7 +102,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
 
 
     return <div className="relative min-h-0 flex-1">
-        <div ref={timeline} onScroll={trackScroll} className="h-full space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-live="polite">
+        <div ref={timeline} onScroll={trackScroll} className="h-full select-text cursor-default space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-live="polite">
             {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} />}
             {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
             {streamedMessage?.responseKind

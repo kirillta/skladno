@@ -43,7 +43,7 @@ describe("AssistantTimelineMessage", () => {
 
         expect(scope.getByText("Talking points prepared")).toBeTruthy();
         expect(scope.getByText("Completed")).toBeTruthy();
-        expect(scope.getByText(/Selected skill/)).toBeTruthy();
+        expect(scope.getByText(/Used skill/).getAttribute("title")).toBe("Talking points");
         expect(scope.queryByText("A long proposal owned by the Proposal View.")).toBeNull();
         await userEvent.setup().click(scope.getByRole("button", { name: "Review Proposal" }));
         expect(openView).toHaveBeenCalledWith("proposal");

@@ -27,7 +27,7 @@ test("Assistant execution loads Skills from its catalog", async () => {
         },
         async *streamAssistant(request: EditorialAssistantRequest) {
             received = request;
-            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "response", text: "Done" };
+            return;
         },
     };
     const request: PreparedAssistantRequest = {
@@ -52,4 +52,42 @@ test("Assistant execution loads Skills from its catalog", async () => {
 
     assert.deepEqual(received?.instructions, ["Catalog instructions."]);
     assert.deepEqual(received?.skills.map((skill) => skill.name), ["Catalog Skill"]);
+});
+
+
+test("a resolved Skill cannot complete as a chat response without its artifact", async () => {
+    const engine = {
+        async *stream() {
+            return;
+        },
+        async *streamConversation() {
+            return;
+        },
+        async *streamAssistant() {
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "response", text: "Generated content in chat" } as const;
+        },
+    };
+    const request: PreparedAssistantRequest = {
+        kind: "new", requestId: "request", articleId: "article", authorMessage: "Prepare this.",
+        scope: { kind: "article", baseRevisionId: "revision" }, articleContent: "Article", articleTitle: "Title",
+        resolvedSkillId: BUILT_IN_SKILL.TALKING_POINTS, operation: "thesis_to_narrative", engine, usesCapabilityLoop: true,
+        capabilityActivities: [], pendingActions: [], authorizedActions: [],
+    };
+    const loop = new AssistantCapabilityLoop({
+        assistant: { setExecution: () => undefined }, engines: {},
+        capabilities: {
+            getDefinitions: () => [], discover: () => [], read: () => undefined, executeAction: () => ({ items: [], rules: "", status: "empty" }),
+            stream: async function* () {
+                return;
+            },
+        },
+        skills: new AssistantSkillCatalog([]), conversationHistory: () => [],
+    });
+
+    const consume = async () => {
+        for await (const event of loop.stream(request, new AbortController().signal))
+            void event;
+    };
+
+    await assert.rejects(consume, { code: "invalid_output" });
 });
