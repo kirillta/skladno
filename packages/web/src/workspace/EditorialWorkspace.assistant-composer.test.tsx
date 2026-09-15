@@ -96,9 +96,20 @@ describe("Editorial Assistant composer", () => {
         expect(document.activeElement).toBe(articleControl);
     });
 
+    it("clears the composer while an Assistant response streams", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn(() => new Promise<void>(() => undefined));
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} assistantMessages={[]} />);
+        const panelScope = within(panel.container);
+        await user.click(panelScope.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(panelScope.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(panelScope.getByRole("button", { name: getMessage("assistant.send") }));
+        await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeNull());
+    });
+
     it("sends the assistant request with Ctrl+Enter when configured", async () => {
         const user = userEvent.setup();
-        const onRequest = vi.fn().mockResolvedValue(undefined);
+        const onRequest = vi.fn(() => new Promise<void>(() => undefined));
         const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} generalSettings={{ ...defaultGeneralSettings, assistantSendMode: "ctrl-enter" }} assistantMessages={[]} />);
         const composer = within(panel.container).getByRole("combobox", { name: getMessage("assistant.guidance") });
         await user.click(within(panel.container).getByRole("button", { name: getMessage("assistant.quickActions") }));
@@ -107,6 +118,7 @@ describe("Editorial Assistant composer", () => {
         expect(onRequest).not.toHaveBeenCalled();
         fireEvent.keyDown(composer, { key: "Enter", ctrlKey: true });
         await waitFor(() => expect(onRequest).toHaveBeenCalledWith("", "talking_points", undefined, 0));
+        await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeNull());
     });
 
     it("sends a selected skill without guidance as an Article request", async () => {

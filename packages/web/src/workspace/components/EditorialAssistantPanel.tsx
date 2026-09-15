@@ -107,11 +107,9 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
         const requestSkill = selectedSkill;
         const selectedSkillOffset = requestSkill ? Math.max(0, skillOffset - leadingWhitespace) : undefined;
 
-        void onRequest(authorMessage, requestSkill, requestSkill === BUILT_IN_SKILL.TRANSLATION ? translationLanguages : undefined, selectedSkillOffset)
-            .then(() => {
-                setGuidance("");
-                setSelectedSkill(undefined);
-            });
+        setGuidance("");
+        setSelectedSkill(undefined);
+        void onRequest(authorMessage, requestSkill, requestSkill === BUILT_IN_SKILL.TRANSLATION ? translationLanguages : undefined, selectedSkillOffset);
     }, [canSend, guidance, onRequest, selectedSkill, skillOffset, translationLanguages]);
 
     useEffect(() => {
