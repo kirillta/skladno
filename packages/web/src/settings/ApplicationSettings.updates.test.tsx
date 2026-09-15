@@ -67,9 +67,13 @@ describe("ApplicationSettings updates", () => {
         expect(screen.getByRole("button", { name: getMessage("settings.viewReleaseNotes") }).classList.contains("bg-transparent")).toBe(true);
     });
 
-    it("shows when an update is downloading", async () => {
-        const updates: DesktopUpdateClient = { getState: vi.fn().mockResolvedValue({ kind: "downloading", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true }), setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined };
+    it("keeps visible activity while an update is downloading", async () => {
+        const available = { kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true } as const;
+        const downloading = { kind: "downloading", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true } as const;
+        const updates: DesktopUpdateClient = { getState: vi.fn().mockResolvedValue(available), setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn().mockResolvedValue(downloading), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined };
         render(<IntlProvider locale="en" messages={messages}><UpdatesSettingsGroup client={updates} desktop /></IntlProvider>);
-        expect(await screen.findByText(getMessage("status.updateDownloading"))).toBeTruthy();
+        await userEvent.setup().click(await screen.findByRole("button", { name: getMessage("settings.downloadUpdate") }));
+        expect((await screen.findByRole("button", { name: getMessage("status.updateDownloading") })).getAttribute("aria-busy")).toBe("true");
+        expect(screen.queryByRole("button", { name: getMessage("settings.checkNow") })).toBeNull();
     });
 });
