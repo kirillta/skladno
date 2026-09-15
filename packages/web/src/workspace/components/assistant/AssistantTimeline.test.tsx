@@ -29,6 +29,15 @@ function AssistantTimeline({ state, message, errorDetails, activity, factCheckCl
 
 
 describe("AssistantTimeline", () => {
+    it("keeps conversation text selectable with the default cursor", () => {
+        const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+        const timeline = view.container.querySelector<HTMLElement>("[aria-live='polite']")!;
+
+        expect(timeline.classList.contains("select-text")).toBe(true);
+        expect(timeline.classList.contains("cursor-default")).toBe(true);
+    });
+
+
     it("shows persisted Fact Check claims in their Findings prepared message", () => {
         render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={[{ id: "findings", articleId: "article", role: "assistant", kind: "response", status: "completed", responseKind: "findings_prepared", createdAt: "2026-08-13T20:30:00.000Z", updatedAt: "2026-08-13T20:30:00.000Z" }]} factCheckClaims={[{ claim: "HTTP was standardized in 1999.", checked: true }]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
 
