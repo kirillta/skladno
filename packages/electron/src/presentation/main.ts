@@ -126,6 +126,9 @@ async function createMainWindow(): Promise<void> {
             telemetry?.capture(failure);
     });
     window.on("close", (event) => {
+        if (closing)
+            return;
+
         event.preventDefault();
         void quitFrom(window);
     });
@@ -218,6 +221,7 @@ if (squirrelStartup) {
             cancelStreams();
             telemetry?.dispose();
             application.database.close();
+            closing = true;
         };
 
         updates = createDesktopUpdateCoordinator(
