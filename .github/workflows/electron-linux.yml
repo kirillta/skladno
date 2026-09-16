@@ -1,0 +1,73 @@
+name: Electron Linux release
+
+on:
+    pull_request:
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: Existing release tag
+                required: true
+    push:
+        tags:
+            - "v*"
+
+permissions:
+    contents: read
+
+jobs:
+    verify-linux:
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - name: Load the Linux credential module
+              run: node -e "require('@napi-rs/keyring')"
+            - run: npm test --workspace @skladno/electron
+            - run: npm run make:electron:linux
+
+    release-linux:
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        runs-on: ubuntu-latest
+        environment: Production
+        timeout-minutes: 25
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ inputs.tag || github.ref }}
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - name: Verify release version
+              env:
+                  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+              run: node scripts/check-electron-release-tag.mjs "$RELEASE_TAG"
+            - name: Package telemetry configuration
+              env:
+                  SKLADNO_POSTHOG_PROJECT_KEY: ${{ vars.SKLADNO_POSTHOG_PROJECT_KEY }}
+              run: |
+                  test -n "$SKLADNO_POSTHOG_PROJECT_KEY"
+                  printf '%s' "{\"endpoint\":\"https://us.i.posthog.com/batch\",\"projectKey\":\"$SKLADNO_POSTHOG_PROJECT_KEY\"}" > packages/electron/telemetry.json
+            - run: npm run make:electron:linux
+            - name: Upload Debian package
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+              run: |
+                  shopt -s nullglob
+                  assets=(packages/electron/out/make/deb/x64/*.deb)
+                  test "${#assets[@]}" -eq 1
+                  if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+                    if [[ "$RELEASE_TAG" == *-preview.* ]]; then prerelease=--prerelease; else prerelease=; fi
+                    gh release create "$RELEASE_TAG" $prerelease --title "Skladno $RELEASE_TAG" --notes "Unsigned Skladno preview release."
+                  fi
+                  gh release upload "$RELEASE_TAG" "${assets[0]}" --clobber

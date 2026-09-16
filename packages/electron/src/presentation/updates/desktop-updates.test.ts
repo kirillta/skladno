@@ -3,11 +3,16 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { createDesktopUpdateCoordinator } from "./desktop-updates.js";
+import { createDesktopUpdateCoordinator, supportsNativeUpdates } from "./desktop-updates.js";
 import { createTelemetryDelivery } from "../../infrastructure/telemetry/telemetry-delivery.js";
 import { createTelemetryOwner } from "../../infrastructure/telemetry/telemetry-owner.js";
 
 // Product scenarios: application.electron-preview-update-discovery, application.electron-preview-update-recovery
+test("native updates are available only on Windows", () => {
+    assert.equal(supportsNativeUpdates("win32"), true);
+    assert.equal(supportsNativeUpdates("linux"), false);
+});
+
 test("update discovery selects the newest complete Windows release without downloading", async () => {
     const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
     const runtimePath = join(root, "runtime-settings.json");

@@ -8,7 +8,7 @@ import {
 import { exposeElectronApplicationClient } from "./preload-bridge.js";
 import { createDesktopSettingsClient } from "./settings/desktop-settings-client.js";
 import { createDesktopShellClient } from "./shell/desktop-shell.js";
-import { createDesktopUpdateClient } from "./updates/desktop-updates.js";
+import { createDesktopUpdateClient, supportsNativeUpdates } from "./updates/desktop-updates.js";
 import { createDesktopTelemetryClient } from "./telemetry/desktop-telemetry.js";
 
 
@@ -44,7 +44,10 @@ function parseCheckpointResult(value: unknown, requestId: string): ElectronCheck
 exposeElectronApplicationClient(ipcRenderer, contextBridge);
 contextBridge.exposeInMainWorld("skladnoDesktop", createDesktopSettingsClient(ipcRenderer));
 contextBridge.exposeInMainWorld("skladnoShell", createDesktopShellClient(ipcRenderer));
-contextBridge.exposeInMainWorld("skladnoUpdates", createDesktopUpdateClient(ipcRenderer));
+
+if (supportsNativeUpdates())
+    contextBridge.exposeInMainWorld("skladnoUpdates", createDesktopUpdateClient(ipcRenderer));
+
 contextBridge.exposeInMainWorld("skladnoTelemetry", createDesktopTelemetryClient(ipcRenderer));
 
 ipcRenderer.on(ELECTRON_LIFECYCLE_CHANNEL.prepareClose, (_event, payload: unknown) => {

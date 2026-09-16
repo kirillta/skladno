@@ -14,7 +14,7 @@ import { createApplicationFailureEvent } from "./telemetry/application-failure-t
 import { registerDesktopSettingsAdapter } from "./settings/desktop-settings.js";
 import { registerDesktopTelemetryAdapter } from "./telemetry/desktop-telemetry.js";
 import { registerDesktopShellAdapter } from "./shell/desktop-shell.js";
-import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter } from "./updates/desktop-updates.js";
+import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter, supportsNativeUpdates } from "./updates/desktop-updates.js";
 
 
 const rendererUrl = "http://localhost:5173";
@@ -153,14 +153,16 @@ async function createMainWindow(): Promise<void> {
 }
 
 
-if (squirrelStartup) {
+if (supportsNativeUpdates() && squirrelStartup) {
     app.quit();
 } else if (!app.requestSingleInstanceLock()) {
     app.quit();
 } else {
     app.on("second-instance", focusMainWindow);
     app.whenReady().then(async () => {
-        app.setAppUserModelId("io.github.kirillta.skladno");
+        if (supportsNativeUpdates())
+            app.setAppUserModelId("io.github.kirillta.skladno");
+
         loadServerEnvironment();
         const config = loadServerConfig();
         const runtimePath = join(app.getPath("userData"), "runtime-settings.json");
@@ -224,28 +226,32 @@ if (squirrelStartup) {
             closing = true;
         };
 
-        updates = createDesktopUpdateCoordinator(
-            { runtimePath, currentVersion: app.getVersion(), supported: app.isPackaged },
-            {
-                fetchReleases: () => net.fetch("https://api.github.com/repos/kirillta/skladno/releases"),
-                openExternal: (url) => shell.openExternal(url),
-            },
-            {
-                database: application.database,
-                dataDirectory: dirname(config.databasePath),
-                updater: autoUpdater,
-                requestCheckpoint: () => mainWindow ? requestDraftCheckpoint(ipcMain, mainWindow.webContents) : Promise.resolve(false),
-                closeApplication: () => closeApplication?.(),
-                telemetry,
-            },
-            { notify: (state) => mainWindow?.webContents.send(desktopUpdatesEvent, state) },
-        );
+        if (supportsNativeUpdates())
+            updates = createDesktopUpdateCoordinator(
+                { runtimePath, currentVersion: app.getVersion(), supported: app.isPackaged },
+                {
+                    fetchReleases: () => net.fetch("https://api.github.com/repos/kirillta/skladno/releases"),
+                    openExternal: (url) => shell.openExternal(url),
+                },
+                {
+                    database: application.database,
+                    dataDirectory: dirname(config.databasePath),
+                    updater: autoUpdater,
+                    requestCheckpoint: () => mainWindow ? requestDraftCheckpoint(ipcMain, mainWindow.webContents) : Promise.resolve(false),
+                    closeApplication: () => closeApplication?.(),
+                    telemetry,
+                },
+                { notify: (state) => mainWindow?.webContents.send(desktopUpdatesEvent, state) },
+            );
+
         app.on("child-process-gone", (_event, details) => {
             const failure = createApplicationFailureEvent("child_process", details.reason);
             if (failure)
                 telemetry?.capture(failure);
         });
-        registerDesktopUpdatesAdapter({ ipcMain, coordinator: updates });
+        if (updates)
+            registerDesktopUpdatesAdapter({ ipcMain, coordinator: updates });
+
         Menu.setApplicationMenu(null);
 
         await createMainWindow();

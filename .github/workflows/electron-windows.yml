@@ -77,7 +77,7 @@ jobs:
             - name: Build installer
               run: npm run make:electron
 
-            - name: Create unsigned release
+            - name: Upload unsigned Windows assets
               env:
                   GH_TOKEN: ${{ github.token }}
                   RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
@@ -87,4 +87,6 @@ jobs:
                   $releases = $assets | Where-Object Name -eq 'RELEASES'
                   $package = $assets | Where-Object Name -match '-full\.nupkg$'
                   if ($setup.Count -ne 1 -or $releases.Count -ne 1 -or $package.Count -ne 1) { throw 'Expected exactly one setup executable, RELEASES manifest, and full nupkg.' }
-                  gh release create $env:RELEASE_TAG $setup.FullName $releases.FullName $package.FullName --prerelease=$($env:RELEASE_TAG -match '-preview\.') --title "Skladno $env:RELEASE_TAG" --notes "Unsigned Windows 11 x64 release. Windows may show a SmartScreen warning. Signing remains tracked in issue #168."
+                  gh release view $env:RELEASE_TAG 2>$null
+                  if ($LASTEXITCODE -ne 0) { gh release create $env:RELEASE_TAG --prerelease=$($env:RELEASE_TAG -match '-preview\.') --title "Skladno $env:RELEASE_TAG" --notes "Unsigned Skladno preview release." }
+                  gh release upload $env:RELEASE_TAG $setup.FullName $releases.FullName $package.FullName --clobber

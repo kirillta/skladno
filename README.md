@@ -44,7 +44,7 @@ Preview your writing against your publishing preferences and length guidance, th
 
 ## Install Skladno
 
-Skladno is currently available for **Windows 11 x64**.
+Skladno is available for **Windows 11 x64** and **Ubuntu 22.04 x64 plus compatible Debian-based distributions**.
 
 Currently supported AI providers:
 
@@ -57,14 +57,14 @@ Currently supported AI providers:
 
 Through OpenCode Zen, Authors can also use models from additional vendors available in its catalog. Supported editorial operations depend on the chosen model's capabilities.
 
-1. Open the [latest release](https://github.com/kirillta/skladno/releases/latest) and download the setup `.exe` from **Assets**.
-2. Run the installer and open Skladno.
+1. Open the [latest release](https://github.com/kirillta/skladno/releases/latest) and download the Windows setup `.exe` or Debian `.deb` from **Assets**.
+2. Run the installer or install the Debian package with your system package manager, then open Skladno.
 3. To use the Editorial Assistant, open **Settings > AI**, add your provider connection and API key, and verify the connection. Your provider's pricing applies.
 4. Create an Article and start writing. Set up a backup folder in **Settings > Data & backups** to protect your work.
 
-**Releases are not digitally signed.** Windows may show a SmartScreen warning when you run the installer. Check that you downloaded it from this repository's release page before choosing to continue.
+**Releases are not digitally signed.** Windows may show a SmartScreen warning. Check that you downloaded the installer or package from this repository's release page before continuing.
 
-You control update checks, downloads, and when to restart for an update in **Settings > About**. If an update causes trouble, follow the [update recovery guide](docs/user/update-recovery.md).
+On Windows, you control update checks, downloads, and restarts in **Settings > About**. On Debian-based distributions, reinstall a newer `.deb` through your package manager. If a Windows update causes trouble, follow the [update recovery guide](docs/user/update-recovery.md).
 
 ## Help
 

@@ -12,7 +12,11 @@ export default {
         packageAfterCopy: async (_config, buildPath) => {
             const destination = path.join(buildPath, "dist", "node_modules", "@napi-rs");
             mkdirSync(destination, { recursive: true });
-            for (const packageName of ["keyring", "keyring-win32-x64-msvc"])
+            const keyringPackage = process.platform === "linux"
+                ? "keyring-linux-x64-gnu"
+                : "keyring-win32-x64-msvc";
+
+            for (const packageName of ["keyring", keyringPackage])
                 cpSync(path.join(import.meta.dirname, "..", "..", "node_modules", "@napi-rs", packageName), path.join(destination, packageName), { recursive: true });
         },
     },
@@ -31,6 +35,19 @@ export default {
                 name: "io.github.kirillta.skladno",
                 setupExe: `Skladno-${rootPackage.version}-win32-x64-setup.exe`,
                 setupIcon: path.join(import.meta.dirname, "assets", "icon.ico"),
+            },
+        },
+        {
+            name: "@electron-forge/maker-deb",
+            platforms: ["linux"],
+            config: {
+                options: {
+                    name: "skladno",
+                    maintainer: "Kirill Taran",
+                    homepage: "https://github.com/kirillta/skladno",
+                    categories: ["Office"],
+                    icon: path.join(import.meta.dirname, "assets", "icon.png"),
+                },
             },
         },
     ],
