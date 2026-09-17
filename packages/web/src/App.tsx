@@ -7,9 +7,11 @@ import { NotificationProvider } from "./notifications/NotificationProvider.js";
 import { useKeyBindingDispatcher } from "./key-bindings/KeyBindingProvider.js";
 import { saveScheduledWebBackup } from "./settings/web-backups.js";
 import type { SettingsSection } from "./settings/settings-sections.js";
+import { QuickStartDialog } from "./application/QuickStartDialog.js";
 import { desktopShellCommands, resolveTheme, type KeyBindingOverrides, type ResolvedTheme, type ThemePreference } from "@skladno/shared";
 
 const defaultClient = createRendererApplicationClient();
+const quickStartCompletionKey = "skladno.quick-start.v1";
 
 
 function readSystemTheme(): ResolvedTheme {
@@ -45,6 +47,8 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>();
     const [theme, setTheme] = useState<ThemePreference>("system");
     const [focusUpdates, setFocusUpdates] = useState(false);
+    const [quickStartOpen, setQuickStartOpen] = useState(() => localStorage.getItem(quickStartCompletionKey) === null);
+    const [hasUsableAiConnection, setHasUsableAiConnection] = useState(false);
     const desktopShell = getDesktopShellClient();
     const dispatcher = useKeyBindingDispatcher(keyBindingOverrides, desktopShell !== undefined);
 
@@ -54,6 +58,7 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
         void client.getApplicationSettings().then((settings) => {
             setKeyBindingOverrides(settings.keyBindingOverrides);
             setTheme(settings.general.theme);
+            setHasUsableAiConnection(settings.connections.some((connection) => connection.active !== false && connection.status === "connected"));
             void saveScheduledWebBackup(client, settings.backupPolicy).catch(() => undefined);
         });
     }, [client]);
@@ -61,6 +66,17 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
     useEffect(() => {
         void getDesktopUpdateClient()?.rendererReady();
     }, []);
+
+    const closeQuickStart = () => {
+        localStorage.setItem(quickStartCompletionKey, "complete");
+        setQuickStartOpen(false);
+    };
+
+    const openQuickStart = () => setQuickStartOpen(true);
+    const openModelSettings = () => {
+        setSettingsSection("ai");
+        setScreen("application-settings");
+    };
 
     useEffect(() => {
         if (!desktopShell)
@@ -86,13 +102,11 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
                 navigation={{ openSettings: () => {
                     setSettingsSection("general");
                     setScreen("application-settings");
-                }, openModelSettings: () => {
-                    setSettingsSection("ai");
-                    setScreen("application-settings");
-                }, backToWorkspace: () => setScreen("editorial-workspace") }}
+                }, openModelSettings, openQuickStart, backToWorkspace: () => setScreen("editorial-workspace") }}
                 bindings={{ dispatcher, keyBindingOverrides: keyBindingOverrides ?? {}, onKeyBindingsUpdated: setKeyBindingOverrides, onThemeApplied: setTheme }}
                 updates={{ focusUpdates, onUpdatesFocused: () => setFocusUpdates(false) }}
             />
+            {quickStartOpen && <QuickStartDialog hasUsableAiConnection={hasUsableAiConnection} close={closeQuickStart} openModelSettings={openModelSettings} />}
         </NotificationProvider>
     </I18nProvider>;
 }

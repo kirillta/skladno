@@ -35,6 +35,7 @@ interface EditorialWorkspaceContext {
 interface EditorialWorkspaceNavigation {
     openSettings: () => void;
     openModelSettings: () => void;
+    openQuickStart: () => void;
     backToWorkspace: () => void;
 }
 
@@ -248,7 +249,7 @@ function useWorkspaceShortcuts({ dispatcher, screen, actions, layout, save }: {
 
 export function EditorialWorkspaceProvider({ context, navigation, bindings, updates = {} }: { context: EditorialWorkspaceContext; navigation: EditorialWorkspaceNavigation; bindings: EditorialWorkspaceBindings; updates?: EditorialWorkspaceUpdates }) {
     const { client, screen, settingsSection } = context;
-    const { openSettings, openModelSettings, backToWorkspace } = navigation;
+    const { openSettings, openModelSettings, openQuickStart, backToWorkspace } = navigation;
     const { dispatcher, keyBindingOverrides, onKeyBindingsUpdated, onThemeApplied } = bindings;
     const { focusUpdates = false, onUpdatesFocused = () => undefined } = updates;
     const intl = useIntl();
@@ -285,7 +286,7 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
         </main>;
 
     if (screen === "application-settings")
-        return <ApplicationSettings client={client} back={backToWorkspace} initialSection={settingsSection} onKeyBindingsUpdated={onKeyBindingsUpdated} onThemeApplied={onThemeApplied} focusUpdates={focusUpdates} onUpdatesFocused={onUpdatesFocused} />;
+        return <ApplicationSettings client={client} back={backToWorkspace} initialSection={settingsSection} onKeyBindingsUpdated={onKeyBindingsUpdated} onThemeApplied={onThemeApplied} focusUpdates={focusUpdates} onUpdatesFocused={onUpdatesFocused} openQuickStart={openQuickStart} />;
 
     return <WorkspaceScreen
         content={{ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings }}

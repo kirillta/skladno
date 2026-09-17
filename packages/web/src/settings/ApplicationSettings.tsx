@@ -18,8 +18,8 @@ import type { SettingsSection } from "./settings-sections.js";
 import { useAiSettingsController } from "./use-ai-settings-controller.js";
 
 
-export function ApplicationSettings(props: { client: EditorialWorkspaceClient; back: () => void; initialSection?: SettingsSection; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void }) {
-    const { client, back, initialSection = "general", onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused } = props;
+export function ApplicationSettings(props: { client: EditorialWorkspaceClient; back: () => void; initialSection?: SettingsSection; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void; openQuickStart?: () => void }) {
+    const { client, back, initialSection = "general", onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused, openQuickStart } = props;
     const intl = useIntl();
     const { notify, notifyError } = useNotifications();
     const [section, setSection] = useState<SettingsSection>(initialSection);
@@ -34,6 +34,8 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
     const desktopSettings = getDesktopSettingsClient();
     const telemetry = getDesktopTelemetryClient();
     const ai = useAiSettingsController({ client, intl, settings, desktopSettings, setSettings, setStatus, aiSettingsOpen: section === "ai" });
+
+    useEffect(() => setSection(initialSection), [initialSection]);
 
     useEffect(() => {
         void client.getApplicationSettings().then((loaded) => {
@@ -182,7 +184,7 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
     else if (settings && section === "publishing")
         sectionContent = <PublishingSettingsSection publishing={publishingSettings} save={savePublishingSettings} general={general} saveGeneral={saveGeneral} />;
     else if (settings && section === "about")
-        sectionContent = <AboutSettingsSection />;
+        sectionContent = <AboutSettingsSection openQuickStart={openQuickStart} />;
 
 
     return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">

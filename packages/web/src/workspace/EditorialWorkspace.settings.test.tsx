@@ -26,7 +26,7 @@ describe("Editorial Workspace settings", () => {
         render(<App client={client} />);
         expect(await screen.findByText(getMessage("workspace.aiConnectionRequired"))).toBeTruthy();
         expect(screen.getByText(getMessage("workspace.aiConnectionCapabilities"))).toBeTruthy();
-        await user.click(screen.getByRole("button", { name: "Add model key" }));
+        await user.click(screen.getAllByRole("button", { name: "Add model key" }).at(-1)!);
         expect(await screen.findByRole("heading", { name: "Connections" })).toBeTruthy();
     });
 
