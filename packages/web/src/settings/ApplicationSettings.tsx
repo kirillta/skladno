@@ -187,7 +187,7 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
         sectionContent = <AboutSettingsSection openQuickStart={openQuickStart} />;
 
 
-    return <main className="flex h-dvh flex-col overflow-hidden bg-surface text-ink md:flex-row">
+    return <main className="flex h-screen flex-col overflow-hidden bg-surface text-ink md:flex-row">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
         <SettingsContent section={section} settings={settings}>{sectionContent}</SettingsContent>
         {ai.connectionPendingRemoval && <ConnectionRemovalDialog connection={ai.connectionPendingRemoval} close={() => ai.setConnectionPendingRemoval(undefined)} remove={() => void ai.removeConnection()} />}
