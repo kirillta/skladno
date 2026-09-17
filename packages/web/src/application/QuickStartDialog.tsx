@@ -48,7 +48,7 @@ export function QuickStartDialog({ hasUsableAiConnection, close, openModelSettin
     }}>
         <div className="flex items-start justify-between gap-4">
             <h1 id="quick-start-title" className="text-lg font-semibold">{intl.formatMessage({ id: "quickStart.title" })}</h1>
-            <IconButton label={intl.formatMessage({ id: "quickStart.close" })} variant="quiet" onClick={close}><CloseIcon /></IconButton>
+            <IconButton label={intl.formatMessage({ id: "quickStart.close" })} variant="quiet" onClick={close}><CloseIcon className="size-4" /></IconButton>
         </div>
         <ol className="mt-5 list-decimal space-y-4 pl-5 text-sm leading-5">
             <li>

@@ -465,6 +465,7 @@ export const messages = {
     "settings.sourceCode": "Source code",
     "settings.reportProblem": "Report a problem",
     "settings.quickStart": "Quick start",
+    "settings.quickStartHint": "Review how Articles, the Assistant, and model keys work.",
     "settings.openQuickStart": "Open quick start",
     "quickStart.title": "Welcome to Skladno",
     "quickStart.close": "Close quick start",
