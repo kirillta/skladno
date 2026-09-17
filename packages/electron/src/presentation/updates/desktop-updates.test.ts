@@ -19,13 +19,16 @@ test("native updates are available only on Windows", () => {
 test("Linux release discovery offers the newest Debian package without downloading", async () => {
     const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
     let checked = false;
+    let opened = false;
     const coordinator = createDesktopUpdateCoordinator(
         { runtimePath: join(root, "runtime-settings.json"), currentVersion: "0.1.0", supported: true, platform: "linux" },
         {
             fetchReleases: async () => new Response(JSON.stringify([
                 { tag_name: "v0.2.0", html_url: "https://example.test/release", prerelease: false, draft: false, assets: [{ name: "skladno_0.2.0_amd64.deb" }] },
             ])),
-            openExternal: async () => undefined,
+            openExternal: async () => {
+                opened = true;
+            },
         },
         {
             database: { exec: () => undefined }, dataDirectory: root,
@@ -40,9 +43,12 @@ test("Linux release discovery offers the newest Debian package without downloadi
         coordinator.setNetworkAccess(true);
         const state = await coordinator.checkNow();
         assert.equal(state.kind, "available");
+        assert.equal(state.recoveryAvailable, false);
         assert.equal(state.kind === "available" && state.downloadable, false);
         coordinator.download();
+        await coordinator.openRecoveryGuide();
         assert.equal(checked, false);
+        assert.equal(opened, false);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

@@ -80,7 +80,7 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
 
 
     function withRecoveryGuidance(next: DesktopUpdateState): DesktopUpdateState {
-        return platform === "win32" ? { ...next, recoveryAvailable: true } : next;
+        return { ...next, recoveryAvailable: platform === "win32" };
     }
 
 
@@ -235,7 +235,7 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
             }
         },
         openReleaseNotes: () => state.kind === "available" || state.kind === "downloading" || state.kind === "ready" ? openExternal(state.releaseNotesUrl) : Promise.resolve(),
-        openRecoveryGuide: () => openExternal(recoveryGuideUrl),
+        openRecoveryGuide: () => platform === "win32" ? openExternal(recoveryGuideUrl) : Promise.resolve(),
         schedule() {
             async function runAutomaticUpdateCheck(): Promise<void> {
                 const runtime = readCurrentRuntimeSettings();
