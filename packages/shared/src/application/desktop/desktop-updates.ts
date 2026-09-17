@@ -3,6 +3,7 @@ export type DesktopUpdateState = {
     automaticChecks: boolean;
     includePrereleases: boolean;
     networkAccess: boolean;
+    recoveryAvailable?: boolean;
 } & (
     | { kind: "unsupported" }
     | { kind: "current"; lastCheckedAt?: string }
@@ -39,6 +40,9 @@ export function isDesktopUpdateState(value: unknown): value is DesktopUpdateStat
         return false;
 
     if (typeof value.currentVersion !== "string" || typeof value.automaticChecks !== "boolean" || typeof value.includePrereleases !== "boolean" || typeof value.networkAccess !== "boolean")
+        return false;
+
+    if (value.recoveryAvailable !== undefined && typeof value.recoveryAvailable !== "boolean")
         return false;
 
     if (value.kind === "unsupported")

@@ -72,7 +72,7 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
             {state.kind === "failed" && <Button variant="secondary" onClick={() => void client.checkNow().then(setState)}>{intl.formatMessage({ id: "settings.retry" })}</Button>}
             {state.kind !== "unsupported" && state.networkAccess && state.kind !== "failed" && state.kind !== "downloading" && <Button variant="secondary" state={state.kind === "checking" ? "loading" : "default"} onClick={() => void client.checkNow().then(setState)}>{intl.formatMessage({ id: "settings.checkNow" })}</Button>}
             {details && <Button variant="quiet" onClick={() => void client.openReleaseNotes()}>{intl.formatMessage({ id: "settings.viewReleaseNotes" })}</Button>}
-            {state.kind !== "unsupported" && <Button variant="quiet" onClick={() => void client.openRecoveryGuide()}>{intl.formatMessage({ id: "settings.updateRecovery" })}</Button>}
+            {state.recoveryAvailable && <Button variant="quiet" onClick={() => void client.openRecoveryGuide()}>{intl.formatMessage({ id: "settings.updateRecovery" })}</Button>}
         </div>}>
             <span />
         </SettingRow>
