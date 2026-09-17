@@ -53,7 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonHTML
     const { children, className, variant = "primary", compact = false, state = "default", loadingLabel, disabled, ...buttonProps } = props;
     const intl = useIntl();
     const loading = state === "loading";
-    return <button ref={ref} {...buttonProps} disabled={disabled || loading} className={joinClassNames("min-h-9 rounded-control border py-2 text-xs font-semibold leading-5 transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55", compact ? "px-2" : "px-3", buttonVariantClasses[variant], controlStateClasses[state], className)} aria-busy={loading || undefined}>
+    return <button ref={ref} {...buttonProps} disabled={disabled || loading} className={joinClassNames("self-center min-h-9 rounded-control border py-2 text-xs font-semibold leading-5 transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55", compact ? "px-2" : "px-3", buttonVariantClasses[variant], controlStateClasses[state], className)} aria-busy={loading || undefined}>
         {loading ? <>
             <span className="invisible" aria-hidden="true">{children}</span>
             <svg className="absolute inset-0 m-auto size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" /><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="3" /></svg>
