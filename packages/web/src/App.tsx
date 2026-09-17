@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import type { EditorialWorkspaceClient } from "./application/client.js";
 import { createRendererApplicationClient, getDesktopShellClient, getDesktopUpdateClient } from "./application/desktop-client.js";
 import { EditorialWorkspaceProvider } from "./workspace/EditorialWorkspace.js";
@@ -12,6 +12,11 @@ import { desktopShellCommands, resolveTheme, type KeyBindingOverrides, type Reso
 
 const defaultClient = createRendererApplicationClient();
 const quickStartCompletionKey = "skladno.quick-start.v1";
+
+
+function hasUsableAiConnection(settings: Awaited<ReturnType<EditorialWorkspaceClient["getApplicationSettings"]>>): boolean {
+    return settings.connections.some((connection) => connection.active !== false && connection.status === "connected");
+}
 
 
 function readSystemTheme(): ResolvedTheme {
@@ -48,7 +53,7 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
     const [theme, setTheme] = useState<ThemePreference>("system");
     const [focusUpdates, setFocusUpdates] = useState(false);
     const [quickStartOpen, setQuickStartOpen] = useState(() => localStorage.getItem(quickStartCompletionKey) === null);
-    const [hasUsableAiConnection, setHasUsableAiConnection] = useState(false);
+    const [quickStartConnectionReady, setQuickStartConnectionReady] = useState<boolean>();
     const desktopShell = getDesktopShellClient();
     const dispatcher = useKeyBindingDispatcher(keyBindingOverrides, desktopShell !== undefined);
 
@@ -58,9 +63,17 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
         void client.getApplicationSettings().then((settings) => {
             setKeyBindingOverrides(settings.keyBindingOverrides);
             setTheme(settings.general.theme);
-            setHasUsableAiConnection(settings.connections.some((connection) => connection.active !== false && connection.status === "connected"));
+            setQuickStartConnectionReady(hasUsableAiConnection(settings));
             void saveScheduledWebBackup(client, settings.backupPolicy).catch(() => undefined);
-        });
+        }).catch(() => setQuickStartConnectionReady(false));
+    }, [client]);
+
+    const refreshQuickStartConnection = useCallback(() => {
+        setQuickStartConnectionReady(undefined);
+        void client.getApplicationSettings().then(
+            (settings) => setQuickStartConnectionReady(hasUsableAiConnection(settings)),
+            () => setQuickStartConnectionReady(false),
+        );
     }, [client]);
 
     useEffect(() => {
@@ -72,10 +85,17 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
         setQuickStartOpen(false);
     };
 
-    const openQuickStart = () => setQuickStartOpen(true);
+    const openQuickStart = () => {
+        setQuickStartOpen(true);
+        refreshQuickStartConnection();
+    };
     const openModelSettings = () => {
         setSettingsSection("ai");
         setScreen("application-settings");
+    };
+    const startWriting = () => {
+        closeQuickStart();
+        setScreen("editorial-workspace");
     };
 
     useEffect(() => {
@@ -106,7 +126,7 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
                 bindings={{ dispatcher, keyBindingOverrides: keyBindingOverrides ?? {}, onKeyBindingsUpdated: setKeyBindingOverrides, onThemeApplied: setTheme }}
                 updates={{ focusUpdates, onUpdatesFocused: () => setFocusUpdates(false) }}
             />
-            {quickStartOpen && <QuickStartDialog hasUsableAiConnection={hasUsableAiConnection} close={closeQuickStart} openModelSettings={openModelSettings} />}
+            {quickStartOpen && quickStartConnectionReady !== undefined && <QuickStartDialog hasUsableAiConnection={quickStartConnectionReady} close={closeQuickStart} openModelSettings={openModelSettings} startWriting={startWriting} />}
         </NotificationProvider>
     </I18nProvider>;
 }

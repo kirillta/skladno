@@ -49,18 +49,18 @@ const buttonVariantClasses = {
 } as const;
 
 
-export function Button(props: PropsWithChildren<ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof buttonVariantClasses; compact?: boolean; state?: ControlState; loadingLabel?: string }>) {
+export const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof buttonVariantClasses; compact?: boolean; state?: ControlState; loadingLabel?: string }>>(function Button(props, ref) {
     const { children, className, variant = "primary", compact = false, state = "default", loadingLabel, disabled, ...buttonProps } = props;
     const intl = useIntl();
     const loading = state === "loading";
-    return <button {...buttonProps} disabled={disabled || loading} className={joinClassNames("min-h-9 rounded-control border py-2 text-xs font-semibold leading-5 transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55", compact ? "px-2" : "px-3", buttonVariantClasses[variant], controlStateClasses[state], className)} aria-busy={loading || undefined}>
+    return <button ref={ref} {...buttonProps} disabled={disabled || loading} className={joinClassNames("min-h-9 rounded-control border py-2 text-xs font-semibold leading-5 transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55", compact ? "px-2" : "px-3", buttonVariantClasses[variant], controlStateClasses[state], className)} aria-busy={loading || undefined}>
         {loading ? <>
             <span className="invisible" aria-hidden="true">{children}</span>
             <svg className="absolute inset-0 m-auto size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" /><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="3" /></svg>
             <span className="sr-only" role="status">{loadingLabel ?? intl.formatMessage({ id: "ui.loading" })}</span>
         </> : children}
     </button>;
-}
+});
 
 
 const iconButtonVariantClasses = {
@@ -189,9 +189,9 @@ export function Diff({ removed, added, layout = "stacked", state = "pending" }: 
 }
 
 
-export function Dialog({ children, ...props }: PropsWithChildren<DialogHTMLAttributes<HTMLDialogElement>>) {
-    return <dialog {...props} className={joinClassNames("fixed inset-0 z-50 m-auto w-fit max-h-[calc(100dvh-2rem)] overflow-auto rounded-panel border border-border bg-surface-raised p-5 text-ink shadow-dialog", props.className)}>{children}</dialog>;
-}
+export const Dialog = forwardRef<HTMLDialogElement, PropsWithChildren<DialogHTMLAttributes<HTMLDialogElement>>>(function Dialog({ children, ...props }, ref) {
+    return <dialog ref={ref} {...props} className={joinClassNames("fixed inset-0 z-50 m-auto w-fit max-h-[calc(100dvh-2rem)] overflow-auto rounded-panel border border-border bg-surface-raised p-5 text-ink shadow-dialog", props.className)}>{children}</dialog>;
+});
 
 
 export function Drawer({ children, ...props }: PropsWithChildren<HTMLAttributes<HTMLElement>>) {

@@ -1,16 +1,43 @@
+import { useLayoutEffect, useRef } from "react";
 import { useIntl } from "react-intl";
 import { Button, Dialog, IconButton } from "../ui/primitives.js";
 import { CloseIcon } from "../ui/icons.js";
 
 
-export function QuickStartDialog({ hasUsableAiConnection, close, openModelSettings }: { hasUsableAiConnection: boolean; close: () => void; openModelSettings: () => void }) {
+export function QuickStartDialog({ hasUsableAiConnection, close, openModelSettings, startWriting }: { hasUsableAiConnection: boolean; close: () => void; openModelSettings: () => void; startWriting: () => void }) {
     const intl = useIntl();
+    const dialog = useRef<HTMLDialogElement>(null);
+    const primaryAction = useRef<HTMLButtonElement>(null);
+
+    useLayoutEffect(() => {
+        const element = dialog.current;
+        const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+        if (!element)
+            return;
+
+        if (typeof element.showModal === "function")
+            element.showModal();
+        else
+            element.setAttribute("open", "");
+
+        primaryAction.current?.focus();
+        return () => {
+            if (element.open && typeof element.close === "function")
+                element.close();
+            else
+                element.removeAttribute("open");
+
+            if (previousFocus?.isConnected)
+                previousFocus.focus({ preventScroll: true });
+        };
+    }, []);
+
     const addModelKey = () => {
         close();
         openModelSettings();
     };
 
-    return <Dialog open aria-labelledby="quick-start-title" className="w-full max-w-[calc(100vw-2rem)] sm:max-w-2xl" onCancel={(event) => {
+    return <Dialog ref={dialog} aria-labelledby="quick-start-title" className="w-full max-w-[calc(100vw-2rem)] sm:max-w-2xl" onCancel={(event) => {
         event.preventDefault();
         close();
     }} onKeyDown={(event) => {
@@ -40,8 +67,8 @@ export function QuickStartDialog({ hasUsableAiConnection, close, openModelSettin
         <div className="mt-6 flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={close}>{intl.formatMessage({ id: "quickStart.skip" })}</Button>
             {hasUsableAiConnection
-                ? <Button autoFocus onClick={close}>{intl.formatMessage({ id: "quickStart.startWriting" })}</Button>
-                : <Button autoFocus onClick={addModelKey}>{intl.formatMessage({ id: "quickStart.addModelKey" })}</Button>}
+                ? <Button ref={primaryAction} onClick={startWriting}>{intl.formatMessage({ id: "quickStart.startWriting" })}</Button>
+                : <Button ref={primaryAction} onClick={addModelKey}>{intl.formatMessage({ id: "quickStart.addModelKey" })}</Button>}
         </div>
     </Dialog>;
 }
