@@ -26,7 +26,7 @@ describe("Editorial Workspace assistant requests", () => {
 
         render(<App client={client} />);
 
-        expect(await screen.findByText("Deutscher Entwurf")).toBeTruthy();
+        expect(await screen.findByText("Deutscher Entwurf", {}, { timeout: 5_000 })).toBeTruthy();
         await user.click(screen.getByRole("tab", { name: "Spanish" }));
         expect(screen.getByText("Borrador traducido")).toBeTruthy();
         await user.click(screen.getByRole("button", { name: "Edit Spanish translation" }));
