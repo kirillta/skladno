@@ -1,6 +1,11 @@
 import { expect, test, type Locator } from "@playwright/test";
 
 
+test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("skladno.quick-start.v1", "complete"));
+});
+
+
 async function activateWithKeyboard(page: import("@playwright/test").Page, target: Locator): Promise<void> {
     await target.focus();
     await page.keyboard.press("Enter");
