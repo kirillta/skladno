@@ -35,7 +35,7 @@ Preview users receive updates without a signing certificate or a separate update
 
 The renderer gains only a narrow desktop update client and validated state. GitHub access, release selection, Squirrel control, snapshots, and restart authority stay in Electron main. Browser and development builds expose no updater imitation.
 
-The release process becomes deliberately manual at publication. Percentage rollout, multiple channels, downgrade migrations, mandatory security updates, update analytics, macOS, Linux, ARM64, and stable-release signing remain outside this decision.
+The release process becomes deliberately manual at publication. Linux packages use the system package manager or manual `.deb` reinstalls and expose no in-app update client until a recovery-preserving Linux update mechanism exists. Percentage rollout, multiple channels, downgrade migrations, mandatory security updates, update analytics, macOS, ARM64, and stable-release signing remain outside this decision.
 
 ## Verification
 

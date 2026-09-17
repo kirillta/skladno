@@ -87,6 +87,23 @@
             ]
         },
         {
+            "id": "application.electron-linux-preview",
+            "area": "Application shell",
+            "title": "Secured Electron desktop client for Debian-based distributions",
+            "status": "partial",
+            "owners": [
+                "packages/electron/src",
+                "packages/electron/forge.config.js",
+                "packages/server/src/local-application.ts",
+                ".github/workflows/electron-linux.yml"
+            ],
+            "contract": "The unsigned Debian x64 application runs the existing context-isolated, sandboxed Electron workspace and local services from one Debian package. Ubuntu 22.04 x64 is the release-validation baseline; compatible Debian-based distributions may install the same package. It preserves Article, Draft, Revision, backup, credential, renderer-isolation, single-window, native-dialog, and shutdown guarantees. About Settings exposes the installed version but no update controls; package-manager upgrades or manual .deb reinstalls remain author-controlled.",
+            "persistence": "Electron runtime state uses Linux userData while Article data remains in the resolved user-local .skladno directory. Install, upgrade, reinstall, and uninstall do not delete or rewrite author data.",
+            "limitations": [
+                "The installed Ubuntu 22.04 acceptance pass, including Secret Service, launcher, upgrade, reinstall, uninstall, and data-preservation evidence, remains required before any Linux target is guaranteed. Other compatible Debian-based distributions require the same pass; ARM64, RPM, Snap, Flatpak, AppImage, and in-app Linux updates require separate demand and acceptance evidence."
+            ]
+        },
+        {
             "id": "application.desktop-responsive-shell",
             "area": "Application shell",
             "title": "Desktop-ready responsive shell",
@@ -231,6 +248,28 @@
             "evidence": {
                 "kind": "automated",
                 "path": "packages/electron/src/application/lifecycle/close-coordinator.test.ts"
+            }
+        },
+        {
+            "id": "application.electron-linux-package-preserves-data",
+            "title": "Debian package lifecycle preserves author data",
+            "capabilityIds": [
+                "application.electron-linux-preview"
+            ],
+            "preconditions": [
+                "An installed Ubuntu 22.04 x64 or compatible Debian-based preview has a disposable .skladno directory containing an Article, Draft, Revision, and Settings."
+            ],
+            "event": "The author launches, upgrades or reinstalls, then uninstalls the Debian package."
+            ,"expected": [
+                "The existing data reopens after upgrade or reinstall and remains on disk after uninstall.",
+                "The app exposes no unsupported update controls."
+            ],
+            "forbidden": [
+                "Squirrel or autoUpdater calls on Linux, or installer lifecycle actions deleting or rewriting the .skladno directory."
+            ],
+            "evidence": {
+                "kind": "human-reviewed",
+                "path": "docs/development/guides/mvp-release-and-recovery.md"
             }
         },
         {

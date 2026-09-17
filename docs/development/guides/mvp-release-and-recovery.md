@@ -1,6 +1,6 @@
 # MVP release, recovery, and limitations
 
-Use this guide to prepare and verify the browser-based local-first MVP and the unsigned Windows Electron preview. Do not put credentials, an author's Article, or a production database in release evidence.
+Use this guide to prepare and verify the browser-based local-first MVP and unsigned Windows and Debian Electron previews. Ubuntu 22.04 x64 is the Linux release-validation baseline. Do not put credentials, an author's Article, or a production database in release evidence.
 
 ## Release checklist
 
@@ -51,7 +51,7 @@ If backup creation fails, leave the active database alone, check the folder perm
 
 Verify local data and recovery against [ADR-005](../architecture/adr-005-article-state-and-consistency.md) and [ADR-006](../architecture/adr-006-sqlite-lifecycle-and-recovery.md). Verify diagnostics, AI completion and storage, and renderer isolation against [ADR-004](../architecture/adr-004-local-diagnostics.md), [ADR-007](../architecture/adr-007-completion-gated-editorial-engine.md), and [ADR-008](../architecture/adr-008-loopback-service-trust-boundary.md).
 
-The supported releases are the browser-based local-first MVP and the unsigned Windows preview described below. The [cross-cutting inventory](../product/cross-cutting-inventory.md) owns deferred product boundaries. Publishing profiles remain guidance and Copy remains the only publishing action.
+The supported releases are the browser-based local-first MVP and the unsigned Windows and Debian previews described below. Ubuntu 22.04 x64 is the Linux release-validation baseline; compatible Debian-based distributions may use the same package. The [cross-cutting inventory](../product/cross-cutting-inventory.md) owns deferred product boundaries. Publishing profiles remain guidance and Copy remains the only publishing action.
 
 ## Windows Electron preview
 
@@ -87,3 +87,9 @@ Create a public GitHub prerelease with the setup executable, `RELEASES`, and ful
 Exercise failed discovery, failed download, and failed snapshot paths. A failed checkpoint or snapshot must leave the existing preview open. For a failed upgraded startup, follow the public [update recovery guide](../../user/update-recovery.md): reinstall the previous preview and restore its matching pre-update snapshot. Record old and new versions, Windows architecture, pass/fail, recovery result, and remaining checks without private paths or Article content.
 
 Mark the desktop pass failed if the renderer gains Node, filesystem, database, credential, or unrestricted IPC access; if generated content changes an Article without approval; or if install, upgrade, reinstall, or uninstall changes `.skladno` data.
+
+## Debian Electron preview
+
+The release-validation target is Ubuntu 22.04 x64. Compatible Debian-based distributions may install the same package when their glibc and Secret Service environment are compatible, but become guaranteed targets only after this pass succeeds there. Build the Debian package with `npm run make:electron:linux`. Install the `.deb` through the system package manager; release updates are manual package-manager upgrades or `.deb` reinstalls, so About Settings has no update controls.
+
+Run the Desktop acceptance scenario above on an installed `.deb`, using GNOME Keyring or the distribution's Secret Service for the managed-credential checks. Also verify locked and unavailable Secret Service states leave Article editing and environment-variable connections usable, launcher integration opens one focused window, file picking and folder reveal work, and upgrade, reinstall, and uninstall preserve the disposable `.skladno` data. Record the package version, distribution and version, architecture, pass/fail, and remaining checks without credentials, Article content, or private paths.

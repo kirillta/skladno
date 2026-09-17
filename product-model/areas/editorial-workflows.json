@@ -91,7 +91,7 @@
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/editorial/engines/configured-editorial-engine-resolver.ts", "packages/server/src/infrastructure/editorial/adapters/provider-model.ts", "packages/server/src/infrastructure/editorial/services/editorial-model-capability-service.ts"],
             "contract": "A selected model resolves through its active OpenAI, OpenCode Zen, Anthropic, Google Gemini API, xAI Grok, or DeepSeek connection without exposing its credential. Basic text generation may use a configured manual model ID; Style review, Translation, and sourced Fact Check require a supported model capability. Unsupported work is rejected before Article content is sent with guidance to choose a capable model or connection.",
-            "persistence": "Connection metadata and each connection's activation state persist locally; environment credentials remain external and managed credentials remain in Windows Credential Manager.",
+            "persistence": "Connection metadata and each connection's activation state persist locally; environment credentials remain external and managed credentials remain in the supported operating-system credential store.",
             "relatedCapabilityIds": ["settings.ai-connections"]
         },
         {
