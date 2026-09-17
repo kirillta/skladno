@@ -76,7 +76,12 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
     const { database, dataDirectory, updater, requestCheckpoint, closeApplication, telemetry } = execution;
     const { notify, scheduleTimeout = setTimeout } = presentation;
     let release: Release | undefined;
-    let state: DesktopUpdateState = getInitialUpdateState();
+    let state: DesktopUpdateState = withRecoveryGuidance(getInitialUpdateState());
+
+
+    function withRecoveryGuidance(next: DesktopUpdateState): DesktopUpdateState {
+        return platform === "win32" ? { ...next, recoveryAvailable: true } : next;
+    }
 
 
     function readCurrentRuntimeSettings(): RuntimeSettings {
@@ -99,9 +104,9 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
 
 
     function setState(next: DesktopUpdateState): DesktopUpdateState {
-        state = next;
-        notify(next);
-        return next;
+        state = withRecoveryGuidance(next);
+        notify(state);
+        return state;
     }
 
 

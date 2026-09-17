@@ -79,10 +79,11 @@ describe("ApplicationSettings updates", () => {
 
     it("offers Linux release notes without an in-app download", async () => {
         const openReleaseNotes = vi.fn();
-        const updates: DesktopUpdateClient = { getState: vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0", version: "0.1.1", title: "Release", summary: "", releaseNotesUrl: "https://example.test/release", security: false, downloadable: false, automaticChecks: true, includePrereleases: false, networkAccess: true }), setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes, openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined };
+        const updates: DesktopUpdateClient = { getState: vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0", version: "0.1.1", title: "Release", summary: "", releaseNotesUrl: "https://example.test/release", security: false, downloadable: false, automaticChecks: true, includePrereleases: false, networkAccess: true, recoveryAvailable: false }), setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes, openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined };
         render(<IntlProvider locale="en" messages={messages}><UpdatesSettingsGroup client={updates} desktop /></IntlProvider>);
         expect(screen.queryByRole("button", { name: getMessage("settings.downloadUpdate") })).toBeNull();
         await userEvent.setup().click(await screen.findByRole("button", { name: getMessage("settings.viewReleaseNotes") }));
         expect(openReleaseNotes).toHaveBeenCalledOnce();
+        expect(screen.queryByRole("button", { name: getMessage("settings.updateRecovery") })).toBeNull();
     });
 });
