@@ -43,6 +43,7 @@ export default {
             config: {
                 options: {
                     name: "skladno",
+                    bin: "Skladno",
                     maintainer: "Kirill Taran",
                     homepage: "https://github.com/kirillta/skladno",
                     categories: ["Office"],
