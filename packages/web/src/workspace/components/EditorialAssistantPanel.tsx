@@ -256,11 +256,11 @@ export function EditorialAssistantPanel({ data, actions, layout }: { data: Edito
     const elapsedDuration = useElapsedDuration(state, intl);
 
     if (collapsed)
-        return <aside data-workspace-panel="editorial-assistant" className="flex h-full w-full flex-col border-l border-border bg-surface-supporting p-1" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
+        return <aside data-workspace-panel="editorial-assistant" className="flex h-full min-w-0 w-full flex-col border-l border-border bg-surface-supporting p-1" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
             <header className="flex min-h-18 w-full items-center justify-center"><Button className="inline-grid size-9 place-items-center !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.expand" })} onClick={() => setCollapsed(false)}><AssistantIcon className="size-5 text-brand" /></Button></header>
         </aside>;
 
-    return <aside data-workspace-panel="editorial-assistant" className="flex h-full min-h-0 w-full flex-col border-l border-border bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
+    return <aside data-workspace-panel="editorial-assistant" className="flex h-full min-h-0 min-w-0 w-full flex-col border-l border-border bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
         <header className="flex min-h-18 items-center border-b border-border px-5">
             <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="ml-3 text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2>
