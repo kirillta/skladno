@@ -7,8 +7,9 @@ package. The Linux app must preserve the same Article, Draft, Revision, backup,
 credential, privacy, and renderer-isolation guarantees as the Windows app.
 
 The first release uses the system package manager or a manual `.deb` reinstall
-for updates. Electron does not support `autoUpdater` on Linux, so the app must
-not show Windows download or restart actions there.
+for updates. Electron does not support `autoUpdater` on Linux, so the app may
+show a consented release notice and release notes, but not Windows download or
+restart actions.
 
 ## Decisions
 
@@ -26,9 +27,9 @@ not show Windows download or restart actions there.
 - Store app runtime files through Electron's Linux `userData` directory and
   keep Article data in the existing resolved `.skladno` data directory. A Linux
   install, upgrade, reinstall, or uninstall must not remove author data.
-- Keep Linux update settings unavailable until the project has a package
-  repository or another update mechanism that preserves the existing explicit
-  checkpoint and recovery gates.
+- Reuse author-approved GitHub release discovery to show the newest matching
+  Debian release and its release notes. Keep downloading and applying updates
+  unavailable until a recovery-preserving Linux mechanism exists.
 
 ## Implementation
 
@@ -41,17 +42,16 @@ Owners:
 - `packages/electron/src/presentation/updates/desktop-update-coordinator.ts`
 - focused Electron update and startup tests
 
-Guard Squirrel startup handling, the Windows AppUserModelID, and construction
-of the Squirrel update coordinator with `process.platform === "win32"`. Expose
-the existing desktop update client only when native updates are supported, as
-the web Settings code already handles an absent desktop update client. Do not
-add a fake Linux updater.
+Guard Squirrel startup handling and the Windows AppUserModelID with
+`process.platform === "win32"`. Expose the desktop update client on Linux for
+release discovery only; select releases with a `.deb` asset and omit the
+download and restart actions. Do not add a fake Linux updater.
 
 Acceptance:
 
 - A packaged Linux process starts without calling Squirrel or `autoUpdater`.
-- About Settings shows the version and no unsupported check, download, channel,
-  or restart controls.
+- About Settings can show a newer Debian release and its notes after consent,
+  but no download or restart action.
 - Windows update discovery, recovery snapshots, and restart behavior retain
   their current tests and product contract.
 

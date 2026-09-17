@@ -23,6 +23,7 @@ interface DesktopUpdateRuntime {
     runtimePath: string;
     currentVersion: string;
     supported: boolean;
+    platform: "linux" | "win32";
 }
 
 
@@ -70,7 +71,7 @@ function createUpdateSnapshot(database: { exec(sql: string): void }, directory: 
 
 
 export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, source: DesktopUpdateReleaseSource, execution: DesktopUpdateExecution, presentation: DesktopUpdatePresentation) {
-    const { runtimePath, currentVersion, supported } = runtime;
+    const { runtimePath, currentVersion, supported, platform } = runtime;
     const { fetchReleases = () => fetch(releasesUrl), openExternal } = source;
     const { database, dataDirectory, updater, requestCheckpoint, closeApplication, telemetry } = execution;
     const { notify, scheduleTimeout = setTimeout } = presentation;
@@ -130,10 +131,10 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
             if (!response.ok || !Array.isArray(payload))
                 throw new Error("Release discovery failed.");
 
-            release = getNewestCompatibleRelease(payload, currentVersion, runtime);
+            release = getNewestCompatibleRelease(payload, currentVersion, runtime, platform);
             const nextRuntime = updateRuntimeSettings(runtimePath, (current) => ({ ...current, lastUpdateCheckAt: new Date().toISOString() }));
             return release
-                ? setState(getAvailableUpdateState(release, currentVersion, nextRuntime))
+                ? setState(getAvailableUpdateState(release, currentVersion, nextRuntime, platform === "win32"))
                 : setState({ kind: "current", currentVersion, lastCheckedAt: nextRuntime.lastUpdateCheckAt, ...updatePreferences(nextRuntime, currentVersion) });
         } catch {
             return setState({
@@ -204,7 +205,7 @@ export function createDesktopUpdateCoordinator(runtime: DesktopUpdateRuntime, so
         },
         checkNow,
         download(): DesktopUpdateState {
-            if (!release || state.kind !== "available")
+            if (!release || state.kind !== "available" || !state.downloadable)
                 return state;
 
             const downloading = { ...state, kind: "downloading" as const };

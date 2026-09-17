@@ -45,7 +45,7 @@ describe("ApplicationSettings updates", () => {
 
     it("keeps preview update download explicit in About", async () => {
         const user = userEvent.setup();
-        const checkNow = vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1.security", title: "Security preview", summary: "Unsigned Windows preview", releaseNotesUrl: "https://example.test/release", security: true, automaticChecks: true, includePrereleases: true, networkAccess: true });
+        const checkNow = vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1.security", title: "Security preview", summary: "Unsigned Windows preview", releaseNotesUrl: "https://example.test/release", security: true, downloadable: true, automaticChecks: true, includePrereleases: true, networkAccess: true });
         const setNetworkAccess = vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, includePrereleases: true, networkAccess: true });
         const setIncludePrereleases = vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, includePrereleases: false, networkAccess: true });
         const updates: DesktopUpdateClient = { getState: vi.fn().mockResolvedValue({ kind: "current", currentVersion: "0.1.0-preview.1", automaticChecks: true, includePrereleases: true, networkAccess: false }), setNetworkAccess, setAutomaticChecks: vi.fn(), setIncludePrereleases, checkNow, download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined };
@@ -68,12 +68,21 @@ describe("ApplicationSettings updates", () => {
     });
 
     it("keeps visible activity while an update is downloading", async () => {
-        const available = { kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true } as const;
+        const available = { kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, downloadable: true, automaticChecks: true, includePrereleases: true, networkAccess: true } as const;
         const downloading = { kind: "downloading", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true } as const;
         const updates: DesktopUpdateClient = { getState: vi.fn().mockResolvedValue(available), setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn().mockResolvedValue(downloading), restartAndUpdate: vi.fn(), openReleaseNotes: vi.fn(), openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined };
         render(<IntlProvider locale="en" messages={messages}><UpdatesSettingsGroup client={updates} desktop /></IntlProvider>);
         await userEvent.setup().click(await screen.findByRole("button", { name: getMessage("settings.downloadUpdate") }));
         expect((await screen.findByRole("button", { name: getMessage("status.updateDownloading") })).getAttribute("aria-busy")).toBe("true");
         expect(screen.queryByRole("button", { name: getMessage("settings.checkNow") })).toBeNull();
+    });
+
+    it("offers Linux release notes without an in-app download", async () => {
+        const openReleaseNotes = vi.fn();
+        const updates: DesktopUpdateClient = { getState: vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0", version: "0.1.1", title: "Release", summary: "", releaseNotesUrl: "https://example.test/release", security: false, downloadable: false, automaticChecks: true, includePrereleases: false, networkAccess: true }), setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes, openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined };
+        render(<IntlProvider locale="en" messages={messages}><UpdatesSettingsGroup client={updates} desktop /></IntlProvider>);
+        expect(screen.queryByRole("button", { name: getMessage("settings.downloadUpdate") })).toBeNull();
+        await userEvent.setup().click(await screen.findByRole("button", { name: getMessage("settings.viewReleaseNotes") }));
+        expect(openReleaseNotes).toHaveBeenCalledOnce();
     });
 });

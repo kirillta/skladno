@@ -66,7 +66,7 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
             </button>
         </SettingRow>}
         <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.updateStatus" })} hint={intl.formatMessage({ id: "settings.updateStatusHint" }, { version: state.currentVersion })} status={status} fullWidthAction action={<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {state.kind === "available" && <Button onClick={() => void client.download().then(setState)}>{intl.formatMessage({ id: "settings.downloadUpdate" })}</Button>}
+            {state.kind === "available" && state.downloadable && <Button onClick={() => void client.download().then(setState)}>{intl.formatMessage({ id: "settings.downloadUpdate" })}</Button>}
             {state.kind === "downloading" && <Button state="loading" loadingLabel={status}>{status}</Button>}
             {state.kind === "ready" && <Button onClick={() => void client.restartAndUpdate()}>{intl.formatMessage({ id: "settings.restartAndUpdate" })}</Button>}
             {state.kind === "failed" && <Button variant="secondary" onClick={() => void client.checkNow().then(setState)}>{intl.formatMessage({ id: "settings.retry" })}</Button>}

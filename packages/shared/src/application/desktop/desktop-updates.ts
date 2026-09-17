@@ -7,7 +7,7 @@ export type DesktopUpdateState = {
     | { kind: "unsupported" }
     | { kind: "current"; lastCheckedAt?: string }
     | { kind: "checking"; lastCheckedAt?: string }
-    | { kind: "available"; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string }
+    | { kind: "available"; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; downloadable: boolean; lastCheckedAt?: string }
     | { kind: "downloading"; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string }
     | { kind: "ready"; version: string; title: string; summary: string; releaseNotesUrl: string; security: boolean; lastCheckedAt?: string }
     | { kind: "failed"; error: "discovery_failed" | "download_failed" | "apply_failed"; lastCheckedAt?: string }
@@ -58,5 +58,6 @@ export function isDesktopUpdateState(value: unknown): value is DesktopUpdateStat
         && typeof value.title === "string"
         && typeof value.summary === "string"
         && typeof value.releaseNotesUrl === "string"
-        && typeof value.security === "boolean";
+        && typeof value.security === "boolean"
+        && (value.kind !== "available" || typeof value.downloadable === "boolean");
 }

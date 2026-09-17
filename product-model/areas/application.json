@@ -111,7 +111,7 @@
                 "packages/server/src/local-application.ts",
                 ".github/workflows/electron-linux.yml"
             ],
-            "contract": "The unsigned Debian x64 application runs the existing context-isolated, sandboxed Electron workspace and local services from one Debian package. Ubuntu 22.04 x64 is the release-validation baseline; compatible Debian-based distributions may install the same package. It preserves Article, Draft, Revision, backup, credential, renderer-isolation, single-window, native-dialog, and shutdown guarantees. About Settings exposes the installed version but no update controls; package-manager upgrades or manual .deb reinstalls remain author-controlled.",
+            "contract": "The unsigned Debian x64 application runs the existing context-isolated, sandboxed Electron workspace and local services from one Debian package. Ubuntu 22.04 x64 is the release-validation baseline; compatible Debian-based distributions may install the same package. It preserves Article, Draft, Revision, backup, credential, renderer-isolation, single-window, native-dialog, and shutdown guarantees. After author-approved GitHub access, About Settings can show the newest matching Debian release and open its release notes. Package-manager upgrades or manual .deb reinstalls remain author-controlled; Linux exposes no in-app download or apply action.",
             "persistence": "Electron runtime state uses Linux userData while Article data remains in the resolved user-local .skladno directory. Install, upgrade, reinstall, and uninstall do not delete or rewrite author data.",
             "limitations": [
                 "The installed Ubuntu 22.04 acceptance pass, including Secret Service, launcher, upgrade, reinstall, uninstall, and data-preservation evidence, remains required before any Linux target is guaranteed. Other compatible Debian-based distributions require the same pass; ARM64, RPM, Snap, Flatpak, AppImage, and in-app Linux updates require separate demand and acceptance evidence."
@@ -276,7 +276,7 @@
             "event": "The author launches, upgrades or reinstalls, then uninstalls the Debian package."
             ,"expected": [
                 "The existing data reopens after upgrade or reinstall and remains on disk after uninstall.",
-                "The app exposes no unsupported update controls."
+                "The app exposes no in-app downloader or updater."
             ],
             "forbidden": [
                 "Squirrel or autoUpdater calls on Linux, or installer lifecycle actions deleting or rewriting the .skladno directory."
@@ -285,6 +285,16 @@
                 "kind": "human-reviewed",
                 "path": "docs/development/guides/mvp-release-and-recovery.md"
             }
+        },
+        {
+            "id": "application.electron-linux-release-discovery",
+            "title": "Linux release discovery remains manual to install",
+            "capabilityIds": ["application.electron-linux-preview"],
+            "preconditions": ["A packaged Debian release has a newer matching Debian package on GitHub and the author has allowed update network access."],
+            "event": "The Linux desktop coordinator checks release metadata." ,
+            "expected": ["It offers the newest matching Debian release and release notes without starting a download."],
+            "forbidden": ["Squirrel or autoUpdater calls on Linux, an in-app Linux download, or a discovery request without author permission."],
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/updates/desktop-updates.test.ts" }
         },
         {
             "id": "application.electron-packaged-startup",

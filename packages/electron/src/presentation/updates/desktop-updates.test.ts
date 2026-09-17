@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { createDesktopUpdateCoordinator, supportsNativeUpdates } from "./desktop-updates.js";
+import { createDesktopUpdateCoordinator, supportsNativeUpdates, supportsReleaseDiscovery } from "./desktop-updates.js";
 import { createTelemetryDelivery } from "../../infrastructure/telemetry/telemetry-delivery.js";
 import { createTelemetryOwner } from "../../infrastructure/telemetry/telemetry-owner.js";
 
@@ -11,6 +11,41 @@ import { createTelemetryOwner } from "../../infrastructure/telemetry/telemetry-o
 test("native updates are available only on Windows", () => {
     assert.equal(supportsNativeUpdates("win32"), true);
     assert.equal(supportsNativeUpdates("linux"), false);
+    assert.equal(supportsReleaseDiscovery("linux"), true);
+    assert.equal(supportsReleaseDiscovery("darwin"), false);
+});
+
+// Product scenario: application.electron-linux-release-discovery
+test("Linux release discovery offers the newest Debian package without downloading", async () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
+    let checked = false;
+    const coordinator = createDesktopUpdateCoordinator(
+        { runtimePath: join(root, "runtime-settings.json"), currentVersion: "0.1.0", supported: true, platform: "linux" },
+        {
+            fetchReleases: async () => new Response(JSON.stringify([
+                { tag_name: "v0.2.0", html_url: "https://example.test/release", prerelease: false, draft: false, assets: [{ name: "skladno_0.2.0_amd64.deb" }] },
+            ])),
+            openExternal: async () => undefined,
+        },
+        {
+            database: { exec: () => undefined }, dataDirectory: root,
+            updater: { setFeedURL: () => undefined, checkForUpdates: () => {
+                checked = true;
+            }, quitAndInstall: () => undefined, on: () => undefined },
+            requestCheckpoint: async () => true, closeApplication: () => undefined,
+        },
+        { notify: () => undefined },
+    );
+    try {
+        coordinator.setNetworkAccess(true);
+        const state = await coordinator.checkNow();
+        assert.equal(state.kind, "available");
+        assert.equal(state.kind === "available" && state.downloadable, false);
+        coordinator.download();
+        assert.equal(checked, false);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
 });
 
 test("update discovery selects the newest complete Windows release without downloading", async () => {
@@ -19,7 +54,7 @@ test("update discovery selects the newest complete Windows release without downl
     writeFileSync(runtimePath, JSON.stringify({ updateNetworkAccess: true, includePrereleaseUpdates: false }));
     let checked = false;
     const coordinator = createDesktopUpdateCoordinator(
-        { runtimePath, currentVersion: "0.1.0-preview.1", supported: true },
+        { runtimePath, currentVersion: "0.1.0-preview.1", supported: true, platform: "win32" },
         {
             fetchReleases: async () => new Response(JSON.stringify([
                 { tag_name: "v0.3.0-preview.1", html_url: "https://example.test/future-preview", prerelease: true, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] },
@@ -55,7 +90,7 @@ test("update discovery requires persisted network access", async () => {
     const root = mkdtempSync(join(tmpdir(), "skladno-updates-test-"));
     let requests = 0;
     const coordinator = createDesktopUpdateCoordinator(
-        { runtimePath: join(root, "runtime-settings.json"), currentVersion: "0.1.0-preview.1", supported: true },
+        { runtimePath: join(root, "runtime-settings.json"), currentVersion: "0.1.0-preview.1", supported: true, platform: "win32" },
         {
             fetchReleases: async () => {
                 requests += 1;
@@ -91,7 +126,7 @@ test("automatic update discovery runs at startup and daily while Skladno remains
     const scheduled: { callback: () => void | Promise<void>; delay: number }[] = [];
     let requests = 0;
     const coordinator = createDesktopUpdateCoordinator(
-        { runtimePath, currentVersion: "0.1.0", supported: true },
+        { runtimePath, currentVersion: "0.1.0", supported: true, platform: "win32" },
         {
             fetchReleases: async () => {
                 requests += 1;
@@ -125,7 +160,7 @@ test("a late update response preserves a newer telemetry consent", async () => {
     const runtimePath = join(root, "runtime-settings.json");
     let resolveResponse: ((response: Response) => void) | undefined;
     const coordinator = createDesktopUpdateCoordinator(
-        { runtimePath, currentVersion: "0.1.0", supported: true },
+        { runtimePath, currentVersion: "0.1.0", supported: true, platform: "win32" },
         {
             fetchReleases: () => new Promise((resolve) => {
                 resolveResponse = resolve;
@@ -163,7 +198,7 @@ test("applying a downloaded update records its recovery snapshot outcome", async
     const telemetry: unknown[] = [];
     let downloaded: (() => void) | undefined;
     const coordinator = createDesktopUpdateCoordinator(
-        { runtimePath, currentVersion: "0.1.0", supported: true },
+        { runtimePath, currentVersion: "0.1.0", supported: true, platform: "win32" },
         {
             fetchReleases: async () => new Response(JSON.stringify([{ tag_name: "v0.1.1", html_url: "https://example.test/release", prerelease: false, draft: false, assets: [{ name: "RELEASES" }, { name: "Skladno-full.nupkg" }] }])),
             openExternal: async () => undefined,

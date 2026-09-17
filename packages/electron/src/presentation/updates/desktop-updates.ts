@@ -13,6 +13,11 @@ export function supportsNativeUpdates(platform = process.platform): boolean {
 }
 
 
+export function supportsReleaseDiscovery(platform = process.platform): boolean {
+    return platform === "win32" || platform === "linux";
+}
+
+
 export function registerDesktopUpdatesAdapter({ ipcMain, coordinator }: { ipcMain: IpcMain; coordinator: ReturnType<typeof createDesktopUpdateCoordinator> }): void {
     ipcMain.handle(desktopUpdatesChannel, async (_event, request: unknown) => {
         const method = request && typeof request === "object" ? (request as Record<string, unknown>).method : undefined;
