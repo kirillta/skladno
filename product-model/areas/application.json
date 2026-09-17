@@ -52,6 +52,20 @@
             "persistence": "Screen selection is renderer state; Application Settings persist through their dedicated service contracts."
         },
         {
+            "id": "application.quick-start-tutorial",
+            "area": "Application shell",
+            "title": "Non-blocking first-run quick start",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/App.tsx",
+                "packages/web/src/application/QuickStartDialog.tsx",
+                "packages/web/src/settings/ApplicationSettings.tsx",
+                "packages/web/src/settings/components/AboutSettingsSection.tsx"
+            ],
+            "contract": "A compact first-run dialog explains Article writing, advisory Assistant output, and model-key setup without blocking editing. It directs an Author without a usable connection to AI Settings and can be reopened from About Settings.",
+            "persistence": "Browser storage contains only the versioned skladno.quick-start.v1 completion marker; no Article, Settings, or credential data is stored."
+        },
+        {
             "id": "application.local-first-single-user",
             "area": "Application shell",
             "title": "Single-user, local-first operation",
@@ -97,7 +111,7 @@
                 "packages/server/src/local-application.ts",
                 ".github/workflows/electron-linux.yml"
             ],
-            "contract": "The unsigned Debian x64 application runs the existing context-isolated, sandboxed Electron workspace and local services from one Debian package. Ubuntu 22.04 x64 is the release-validation baseline; compatible Debian-based distributions may install the same package. It preserves Article, Draft, Revision, backup, credential, renderer-isolation, single-window, native-dialog, and shutdown guarantees. About Settings exposes the installed version but no update controls; package-manager upgrades or manual .deb reinstalls remain author-controlled.",
+            "contract": "The unsigned Debian x64 application runs the existing context-isolated, sandboxed Electron workspace and local services from one Debian package. Ubuntu 22.04 x64 is the release-validation baseline; compatible Debian-based distributions may install the same package. It preserves Article, Draft, Revision, backup, credential, renderer-isolation, single-window, native-dialog, and shutdown guarantees. After author-approved GitHub access, About Settings can show the newest matching Debian release and open its release notes. Package-manager upgrades or manual .deb reinstalls remain author-controlled; Linux exposes no in-app download or apply action.",
             "persistence": "Electron runtime state uses Linux userData while Article data remains in the resolved user-local .skladno directory. Install, upgrade, reinstall, and uninstall do not delete or rewrite author data.",
             "limitations": [
                 "The installed Ubuntu 22.04 acceptance pass, including Secret Service, launcher, upgrade, reinstall, uninstall, and data-preservation evidence, remains required before any Linux target is guaranteed. Other compatible Debian-based distributions require the same pass; ARM64, RPM, Snap, Flatpak, AppImage, and in-app Linux updates require separate demand and acceptance evidence."
@@ -262,7 +276,7 @@
             "event": "The author launches, upgrades or reinstalls, then uninstalls the Debian package."
             ,"expected": [
                 "The existing data reopens after upgrade or reinstall and remains on disk after uninstall.",
-                "The app exposes no unsupported update controls."
+                "The app exposes no in-app downloader or updater."
             ],
             "forbidden": [
                 "Squirrel or autoUpdater calls on Linux, or installer lifecycle actions deleting or rewriting the .skladno directory."
@@ -271,6 +285,16 @@
                 "kind": "human-reviewed",
                 "path": "docs/development/guides/mvp-release-and-recovery.md"
             }
+        },
+        {
+            "id": "application.electron-linux-release-discovery",
+            "title": "Linux release discovery remains manual to install",
+            "capabilityIds": ["application.electron-linux-preview"],
+            "preconditions": ["A packaged Debian release has a newer matching Debian package on GitHub and the author has allowed update network access."],
+            "event": "The Linux desktop coordinator checks release metadata." ,
+            "expected": ["It offers the newest matching Debian release and release notes without starting a download."],
+            "forbidden": ["Squirrel or autoUpdater calls on Linux, an in-app Linux download, or a discovery request without author permission."],
+            "evidence": { "kind": "automated", "path": "packages/electron/src/presentation/updates/desktop-updates.test.ts" }
         },
         {
             "id": "application.electron-packaged-startup",
@@ -368,6 +392,46 @@
                 "kind": "automated",
                 "path": "packages/web/src/workspace/EditorialWorkspace.settings.test.tsx"
             }
+        },
+        {
+            "id": "application.quick-start-initial-display",
+            "title": "Quick start appears on first launch",
+            "capabilityIds": ["application.quick-start-tutorial"],
+            "preconditions": ["The local profile has no quick-start completion marker."],
+            "event": "The Author opens Skladno.",
+            "expected": ["The quick start opens with accessible controls and focus.", "An Author without a usable connection sees Add model key; an Author with one sees Start writing."],
+            "forbidden": ["Blocking Article editing or storing credentials or Article data in browser storage."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/application/QuickStartDialog.test.tsx" }
+        },
+        {
+            "id": "application.quick-start-dismissal",
+            "title": "Quick start dismissal is remembered",
+            "capabilityIds": ["application.quick-start-tutorial"],
+            "preconditions": ["The quick start is open."],
+            "event": "The Author skips, closes, or presses Escape.",
+            "expected": ["Only the versioned completion marker is stored.", "Later launches do not reopen the dialog automatically."],
+            "forbidden": ["Changing an Article, Draft, Revision, or saved Settings."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/application/QuickStartDialog.test.tsx" }
+        },
+        {
+            "id": "application.quick-start-reopening",
+            "title": "Quick start can be reopened from About Settings",
+            "capabilityIds": ["application.quick-start-tutorial"],
+            "preconditions": ["The Author has dismissed the quick start."],
+            "event": "The Author selects Quick start in About Settings.",
+            "expected": ["The dialog reopens without modifying the current Article or saved Settings."],
+            "forbidden": ["Resetting the completion marker or creating Article history."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/application/QuickStartDialog.test.tsx" }
+        },
+        {
+            "id": "application.quick-start-ai-settings",
+            "title": "Quick start directs missing model-key setup to AI Settings",
+            "capabilityIds": ["application.quick-start-tutorial", "application.workspace-and-settings-screens"],
+            "preconditions": ["No usable AI connection exists."],
+            "event": "The Author selects Add model key in the quick start.",
+            "expected": ["The dialog closes and AI Settings opens."],
+            "forbidden": ["Handling or displaying a credential in the tutorial."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/application/QuickStartDialog.test.tsx" }
         }
     ]
 }

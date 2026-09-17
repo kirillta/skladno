@@ -14,7 +14,7 @@ import { createApplicationFailureEvent } from "./telemetry/application-failure-t
 import { registerDesktopSettingsAdapter } from "./settings/desktop-settings.js";
 import { registerDesktopTelemetryAdapter } from "./telemetry/desktop-telemetry.js";
 import { registerDesktopShellAdapter } from "./shell/desktop-shell.js";
-import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter, supportsNativeUpdates } from "./updates/desktop-updates.js";
+import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter, supportsNativeUpdates, supportsReleaseDiscovery } from "./updates/desktop-updates.js";
 
 
 const rendererUrl = "http://localhost:5173";
@@ -226,9 +226,9 @@ if (supportsNativeUpdates() && squirrelStartup) {
             closing = true;
         };
 
-        if (supportsNativeUpdates())
+        if (supportsReleaseDiscovery())
             updates = createDesktopUpdateCoordinator(
-                { runtimePath, currentVersion: app.getVersion(), supported: app.isPackaged },
+                { runtimePath, currentVersion: app.getVersion(), supported: app.isPackaged, platform: supportsNativeUpdates() ? "win32" : "linux" },
                 {
                     fetchReleases: () => net.fetch("https://api.github.com/repos/kirillta/skladno/releases"),
                     openExternal: (url) => shell.openExternal(url),

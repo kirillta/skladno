@@ -150,7 +150,7 @@ export function WorkspaceShell({ content, layout }: { content: WorkspaceShellCon
             {isValidElement(library) ? cloneElement(library, { collapsed: effectiveLibraryCollapsed, setCollapsed: setLibraryCollapsed }) : library}
             {!effectiveLibraryCollapsed && <ResizeHandle label={intl.formatMessage({ id: "navigation.resizeArticleLibrary" })} value={libraryWidth} minimum={libraryLimits.minimum} maximum={libraryLimits.maximum} onChange={setLibraryWidth} />}
         </div>}
-        {!focusMode && <div data-responsive-overlay={assistantOverlay || undefined} className={assistantOverlay ? "absolute inset-y-0 right-0 z-20 min-h-0 border-l border-border-strong shadow-raised" : "relative min-h-0"} style={{ gridArea: "assistant", ...(assistantOverlay ? { width: effectiveAssistantWidth } : {}) }}>
+        {!focusMode && <div data-responsive-overlay={assistantOverlay || undefined} className={assistantOverlay ? "absolute inset-y-0 right-0 z-20 min-h-0 min-w-0 border-l border-border-strong shadow-raised" : "relative min-h-0 min-w-0"} style={{ gridArea: "assistant", ...(assistantOverlay ? { width: effectiveAssistantWidth } : {}) }}>
             {isValidElement(assistant) ? cloneElement(assistant, { collapsed: effectiveAssistantCollapsed, setCollapsed: setAssistantCollapsed }) : assistant}
             {!effectiveAssistantCollapsed && !assistantOverlay && <ResizeHandle label={intl.formatMessage({ id: "assistant.resize" })} value={effectiveAssistantWidth} minimum={assistantLimits.minimum} maximum={assistantMaximum} direction={-1} edge="start" onChange={setAssistantWidth} />}
         </div>}

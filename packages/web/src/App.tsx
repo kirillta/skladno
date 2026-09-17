@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import type { EditorialWorkspaceClient } from "./application/client.js";
 import { createRendererApplicationClient, getDesktopShellClient, getDesktopUpdateClient } from "./application/desktop-client.js";
 import { EditorialWorkspaceProvider } from "./workspace/EditorialWorkspace.js";
@@ -7,9 +7,16 @@ import { NotificationProvider } from "./notifications/NotificationProvider.js";
 import { useKeyBindingDispatcher } from "./key-bindings/KeyBindingProvider.js";
 import { saveScheduledWebBackup } from "./settings/web-backups.js";
 import type { SettingsSection } from "./settings/settings-sections.js";
+import { QuickStartDialog } from "./application/QuickStartDialog.js";
 import { desktopShellCommands, resolveTheme, type KeyBindingOverrides, type ResolvedTheme, type ThemePreference } from "@skladno/shared";
 
 const defaultClient = createRendererApplicationClient();
+const quickStartCompletionKey = "skladno.quick-start.v1";
+
+
+function hasUsableAiConnection(settings: Awaited<ReturnType<EditorialWorkspaceClient["getApplicationSettings"]>>): boolean {
+    return settings.connections.some((connection) => connection.active !== false && connection.status === "connected");
+}
 
 
 function readSystemTheme(): ResolvedTheme {
@@ -45,6 +52,8 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
     const [keyBindingOverrides, setKeyBindingOverrides] = useState<KeyBindingOverrides>();
     const [theme, setTheme] = useState<ThemePreference>("system");
     const [focusUpdates, setFocusUpdates] = useState(false);
+    const [quickStartOpen, setQuickStartOpen] = useState(() => localStorage.getItem(quickStartCompletionKey) === null);
+    const [quickStartConnectionReady, setQuickStartConnectionReady] = useState<boolean>();
     const desktopShell = getDesktopShellClient();
     const dispatcher = useKeyBindingDispatcher(keyBindingOverrides, desktopShell !== undefined);
 
@@ -54,13 +63,40 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
         void client.getApplicationSettings().then((settings) => {
             setKeyBindingOverrides(settings.keyBindingOverrides);
             setTheme(settings.general.theme);
+            setQuickStartConnectionReady(hasUsableAiConnection(settings));
             void saveScheduledWebBackup(client, settings.backupPolicy).catch(() => undefined);
-        });
+        }).catch(() => setQuickStartConnectionReady(false));
+    }, [client]);
+
+    const refreshQuickStartConnection = useCallback(() => {
+        setQuickStartConnectionReady(undefined);
+        void client.getApplicationSettings().then(
+            (settings) => setQuickStartConnectionReady(hasUsableAiConnection(settings)),
+            () => setQuickStartConnectionReady(false),
+        );
     }, [client]);
 
     useEffect(() => {
         void getDesktopUpdateClient()?.rendererReady();
     }, []);
+
+    const closeQuickStart = () => {
+        localStorage.setItem(quickStartCompletionKey, "complete");
+        setQuickStartOpen(false);
+    };
+
+    const openQuickStart = () => {
+        setQuickStartOpen(true);
+        refreshQuickStartConnection();
+    };
+    const openModelSettings = () => {
+        setSettingsSection("ai");
+        setScreen("application-settings");
+    };
+    const startWriting = () => {
+        closeQuickStart();
+        setScreen("editorial-workspace");
+    };
 
     useEffect(() => {
         if (!desktopShell)
@@ -86,13 +122,11 @@ export function App({ client = defaultClient }: { client?: EditorialWorkspaceCli
                 navigation={{ openSettings: () => {
                     setSettingsSection("general");
                     setScreen("application-settings");
-                }, openModelSettings: () => {
-                    setSettingsSection("ai");
-                    setScreen("application-settings");
-                }, backToWorkspace: () => setScreen("editorial-workspace") }}
+                }, openModelSettings, openQuickStart, backToWorkspace: () => setScreen("editorial-workspace") }}
                 bindings={{ dispatcher, keyBindingOverrides: keyBindingOverrides ?? {}, onKeyBindingsUpdated: setKeyBindingOverrides, onThemeApplied: setTheme }}
                 updates={{ focusUpdates, onUpdatesFocused: () => setFocusUpdates(false) }}
             />
+            {quickStartOpen && quickStartConnectionReady !== undefined && <QuickStartDialog hasUsableAiConnection={quickStartConnectionReady} close={closeQuickStart} openModelSettings={openModelSettings} startWriting={startWriting} />}
         </NotificationProvider>
     </I18nProvider>;
 }

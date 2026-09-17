@@ -8,7 +8,7 @@ import {
 import { exposeElectronApplicationClient } from "./preload-bridge.js";
 import { createDesktopSettingsClient } from "./settings/desktop-settings-client.js";
 import { createDesktopShellClient } from "./shell/desktop-shell.js";
-import { createDesktopUpdateClient, supportsNativeUpdates } from "./updates/desktop-updates.js";
+import { createDesktopUpdateClient, supportsReleaseDiscovery } from "./updates/desktop-updates.js";
 import { createDesktopTelemetryClient } from "./telemetry/desktop-telemetry.js";
 
 
@@ -45,7 +45,7 @@ exposeElectronApplicationClient(ipcRenderer, contextBridge);
 contextBridge.exposeInMainWorld("skladnoDesktop", createDesktopSettingsClient(ipcRenderer));
 contextBridge.exposeInMainWorld("skladnoShell", createDesktopShellClient(ipcRenderer));
 
-if (supportsNativeUpdates())
+if (supportsReleaseDiscovery())
     contextBridge.exposeInMainWorld("skladnoUpdates", createDesktopUpdateClient(ipcRenderer));
 
 contextBridge.exposeInMainWorld("skladnoTelemetry", createDesktopTelemetryClient(ipcRenderer));

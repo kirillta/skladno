@@ -1,13 +1,14 @@
 import { useIntl } from "react-intl";
 import { getDesktopSettingsClient, getDesktopUpdateClient } from "../../application/desktop-client.js";
-import { SettingsGroup } from "./SettingRow.js";
+import { SettingRow, SettingsGroup } from "./SettingRow.js";
 import { UpdatesSettingsGroup } from "./UpdatesSettingsGroup.js";
+import { Button } from "../../ui/primitives.js";
 
 
 const repositoryUrl = "https://github.com/kirillta/skladno";
 
 
-export function AboutSettingsSection() {
+export function AboutSettingsSection({ openQuickStart }: { openQuickStart?: () => void }) {
     const intl = useIntl();
 
     return <>
@@ -19,6 +20,9 @@ export function AboutSettingsSection() {
                 <a className="inline-flex min-h-9 items-center text-sm font-semibold text-brand underline underline-offset-2" href={`${repositoryUrl}/blob/main/LICENSE`} target="_blank" rel="noreferrer">{intl.formatMessage({ id: "settings.mitLicense" })}</a>
             </div>
         </SettingsGroup>
+        {openQuickStart && <SettingRow label={intl.formatMessage({ id: "settings.quickStart" })} hint={intl.formatMessage({ id: "settings.quickStartHint" })}>
+            <Button variant="secondary" compact onClick={openQuickStart}>{intl.formatMessage({ id: "settings.openQuickStart" })}</Button>
+        </SettingRow>}
         <div id="settings-updates" tabIndex={-1} />
         <UpdatesSettingsGroup client={getDesktopUpdateClient()} desktop={Boolean(getDesktopSettingsClient())} />
     </>;

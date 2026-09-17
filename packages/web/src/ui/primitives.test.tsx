@@ -12,6 +12,7 @@ describe("Button", () => {
 
         const button = screen.getByRole("button", { name: "Saving article" }) as HTMLButtonElement;
         expect(button.disabled).toBe(true);
+        expect(button.className).toContain("self-center");
         expect(button.getAttribute("aria-busy")).toBe("true");
         expect(screen.getByRole("status").textContent).toBe("Saving article");
         expect(screen.getByText("Save").className).toContain("invisible");
