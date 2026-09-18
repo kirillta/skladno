@@ -31,10 +31,10 @@ describe("ProposalReviewView", () => {
         expect(screen.getByText("Clarifies the opening statement.")).toBeTruthy();
         expect(screen.getAllByText("Original").length).toBeGreaterThan(0);
         expect(screen.getAllByText("Proposed").length).toBeGreaterThan(0);
-        expect(screen.getByText(getMessage("views.preservationWarnings")).compareDocumentPosition(screen.getByRole("heading", { name: getMessage("views.proposalReview") })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByText(getMessage("views.preservationWarnings")).closest(".overflow-y-auto")).toBeTruthy();
     });
 
-    it("workspace.proposal.stale-blocked warns before the review controls while blocking acceptance", () => {
+    it("workspace.proposal.stale-blocked keeps warnings in the scrolling content while blocking acceptance", () => {
         const dismissProposal = vi.fn();
 
         render(<IntlProvider locale="en" messages={messages}>
@@ -49,9 +49,9 @@ describe("ProposalReviewView", () => {
         </IntlProvider>);
 
         const warning = screen.getByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.");
-        const heading = screen.getByRole("heading", { name: getMessage("views.proposalReview") });
+        const content = screen.getByRole("heading", { name: getMessage("views.proposalReview") }).closest("header")?.nextElementSibling;
 
-        expect(warning.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(content?.contains(warning)).toBe(true);
         expect(screen.getByText("Complete proposal · 2 changes")).toBeTruthy();
         expect(screen.getByRole("button", { name: getMessage("views.acceptAll") }).hasAttribute("disabled")).toBe(true);
         expect(screen.getByRole("button", { name: getMessage("views.rejectAll") }).hasAttribute("disabled")).toBe(true);
@@ -74,6 +74,56 @@ describe("ProposalReviewView", () => {
 
         expect(screen.getByRole("button", { name: getMessage("views.previousChange") }).querySelector("svg")).toBeTruthy();
         expect(screen.getByRole("button", { name: getMessage("views.nextChange") }).querySelector("svg")).toBeTruthy();
+    });
+
+    it("scrolls the selected change to the start of the review", () => {
+        const scrollIntoView = vi.fn();
+        const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+        HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+        try {
+            render(<IntlProvider locale="en" messages={messages}>
+                <ProposalReviewView review={{
+                    baseContent: "Original\nSecond original",
+                    proposedContent: "Proposed\nSecond proposed",
+                    changes: [
+                        { id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] },
+                        { id: "change-2", baseStart: 1, baseEnd: 2, baseLines: ["Second original"], proposalLines: ["Second proposed"] },
+                    ],
+                }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} dismissProposal={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
+            </IntlProvider>);
+
+            const nextChange = screen.getByRole("button", { name: getMessage("views.nextChange") });
+            fireEvent.click(nextChange);
+            nextChange.focus();
+            fireEvent.click(nextChange);
+
+            expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+            expect(scrollIntoView.mock.contexts[0]).toBe(screen.getAllByRole("article")[0]);
+            expect(scrollIntoView.mock.contexts[1]).toBe(screen.getAllByRole("article")[1]);
+        } finally {
+            HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+        }
+    });
+
+    it("keeps change navigation outside the scrolling review content", () => {
+        render(<IntlProvider locale="en" messages={messages}>
+            <ProposalReviewView review={{
+                baseContent: "Original\nSecond original",
+                proposedContent: "Proposed\nSecond proposed",
+                changes: [
+                    { id: "change-1", baseStart: 0, baseEnd: 1, baseLines: ["Original"], proposalLines: ["Proposed"] },
+                    { id: "change-2", baseStart: 1, baseEnd: 2, baseLines: ["Second original"], proposalLines: ["Second proposed"] },
+                ],
+            }} stale={false} decisions={{}} setDecision={vi.fn()} acceptAll={vi.fn()} applyAccepted={vi.fn()} rejectAll={vi.fn()} dismissProposal={vi.fn()} warningsDismissed={false} dismissWarnings={vi.fn()} openWrite={vi.fn()} openAssistant={vi.fn()} />
+        </IntlProvider>);
+
+        const header = screen.getByRole("heading", { name: getMessage("views.proposalReview") }).closest("header");
+        const content = header?.nextElementSibling;
+
+        expect(header).toBeTruthy();
+        expect(content?.className).toContain("overflow-y-auto");
+        expect(content?.contains(screen.getByRole("button", { name: getMessage("views.nextChange") }))).toBe(false);
     });
 
     it("applies exact-text highlights to both layouts", () => {
