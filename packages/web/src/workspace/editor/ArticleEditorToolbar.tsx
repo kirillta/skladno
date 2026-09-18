@@ -197,12 +197,12 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
     ] as const;
 
     return <div className="shrink-0 overflow-x-auto border-b border-border bg-surface-raised px-4 py-1 [scrollbar-width:thin]">
-        <div role="toolbar" aria-label={intl.formatMessage({ id: "editor.formatting" })} onKeyDown={handleKeyNavigation} className="flex w-max min-w-full items-center gap-1">
-            <select aria-label={intl.formatMessage({ id: "editor.blockStyle" })}
+        <div data-focus-area="formatting-toolbar" role="toolbar" aria-label={intl.formatMessage({ id: "editor.formatting" })} onKeyDown={handleKeyNavigation} className="flex w-max min-w-full items-center gap-1">
+            <select data-focus-area-entry aria-label={intl.formatMessage({ id: "editor.blockStyle" })}
                 value={block}
                 onMouseDown={rememberBlockSelection}
                 onChange={(event) => applyBlockType(event.target.value as BlockType)}
-                className="min-h-9 rounded-control border border-border bg-surface-raised px-2 text-xs text-ink">
+                className="min-h-9 rounded-control border border-border bg-surface-raised px-2 text-xs text-ink focus-visible:outline focus-visible:outline-brand">
                 <option value="paragraph">{intl.formatMessage({ id: "editor.paragraph" })}</option>
                 {[1, 2, 3, 4, 5, 6].map((level) => <option key={level} value={`h${level}`}>{intl.formatMessage({ id: "editor.heading" }, { level })}</option>)}
                 <option value="quote">{intl.formatMessage({ id: "editor.blockQuote" })}</option>

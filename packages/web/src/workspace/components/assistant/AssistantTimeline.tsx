@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useIntl } from "react-intl";
 import type { AssistantCapabilityActivity, AssistantMessage, FactCheckClaimPreview, GeneralSettings } from "@skladno/shared";
 import { Banner, Button, IconButton } from "../../../ui/primitives.js";
@@ -101,8 +101,22 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
     }
 
 
-    return <div className="relative min-h-0 flex-1">
-        <div ref={timeline} onScroll={trackScroll} className="h-full select-text cursor-default space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-live="polite">
+    function handleChatKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+            return;
+
+        const actions = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
+        if (!actions.length)
+            return;
+
+        event.preventDefault();
+        const index = actions.indexOf(document.activeElement as HTMLButtonElement);
+        actions[(index + (event.key === "ArrowRight" ? 1 : actions.length - 1)) % actions.length]?.focus();
+    }
+
+
+    return <div data-focus-area="assistant-chat" onKeyDown={handleChatKeyDown} className="relative min-h-0 flex-1">
+        <div ref={timeline} data-focus-area-entry tabIndex={0} onScroll={trackScroll} className="h-full select-text cursor-default space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "assistant.response.conversation" })} aria-live="polite">
             {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} />}
             {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
             {streamedMessage?.responseKind

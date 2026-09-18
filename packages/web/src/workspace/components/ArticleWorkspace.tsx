@@ -49,7 +49,7 @@ export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceVi
 
     if (!article)
         return <EmptyState title={intl.formatMessage({ id: "navigation.noArticlesYet" })} className="pt-40">
-            <Button title={getShortcutHint(intl.formatMessage({ id: "articleWorkspace.create" }), KEY_BINDING_COMMAND.NEW_ARTICLE, shortcutOverrides)} onClick={() => void createBlank()}>{intl.formatMessage({ id: "articleWorkspace.create" })}</Button>
+            <Button data-focus-area="article-editor" data-focus-area-entry title={getShortcutHint(intl.formatMessage({ id: "articleWorkspace.create" }), KEY_BINDING_COMMAND.NEW_ARTICLE, shortcutOverrides)} onClick={() => void createBlank()}>{intl.formatMessage({ id: "articleWorkspace.create" })}</Button>
         </EmptyState>;
 
     const revisionIndex = revisions.revisions.findIndex((revision) => revision.id === article.currentRevisionId);

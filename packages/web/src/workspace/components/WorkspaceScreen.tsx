@@ -113,7 +113,7 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
 function AiConnectionWarning({ openModelSettings }: { openModelSettings: () => void }) {
     const intl = useIntl();
 
-    return <Banner className="m-3 shrink-0" tone="warning" role="status">
+    return <Banner data-focus-area="workspace-views" className="m-3 shrink-0" tone="warning" role="status">
         <span className="min-w-0">
             <strong className="block">{intl.formatMessage({ id: "workspace.aiConnectionRequired" })}</strong>
             {intl.formatMessage({ id: "workspace.aiConnectionCapabilities" })}</span>

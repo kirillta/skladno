@@ -1,5 +1,6 @@
 import { cloneElement, isValidElement, useEffect, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useIntl } from "react-intl";
+import { useFocusAreaNavigation, workspaceFocusAreas } from "../../ui/focus-area-navigation.js";
 
 
 const libraryLimits = { default: 208, minimum: 192, maximum: 280, collapsed: 40 };
@@ -102,6 +103,7 @@ export function WorkspaceShell({ content, layout }: { content: WorkspaceShellCon
     const { children, library, assistant } = content;
     const { focusMode, libraryCollapsed, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, assistantOpenRequest, libraryWidth, setLibraryWidth, assistantWidth, setAssistantWidth } = layout;
     const intl = useIntl();
+    const focusAreas = useFocusAreaNavigation(workspaceFocusAreas);
     const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
     const [responsiveAssistantExpanded, setResponsiveAssistantExpanded] = useState(false);
     const requestedLibraryWidth = libraryCollapsed ? libraryLimits.collapsed : libraryWidth;
@@ -141,7 +143,7 @@ export function WorkspaceShell({ content, layout }: { content: WorkspaceShellCon
             setResponsiveAssistantExpanded(true);
     }, [assistantCollapsed, assistantOpenRequest]);
 
-    return <main className="relative grid h-dvh overflow-hidden bg-surface text-ink" style={{
+    return <main ref={focusAreas.ref} onFocusCapture={focusAreas.onFocusCapture} onKeyDownCapture={focusAreas.onKeyDownCapture} className="relative grid h-dvh overflow-hidden bg-surface text-ink" style={{
         gridTemplateAreas: focusMode ? '"workspace"' : '"library workspace assistant"',
         gridTemplateColumns: focusMode ? "minmax(0, 1fr)" : `${effectiveLibraryWidth}px minmax(0, 1fr) ${assistantOverlay ? 0 : effectiveAssistantWidth}px`,
     }}>

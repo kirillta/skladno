@@ -84,6 +84,20 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, save
     }
 
 
+    function handleStatusKeyDown(event: KeyboardEvent<HTMLElement>) {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+            return;
+
+        const controls = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not([role^=menuitem])")];
+        const index = controls.indexOf(document.activeElement as HTMLButtonElement);
+        if (index < 0)
+            return;
+
+        event.preventDefault();
+        controls[(index + (event.key === "ArrowRight" ? 1 : controls.length - 1)) % controls.length]?.focus();
+    }
+
+
     function copy(copyText: () => Promise<boolean>) {
         void copyText().then((copied) => {
             setCopyStatus(copied ? "copied" : "failed");
@@ -95,10 +109,10 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, save
     }
 
 
-    return <footer className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
+    return <footer data-focus-area="article-status" onKeyDown={handleStatusKeyDown} className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
         <span className="font-normal text-muted">{intl.formatMessage({ id: "status.revision" }, { revisionNumber })}</span>
         <div className="relative ml-2">
-            <button ref={languageTrigger} className="inline-flex h-6 items-center gap-1 border-x border-border px-1.5 text-xs text-muted hover:bg-brand-soft hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} aria-controls={languageMenuOpen ? languageMenuId : undefined} aria-expanded={languageMenuOpen} aria-haspopup="menu" onClick={() => {
+            <button data-focus-area-entry ref={languageTrigger} className="inline-flex h-6 items-center gap-1 border-x border-border px-1.5 text-xs text-muted hover:bg-brand-soft hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} aria-controls={languageMenuOpen ? languageMenuId : undefined} aria-expanded={languageMenuOpen} aria-haspopup="menu" onClick={() => {
                 setLanguageMenuOpen((open) => !open);
                 setProfileMenuOpen(false);
                 setCopyMenuOpen(false);
@@ -126,7 +140,7 @@ function LocalizedArticleStatusBar({ revisionNumber, language, setLanguage, save
             {saveLabel}
         </span>
         <div className="relative ml-auto">
-            <button ref={profileTrigger} className={`inline-flex h-6 items-center gap-1 rounded-control px-1.5 hover:bg-brand-soft hover:text-brand focus:outline-none ${tone === "error" ? "font-semibold text-danger" : tone === "warning" ? "font-semibold text-warning" : "text-muted"}`} type="button" aria-controls={profileMenuOpen ? profileMenuId : undefined} aria-expanded={profileMenuOpen} aria-haspopup="menu" aria-label={intl.formatMessage({ id: "status.characterCount.ariaLabel" }, { characterCount: intl.formatNumber(length.count), characterLimit: intl.formatNumber(profile.characterLimit ?? 0) })} title={length.remaining === undefined ? undefined : length.state === "over-limit" ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(length.remaining)) }) : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(length.remaining) })} onClick={() => {
+            <button ref={profileTrigger} className={`inline-flex h-6 items-center gap-1 rounded-control px-1.5 hover:bg-brand-soft hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${tone === "error" ? "font-semibold text-danger" : tone === "warning" ? "font-semibold text-warning" : "text-muted"}`} type="button" aria-controls={profileMenuOpen ? profileMenuId : undefined} aria-expanded={profileMenuOpen} aria-haspopup="menu" aria-label={intl.formatMessage({ id: "status.characterCount.ariaLabel" }, { characterCount: intl.formatNumber(length.count), characterLimit: intl.formatNumber(profile.characterLimit ?? 0) })} title={length.remaining === undefined ? undefined : length.state === "over-limit" ? intl.formatMessage({ id: "publishing.charactersOverGuidance" }, { count: intl.formatNumber(Math.abs(length.remaining)) }) : intl.formatMessage({ id: "publishing.charactersRemaining" }, { count: intl.formatNumber(length.remaining) })} onClick={() => {
                 setProfileMenuOpen((open) => !open);
                 setLanguageMenuOpen(false);
             }} onKeyDown={(event) => {

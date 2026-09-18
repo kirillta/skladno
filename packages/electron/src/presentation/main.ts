@@ -6,7 +6,7 @@ import { defaultInterfaceLocale, getElectronMessagesFor } from "@skladno/shared"
 import { requestDraftCheckpoint } from "../application/lifecycle/close-coordinator.js";
 import { applyPendingRestore } from "../infrastructure/recovery/pending-restore.js";
 import { PendingRestoreError } from "../infrastructure/recovery/pending-restore-error.js";
-import { createWindowOptions, focusWindow, isExternalWebUrl } from "../infrastructure/window/window-policy.js";
+import { createWindowOptions, focusWindow, isExternalWebUrl, isRendererNavigation } from "../infrastructure/window/window-policy.js";
 import { readWindowBounds, writeWindowBounds } from "../infrastructure/window/window-state.js";
 import { createTelemetryOwner } from "../infrastructure/telemetry/telemetry-owner.js";
 import { createTelemetryDelivery, readTelemetryDelivery } from "../infrastructure/telemetry/telemetry-delivery.js";
@@ -116,6 +116,9 @@ async function createMainWindow(): Promise<void> {
         return { action: "deny" };
     });
     window.webContents.on("will-navigate", (event, url) => {
+        if (!app.isPackaged && isRendererNavigation(url, rendererUrl))
+            return;
+
         event.preventDefault();
         if (isExternalWebUrl(url))
             void shell.openExternal(url);

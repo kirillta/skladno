@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { KEY_BINDING_COMMAND, type Article, type KeyBindingOverrides } from "@skladno/shared";
 import { Button, Dialog, Field, IconButton } from "../../ui/primitives.js";
 import { ArticleIcon, ChevronRightIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
@@ -160,7 +160,7 @@ export function ArticleLibraryPanel({ data, navigation, mutations }: { data: Art
             next.splice(next.findIndex((item) => item.id === article.id), 0, dragged);
             run(() => reorderPinned(next.map((item) => item.id)));
         }}>
-            <button ref={(element) => {
+            <button data-focus-area-entry={selectedRow || undefined} ref={(element) => {
                 if (element)
                     triggerRefs.current.set(article.id, element);
             }} type="button" onClick={() => selectArticle(article.id)} onContextMenu={(event) => {
@@ -194,7 +194,23 @@ export function ArticleLibraryPanel({ data, navigation, mutations }: { data: Art
 
     const archivedContent = renderRoots(archivedRoots);
     const groupCount = deleteTarget ? (deleteTarget.sourceArticleId ? 1 : getChildArticles(deleteTarget.id).length + 1) : 1;
-    return <aside data-workspace-panel="article-library" className={collapsed ? "flex h-full w-full flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-full flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
+
+
+    function handleLibraryKeyDown(event: KeyboardEvent<HTMLElement>) {
+        if ((event.key !== "ArrowUp" && event.key !== "ArrowDown") || event.target instanceof HTMLInputElement)
+            return;
+
+        const controls = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not([role^=menuitem])")];
+        const index = controls.indexOf(document.activeElement as HTMLButtonElement);
+        if (index < 0)
+            return;
+
+        event.preventDefault();
+        controls[(index + (event.key === "ArrowDown" ? 1 : controls.length - 1)) % controls.length]?.focus();
+    }
+
+
+    return <aside data-workspace-panel="article-library" data-focus-area="library" onKeyDown={handleLibraryKeyDown} className={collapsed ? "flex h-full w-full flex-col border-r border-border bg-surface-supporting px-0.5 py-2" : "flex h-full w-full flex-col border-r border-border bg-surface-supporting"} aria-label={intl.formatMessage({ id: "navigation.articleLibrary" })}>
         {collapsed ? <><header className="flex min-h-18 items-center justify-center"><IconButton className="text-base font-semibold text-brand" label={intl.formatMessage({ id: "navigation.expandArticleLibrary" })} onClick={() => setCollapsed(false)}>S</IconButton></header><footer className="mt-auto flex flex-col items-center gap-1 border-t border-border px-0.5 py-2"><IconButton label={intl.formatMessage({ id: "navigation.styleProfile" })} onClick={openStyleProfile}><UserIcon className="size-4" /></IconButton><IconButton label={intl.formatMessage({ id: "navigation.settings" })} title={getShortcutHint(intl.formatMessage({ id: "navigation.settings" }), KEY_BINDING_COMMAND.OPEN_SETTINGS, shortcutOverrides)} onClick={openSettings}><SettingsIcon className="size-4" /></IconButton><UpdateController /></footer></> : <>
             <header className="flex min-h-18 items-center justify-between border-b border-border px-4"><span className="flex items-center gap-2 text-base font-semibold text-brand"><span aria-hidden="true" className="text-lg leading-none">✢</span>Skladno</span><div className="flex items-center gap-1"><IconButton label={intl.formatMessage({ id: "navigation.newArticle" })} title={getShortcutHint(intl.formatMessage({ id: "navigation.newArticle" }), KEY_BINDING_COMMAND.NEW_ARTICLE, shortcutOverrides)} onClick={() => void createBlank()}>+</IconButton><IconButton label={intl.formatMessage({ id: "navigation.collapseArticleLibrary" })} title={getShortcutHint(intl.formatMessage({ id: "navigation.collapseArticleLibrary" }), KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, shortcutOverrides)} onClick={() => setCollapsed(true)}>‹</IconButton></div></header>
             <div className="border-b border-border px-3 py-3"><div className="relative"><SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" /><Field ref={searchRef} className="min-h-9 py-1.5 pl-8 pr-2" aria-label={intl.formatMessage({ id: "navigation.searchArticles" })} title={getShortcutHint(intl.formatMessage({ id: "navigation.searchArticles" }), KEY_BINDING_COMMAND.SEARCH_ARTICLES, shortcutOverrides)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={intl.formatMessage({ id: "navigation.searchArticles" })} /></div></div>

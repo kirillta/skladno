@@ -106,6 +106,33 @@ function ResponsiveShell() {
 }
 
 
+function FocusAreaShell({ hiddenEditor = false }: { hiddenEditor?: boolean }) {
+    return <IntlProvider locale="en" messages={messages}>
+        <WorkspaceShell
+            focusMode={false}
+            libraryCollapsed={false}
+            setLibraryCollapsed={vi.fn()}
+            assistantCollapsed={false}
+            setAssistantCollapsed={vi.fn()}
+            assistantOpenRequest={0}
+            libraryWidth={208}
+            setLibraryWidth={vi.fn()}
+            assistantWidth={384}
+            setAssistantWidth={vi.fn()}
+            library={<aside data-focus-area="library"><button data-focus-area-entry>Library</button></aside>}
+            assistant={<aside><button data-focus-area="assistant-chat" data-focus-area-entry>Chat</button><div data-focus-area="assistant-composer"><button data-focus-area-entry>Composer</button></div></aside>}>
+            <div>
+                <div data-focus-area="workspace-views"><button data-focus-area-entry>Views</button></div>
+                <div data-focus-area="article-header"><button data-focus-area-entry>Header</button><button>Last header control</button></div>
+                <div data-focus-area="formatting-toolbar"><button data-focus-area-entry>Toolbar</button></div>
+                <div data-focus-area="article-editor" hidden={hiddenEditor}><button data-focus-area-entry>Editor</button></div>
+                <div data-focus-area="article-status"><button data-focus-area-entry>Status</button></div>
+            </div>
+        </WorkspaceShell>
+    </IntlProvider>;
+}
+
+
 describe("WorkspaceShell", () => {
     afterEach(() => {
         cleanup();
@@ -197,4 +224,53 @@ describe("WorkspaceShell", () => {
         expect(screen.queryByLabelText("Editorial Assistant Panel")).toBeNull();
         expect(screen.getByText("Article Workspace").closest("section")).toBeTruthy();
     });
+
+
+    it("moves between focus areas, skips hidden areas, and prefers the declared entry", () => {
+        setViewportWidth(1440);
+        render(<FocusAreaShell hiddenEditor />);
+
+        const library = screen.getByRole("button", { name: "Library" });
+        const header = screen.getByRole("button", { name: "Header" });
+        const lastHeaderControl = screen.getByRole("button", { name: "Last header control" });
+        library.focus();
+
+        fireEvent.keyDown(library, { key: "Tab" });
+        expect(document.activeElement).toBe(header);
+        fireEvent.keyDown(document.activeElement!, { key: "Tab" });
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Views" }));
+
+        lastHeaderControl.focus();
+        fireEvent.keyDown(lastHeaderControl, { key: "Tab", shiftKey: true });
+        expect(document.activeElement).toBe(library);
+        library.focus();
+        fireEvent.keyDown(library, { key: "Tab" });
+        expect(document.activeElement).toBe(header);
+
+        fireEvent.keyDown(lastHeaderControl, { key: "Tab" });
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Views" }));
+        fireEvent.keyDown(document.activeElement!, { key: "Tab" });
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Toolbar" }));
+        fireEvent.keyDown(document.activeElement!, { key: "Tab" });
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Status" }));
+    });
+
+
+    it("wraps from the editor through status, Assistant, Library, and views", () => {
+        setViewportWidth(1440);
+        render(<FocusAreaShell />);
+
+        const editor = screen.getByRole("button", { name: "Editor" });
+        editor.focus();
+        for (const name of ["Status", "Chat", "Composer"]) {
+            fireEvent.keyDown(document.activeElement!, { key: "Tab" });
+            expect(document.activeElement).toBe(screen.getByRole("button", { name }));
+        }
+
+        for (const name of ["Library", "Header", "Views"]) {
+            fireEvent.keyDown(document.activeElement!, { key: "Tab" });
+            expect(document.activeElement).toBe(screen.getByRole("button", { name }));
+        }
+    });
+
 });
