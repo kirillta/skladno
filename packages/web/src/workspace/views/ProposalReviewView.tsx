@@ -89,13 +89,16 @@ export function ProposalReviewView({ data, actions }: { data: ProposalReviewData
     const cards = useRef<(HTMLElement | null)[]>([]);
     const [displayMode, setDisplayMode] = useState<"side-by-side" | "stacked">("side-by-side");
     const [highlightChanges, setHighlightChanges] = useState(false);
+    const [currentChange, setCurrentChange] = useState<number>();
 
 
     function moveChange(direction: -1 | 1) {
-        const current = cards.current.findIndex((card) => card === document.activeElement);
-        const index = current < 0 ? 0 : (current + direction + cards.current.length) % cards.current.length;
+        const index = currentChange === undefined ? 0 : (currentChange + direction + cards.current.length) % cards.current.length;
+        const card = cards.current[index];
 
-        cards.current[index]?.focus();
+        setCurrentChange(index);
+        card?.scrollIntoView({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+        card?.focus({ preventScroll: true });
     }
 
 
@@ -107,31 +110,9 @@ export function ProposalReviewView({ data, actions }: { data: ProposalReviewData
     const acceptanceBlocked = accepted || stale || !presentation.reliable;
     const allResolved = counts.pending === 0 && presentation.changes.length > 0;
 
-    return <div className="mx-auto w-full max-w-6xl pb-6">
-        {accepted && <Status className="mb-4" label={intl.formatMessage({ id: "views.proposalAccepted" })} tone="success" />}
-        {stale && <Banner className="mb-4" tone="warning">
-            <div>
-                <p>{intl.formatMessage({ id: "views.proposalStale" })}</p>
-                <div className="mt-2 flex gap-2">
-                    <Button variant="secondary" onClick={openWrite}>{intl.formatMessage({ id: "views.reviewCurrentArticle" })}</Button>
-                    <Button variant="secondary" onClick={openAssistant}>{intl.formatMessage({ id: "views.regenerateInAssistant" })}</Button>
-                    <Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button>
-                </div>
-            </div>
-        </Banner>
-        }
-        {presentation.warnings.length > 0 && !warningsDismissed
-            && <div className="relative mb-4">
-                <Status label={intl.formatMessage({ id: "views.preservationWarnings" })} tone="warning">
-                    <ul className="mt-1 list-disc pl-4 pr-8">{presentation.warnings.map((warning) => <li key={warning}>{intl.formatMessage({ id: `views.warning.${warning}` as never })}</li>)}</ul>
-                </Status>
-                <IconButton className="absolute right-2 top-2" label={intl.formatMessage({ id: "views.dismissPreservationWarnings" })} onClick={dismissWarnings}>
-                    <CloseIcon className="size-4" />
-                </IconButton>
-            </div>
-        }
-        <header className="-mx-5 border-b border-border bg-canvas px-5 py-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+    return <div className="flex min-h-0 flex-1 flex-col">
+        <header className="shrink-0 border-b border-border bg-canvas">
+            <div className="mx-auto flex w-full max-w-6xl flex-wrap items-start justify-between gap-3 px-5 py-4">
                 <div>
                     <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.proposalReview" })}</h2>
                     <p className="mt-1 text-xs text-muted">{stale || !presentation.reliable
@@ -160,40 +141,65 @@ export function ProposalReviewView({ data, actions }: { data: ProposalReviewData
                 </div>
             </div>
         </header>
-        {(!presentation.reliable || stale)
-            && <div className="mt-4">{!presentation.reliable
-                && <Banner className="mb-3" tone="warning">{intl.formatMessage({ id: "views.proposalFallback" })}</Banner>}
-            <ProposalDiff original={review.baseContent} proposed={review.proposedContent} layout={displayMode === "side-by-side" ? "columns" : "stacked"} highlight={highlightChanges} />
-            </div>}
-        {presentation.changes.length === 0
-            ? <EmptyState title={intl.formatMessage({ id: "views.proposalNoChanges" })}>
-                <Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button>
-            </EmptyState>
-            : presentation.reliable && !stale && <div className="mt-4 space-y-4">{presentation.changes.map((change, index) => {
-                const decision = decisions[change.id] ?? "pending";
-                const decisionClasses = decision === "accepted" ? "border-success bg-success-soft" : decision === "rejected" ? "border-danger bg-danger-soft" : "border-border bg-surface-raised";
-                return <article key={change.id} ref={(element) => {
-                    cards.current[index] = element;
-                }} tabIndex={-1} className={`rounded-panel border p-4 ${decisionClasses}`}>
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h3 className="text-sm font-semibold">{intl.formatMessage({ id: `views.changeType.${change.kind}` as never }, { index: index + 1, total: presentation.changes.length })}</h3>
-                            <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: `views.decision.${decision}` as never })}</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="secondary" state={decision === "rejected" ? "error" : "default"} disabled={accepted || stale} onClick={() => setDecision(change.id, "rejected")}>{intl.formatMessage({ id: "views.rejectChange" })}</Button>
-                            <Button state={decision === "accepted" ? "success" : "default"} disabled={accepted || stale} onClick={() => setDecision(change.id, "accepted")}>{intl.formatMessage({ id: "views.acceptChange" })}</Button>
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
+            <div className="mx-auto w-full max-w-6xl p-5 pb-6">
+                {accepted && <Status className="mb-4" label={intl.formatMessage({ id: "views.proposalAccepted" })} tone="success" />}
+                {stale && <Banner className="mb-4" tone="warning">
+                    <div>
+                        <p>{intl.formatMessage({ id: "views.proposalStale" })}</p>
+                        <div className="mt-2 flex gap-2">
+                            <Button variant="secondary" onClick={openWrite}>{intl.formatMessage({ id: "views.reviewCurrentArticle" })}</Button>
+                            <Button variant="secondary" onClick={openAssistant}>{intl.formatMessage({ id: "views.regenerateInAssistant" })}</Button>
+                            <Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button>
                         </div>
                     </div>
-                    <div className="mt-4 flex min-h-9 items-start gap-2 border-y border-border py-3 text-sm" aria-live="polite">
-                        <AssistantIcon className="mt-0.5 size-4 shrink-0 text-brand" />
-                        <p>{summaries?.[change.id] ?? (summaryState === "loading" ? intl.formatMessage({ id: "views.proposalSummaryLoading" }) : intl.formatMessage({ id: "views.proposalSummaryUnavailable" }))}</p>
-                    </div>
-                    <div className="mt-4">
-                        <ProposalDiff decision={decision} original={change.baseLines.join("\n")} proposed={change.proposalLines.join("\n")} layout={displayMode === "side-by-side" ? "columns" : "stacked"} highlight={highlightChanges} />
-                    </div>
-                </article>;
-            })}</div>
-        }
+                </Banner>}
+                {presentation.warnings.length > 0 && !warningsDismissed && <div className="relative mb-4">
+                    <Status label={intl.formatMessage({ id: "views.preservationWarnings" })} tone="warning">
+                        <ul className="mt-1 list-disc pl-4 pr-8">
+                            {presentation.warnings.map((warning) => <li key={warning}>{intl.formatMessage({ id: `views.warning.${warning}` as never })}</li>)}
+                        </ul>
+                    </Status>
+                    <IconButton className="absolute right-2 top-2" label={intl.formatMessage({ id: "views.dismissPreservationWarnings" })} onClick={dismissWarnings}>
+                        <CloseIcon className="size-4" />
+                    </IconButton>
+                </div>}
+                {(!presentation.reliable || stale)
+                    && <div className="mt-4">{!presentation.reliable
+                        && <Banner className="mb-3" tone="warning">{intl.formatMessage({ id: "views.proposalFallback" })}</Banner>}
+                    <ProposalDiff original={review.baseContent} proposed={review.proposedContent} layout={displayMode === "side-by-side" ? "columns" : "stacked"} highlight={highlightChanges} />
+                    </div>}
+                {presentation.changes.length === 0
+                    ? <EmptyState title={intl.formatMessage({ id: "views.proposalNoChanges" })}>
+                        <Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button>
+                    </EmptyState>
+                    : presentation.reliable && !stale && <div className="mt-4 space-y-4">{presentation.changes.map((change, index) => {
+                        const decision = decisions[change.id] ?? "pending";
+                        const decisionClasses = decision === "accepted" ? "border-success bg-success-soft" : decision === "rejected" ? "border-danger bg-danger-soft" : "border-border bg-surface-raised";
+                        return <article key={change.id} ref={(element) => {
+                            cards.current[index] = element;
+                        }} tabIndex={-1} className={`rounded-panel border p-4 ${decisionClasses}`}>
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h3 className="text-sm font-semibold">{intl.formatMessage({ id: `views.changeType.${change.kind}` as never }, { index: index + 1, total: presentation.changes.length })}</h3>
+                                    <p className="mt-1 text-xs text-muted">{intl.formatMessage({ id: `views.decision.${decision}` as never })}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button variant="secondary" state={decision === "rejected" ? "error" : "default"} disabled={accepted || stale} onClick={() => setDecision(change.id, "rejected")}>{intl.formatMessage({ id: "views.rejectChange" })}</Button>
+                                    <Button state={decision === "accepted" ? "success" : "default"} disabled={accepted || stale} onClick={() => setDecision(change.id, "accepted")}>{intl.formatMessage({ id: "views.acceptChange" })}</Button>
+                                </div>
+                            </div>
+                            <div className="mt-4 flex min-h-9 items-start gap-2 border-y border-border py-3 text-sm" aria-live="polite">
+                                <AssistantIcon className="mt-0.5 size-4 shrink-0 text-brand" />
+                                <p>{summaries?.[change.id] ?? (summaryState === "loading" ? intl.formatMessage({ id: "views.proposalSummaryLoading" }) : intl.formatMessage({ id: "views.proposalSummaryUnavailable" }))}</p>
+                            </div>
+                            <div className="mt-4">
+                                <ProposalDiff decision={decision} original={change.baseLines.join("\n")} proposed={change.proposalLines.join("\n")} layout={displayMode === "side-by-side" ? "columns" : "stacked"} highlight={highlightChanges} />
+                            </div>
+                        </article>;
+                    })}</div>
+                }
+            </div>
+        </div>
     </div>;
 }
