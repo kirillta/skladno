@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createWindowOptions, focusWindow, isExternalWebUrl } from "./window-policy.js";
+import { createWindowOptions, focusWindow, isExternalWebUrl, isRendererNavigation } from "./window-policy.js";
 
 
 // product: application.electron-secured-window
@@ -19,6 +19,8 @@ test("desktop window keeps the renderer isolated and only accepts web links", ()
     assert.equal(isExternalWebUrl("http://example.com/article"), true);
     assert.equal(isExternalWebUrl("file:///C:/private.txt"), false);
     assert.equal(isExternalWebUrl("javascript:alert(1)"), false);
+    assert.equal(isRendererNavigation("http://localhost:5173/", "http://localhost:5173"), true);
+    assert.equal(isRendererNavigation("https://example.com/article", "http://localhost:5173"), false);
 });
 
 

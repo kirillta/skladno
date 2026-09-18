@@ -50,3 +50,12 @@ export function isExternalWebUrl(value: string): boolean {
         return false;
     }
 }
+
+
+export function isRendererNavigation(value: string, rendererUrl: string): boolean {
+    try {
+        return new URL(value).origin === new URL(rendererUrl).origin;
+    } catch {
+        return false;
+    }
+}
