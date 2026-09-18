@@ -5,12 +5,21 @@ import { $insertList, $isListNode, $removeList, type ListType } from "@lexical/l
 import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection, $setSelection, type BaseSelection, type ElementNode, type LexicalEditor, type TextFormatType } from "lexical";
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text";
 import { useIntl } from "react-intl";
+import { formatKeyBinding } from "@skladno/shared";
 import { BoldIcon, CodeIcon, ItalicIcon, LinkIcon, ListIcon, NumberedListIcon, StrikeIcon } from "../../ui/icons.js";
 import { IconButton } from "../../ui/primitives.js";
 import { isSupportedArticleLink } from "./paste-constants.js";
 
 
 type BlockType = "paragraph" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "quote" | "code";
+
+
+function getToolbarHint(label: string, shortcut?: string): string {
+    if (!shortcut)
+        return label;
+
+    return `${label} (${formatKeyBinding({ primary: true, shift: false, alt: false, key: shortcut }, typeof navigator === "undefined" ? "" : navigator.platform).replaceAll("+", " + ")})`;
+}
 
 
 function $setBlockType(type: BlockType) {
@@ -193,12 +202,12 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
     };
 
     const controls = [
-        ["editor.bold", BoldIcon, "bold"], ["editor.italic", ItalicIcon, "italic"], ["editor.strikethrough", StrikeIcon, "strikethrough"], ["editor.codeBlock", CodeIcon, "code"],
+        ["editor.bold", BoldIcon, "bold", "b"], ["editor.italic", ItalicIcon, "italic", "i"], ["editor.strikethrough", StrikeIcon, "strikethrough"], ["editor.inlineCode", CodeIcon, "code"],
     ] as const;
 
     return <div className="shrink-0 overflow-x-auto border-b border-border bg-surface-raised px-4 py-1 [scrollbar-width:thin]">
         <div data-focus-area="formatting-toolbar" role="toolbar" aria-label={intl.formatMessage({ id: "editor.formatting" })} onKeyDown={handleKeyNavigation} className="flex w-max min-w-full items-center gap-1">
-            <select data-focus-area-entry aria-label={intl.formatMessage({ id: "editor.blockStyle" })}
+            <select data-focus-area-entry aria-label={intl.formatMessage({ id: "editor.blockStyle" })} title={intl.formatMessage({ id: "editor.blockStyle" })}
                 value={block}
                 onMouseDown={rememberBlockSelection}
                 onChange={(event) => applyBlockType(event.target.value as BlockType)}
@@ -208,9 +217,13 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
                 <option value="quote">{intl.formatMessage({ id: "editor.blockQuote" })}</option>
                 <option value="code">{intl.formatMessage({ id: "editor.codeBlock" })}</option>
             </select>
-            {controls.map(([label, Icon, format]) => <IconButton variant="toolbar" key={format} type="button" label={intl.formatMessage({ id: label as "editor.bold" | "editor.italic" | "editor.strikethrough" | "editor.codeBlock" })} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextFormat(format)}><Icon /></IconButton>)}
+            {controls.map(([label, Icon, format, shortcut]) => {
+                const controlLabel = intl.formatMessage({ id: label });
+                return <IconButton variant="toolbar" key={format} type="button" label={controlLabel} title={getToolbarHint(controlLabel, shortcut)} aria-pressed={formats.has(format)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextFormat(format)}><Icon /></IconButton>;
+            })}
             <IconButton variant="toolbar" type="button"
                 label={intl.formatMessage({ id: "editor.link" })}
+                title={intl.formatMessage({ id: "editor.link" })}
                 aria-pressed={linkActive}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => activate(openLink)}>
@@ -219,6 +232,7 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
             {linkUrl && <a href={linkUrl} target="_blank" rel="noreferrer" aria-label={intl.formatMessage({ id: "editor.openLink" }, { url: linkUrl })} className="inline-flex min-h-9 max-w-32 items-center truncate rounded-control px-2 text-xs font-semibold text-brand underline underline-offset-2 hover:bg-brand-soft">{linkUrl}</a>}
             <IconButton variant="toolbar" type="button"
                 label={intl.formatMessage({ id: "editor.bulletedList" })}
+                title={intl.formatMessage({ id: "editor.bulletedList" })}
                 aria-pressed={listType === "bullet"}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => applyList("bullet")}>
@@ -226,6 +240,7 @@ export function ArticleEditorToolbar({ editor, openLink }: { editor: LexicalEdit
             </IconButton>
             <IconButton variant="toolbar" type="button"
                 label={intl.formatMessage({ id: "editor.numberedList" })}
+                title={intl.formatMessage({ id: "editor.numberedList" })}
                 aria-pressed={listType === "number"}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => applyList("number")}>

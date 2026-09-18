@@ -269,6 +269,7 @@ export const messages = {
     "editor.bold": "Bold",
     "editor.italic": "Italic",
     "editor.strikethrough": "Strikethrough",
+    "editor.inlineCode": "Inline code",
     "editor.link": "Link",
     "editor.openLink": "Open link: {url}",
     "editor.bulletedList": "Bulleted list",
