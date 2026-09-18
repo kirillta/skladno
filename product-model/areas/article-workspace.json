@@ -196,8 +196,8 @@
                 "packages/web/src/workspace/views/TranslationsView.tsx",
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
-            "contract": "A stale source blocks creation, and the completed translated title and text create an independent linked Article without overwriting its source Article.",
-            "persistence": "Independent Article with source Article and Revision linkage.",
+            "contract": "A stale source blocks creation, and the completed translated title and text create an independent linked Article without overwriting its source Article. The selected completed translation is restored per Article when available, otherwise the latest available translation is shown.",
+            "persistence": "Independent Article with source Article and Revision linkage; selected translation language is a local workspace preference per Article.",
             "relatedCapabilityIds": ["history-and-publishing.translations", "editorial-workflows.translation-request"]
         },
         {
@@ -665,6 +665,28 @@
             "evidence": {
                 "kind": "automated",
                 "path": "packages/web/src/workspace/views/TranslationsView.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.translations.selected-language",
+            "title": "Selected translation language restores locally per Article",
+            "capabilityIds": [
+                "workspace.translations.linked-article"
+            ],
+            "preconditions": [
+                "Completed translations exist for an Article"
+            ],
+            "event": "Author selects a target language, navigates away, or restarts the workspace.",
+            "expected": [
+                "The selected language restores when its completed translation remains available",
+                "An unavailable selection falls back to the latest available translation"
+            ],
+            "forbidden": [
+                "Showing a selected translation from another Article or changing translation content"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/EditorialWorkspace.assistant-requests.test.tsx"
             }
         },
         {

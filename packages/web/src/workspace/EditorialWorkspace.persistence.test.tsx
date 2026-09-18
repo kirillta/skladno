@@ -25,16 +25,16 @@ describe("Editorial Workspace persistence", () => {
         localStorage.setItem("skladno-assistant-collapsed", "false");
         render(<App client={createFakeClient()} />);
         await screen.findByRole("heading", { name: "First Article" });
-        await waitFor(() => expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toEqual({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: true, assistantCollapsed: false, proposalWarningsDismissed: false, view: "write", selectedArticleId: "one" }));
+        await waitFor(() => expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toEqual({ version: 4, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: true, assistantCollapsed: false, proposalWarningsDismissed: false, selectedTranslationLanguages: {}, view: "write", selectedArticleId: "one" }));
         expect(localStorage.getItem("skladno-navigation-collapsed")).toBeNull();
         expect(localStorage.getItem("skladno-assistant-collapsed")).toBeNull();
     });
 
     it("repairs malformed persisted workspace dimensions", async () => {
-        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: "wide", assistantWidth: null, libraryCollapsed: "true", assistantCollapsed: false, proposalWarningsDismissed: "yes", view: "write" }));
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: "wide", assistantWidth: null, libraryCollapsed: "true", assistantCollapsed: false, proposalWarningsDismissed: "yes", selectedTranslationLanguages: { invalid: 1, one: "Spanish" }, view: "write" }));
         render(<App client={createFakeClient()} />);
         await screen.findByRole("heading", { name: "First Article" });
-        await waitFor(() => expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toMatchObject({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "write" }));
+        await waitFor(() => expect(JSON.parse(localStorage.getItem("skladno-workspace-layout")!)).toMatchObject({ version: 4, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, selectedTranslationLanguages: { one: "Spanish" }, view: "write" }));
     });
 
     it("restores the selected Article and Workspace View from local preferences", async () => {

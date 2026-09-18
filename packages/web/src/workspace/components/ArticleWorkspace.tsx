@@ -107,7 +107,7 @@ export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceVi
             navigation={{ proposalWarningsDismissed: layout.proposalWarningsDismissed, dismissProposalWarnings: () => layout.setProposalWarningsDismissed(true), openWrite: () => layout.setView("write"), openAssistant: () => {
                 layout.setAssistantCollapsed(false);
                 layout.setView("write");
-            }}} />
+            }, selectedTranslationLanguages: layout.selectedTranslationLanguages, setSelectedTranslationLanguage: layout.setSelectedTranslationLanguage }} />
         <ArticleStatusBar revisionNumber={revisionNumber} language={article.language ?? "en"} setLanguage={async (language) => {
             try {
                 await workspace.updateArticle(article.id, { language });

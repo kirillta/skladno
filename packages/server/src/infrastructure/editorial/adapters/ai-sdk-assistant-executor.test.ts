@@ -50,3 +50,51 @@ test("Assistant completes only after a successful final finish reason", async ()
         }
     }
 });
+
+
+test("Assistant fails when an artifact tool fails instead of completing with the model's explanation", async () => {
+    const usage = {
+        inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+        outputTokens: { total: 1, text: 1, reasoning: 0 },
+    };
+    const model = new MockLanguageModelV3({
+        doStream: [
+            {
+                stream: new ReadableStream<LanguageModelV3StreamPart>({
+                    start(controller) {
+                        controller.enqueue({ type: "tool-call", toolCallId: "translation", toolName: "translate", input: JSON.stringify({ targetLanguage: "Spanish" }) });
+                        controller.enqueue({ type: "finish", finishReason: { unified: "tool-calls", raw: undefined }, usage });
+                        controller.close();
+                    },
+                }),
+            },
+            {
+                stream: new ReadableStream<LanguageModelV3StreamPart>({
+                    start(controller) {
+                        controller.enqueue({ type: "text-start", id: "text" });
+                        controller.enqueue({ type: "text-delta", id: "text", delta: "Translation failed." });
+                        controller.enqueue({ type: "text-end", id: "text" });
+                        controller.enqueue({ type: "finish", finishReason: { unified: "stop", raw: undefined }, usage });
+                        controller.close();
+                    },
+                }),
+            },
+        ],
+    });
+    const executor = new AiSdkAssistantExecutor({ languageModel: model, provider: AI_PROVIDER.OPENAI, storeResponses: false });
+    const events: string[] = [];
+    const consume = async () => {
+        for await (const event of executor.stream({
+            message: "Translate to Spanish", article: "Article", scope: "article", instructions: [], history: [], skills: [], initialActiveCapabilities: ["translate"],
+            tools: [{
+                capability: "translate", description: "Prepare translation", input: "target-language", execute: async () => {
+                    throw new Error("translation failed");
+                }
+            }],
+        }, new AbortController().signal))
+            events.push(event.type);
+    };
+
+    await assert.rejects(consume(), /translation failed/);
+    assert.deepEqual(events, []);
+});

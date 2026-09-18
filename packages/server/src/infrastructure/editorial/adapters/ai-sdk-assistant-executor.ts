@@ -24,18 +24,24 @@ export class AiSdkAssistantExecutor {
 
 
     async *stream(request: EditorialAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const state = { activeCapabilities: request.initialActiveCapabilities };
+        const state: { activeCapabilities?: readonly string[]; failure?: { error: unknown } } = { activeCapabilities: request.initialActiveCapabilities };
         const execute = (capability: string, input: Readonly<Record<string, string>>) => this.executeCapability(request, signal, state, capability, input);
         const agent = this.createAgent(request, createAssistantTools(request, execute), state);
         const result = await agent.stream({ prompt: createAssistantConversationPrompt(request), abortSignal: signal });
         let text = "";
         for await (const delta of result.textStream) {
+            if (state.failure)
+                continue;
+
             text += delta;
             yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta };
         }
 
         const steps = await result.steps;
         const finalStep = await result.finalStep;
+        if (state.failure)
+            throw state.failure.error;
+
         if (!text.trim() || signal.aborted || !isAcceptedFinish(finalStep.finishReason) || (steps.length >= 6 && finalStep.finishReason === "tool-calls"))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
 
@@ -44,12 +50,19 @@ export class AiSdkAssistantExecutor {
     }
 
 
-    private async executeCapability(request: EditorialAssistantRequest, signal: AbortSignal, state: { activeCapabilities?: readonly string[] }, capability: string, input: Readonly<Record<string, string>>): Promise<unknown> {
+    private async executeCapability(request: EditorialAssistantRequest, signal: AbortSignal, state: { activeCapabilities?: readonly string[]; failure?: { error: unknown } }, capability: string, input: Readonly<Record<string, string>>): Promise<unknown> {
         const candidate = request.tools.find((toolCandidate) => toolCandidate.capability === capability);
         if (!candidate)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-        const result = await candidate.execute(input, signal);
+        let result: unknown;
+        try {
+            result = await candidate.execute(input, signal);
+        } catch (error) {
+            state.failure = { error };
+            throw error;
+        }
+
         if (capability === "find_capabilities" && Array.isArray(result))
             state.activeCapabilities = result.flatMap((item) => item && typeof item === "object" && "capability" in item && typeof item.capability === "string" ? [item.capability] : []);
 
@@ -57,7 +70,7 @@ export class AiSdkAssistantExecutor {
     }
 
 
-    private createAgent(request: EditorialAssistantRequest, tools: ToolSet, state: { activeCapabilities?: readonly string[] }) {
+    private createAgent(request: EditorialAssistantRequest, tools: ToolSet, state: { activeCapabilities?: readonly string[]; failure?: { error: unknown } }) {
         const getActiveTools = () => state.activeCapabilities ? [...state.activeCapabilities, "load_skill"] : ["find_capabilities", "load_skill"];
         const providerOptions = getEditorialProviderOptions(this.options);
 
