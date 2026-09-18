@@ -39,6 +39,7 @@ When proposing a change, identify its benefit to Authors and any tradeoff agains
 | Native Settings, credentials, restore, or data relocation | [ADR-009](docs/development/architecture/adr-009-native-settings-credentials-and-data-switching.md) |
 | Updates, packaging, or release automation | [ADR-010](docs/development/architecture/adr-010-author-controlled-preview-updates.md) and [release guide](docs/development/guides/mvp-release-and-recovery.md) |
 | Assistant Skills, capabilities, routing, or tool execution | [ADR-011](docs/development/architecture/adr-011-assistant-skills-and-bounded-capabilities.md) |
+| Workspace or Settings focus-area navigation | [ADR-012](docs/development/architecture/adr-012-workspace-keyboard-focus-areas.md) |
 | UI layout, controls, or interaction states | [Design system](docs/development/ui/design-system.md) |
 | Visible copy, accessible names, or locale formatting | [Internationalization](docs/development/guides/internationalization.md) |
 

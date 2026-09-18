@@ -44,7 +44,7 @@ export function WorkspaceTabBar({ view, setView, badges = {}, shortcutOverrides 
     }
 
 
-    return <TabList className="min-h-10 bg-surface px-3" aria-label={intl.formatMessage({ id: "workspace.tabs.ariaLabel" })}>
+    return <TabList data-focus-area="workspace-views" className="min-h-10 bg-surface px-3" aria-label={intl.formatMessage({ id: "workspace.tabs.ariaLabel" })}>
         {workspaceViewDefinitions.map((item, index) => {
             const badge = badges[item.id];
             const label = intl.formatMessage({ id: item.label });
@@ -59,6 +59,7 @@ export function WorkspaceTabBar({ view, setView, badges = {}, shortcutOverrides 
                 id={`workspace-tab-${item.id}`}
                 aria-controls={`workspace-panel-${item.id}`}
                 aria-label={accessibleName}
+                data-focus-area-entry={view === item.id || undefined}
                 selected={view === item.id}
                 tabIndex={view === item.id ? 0 : -1}
                 title={getShortcutHint(accessibleName, item.command, shortcutOverrides)}

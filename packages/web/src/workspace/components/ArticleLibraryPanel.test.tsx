@@ -66,6 +66,7 @@ describe("ArticleLibraryPanel", () => {
         expect(screen.getByText("Mother Article").title).toBe("Mother Article");
         expect(screen.getByText("Mother Article").classList.contains("truncate")).toBe(true);
         expect(sourceButton.classList.contains("py-2.5")).toBe(true);
+        expect(sourceButton.dataset.focusAreaEntry).toBe("true");
         expect(translationButton.classList.contains("py-1.5")).toBe(true);
         expect(screen.getByText("Spanish edition").classList.contains("text-xs")).toBe(true);
         expect(sourceButton.getAttribute("aria-expanded")).toBe("true");
@@ -78,6 +79,23 @@ describe("ArticleLibraryPanel", () => {
         await user.click(screen.getByRole("button", { name: /Other Spanish edition/ }));
         expect(screen.getByRole("button", { name: /Other Article/ })).toBeTruthy();
         expect(selectArticle).toHaveBeenCalledWith("other-translation");
+    });
+
+
+    it("moves between Library controls with Up and Down without taking search editing keys", () => {
+        render(<IntlProvider locale="en" messages={messages}>
+            <ArticleLibraryPanel articles={[source]} selectedArticleId={source.id} selectArticle={vi.fn()} collapsed={false} setCollapsed={vi.fn()} createBlank={vi.fn()} openStyleProfile={vi.fn()} openSettings={vi.fn()} language="en" />
+        </IntlProvider>);
+
+        const article = screen.getByRole("button", { name: /Mother Article/ });
+        article.focus();
+        fireEvent.keyDown(article, { key: "ArrowDown" });
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Style Profile" }));
+
+        const search = screen.getByRole("textbox", { name: getMessage("navigation.searchArticles") });
+        search.focus();
+        expect(fireEvent.keyDown(search, { key: "ArrowDown" })).toBe(true);
+        expect(document.activeElement).toBe(search);
     });
 
 

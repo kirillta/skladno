@@ -38,6 +38,20 @@ describe("AssistantTimeline", () => {
     });
 
 
+    it("leaves Up and Down to the scroll region and moves actionable results with Left and Right", () => {
+        const assistantMessages = [
+            { id: "proposal", articleId: "article", role: "assistant" as const, kind: "response" as const, status: "completed" as const, responseKind: "proposal_prepared" as const, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+        ];
+        const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={assistantMessages} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+        const timeline = view.container.querySelector<HTMLElement>("[aria-live='polite']")!;
+        timeline.focus();
+
+        expect(fireEvent.keyDown(timeline, { key: "ArrowDown" })).toBe(true);
+        fireEvent.keyDown(timeline, { key: "ArrowRight" });
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Review Proposal" }));
+    });
+
+
     it("shows persisted Fact Check claims in their Findings prepared message", () => {
         render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={[{ id: "findings", articleId: "article", role: "assistant", kind: "response", status: "completed", responseKind: "findings_prepared", createdAt: "2026-08-13T20:30:00.000Z", updatedAt: "2026-08-13T20:30:00.000Z" }]} factCheckClaims={[{ claim: "HTTP was standardized in 1999.", checked: true }]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
 

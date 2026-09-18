@@ -16,11 +16,13 @@ import { KeyBindingSettings } from "./components/KeyBindingSettings.js";
 import { PublishingSettingsSection } from "./components/PublishingSettingsSection.js";
 import type { SettingsSection } from "./settings-sections.js";
 import { useAiSettingsController } from "./use-ai-settings-controller.js";
+import { settingsFocusAreas, useFocusAreaNavigation } from "../ui/focus-area-navigation.js";
 
 
 export function ApplicationSettings(props: { client: EditorialWorkspaceClient; back: () => void; initialSection?: SettingsSection; onKeyBindingsUpdated?: (overrides: KeyBindingOverrides) => void; onThemeApplied?: (theme: GeneralSettings["theme"]) => void; focusUpdates?: boolean; onUpdatesFocused?: () => void; openQuickStart?: () => void }) {
     const { client, back, initialSection = "general", onKeyBindingsUpdated, onThemeApplied, focusUpdates = false, onUpdatesFocused, openQuickStart } = props;
     const intl = useIntl();
+    const focusAreas = useFocusAreaNavigation(settingsFocusAreas);
     const { notify, notifyError } = useNotifications();
     const [section, setSection] = useState<SettingsSection>(initialSection);
     const [settings, setSettings] = useState<ApplicationSettingsSnapshot>();
@@ -187,7 +189,7 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
         sectionContent = <AboutSettingsSection openQuickStart={openQuickStart} />;
 
 
-    return <main className="flex h-screen flex-col overflow-hidden bg-surface text-ink md:flex-row">
+    return <main ref={focusAreas.ref} onFocusCapture={focusAreas.onFocusCapture} onKeyDownCapture={focusAreas.onKeyDownCapture} className="flex h-screen flex-col overflow-hidden bg-surface text-ink md:flex-row">
         <SettingsNavigation section={section} setSection={setSection} back={back} status={status} />
         <SettingsContent section={section} settings={settings}>{sectionContent}</SettingsContent>
         {ai.connectionPendingRemoval && <ConnectionRemovalDialog connection={ai.connectionPendingRemoval} close={() => ai.setConnectionPendingRemoval(undefined)} remove={() => void ai.removeConnection()} />}

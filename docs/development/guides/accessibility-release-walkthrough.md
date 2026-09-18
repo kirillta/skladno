@@ -20,7 +20,7 @@ Record P, F, B, or N/A. A failure or block needs a reason and linked issue befor
 
 | ID | Area and expected observable result | A: 1440 x 1024 light | B: 1280 x 800 dark |
 | --- | --- | --- | --- |
-| WS-01 | Article Library Panel, Navigation Rail, Article Header, Editor, Status Bar, and Editorial Assistant remain reachable in reading order. Panel collapse controls have names and visible focus. |  |  |
+| WS-01 | Workspace focus areas follow [ADR-012](../architecture/adr-012-workspace-keyboard-focus-areas.md). Panel collapse controls have names and visible focus. |  |  |
 | WS-02 | Write supports keyboard editing, save, Draft recovery, and current-save feedback. Content does not clip or overlap a focused control. |  |  |
 | WS-03 | Proposal Review exposes labelled decision controls and non-color diff cues. Accepting a Proposal returns focus to Write. |  |  |
 | WS-04 | Revision History and preview are keyboard reachable. Restore confirmation contains focus and restores it after cancel or confirmation. |  |  |

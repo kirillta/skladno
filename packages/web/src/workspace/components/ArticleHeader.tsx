@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { type Article, type KeyBindingOverrides, type UpdateArticleInput } from "@skladno/shared";
 import { Button, Dialog, Field, IconButton } from "../../ui/primitives.js";
 import { ArchiveIcon, DeleteIcon, FocusIcon, LeaveFocusIcon, SaveIcon } from "../../ui/icons.js";
@@ -97,7 +97,22 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, setArchi
     }
 
 
-    return <header className="border-b border-border bg-surface">
+    function handleHeaderKeyDown(event: KeyboardEvent<HTMLElement>) {
+        const target = event.target instanceof HTMLElement ? event.target : undefined;
+        if ((event.key !== "ArrowLeft" && event.key !== "ArrowRight") || target instanceof HTMLInputElement || target?.closest("dialog[open]"))
+            return;
+
+        const controls = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button")];
+        const index = controls.indexOf(document.activeElement as HTMLButtonElement);
+        if (index < 0)
+            return;
+
+        event.preventDefault();
+        controls[(index + (event.key === "ArrowRight" ? 1 : controls.length - 1)) % controls.length]?.focus();
+    }
+
+
+    return <header data-focus-area="article-header" onKeyDown={handleHeaderKeyDown} className="border-b border-border bg-surface" aria-label={intl.formatMessage({ id: "articleHeader.metadata" })}>
         <div className="flex min-h-12 items-center gap-2 overflow-x-auto px-5 py-1.5">
             <h1 className={editingTitle ? "min-w-0 flex-1 text-xl font-semibold tracking-tight" : "min-w-0 flex-1 text-xl font-semibold tracking-tight"}>
                 {editingTitle
@@ -115,7 +130,7 @@ function LocalizedArticleHeader({ article, updateArticle, save, remove, setArchi
                             setEditingTitle(false);
                         }
                     }} />
-                    : <button className="w-full truncate text-left hover:text-brand focus:outline-none" type="button" aria-label={intl.formatMessage({ id: "articleHeader.rename" }, { articleTitle: article.title })} onClick={() => setEditingTitle(true)}>{article.title}</button>}
+                    : <button data-focus-area-entry className="w-full truncate text-left hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" aria-label={intl.formatMessage({ id: "articleHeader.rename" }, { articleTitle: article.title })} onClick={() => setEditingTitle(true)}>{article.title}</button>}
             </h1>
             <div className="flex shrink-0 items-center gap-2 text-xs" aria-label={intl.formatMessage({ id: "articleHeader.metadata" })}>
                 <IconButton variant="quiet" label={intl.formatMessage({ id: "articleHeader.saveRevision" })} title={getShortcutHint(intl.formatMessage({ id: "articleHeader.saveRevision" }), KEY_BINDING_COMMAND.SAVE_REVISION, shortcutOverrides)} onClick={() => void save().catch(() => undefined)}>
