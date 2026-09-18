@@ -1,21 +1,24 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { EditorialWorkspaceClient } from "../../application/client.js";
 import type { AssistantRequestStore } from "./assistant-request-state.js";
 
 
 interface AssistantMessageHistoryOptions {
-    client: EditorialWorkspaceClient;
+    client: Pick<EditorialWorkspaceClient, "listAssistantMessages">;
     articleId: string | undefined;
     profileRebuilt: { articleId: string; count: number; token: number } | undefined;
-    store: AssistantRequestStore;
+    store: Pick<AssistantRequestStore, "setMessagesByArticle">;
 }
 
 
 export function useAssistantMessageHistory({ client, articleId, profileRebuilt, store }: AssistantMessageHistoryOptions) {
     const { setMessagesByArticle } = store;
+    const requestVersion = useRef(0);
     const reload = useCallback(async (id: string) => {
+        const version = ++requestVersion.current;
         const messages = await client.listAssistantMessages(id);
-        setMessagesByArticle((current) => ({ ...current, [id]: messages }));
+        if (version === requestVersion.current)
+            setMessagesByArticle((current) => ({ ...current, [id]: messages }));
     }, [client, setMessagesByArticle]);
 
     useEffect(() => {
@@ -25,9 +28,10 @@ export function useAssistantMessageHistory({ client, articleId, profileRebuilt, 
                 cancelled = true;
             };
 
+        const version = ++requestVersion.current;
         void client.listAssistantMessages(articleId)
             .then((messages) => {
-                if (!cancelled)
+                if (!cancelled && version === requestVersion.current)
                     setMessagesByArticle((current) => ({
                         ...current,
                         [articleId]: [...messages, ...(current[articleId] ?? [])
@@ -35,7 +39,7 @@ export function useAssistantMessageHistory({ client, articleId, profileRebuilt, 
                     }));
             })
             .catch(() => {
-                if (!cancelled)
+                if (!cancelled && version === requestVersion.current)
                     setMessagesByArticle((current) => {
                         const remaining = { ...current };
                         delete remaining[articleId];
