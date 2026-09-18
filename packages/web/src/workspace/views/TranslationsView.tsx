@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getPublishingLength, type Article, type PublishLimitProfile, type TranslationMetadata } from "@skladno/shared";
 import { AlignedParagraphsIcon, SideBySideIcon } from "../../ui/icons.js";
 import { Banner, Button, EmptyState, IconButton, Tab, TabList } from "../../ui/primitives.js";
@@ -29,6 +29,7 @@ interface TranslationsData {
     translationLanguages?: readonly string[];
     publishProfile?: PublishLimitProfile;
     publishProfileLabel?: string;
+    selectedTargetLanguage?: string;
 }
 
 
@@ -36,23 +37,19 @@ interface TranslationsActions {
     create: (targetLanguage: string) => Promise<void>;
     edit?: () => void;
     openArticle?: (articleId: string) => void;
+    selectTargetLanguage?: (language: string) => void;
     translate: () => void;
 }
 
 
 export function TranslationsView({ data, actions }: { data: TranslationsData; actions: TranslationsActions }) {
-    const { article, sourceArticle, linkedTranslations = [], translations = [], stale, translationLanguages = [], publishProfile, publishProfileLabel } = data;
-    const { create, edit, openArticle, translate } = actions;
+    const { article, sourceArticle, linkedTranslations = [], translations = [], stale, translationLanguages = [], publishProfile, publishProfileLabel, selectedTargetLanguage } = data;
+    const { create, edit, openArticle, selectTargetLanguage, translate } = actions;
     const intl = useIntl();
     const [creating, setCreating] = useState(false);
     const [displayMode, setDisplayMode] = useState<"side-by-side" | "aligned">("side-by-side");
     const [visibleText, setVisibleText] = useState<"source" | "translation">("source");
-    const [selectedTargetLanguage, setSelectedTargetLanguage] = useState<string>();
     const translation = translations.find((item) => item.metadata.targetLanguage === selectedTargetLanguage) ?? translations.at(-1);
-    useEffect(() => {
-        if (!translation && translations.length)
-            setSelectedTargetLanguage(translations.at(-1)?.metadata.targetLanguage);
-    }, [translation, translations]);
     const startCreate = () => {
         if (!translation)
             return;
@@ -96,7 +93,7 @@ export function TranslationsView({ data, actions }: { data: TranslationsData; ac
             </div>
         </header>
         {translations.length > 1 && <TabList className="mt-4">
-            {translations.map((item) => <Tab key={item.metadata.targetLanguage} selected={item.metadata.targetLanguage === translation?.metadata.targetLanguage} onClick={() => setSelectedTargetLanguage(item.metadata.targetLanguage)}>{item.metadata.targetLanguage}</Tab>)}
+            {translations.map((item) => <Tab key={item.metadata.targetLanguage} selected={item.metadata.targetLanguage === translation?.metadata.targetLanguage} onClick={() => selectTargetLanguage?.(item.metadata.targetLanguage)}>{item.metadata.targetLanguage}</Tab>)}
         </TabList>}
         {linkedTranslations.length > 0 && openArticle && <nav className="mt-3 flex items-center gap-2" aria-label={intl.formatMessage({ id: "views.existingTranslations" })}>
             <span className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "views.existingTranslations" })}</span>

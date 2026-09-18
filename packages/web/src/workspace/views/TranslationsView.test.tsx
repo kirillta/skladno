@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
@@ -12,7 +13,11 @@ type TranslationsViewTestProps = Parameters<typeof RenderTranslationsView>[0]["d
 
 function TranslationsView(props: TranslationsViewTestProps) {
     const { article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel, create, edit, openArticle, translate } = props;
-    return <RenderTranslationsView data={{ article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel }} actions={{ create, edit, openArticle, translate }} />;
+    const [selectedTargetLanguage, setSelectedTargetLanguage] = useState<string>();
+    return <RenderTranslationsView data={{ article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel, selectedTargetLanguage: props.selectedTargetLanguage ?? selectedTargetLanguage }} actions={{ create, edit, openArticle, translate, selectTargetLanguage: (language) => {
+        setSelectedTargetLanguage(language);
+        props.selectTargetLanguage?.(language);
+    } }} />;
 }
 
 
@@ -141,6 +146,22 @@ describe("TranslationsView", () => {
         expect(screen.getByText("Texto en español")).toBeTruthy();
         await user.click(screen.getByRole("button", { name: getMessage("views.editTranslationLanguage", { language: "Spanish" }) }));
         expect(create).toHaveBeenCalledWith("Spanish");
+    });
+
+    it("restores an Article's selected language and falls back when it is unavailable", () => {
+        const translations = [
+            { metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "Texto en espaÃ±ol", baseRevisionId: "revision-2" },
+            { metadata: { targetLanguage: "German", protectedSpans: [] }, content: "Deutscher Text", baseRevisionId: "revision-2" },
+        ];
+        const { rerender } = render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} translations={translations} selectedTargetLanguage="Spanish" stale={false} create={vi.fn()} translate={vi.fn()} />
+        </IntlProvider>);
+
+        expect(screen.getByText("Texto en espaÃ±ol")).toBeTruthy();
+        rerender(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} translations={[translations[1]!]} selectedTargetLanguage="Spanish" stale={false} create={vi.fn()} translate={vi.fn()} />
+        </IntlProvider>);
+        expect(screen.getByText("Deutscher Text")).toBeTruthy();
     });
 
     it("shows selected-profile character guidance for the selected translation", async () => {

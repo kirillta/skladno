@@ -40,13 +40,15 @@ interface WorkspaceViewNavigation {
     dismissProposalWarnings: () => void;
     openWrite: () => void;
     openAssistant: () => void;
+    selectedTranslationLanguages: Readonly<Record<string, string>>;
+    setSelectedTranslationLanguage: (articleId: string, targetLanguage: string) => void;
 }
 
 
 export function WorkspaceViewRouter({ content, actions, navigation }: { content: WorkspaceViewContent; actions: WorkspaceViewActions; navigation: WorkspaceViewNavigation }) {
     const { view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile, publishProfileLabel } = content;
     const { runFactCheck, runTranslation, onSelectionChange, assistantSelection } = actions;
-    const { proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant } = navigation;
+    const { proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant, selectedTranslationLanguages, setSelectedTranslationLanguage } = navigation;
     const renderPanel = (children: ReactNode) => <section data-focus-area={view === "write" ? undefined : "article-editor"} role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" || view === "revisions" || view === "proposal" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : view === "translations" ? "flex min-h-0 flex-1 flex-col overflow-hidden p-5" : view === "style-profile" ? "min-h-0 flex-1 overflow-hidden p-5" : "min-h-0 flex-1 overflow-y-auto p-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong"}>{children}</section>;
 
     if (view === "write")
@@ -68,7 +70,7 @@ export function WorkspaceViewRouter({ content, actions, navigation }: { content:
         return renderPanel(<StyleProfileView data={{ corpus: corpus.corpus, findings: editorial.styleReview, findingsStale: editorial.styleReviewStale, articleId: article.id, revisions: revisions.revisions, generalSettings }} actions={{ add: corpus.add, remove: corpus.remove, setIncluded: corpus.setIncluded, setRules: corpus.setRules, rebuild: corpus.rebuild, getArticleRules: corpus.getArticleRules, setArticleRules: corpus.setArticleRules, snapshotArticleRevision: corpus.snapshotArticleRevision }} />);
 
     if (view === "translations")
-        return renderPanel(<TranslationsView data={{ article, sourceArticle: article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined, linkedTranslations: workspace.articles.filter((item) => item.sourceArticleId === article.id), translations: editorial.translations, stale: editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId), translationLanguages: generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language), publishProfile, publishProfileLabel }} actions={{ create: editorial.createTranslation, edit: openWrite, openArticle: workspace.selectArticle, translate: runTranslation }} />);
+        return renderPanel(<TranslationsView data={{ article, sourceArticle: article.sourceArticleId ? workspace.articles.find((item) => item.id === article.sourceArticleId) : undefined, linkedTranslations: workspace.articles.filter((item) => item.sourceArticleId === article.id), translations: editorial.translations, stale: editorial.translationStale || Boolean(article.sourceArticleId && workspace.articles.find((item) => item.id === article.sourceArticleId)?.currentRevisionId !== article.sourceRevisionId), translationLanguages: generalSettings.defaultTranslationLanguages.filter((language) => language !== article.language), publishProfile, publishProfileLabel, selectedTargetLanguage: selectedTranslationLanguages[article.id] }} actions={{ create: editorial.createTranslation, edit: openWrite, openArticle: workspace.selectArticle, selectTargetLanguage: (targetLanguage) => setSelectedTranslationLanguage(article.id, targetLanguage), translate: runTranslation }} />);
 
     return null;
 }

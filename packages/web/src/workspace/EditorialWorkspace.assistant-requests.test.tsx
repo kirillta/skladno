@@ -10,7 +10,8 @@ import { createArticleFixture, createFakeClient, resetWorkspaceTestEnvironment }
 describe("Editorial Workspace assistant requests", () => {
     afterEach(resetWorkspaceTestEnvironment);
 
-    it("restores the latest completed translation from local Assistant records", async () => {
+    // product: workspace.translations.selected-language
+    it("restores the selected translation after navigation and restart", async () => {
         const client = createFakeClient();
         const user = userEvent.setup();
         localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "translations", selectedArticleId: "one" }));
@@ -24,11 +25,19 @@ describe("Editorial Workspace assistant requests", () => {
             createdAt: "2026-01-01T00:01:00.000Z", updatedAt: "2026-01-01T00:01:00.000Z",
         }]);
 
-        render(<App client={client} />);
+        const firstWorkspace = render(<App client={client} />);
 
         expect(await screen.findByText("Deutscher Entwurf", {}, { timeout: 5_000 })).toBeTruthy();
         await user.click(screen.getByRole("tab", { name: "Spanish" }));
         expect(screen.getByText("Borrador traducido")).toBeTruthy();
+        await user.click(screen.getByRole("tab", { name: "Write" }));
+        await user.click(screen.getByRole("tab", { name: /Translations/ }));
+        expect(screen.getByText("Borrador traducido")).toBeTruthy();
+        firstWorkspace.unmount();
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText("Borrador traducido")).toBeTruthy();
         await user.click(screen.getByRole("button", { name: "Edit Spanish translation" }));
         expect(client.createArticle).toHaveBeenCalledWith(expect.objectContaining({
             title: "TÃ­tulo traducido",

@@ -3,13 +3,14 @@ import { isWorkspaceView, type WorkspaceView } from "../workspace-views.js";
 
 
 interface WorkspaceLayoutPreferences {
-    version: 3;
+    version: 4;
     libraryWidth: number;
     assistantWidth: number;
     libraryCollapsed: boolean;
     assistantCollapsed: boolean;
     proposalWarningsDismissed: boolean;
     selectedArticleId?: string;
+    selectedTranslationLanguages: Record<string, string>;
     view: WorkspaceView;
 }
 
@@ -24,6 +25,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 
+function storedSelectedTranslationLanguages(value: unknown): Record<string, string> {
+    if (!isRecord(value))
+        return {};
+
+    const selectedLanguages: Record<string, string> = {};
+    for (const [articleId, language] of Object.entries(value))
+        if (articleId.trim() && typeof language === "string" && language.trim())
+            selectedLanguages[articleId] = language;
+
+    return selectedLanguages;
+}
+
+
 function storedPreferences(value: unknown): WorkspaceLayoutPreferences | undefined {
     if (!isRecord(value))
         return undefined;
@@ -33,19 +47,20 @@ function storedPreferences(value: unknown): WorkspaceLayoutPreferences | undefin
     const libraryCollapsed = value.libraryCollapsed === true;
     const assistantCollapsed = value.assistantCollapsed === true;
     if (value.version === 1)
-        return { version: 3, libraryWidth, assistantWidth, libraryCollapsed, assistantCollapsed, proposalWarningsDismissed: false, view: "write" };
+        return { version: 4, libraryWidth, assistantWidth, libraryCollapsed, assistantCollapsed, proposalWarningsDismissed: false, selectedTranslationLanguages: {}, view: "write" };
 
     const view = value.view === "publish" ? "write" : value.view;
-    if ((value.version !== 2 && value.version !== 3) || !isWorkspaceView(view))
+    if ((value.version !== 2 && value.version !== 3 && value.version !== 4) || !isWorkspaceView(view))
         return undefined;
 
     return {
-        version: 3,
+        version: 4,
         libraryWidth,
         assistantWidth,
         libraryCollapsed,
         assistantCollapsed,
         proposalWarningsDismissed: value.proposalWarningsDismissed === true,
+        selectedTranslationLanguages: storedSelectedTranslationLanguages(value.selectedTranslationLanguages),
         view,
         ...(typeof value.selectedArticleId === "string" && value.selectedArticleId.trim() ? { selectedArticleId: value.selectedArticleId } : {}),
     };
@@ -54,12 +69,13 @@ function storedPreferences(value: unknown): WorkspaceLayoutPreferences | undefin
 
 function migratedPreferences(): WorkspaceLayoutPreferences {
     return {
-        version: 3,
+        version: 4,
         libraryWidth: 208,
         assistantWidth: 384,
         libraryCollapsed: localStorage.getItem("skladno-navigation-collapsed") === "true",
         assistantCollapsed: localStorage.getItem("skladno-assistant-collapsed") === "true",
         proposalWarningsDismissed: false,
+        selectedTranslationLanguages: {},
         view: "write",
     };
 }
@@ -91,6 +107,7 @@ export function useWorkspaceLayout() {
 
     const setView = useCallback((view: WorkspaceView) => setPreferences((current) => ({ ...current, view })), []);
     const setSelectedArticleId = useCallback((selectedArticleId: string | undefined) => setPreferences((current) => ({ ...current, ...(selectedArticleId ? { selectedArticleId } : { selectedArticleId: undefined }) })), []);
+    const setSelectedTranslationLanguage = useCallback((articleId: string, targetLanguage: string) => setPreferences((current) => ({ ...current, selectedTranslationLanguages: { ...current.selectedTranslationLanguages, [articleId]: targetLanguage } })), []);
     const setAssistantCollapsed = useCallback((assistantCollapsed: boolean) => {
         setPreferences((current) => ({ ...current, assistantCollapsed }));
         if (!assistantCollapsed)
@@ -104,6 +121,8 @@ export function useWorkspaceLayout() {
         setView,
         selectedArticleId: preferences.selectedArticleId,
         setSelectedArticleId,
+        selectedTranslationLanguages: preferences.selectedTranslationLanguages,
+        setSelectedTranslationLanguage,
         libraryCollapsed: preferences.libraryCollapsed,
         setLibraryCollapsed: (libraryCollapsed: boolean) => setPreferences((current) => ({ ...current, libraryCollapsed })),
         assistantCollapsed: preferences.assistantCollapsed,
