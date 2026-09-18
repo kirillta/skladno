@@ -79,7 +79,11 @@ describe("AssistantTimeline", () => {
         });
 
         fireEvent.scroll(timeline);
-        await user.click(screen.getByRole("button", { name: "Scroll to end" }));
+        const scrollToEnd = screen.getByRole("button", { name: "Scroll to end" });
+        timeline.focus();
+        fireEvent.keyDown(timeline, { key: "ArrowRight" });
+        expect(document.activeElement).toBe(scrollToEnd);
+        await user.click(scrollToEnd);
 
         expect(timeline.scrollTop).toBe(500);
         expect(screen.queryByRole("button", { name: "Scroll to end" })).toBeNull();

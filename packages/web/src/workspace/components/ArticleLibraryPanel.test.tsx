@@ -99,6 +99,7 @@ describe("ArticleLibraryPanel", () => {
     });
 
 
+
     it("shows the icon-only update control beside Settings when an update is available", async () => {
         window.skladnoUpdates = {
             getState: vi.fn().mockResolvedValue({ kind: "available", currentVersion: "0.1.0-preview.1", version: "0.1.1-preview.1", title: "Preview", summary: "", releaseNotesUrl: "https://example.test/release", security: false, automaticChecks: true, includePrereleases: true, networkAccess: true }),

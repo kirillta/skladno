@@ -11,20 +11,35 @@ function isAvailable(element: HTMLElement): boolean {
 }
 
 
-function entryFor(area: HTMLElement, lastFocused: HTMLElement | undefined): HTMLElement | undefined {
-    if (lastFocused && area.contains(lastFocused) && isAvailable(lastFocused))
-        return lastFocused;
-
-    if (area.matches("[data-focus-area-entry]"))
-        return area;
-
-    return area.querySelector<HTMLElement>("[data-focus-area-entry], a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [contenteditable=true], [tabindex]:not([tabindex='-1'])") ?? undefined;
-}
+const focusableSelector = "a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [contenteditable=true], [tabindex]";
 
 
 export function useFocusAreaNavigation(order: readonly string[]): { ref: RefObject<HTMLElement>; onFocusCapture: (event: FocusEvent<HTMLElement>) => void; onKeyDownCapture: (event: KeyboardEvent<HTMLElement>) => void } {
     const ref = useRef<HTMLElement>(null);
     const lastFocused = useRef(new Map<string, HTMLElement>());
+
+
+    function controlsFor(name: string): HTMLElement[] {
+        const areas = ref.current?.querySelectorAll<HTMLElement>(`[data-focus-area='${name}']`) ?? [];
+        return [...areas].flatMap((area) => {
+            const candidates = area.matches(focusableSelector) ? [area, ...area.querySelectorAll<HTMLElement>(focusableSelector)] : [...area.querySelectorAll<HTMLElement>(focusableSelector)];
+            return candidates.filter((candidate) => (candidate.tabIndex >= 0 || candidate.isContentEditable || candidate.getAttribute("contenteditable") === "true") && isAvailable(candidate));
+        });
+    }
+
+
+    function entryFor(name: string): HTMLElement | undefined {
+        const controls = controlsFor(name);
+        const entry = controls.find((control) => control.hasAttribute("data-focus-area-entry"));
+        if (entry)
+            return entry;
+
+        const last = lastFocused.current.get(name);
+        if (last && controls.includes(last))
+            return last;
+
+        return controls[0];
+    }
 
 
     function onFocusCapture(event: FocusEvent<HTMLElement>) {
@@ -48,16 +63,17 @@ export function useFocusAreaNavigation(order: readonly string[]): { ref: RefObje
         if (!current)
             return;
 
-        const areas = order.flatMap((name) => {
-            const area = [...(ref.current?.querySelectorAll<HTMLElement>(`[data-focus-area='${name}']`) ?? [])].find((candidate) => isAvailable(candidate) && entryFor(candidate, lastFocused.current.get(name)));
-            return area ? [area] : [];
-        });
-        const index = areas.indexOf(current);
+        const name = current.dataset.focusArea;
+        if (!name)
+            return;
+
+        const areas = order.filter((areaName) => controlsFor(areaName).length > 0);
+        const index = areas.indexOf(name);
         if (index < 0 || areas.length < 2)
             return;
 
         const next = areas[(index + (event.shiftKey ? areas.length - 1 : 1)) % areas.length];
-        const entry = next && entryFor(next, lastFocused.current.get(next.dataset.focusArea ?? ""));
+        const entry = next ? entryFor(next) : undefined;
         if (!entry)
             return;
 

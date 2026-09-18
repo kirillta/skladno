@@ -22,7 +22,7 @@ Tab and Shift+Tab move between visible Workspace focus areas in this order:
 7. Assistant chat
 8. Assistant composer
 
-Entering an area restores its last valid focused descendant, otherwise its stable entry target. Missing, disabled, collapsed, or hidden entries leave the sequence. The editor retains its caret or selection when Lexical can restore it.
+Entering an area focuses its stable entry target, otherwise its last valid focused descendant. Missing, disabled, collapsed, or hidden entries leave the sequence. The editor retains its caret or selection when Lexical can restore it.
 
 Settings remains separate from the Workspace. Its two areas are Settings navigation and Settings content.
 

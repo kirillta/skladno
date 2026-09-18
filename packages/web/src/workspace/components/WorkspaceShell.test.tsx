@@ -226,7 +226,7 @@ describe("WorkspaceShell", () => {
     });
 
 
-    it("moves between focus areas, skips hidden areas, and restores the last control", () => {
+    it("moves between focus areas, skips hidden areas, and prefers the declared entry", () => {
         setViewportWidth(1440);
         render(<FocusAreaShell hiddenEditor />);
 
@@ -243,8 +243,9 @@ describe("WorkspaceShell", () => {
         lastHeaderControl.focus();
         fireEvent.keyDown(lastHeaderControl, { key: "Tab", shiftKey: true });
         expect(document.activeElement).toBe(library);
-        fireEvent.keyDown(document.activeElement!, { key: "Tab" });
-        expect(document.activeElement).toBe(lastHeaderControl);
+        library.focus();
+        fireEvent.keyDown(library, { key: "Tab" });
+        expect(document.activeElement).toBe(header);
 
         fireEvent.keyDown(lastHeaderControl, { key: "Tab" });
         expect(document.activeElement).toBe(screen.getByRole("button", { name: "Views" }));
@@ -261,9 +262,15 @@ describe("WorkspaceShell", () => {
 
         const editor = screen.getByRole("button", { name: "Editor" });
         editor.focus();
-        for (const name of ["Status", "Chat", "Composer", "Library", "Header", "Views"]) {
+        for (const name of ["Status", "Chat", "Composer"]) {
+            fireEvent.keyDown(document.activeElement!, { key: "Tab" });
+            expect(document.activeElement).toBe(screen.getByRole("button", { name }));
+        }
+
+        for (const name of ["Library", "Header", "Views"]) {
             fireEvent.keyDown(document.activeElement!, { key: "Tab" });
             expect(document.activeElement).toBe(screen.getByRole("button", { name }));
         }
     });
+
 });
