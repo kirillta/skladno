@@ -43,6 +43,23 @@ const article: Article = {
 describe("TranslationsView", () => {
     afterEach(cleanup);
 
+    it("uses the standard workspace width for translation comparison", () => {
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} stale={false} create={vi.fn()} translate={vi.fn()} />
+        </IntlProvider>);
+
+        expect(screen.getByRole("heading", { name: getMessage("views.translations") }).parentElement?.parentElement?.parentElement?.className).toContain("w-full");
+    });
+
+    it("uses comparison-sized text for translated content", () => {
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "Texto traducido", baseRevisionId: "revision-2" }]} stale={false} create={vi.fn()} translate={vi.fn()} />
+        </IntlProvider>);
+
+        expect(screen.getByText("Source Article").className).toContain("text-base");
+        expect(screen.getByText("Texto traducido").className).toContain("text-base");
+    });
+
     it("starts translation from the workspace without inventing a target language", async () => {
         const user = userEvent.setup();
         const translate = vi.fn();
@@ -189,6 +206,7 @@ describe("TranslationsView", () => {
         expect(screen.getByRole("button", { name: getMessage("views.translationAligned") }).getAttribute("aria-pressed")).toBe("true");
         expect(screen.getByText("1. First source paragraph.")).toBeTruthy();
         expect(screen.getByText("1. Primer párrafo traducido.")).toBeTruthy();
+        expect(screen.getByText("1. First source paragraph.").className).toContain("text-base");
         const sourceSecond = screen.getByText("2. Second source paragraph.");
         const translatedSecond = screen.getByText("2. Segundo párrafo traducido.");
         expect(sourceSecond.parentElement).toBe(translatedSecond.parentElement);
