@@ -50,6 +50,7 @@ export interface ElectronApplicationOperationMap {
     summarizeProposal: { args: [string, SummarizeProposalInput]; result: ProposalChangeSummary[] };
     restoreRevision: { args: [string, string]; result: ArticleRevision };
     listAssistantMessages: { args: [string]; result: import("../../assistant/assistant.js").AssistantMessage[] };
+    rejectTranslation: { args: [string, string]; result: void };
     listFactChecks: { args: [string]; result: FactCheck[] };
     resolveFactCheckFinding: { args: [string, string, NonNullable<FactCheckFinding["resolution"]>]; result: void };
     getStyleCorpus: { args: []; result: StyleCorpus };
@@ -97,6 +98,7 @@ export const ELECTRON_APPLICATION_METHOD = {
     summarizeProposal: "summarizeProposal",
     restoreRevision: "restoreRevision",
     listAssistantMessages: "listAssistantMessages",
+    rejectTranslation: "rejectTranslation",
     listFactChecks: "listFactChecks",
     resolveFactCheckFinding: "resolveFactCheckFinding",
     getStyleCorpus: "getStyleCorpus",

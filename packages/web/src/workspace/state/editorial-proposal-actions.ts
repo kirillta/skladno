@@ -52,7 +52,7 @@ type ProposalActionsInput = ProposalSetters & {
         setProposalSummaries: Dispatch<SetStateAction<Record<string, string>>>;
         setProposalSummaryLocale: Dispatch<SetStateAction<string | undefined>>;
     };
-    results: Pick<EditorialResultsState, "applyResult" | "loadFactChecks" | "markCorrectedFindings" | "resolveFactCheck" | "createTranslation" | "setFactCheck" | "setStyleReview" | "retainTranslation">;
+    results: Pick<EditorialResultsState, "applyResult" | "loadFactChecks" | "markCorrectedFindings" | "resolveFactCheck" | "createTranslation" | "rejectTranslation" | "setFactCheck" | "setStyleReview" | "retainTranslation">;
     restoredArticleIds: { current: Set<string> };
     controller: { current: AbortController | undefined };
 };
@@ -99,7 +99,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
     const { notifyError } = useNotifications();
     const telemetry = getDesktopTelemetryClient();
     const { setProposal, setBase, setDecisions, setState, setMessage } = setters;
-    const { applyResult, loadFactChecks, markCorrectedFindings, resolveFactCheck, createTranslation, setFactCheck, setStyleReview, retainTranslation } = results;
+    const { applyResult, loadFactChecks, markCorrectedFindings, resolveFactCheck, createTranslation, rejectTranslation, setFactCheck, setStyleReview, retainTranslation } = results;
 
 
     async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string, correctedFindingIds?: string[]) {
@@ -183,7 +183,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
             setDecisions({});
         }
 
-        applyResult(articleId, baseRevisionId, result);
+        applyResult(articleId, baseRevisionId, result, editorialArtifactId);
     }, [applyResult, restoredArticleIds, setBase, setDecisions, setProposal, setProposalSummaries, setProposalSummaryLocale, workspace.articles, workspace.content]);
 
     const restoreAssistantProposal = useCallback((messages: AssistantMessage[] | undefined) => {
@@ -192,7 +192,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
             return;
 
         const message = [...(messages ?? [])].reverse().find((item) => item.responseKind !== "translation_proposal_prepared" && item.proposalContent && item.baseRevisionId && item.baseRevisionContent);
-        const translationMessages = (messages ?? []).filter((item) => item.translation && item.baseRevisionId);
+        const translationMessages = (messages ?? []).filter((item) => item.status === "completed" && item.translation && item.baseRevisionId);
         if (!message && !translationMessages.length)
             return;
 
@@ -208,7 +208,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
         }
 
         for (const translationMessage of translationMessages)
-            retainTranslation({ articleId: article.id, baseRevisionId: translationMessage.baseRevisionId!, value: translationMessage.translation! });
+            retainTranslation({ articleId: article.id, baseRevisionId: translationMessage.baseRevisionId!, value: { ...translationMessage.translation!, editorialArtifactId: translationMessage.editorialArtifactId } });
     }, [restoredArticleIds, retainTranslation, setBase, setDecisions, setProposal, setProposalSummaries, setProposalSummaryLocale, workspace.selectedArticle]);
 
     const setDecision = (id: string, decision: ProposalDecision) => setDecisions((current) => ({ ...current, [id]: decision }));
@@ -244,6 +244,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
         resolveFactCheck,
         proposeFactCorrections,
         createTranslation,
+        rejectTranslation,
         applyAssistantResult,
         restoreAssistantProposal,
     };

@@ -21,7 +21,7 @@ interface EditorialResult<T> {
 }
 
 
-type TranslationResult = EditorialResult<{ metadata: TranslationMetadata; content: string }>;
+type TranslationResult = EditorialResult<{ metadata: TranslationMetadata; content: string; editorialArtifactId?: string }>;
 
 
 export function withFindingFreshness(factCheck: FactCheck, revisionId: string, content: string): FactCheck {
@@ -126,7 +126,17 @@ function useTranslationResults(client: EditorialWorkspaceClient, workspace: Arti
         }
     }, [client, intl, notifyError, translations, workspace]);
 
-    return { translation: translations.at(-1)?.value.metadata, translations: translations.map((result) => ({ ...result.value, baseRevisionId: result.baseRevisionId })), translationStale, createTranslation, retainTranslation };
+    const rejectTranslation = useCallback(async (targetLanguage: string) => {
+        const article = workspace.selectedArticle;
+        const translationResult = translations.find((result) => result.value.metadata.targetLanguage === targetLanguage);
+        if (!article || !translationResult?.value.editorialArtifactId)
+            return;
+
+        await client.rejectTranslation(article.id, translationResult.value.editorialArtifactId);
+        setTranslationResults((current) => current.filter((result) => result !== translationResult));
+    }, [client, translations, workspace.selectedArticle]);
+
+    return { translation: translations.at(-1)?.value.metadata, translations: translations.map((result) => ({ ...result.value, baseRevisionId: result.baseRevisionId })), translationStale, createTranslation, rejectTranslation, retainTranslation };
 }
 
 
@@ -138,7 +148,7 @@ export function useEditorialResults(client: EditorialWorkspaceClient, workspace:
     const styleReview = styleReviewResult && styleReviewResult.articleId === selectedArticleId ? styleReviewResult.value : undefined;
     const styleReviewStale = Boolean(styleReviewResult && styleReviewResult.articleId === selectedArticleId && styleReviewResult.baseRevisionId !== workspace.selectedArticle?.currentRevisionId);
 
-    const applyResult = useCallback((articleId: string, baseRevisionId: string, result: AssistantEditorialResult) => {
+    const applyResult = useCallback((articleId: string, baseRevisionId: string, result: AssistantEditorialResult, editorialArtifactId?: string) => {
         if (result.factCheck)
             setFactCheck({ articleId, baseRevisionId, value: result.factCheck });
 
@@ -146,7 +156,7 @@ export function useEditorialResults(client: EditorialWorkspaceClient, workspace:
             setStyleReviewResult({ articleId, baseRevisionId, value: result.styleReview });
 
         if (result.translation)
-            retainTranslation({ articleId, baseRevisionId, value: result.translation });
+            retainTranslation({ articleId, baseRevisionId, value: { ...result.translation, editorialArtifactId } });
     }, [retainTranslation, setFactCheck]);
 
     return {

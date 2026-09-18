@@ -5,7 +5,7 @@ import { createId, getCurrentTimestamp, parseObject, type Row } from "./reposito
 
 const roles: readonly AssistantMessageRole[] = ["assistant", "author", "system"];
 const kinds: readonly AssistantMessageKind[] = ["greeting", "message", "response", "status"];
-const statuses: readonly AssistantMessageStatus[] = ["completed", "pending", "failed", "cancelled"];
+const statuses: readonly AssistantMessageStatus[] = ["completed", "pending", "failed", "cancelled", "rejected"];
 const requestStatuses: readonly AssistantRequestStatus[] = ["pending", "running", "completed", "failed", "cancelled"];
 const skillSources: readonly AssistantSkillSource[] = ["explicit", "inferred"];
 
@@ -132,6 +132,12 @@ export class AssistantRepository {
             this.database.prepare("UPDATE assistant_requests SET status = 'completed', updated_at = ? WHERE id = ?").run(timestamp, input.requestId);
             return this.mapMessageFromRow(this.database.prepare("SELECT * FROM assistant_messages WHERE id = ?").get(messageId) as Row);
         });
+    }
+
+
+    rejectTranslation(articleId: string, editorialArtifactId: string): void {
+        this.database.prepare("UPDATE assistant_messages SET status = 'rejected', updated_at = ? WHERE article_id = ? AND editorial_artifact_id = ? AND response_kind = 'translation_proposal_prepared' AND status = 'completed'")
+            .run(getCurrentTimestamp(), articleId, editorialArtifactId);
     }
 
 

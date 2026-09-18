@@ -104,6 +104,13 @@ export function listAssistantMessagesRoute(response: ServerResponse, articleId: 
 }
 
 
+export function rejectAssistantTranslationRoute(response: ServerResponse, articleId: string, editorialArtifactId: string, assistant: AssistantService): void {
+    assistant.rejectTranslation(articleId, editorialArtifactId);
+    response.writeHead(HTTP_STATUS.NO_CONTENT);
+    response.end();
+}
+
+
 export async function createAssistantRequestRoute(request: IncomingMessage, response: ServerResponse, articleId: string, assistant: AssistantService, diagnostics?: LocalDiagnostics): Promise<void> {
     const input = readAssistantRequest(parseObject(await readJson(request)));
     const prepared = assistant.prepare({ ...input, articleId });

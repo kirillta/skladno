@@ -69,6 +69,9 @@ test("Electron IPC invokes application services and serializes conflict details"
         const health = await adapter.ipcMain.invoke({ method: "getHealth", args: [] });
         assert.deepEqual(health, { ok: true, value: { status: "ok", service: "skladno-local-service", timestamp: "2026-08-10T00:00:00.000Z" } });
 
+        const rejectedTranslation = await adapter.ipcMain.invoke({ method: ELECTRON_APPLICATION_METHOD.rejectTranslation, args: ["article", "artifact"] });
+        assert.deepEqual(rejectedTranslation, { ok: true, value: undefined });
+
         const created = await adapter.ipcMain.invoke({ method: "createArticle", args: [{ title: "Draft", content: "first" }] });
         assert.equal(created.ok, true);
         if (!created.ok)

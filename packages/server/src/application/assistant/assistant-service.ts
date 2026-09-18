@@ -60,6 +60,11 @@ export class AssistantService {
     }
 
 
+    rejectTranslation(articleId: string, editorialArtifactId: string): void {
+        this.stores.assistant.rejectTranslation(articleId, editorialArtifactId);
+    }
+
+
     prepare(request: AssistantServiceRequest): PreparedAssistantRequest {
         const observed = beginTimedTelemetryCapture(this.telemetry);
         try {

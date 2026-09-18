@@ -155,6 +155,12 @@ test("Translation proposals remain recoverable with their Assistant message", ()
     const message = repositories.assistant.listMessages(article.id).find((item) => item.editorialArtifactId === artifact.id);
 
     assert.deepEqual(message?.translation, { content: "Hola Node.js", metadata: { targetLanguage: "Spanish", protectedSpans: ["Node.js"] } });
+
+    repositories.assistant.rejectTranslation(article.id, artifact.id);
+
+    const rejected = repositories.assistant.listMessages(article.id).find((item) => item.editorialArtifactId === artifact.id);
+    assert.equal(rejected?.status, "rejected");
+    assert.deepEqual(rejected?.translation, { content: "Hola Node.js", metadata: { targetLanguage: "Spanish", protectedSpans: ["Node.js"] } });
 }));
 
 

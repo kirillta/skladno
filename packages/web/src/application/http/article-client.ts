@@ -7,6 +7,7 @@ import {
     articlesPath,
     createAssistantMessagesPath,
     createAssistantRequestsPath,
+    createAssistantTranslationRejectionPath,
     createEditorialPath,
     createFactCheckResolutionPath,
     createFactChecksPath,
@@ -136,6 +137,11 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
             onEvent(event);
         });
+    }
+
+
+    async rejectTranslation(articleId: string, editorialArtifactId: string): Promise<void> {
+        await this.request<void>(createAssistantTranslationRejectionPath(articleId, editorialArtifactId), { method: HTTP_METHOD.POST });
     }
 
 

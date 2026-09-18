@@ -69,6 +69,8 @@ function getStatusLabel(status: AssistantMessage["status"], intl: ReturnType<typ
             return intl.formatMessage({ id: "assistant.status.cancelled" });
         case "pending":
             return intl.formatMessage({ id: "assistant.status.pending" });
+        case "rejected":
+            return intl.formatMessage({ id: "assistant.status.rejected" });
         default:
             return intl.formatMessage({ id: "assistant.status.completed" });
     }
@@ -76,7 +78,7 @@ function getStatusLabel(status: AssistantMessage["status"], intl: ReturnType<typ
 
 
 function getStatusTone(status: AssistantMessage["status"]): "warning" | "info" | "success" {
-    if (status === "failed" || status === "cancelled")
+    if (status === "failed" || status === "cancelled" || status === "rejected")
         return "warning";
 
     if (status === "pending")
@@ -127,7 +129,7 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
         </p>}
         {!authorMessage && messageContent && !handoffOwnsContent && (message.template || message.kind === "greeting" || message.kind === "status" ? <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">{messageContent}</p> : <AssistantMarkdown content={messageContent} />)}
         {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
-        {view && <Button className="mt-3" variant="secondary" onClick={() => openView?.(view)}>
+        {view && message.status !== "rejected" && <Button className="mt-3" variant="secondary" onClick={() => openView?.(view)}>
             {getViewLabel(view, intl)}
         </Button>}
         {(message.status === "failed" || message.status === "cancelled") && retryRequestId && <Button className="mt-3" variant="secondary" onClick={() => onRetry?.(retryRequestId)}>{intl.formatMessage({ id: "assistant.retry" })}</Button>}

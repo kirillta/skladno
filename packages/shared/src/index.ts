@@ -195,6 +195,7 @@ export {
     BUILT_IN_SKILL,
     createAssistantMessagesPath,
     createAssistantRequestsPath,
+    createAssistantTranslationRejectionPath,
     builtInSkills,
     builtInSkillScopeCompatibility,
     isAssistantEvent,

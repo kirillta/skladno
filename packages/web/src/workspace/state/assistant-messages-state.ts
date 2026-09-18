@@ -29,6 +29,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         streamedMessage: article ? store.streamedMessagesByArticle[article.id] : undefined,
         factCheckClaims: article ? store.factCheckClaimsByArticle[article.id] : undefined,
         request, retry,
+        reload,
         cancel: () => store.controller.current?.abort(),
     };
 }

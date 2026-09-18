@@ -35,6 +35,7 @@ interface WorkspaceScreenActions {
     createBlank: () => Promise<unknown>;
     runFactCheck: () => void;
     runTranslation: () => void;
+    rejectTranslation: (targetLanguage: string) => Promise<void>;
     openSettings: () => void;
     openModelSettings: () => void;
 }
@@ -62,7 +63,7 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
     selection: WorkspaceScreenSelection;
 }) {
     const { layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings } = content;
-    const { createBlank, runFactCheck, runTranslation, openSettings, openModelSettings } = actions;
+    const { createBlank, runFactCheck, runTranslation, rejectTranslation, openSettings, openModelSettings } = actions;
     const { dispatcher, shortcutOverrides, hasUsableAiConnection, overlays } = environment;
     const { assistantSelection, onSelectionChange, clearAssistantSelection } = selection;
     const { notifyError } = useNotifications();
@@ -102,7 +103,7 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
                 layout={{ collapsed: layout.assistantCollapsed, setCollapsed: layout.setAssistantCollapsed }} />,
             children: <>
                 {hasUsableAiConnection === false && <AiConnectionWarning openModelSettings={openModelSettings} />}
-                <ArticleWorkspace state={{ workspace, layout, editorial, revisions, corpus, publishing, generalSettings }} actions={{ createBlank, runFactCheck, runTranslation, shortcutOverrides, onSelectionChange, assistantSelection: assistantSelection?.preview }} />
+                <ArticleWorkspace state={{ workspace, layout, editorial, revisions, corpus, publishing, generalSettings }} actions={{ createBlank, runFactCheck, runTranslation, rejectTranslation, shortcutOverrides, onSelectionChange, assistantSelection: assistantSelection?.preview }} />
                 {overlays}
             </>,
         }}
