@@ -17,10 +17,14 @@ export function nextReleaseVersion(currentVersion, preview, requestedVersion, ex
             return requestedVersion;
         }
 
-        return `${current[1]}.${current[2]}.${Number(current[3]) + 1}`;
+        return current[4] === undefined
+            ? `${current[1]}.${current[2]}.${Number(current[3]) + 1}`
+            : `${current[1]}.${current[2]}.${current[3]}`;
     }
 
-    const baseVersion = requestedVersion ?? `${current[1]}.${current[2]}.${current[3]}`;
+    const baseVersion = requestedVersion ?? (current[4] === undefined
+        ? `${current[1]}.${current[2]}.${Number(current[3]) + 1}`
+        : `${current[1]}.${current[2]}.${current[3]}`);
     assert.match(baseVersion, STABLE_VERSION, "Expected an x.y.z version.");
     const previewNumbers = existingVersions
         .map((version) => version.match(PREVIEW_VERSION))

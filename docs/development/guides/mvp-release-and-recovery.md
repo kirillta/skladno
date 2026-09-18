@@ -63,7 +63,7 @@ The release workflow uses the `SKLADNO_POSTHOG_PROJECT_KEY` variable from the Gi
 
 Environment-variable credentials remain supported. Managed credentials use Windows Credential Manager and never enter SQLite, backup snapshots, or renderer responses. The installer does not create or import a `.env` file.
 
-Run `npm run release` to release the next stable patch or `npm run release -- 1.2.3` to release an explicit stable version. Run `npm run release:preview` to advance the current version's preview number or `npm run release:preview -- 1.2.3` to release the next available preview of `1.2.3`. Both commands require a clean worktree, update both package versions and the lockfile, run verification, commit, tag, and atomically push the commit and tag.
+Run `npm run release` to release the next stable patch or `npm run release -- 1.2.3` to release an explicit stable version. Run `npm run release:preview` from a stable version to start the next patch's preview series, or from a preview to advance that series. Use `npm run release:preview -- 1.2.3` to release the next available preview of `1.2.3`. Both commands require a clean worktree, update both package versions and the lockfile, run verification, commit, tag, and atomically push the commit and tag.
 
 If a tag exists without a release, run `gh workflow run electron-windows.yml -f tag=v1.2.3` after the workflow change reaches the default branch.
 
