@@ -95,8 +95,6 @@ export const messages = {
     "status.revision": "v{revisionNumber}",
     "status.revisionSelector": "Current Revision v{revisionNumber}. Choose a saved Revision.",
     "status.revisionMenu": "Saved Revisions",
-    "status.revisionSelected": "Selected",
-    "status.revisionPreview": "Revision {revisionNumber} preview",
     "status.characterCount": "{characterCount} / {characterLimit} characters",
     "status.characterCount.ariaLabel": "Character count: {characterCount} of {characterLimit} characters. Choose a character limit.",
     "status.characterLimitPresets": "Character limit presets",

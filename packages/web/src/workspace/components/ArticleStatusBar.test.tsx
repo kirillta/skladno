@@ -9,7 +9,7 @@ import { ArticleStatusBar } from "./ArticleStatusBar.js";
 
 const revisions: ArticleRevision[] = [
     { id: "revision-one", articleId: "article-one", content: "Initial text", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" } },
-    { id: "revision-two", articleId: "article-one", content: "Current text", createdAt: "2026-01-02T00:00:00.000Z", provenance: { kind: "author-draft" } },
+    { id: "revision-two", articleId: "article-one", content: "Current text", createdAt: "2026-01-02T00:00:00.000Z", description: "Current saved draft", provenance: { kind: "author-draft" } },
 ];
 
 
@@ -62,7 +62,7 @@ it("closes an open menu when the Author clicks outside the Status Bar", async ()
 });
 
 
-it("lists Revisions newest first, previews a selection, and keeps restore explicit", async () => {
+it("lists Revisions newest first by description and opens restore confirmation for a historical Revision", async () => {
     const user = userEvent.setup();
     const selectForRestore = vi.fn();
     render(<IntlProvider locale="en" messages={messages}><ArticleStatusBar
@@ -81,15 +81,17 @@ it("lists Revisions newest first, previews a selection, and keeps restore explic
 
     await user.click(screen.getByRole("button", { name: /Current Revision v2/ }));
     const menu = screen.getByRole("menu", { name: "Saved Revisions" });
-    const items = within(menu).getAllByRole("menuitemradio");
+    const items = within(menu).getAllByRole("menuitem");
 
     expect(items[0]?.textContent).toContain("v2");
+    expect(items[0]?.textContent).toContain("Current saved draft");
     expect(items[0]?.textContent).toContain("Current");
-    expect(items[0]?.textContent).toContain("Selected");
+    expect(items[1]?.textContent).toContain("Initial Revision");
+    expect(within(items[0]!).getByTitle("Current saved draft")).toBeTruthy();
+    expect(items[0]?.querySelector('[data-revision-timeline-icon="manual"]')).toBeTruthy();
+    expect(items[1]?.querySelector('[data-revision-timeline-icon="initial"]')).toBeTruthy();
     await user.click(items[1]!);
 
-    expect(screen.getByRole("region", { name: "Revision 1 preview" })).toBeTruthy();
-    expect(screen.getByText("Initial text")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Restore this revision" }));
     expect(selectForRestore).toHaveBeenCalledWith(revisions[0]);
+    expect(screen.queryByRole("menu", { name: "Saved Revisions" })).toBeNull();
 });
