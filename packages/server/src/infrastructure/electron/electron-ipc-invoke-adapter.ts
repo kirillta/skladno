@@ -68,6 +68,7 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
         case ELECTRON_APPLICATION_METHOD.summarizeProposal: return services.proposalSummaries.summarize(String(args[0]), args[1], new AbortController().signal);
         case ELECTRON_APPLICATION_METHOD.restoreRevision: return services.articles.restoreRevision(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.listAssistantMessages: return services.assistant.listMessages(String(args[0]));
+        case ELECTRON_APPLICATION_METHOD.rejectTranslation: return services.assistant.rejectTranslation(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.listFactChecks: return services.factChecks.list(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.resolveFactCheckFinding:
             if (!isFactCheckResolution(args[2]))

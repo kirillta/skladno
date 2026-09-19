@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { IntlProvider } from "react-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,16 +12,16 @@ type TranslationsViewTestProps = Parameters<typeof RenderTranslationsView>[0]["d
 
 
 function TranslationsView(props: TranslationsViewTestProps) {
-    const { article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel, create, edit, openArticle, translate } = props;
+    const { article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel, create, reject, edit, openArticle, translate } = props;
     const [selectedTargetLanguage, setSelectedTargetLanguage] = useState<string>();
-    return <RenderTranslationsView data={{ article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel, selectedTargetLanguage: props.selectedTargetLanguage ?? selectedTargetLanguage }} actions={{ create, edit, openArticle, translate, selectTargetLanguage: (language) => {
+    return <RenderTranslationsView data={{ article, sourceArticle, linkedTranslations, translations, stale, translationLanguages, publishProfile, publishProfileLabel, selectedTargetLanguage: props.selectedTargetLanguage ?? selectedTargetLanguage }} actions={{ create, reject, edit, openArticle, translate, selectTargetLanguage: (language) => {
         setSelectedTargetLanguage(language);
         props.selectTargetLanguage?.(language);
     } }} />;
 }
 
 
-// Product scenarios: workspace.translations.stale-source, history-and-publishing.translation-stale-source
+// Product scenarios: workspace.translations.stale-source, workspace.translations.reject-generated, history-and-publishing.translation-stale-source
 
 const article: Article = {
     id: "article-1",
@@ -121,6 +121,21 @@ describe("TranslationsView", () => {
         expect(edit).toHaveBeenCalledOnce();
     });
 
+    it("requires confirmation before rejecting generated translation output", async () => {
+        const user = userEvent.setup();
+        const reject = vi.fn().mockResolvedValue(undefined);
+        render(<IntlProvider locale="en" messages={messages}>
+            <TranslationsView article={article} translations={[{ metadata: { targetLanguage: "Spanish", protectedSpans: [] }, content: "Borrador traducido", baseRevisionId: "revision-2", editorialArtifactId: "translation-artifact" }]} stale={false} create={vi.fn()} reject={reject} translate={vi.fn()} />
+        </IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: getMessage("views.rejectTranslation") }));
+        expect(reject).not.toHaveBeenCalled();
+        await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: getMessage("views.confirmRejectTranslation") }));
+        expect(reject).toHaveBeenCalledWith("Spanish");
+        await waitFor(() => expect(within(screen.getByRole("dialog")).getByRole("status").textContent).toBe("Rejected"));
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    });
+
     it("names and opens the linked source while showing its Revision number and full target language", async () => {
         const user = userEvent.setup();
         const edit = vi.fn();
@@ -190,9 +205,9 @@ describe("TranslationsView", () => {
             ]} stale={false} create={vi.fn()} translate={vi.fn()} publishProfile={publishLimitProfiles[2]!} publishProfileLabel="LinkedIn post" />
         </IntlProvider>);
 
-        expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "LinkedIn post guidance · 4 characters / 3,000 · 2,996 characters remaining (guidance)")).toBeTruthy();
+        expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "4 / 3,000 characters")).toBeTruthy();
         await user.click(screen.getByRole("tab", { name: "Spanish" }));
-        expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "LinkedIn post guidance · 3,001 characters / 3,000 · 1 characters over guidance")).toBeTruthy();
+        expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "3,001 / 3,000 characters")).toBeTruthy();
     });
 
     it("aligns source and translated paragraphs by order", async () => {

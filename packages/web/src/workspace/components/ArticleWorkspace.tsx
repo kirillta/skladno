@@ -34,6 +34,7 @@ interface ArticleWorkspaceActions {
     createBlank: () => Promise<unknown>;
     runFactCheck: () => void;
     runTranslation: () => void;
+    rejectTranslation?: (targetLanguage: string) => Promise<void>;
     shortcutOverrides?: KeyBindingOverrides;
     onSelectionChange?: (value: AssistantSelectionSnapshot | undefined) => void;
     assistantSelection?: string;
@@ -42,7 +43,7 @@ interface ArticleWorkspaceActions {
 
 export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceViewState; actions: ArticleWorkspaceActions }) {
     const { workspace, layout, editorial, revisions, corpus, publishing, generalSettings } = state;
-    const { createBlank, runFactCheck, runTranslation, shortcutOverrides, onSelectionChange, assistantSelection } = actions;
+    const { createBlank, runFactCheck, runTranslation, rejectTranslation, shortcutOverrides, onSelectionChange, assistantSelection } = actions;
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const article = workspace.selectedArticle;
@@ -103,7 +104,7 @@ export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceVi
         <WorkspaceTabBar view={layout.view} setView={layout.setView} badges={badges} shortcutOverrides={shortcutOverrides} />
         <WorkspaceViewRouter
             content={{ view: layout.view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile: publishing.profile, publishProfileLabel }}
-            actions={{ runFactCheck, runTranslation, onSelectionChange, assistantSelection }}
+            actions={{ runFactCheck, runTranslation, rejectTranslation, onSelectionChange, assistantSelection }}
             navigation={{ proposalWarningsDismissed: layout.proposalWarningsDismissed, dismissProposalWarnings: () => layout.setProposalWarningsDismissed(true), openWrite: () => layout.setView("write"), openAssistant: () => {
                 layout.setAssistantCollapsed(false);
                 layout.setView("write");

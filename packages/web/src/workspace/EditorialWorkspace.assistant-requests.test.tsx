@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { APPLICATION_ERROR, ApplicationClientError, defaultGeneralSettings, type ArticleRevision } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, defaultGeneralSettings, type ArticleRevision, type AssistantMessage } from "@skladno/shared";
 
 import { App } from "../App.js";
 import { getMessage } from "../i18n/test-message.js";
@@ -9,6 +9,31 @@ import { createArticleFixture, createFakeClient, resetWorkspaceTestEnvironment }
 
 describe("Editorial Workspace assistant requests", () => {
     afterEach(resetWorkspaceTestEnvironment);
+
+    it("removes a rejected translation after Assistant messages reload", async () => {
+        const client = createFakeClient();
+        const user = userEvent.setup();
+        const completed = {
+            id: "polish-translation", articleId: "one", role: "assistant", kind: "response", status: "completed", responseKind: "translation_proposal_prepared", baseRevisionId: "one-revision", editorialArtifactId: "polish-artifact",
+            translation: { content: "Polski tekst", metadata: { targetLanguage: "Polish", protectedSpans: [] } }, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+        } satisfies AssistantMessage;
+        let rejected = false;
+        client.listAssistantMessages = vi.fn().mockImplementation(async () => [rejected ? { ...completed, status: "rejected" as const } : completed]);
+        client.streamAssistantRequest = vi.fn().mockImplementation(async () => {
+            rejected = true;
+        });
+        localStorage.setItem("skladno-workspace-layout", JSON.stringify({ version: 3, libraryWidth: 208, assistantWidth: 384, libraryCollapsed: false, assistantCollapsed: false, proposalWarningsDismissed: false, view: "translations", selectedArticleId: "one" }));
+
+        render(<App client={client} />);
+
+        expect(await screen.findByText("Polski tekst")).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
+
+        await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalled());
+        expect(await screen.findByText("No translation proposal")).toBeTruthy();
+    });
 
     // product: workspace.translations.selected-language
     it("restores the selected translation after navigation and restart", async () => {
@@ -116,6 +141,21 @@ describe("Editorial Workspace assistant requests", () => {
 
         await screen.findByRole("heading", { name: "Second Article" });
         expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("stops progress and displays recovery guidance when an Assistant request times out", async () => {
+        const client = createFakeClient();
+        const user = userEvent.setup();
+        client.streamAssistantRequest = vi.fn().mockRejectedValue(new ApplicationClientError(APPLICATION_ERROR.ASSISTANT_REQUEST_TIMED_OUT, undefined, 400));
+        render(<App client={client} />);
+        await screen.findByRole("heading", { name: "First Article" });
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
+        await screen.findByRole("alert");
+        expect(screen.queryByText(/Working for/)).toBeNull();
+        await user.click(screen.getByText("Error details"));
+        expect(screen.getByText(getMessage("errors.assistantRequestTimedOut"))).toBeTruthy();
     });
 
     it("opens Application Settings after an unavailable AI connection without changing the Article or Workspace View", async () => {

@@ -17,6 +17,22 @@ import { resetApplicationSettingsTestEnvironment, settingsSnapshot } from "./App
 describe("ApplicationSettings general", () => {
     afterEach(resetApplicationSettingsTestEnvironment);
 
+    // Product scenario: settings.assistant-request-timeout
+    it("defaults to two minutes and saves an accessible Assistant request time limit", async () => {
+        const user = userEvent.setup();
+        const updateGeneralSettings = vi.fn().mockResolvedValue({ ...defaultGeneralSettings, assistantRequestTimeoutMinutes: 5 });
+        const client = { getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()), updateGeneralSettings, getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }) } as unknown as EditorialWorkspaceClient;
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+        const select = await screen.findByRole("combobox", { name: getMessage("settings.assistantRequestTimeout") });
+        expect((select as HTMLSelectElement).value).toBe("2");
+        expect([...select.querySelectorAll("option")].map((option) => option.value)).toEqual(["1", "2", "3", "5", "10", "15", "30", "unlimited"]);
+        expect(select.getAttribute("aria-describedby")).toBeTruthy();
+        await user.selectOptions(select, "5");
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({ ...defaultGeneralSettings, assistantRequestTimeoutMinutes: 5 }));
+        await user.selectOptions(select, "unlimited");
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenLastCalledWith({ ...defaultGeneralSettings, assistantRequestTimeoutMinutes: "unlimited" }));
+    });
+
     it("provides a compact section selector", async () => {
         const user = userEvent.setup();
         const client = { getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()), getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }) } as unknown as EditorialWorkspaceClient;

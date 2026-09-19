@@ -196,7 +196,7 @@
                 "packages/web/src/workspace/views/TranslationsView.tsx",
                 "packages/web/src/workspace/state/article-workspace-state.ts"
             ],
-            "contract": "A stale source blocks creation, and the completed translated title and text create an independent linked Article without overwriting its source Article. The selected completed translation is restored per Article when available, otherwise the latest available translation is shown.",
+            "contract": "A stale source blocks creation, and the completed translated title and text create an independent linked Article without overwriting its source Article. The selected completed translation is restored per Article when available, otherwise the latest available translation is shown. An Author can confirm rejection of generated output, which removes it from pending approval without changing the source Article or accepted translation history.",
             "persistence": "Independent Article with source Article and Revision linkage; selected translation language is a local workspace preference per Article.",
             "relatedCapabilityIds": ["history-and-publishing.translations", "editorial-workflows.translation-request"]
         },
@@ -661,6 +661,28 @@
             ],
             "forbidden": [
                 "Overwriting the source Article or creating from stale source content"
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/views/TranslationsView.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.translations.reject-generated",
+            "title": "Generated translation rejection leaves Article history unchanged",
+            "capabilityIds": [
+                "workspace.translations.linked-article"
+            ],
+            "preconditions": [
+                "A generated translation proposal is awaiting approval"
+            ],
+            "event": "The author confirms rejection of the translation.",
+            "expected": [
+                "The proposal no longer appears as pending or actionable",
+                "The rejection remains distinct from a failed generation"
+            ],
+            "forbidden": [
+                "Changing the source Article or any accepted translation Revision"
             ],
             "evidence": {
                 "kind": "automated",

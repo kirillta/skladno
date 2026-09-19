@@ -80,7 +80,7 @@ export function handleEditorialEvent({ event, articleId, content, revisionId, op
     setFactCheck: (articleId: string, baseRevisionId: string, value: FactCheck) => void;
     loadFactChecks: () => Promise<void>;
     setStyleReview: (articleId: string, baseRevisionId: string, value: StyleReview) => void;
-    retainTranslation: (result: { articleId: string; baseRevisionId: string; value: { metadata: TranslationMetadata; content: string } }) => void;
+    retainTranslation: (result: { articleId: string; baseRevisionId: string; value: { metadata: TranslationMetadata; content: string; editorialArtifactId?: string } }) => void;
     intl: IntlShape;
 }) {
     if (event.type === "text_delta" && isProposalOperation(operation))
@@ -103,7 +103,7 @@ export function handleEditorialEvent({ event, articleId, content, revisionId, op
             setStyleReview(articleId, revisionId, event.styleReview);
 
         if (event.translation)
-            retainTranslation({ articleId, baseRevisionId: revisionId, value: { metadata: event.translation, content: event.text } });
+            retainTranslation({ articleId, baseRevisionId: revisionId, value: { metadata: event.translation, content: event.text, editorialArtifactId: event.editorialArtifactId } });
 
         setState("idle");
     }

@@ -21,7 +21,7 @@ export const editorialOperationClassifications: readonly EditorialOperationClass
     callable("artifacts.inspect", "callable-read", EDITORIAL_CAPABILITY.INSPECT_ARTIFACTS, "Inspect saved editorial artifact summaries.", ["artifact", "proposal", "editorial work"]), callable("proposal.summary", "callable-read", EDITORIAL_CAPABILITY.INSPECT_PROPOSAL_SUMMARY, "Inspect a saved Proposal summary.", ["summarize proposal", "proposal changes"]), callable("proposal.generate", "callable-artifact", EDITORIAL_CAPABILITY.GENERATE_PROPOSAL, "Prepare a Talking Points, Narrative Draft, or Flow and Clarity Proposal.", ["talking points", "narrative", "flow", "clarity"]), handoff("proposal.decide", "proposal", "Accept, reject, dismiss, or partially accept a Proposal.", "Proposal decisions require visual diff review and explicit approval.", ["accept proposal", "reject proposal", "dismiss proposal"]),
     callable("fact-check.run", "callable-artifact", EDITORIAL_CAPABILITY.FACT_CHECK, "Run an advisory Fact Check.", ["fact check", "verify", "citations"]), callable("fact-check.inspect", "callable-read", EDITORIAL_CAPABILITY.INSPECT_FACT_CHECKS, "Inspect current Fact Check findings and freshness.", ["findings", "claims", "fact status"]), callable("fact-check.corrections", "callable-artifact", EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS, "Prepare a correction Proposal for explicitly selected Findings.", ["correct findings", "propose corrections"]), handoff("fact-check.resolve", "fact-check", "Resolve a Finding.", "Finding resolution is an Author judgment in Fact Check.", ["resolve finding", "accept evidence"]),
     callable("style-corpus.inspect", "callable-read", EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS, "Inspect Style Corpus readiness and compact rules.", ["style corpus", "style profile"]), callable("style-rules.inspect", "callable-read", EDITORIAL_CAPABILITY.INSPECT_ARTICLE_STYLE_RULES, "Inspect current Article-specific style rules.", ["article style rules", "style rules"]), callable("style-rules.set", "callable-action", EDITORIAL_CAPABILITY.SET_ARTICLE_STYLE_RULES, "Replace current Article-specific style rules.", ["set style rules", "replace style rules"]), callable("style-corpus.add-revision", "callable-action", EDITORIAL_CAPABILITY.ADD_REVISION_TO_STYLE_CORPUS, "Add the current immutable Revision to the Style Corpus.", ["add revision to style corpus"]), callable("style-profile.rebuild", "callable-action", EDITORIAL_CAPABILITY.REBUILD_STYLE_PROFILE, "Rebuild the local Style Profile.", ["rebuild style profile"]), callable("style-review.run", "callable-artifact", EDITORIAL_CAPABILITY.STYLE_REVIEW, "Run a Style Review.", ["style review", "voice", "tone"]), handoff("style-corpus.manage", "style-profile", "Manage Style Corpus samples or global rules.", "Corpus management needs the Style Profile View.", ["remove style sample", "global rules", "include sample"]),
-    callable("translations.inspect", "callable-read", EDITORIAL_CAPABILITY.INSPECT_TRANSLATIONS, "Inspect prepared translations and Article linkage.", ["prepared translations", "translation status"]), callable("translation.prepare", "callable-artifact", EDITORIAL_CAPABILITY.TRANSLATE, "Prepare a translation Proposal without changing Article language metadata.", ["translate", "translation"]), handoff("translation.create-linked", "translations", "Create or update a linked translation Article.", "Translation Article creation stays explicitly recoverable in Translations.", ["create translation article", "save translation"]), callable("publishing.inspect", "callable-read", EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE, "Inspect assigned Publishing guidance.", ["publishing guidance", "character limit"]), handoff("publishing.copy", "article-status", "Copy Markdown or plain text for publication.", "Copy remains an explicit local clipboard action.", ["copy markdown", "copy plain text"]), excluded("publishing.profiles.manage", "Create, edit, or delete Publishing profile definitions.", "Publishing profile definitions belong to Settings.", ["edit publishing profile", "new publishing profile"]), excluded("publishing.external", "Publish externally.", "Skladno never publishes directly.", ["publish", "post externally"]), handoff("workspace.open-view", "write", "Open a Workspace View.", "Workspace navigation remains a renderer-owned action.", ["open view", "go to"]), excluded("application.administration", "Change Settings, credentials, backups, diagnostics, or updates.", "These cross application and privileged boundaries.", ["settings", "credentials", "backup", "diagnostics", "updates"]),
+    callable("translations.inspect", "callable-read", EDITORIAL_CAPABILITY.INSPECT_TRANSLATIONS, "Inspect prepared translations and Article linkage.", ["prepared translations", "translation status"]), callable("translation.prepare", "callable-artifact", EDITORIAL_CAPABILITY.TRANSLATE, "Prepare a translation Proposal without changing Article language metadata.", ["translate", "translation"]), callable("translation.reject", "callable-action", EDITORIAL_CAPABILITY.REJECT_TRANSLATION, "Reject one prepared translation Proposal without changing Article history.", ["reject translation", "discard translation"]), handoff("translation.create-linked", "translations", "Create or update a linked translation Article.", "Translation Article creation stays explicitly recoverable in Translations.", ["create translation article", "save translation"]), callable("publishing.inspect", "callable-read", EDITORIAL_CAPABILITY.INSPECT_PUBLISHING_GUIDANCE, "Inspect assigned Publishing guidance.", ["publishing guidance", "character limit"]), handoff("publishing.copy", "article-status", "Copy Markdown or plain text for publication.", "Copy remains an explicit local clipboard action.", ["copy markdown", "copy plain text"]), excluded("publishing.profiles.manage", "Create, edit, or delete Publishing profile definitions.", "Publishing profile definitions belong to Settings.", ["edit publishing profile", "new publishing profile"]), excluded("publishing.external", "Publish externally.", "Skladno never publishes directly.", ["publish", "post externally"]), handoff("workspace.open-view", "write", "Open a Workspace View.", "Workspace navigation remains a renderer-owned action.", ["open view", "go to"]), excluded("application.administration", "Change Settings, credentials, backups, diagnostics, or updates.", "These cross application and privileged boundaries.", ["settings", "credentials", "backup", "diagnostics", "updates"]),
 ];
 
 export const editorialCapabilityDefinitions: readonly EditorialCapabilityDefinition[] = [
@@ -163,6 +163,14 @@ export const editorialCapabilityDefinitions: readonly EditorialCapabilityDefinit
         retry: "never",
         activity: "Rebuilding the Style Profile."
     }, {
+        id: EDITORIAL_CAPABILITY.REJECT_TRANSLATION,
+        execution: "action",
+        allowedContext: "article",
+        input: EDITORIAL_CAPABILITY_INPUT.ARTIFACT_ID,
+        result: "translations",
+        retry: "never",
+        activity: "Rejecting the prepared translation."
+    }, {
         id: EDITORIAL_CAPABILITY.GENERATE_PROPOSAL,
         execution: "artifact",
         allowedContext: "article",
@@ -231,6 +239,9 @@ export const transportEvaluations: readonly TransportEvaluation[] = [
         operation: "article.publishing-profile.assign"
     }, {
         transport: "http",
+        operation: "translation.reject"
+    }, {
+        transport: "http",
         operation: "revision.restore"
     }, {
         transport: "electron",
@@ -241,6 +252,9 @@ export const transportEvaluations: readonly TransportEvaluation[] = [
     }, {
         transport: "electron",
         operation: "article.publishing-profile.assign"
+    }, {
+        transport: "electron",
+        operation: "translation.reject"
     }, {
         transport: "electron",
         outsideAssistantAuthority: "desktop lifecycle and transport dispatch"

@@ -1,11 +1,11 @@
-import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantMessagesPath, createAssistantRequestsPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
+import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantMessagesPath, createAssistantRequestsPath, createAssistantTranslationRejectionPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, reorderPinnedArticlesRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, setArticleArchivedRoute, setArticlePinnedRoute, updateArticleRoute } from "./articles-route.js";
-import { createAssistantRequestRoute, listAssistantMessagesRoute } from "./assistant-route.js";
+import { createAssistantRequestRoute, listAssistantMessagesRoute, rejectAssistantTranslationRoute } from "./assistant-route.js";
 import { handleEditorialRoute } from "./editorial-route.js";
 import { handleHealthRoute } from "./health-route.js";
 import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publish-settings-route.js";
@@ -33,6 +33,7 @@ const ARTICLE_PROPOSAL_SUMMARIES_PATH = createRoutePattern(createProposalSummari
 const ARTICLE_RESTORATION_PATH = createRoutePattern(restoreRevisionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const ASSISTANT_MESSAGES_PATH = createRoutePattern(createAssistantMessagesPath(ROUTE_PARAMETER));
 const ASSISTANT_REQUESTS_PATH = createRoutePattern(createAssistantRequestsPath(ROUTE_PARAMETER));
+const ASSISTANT_TRANSLATION_REJECTION_PATH = createRoutePattern(createAssistantTranslationRejectionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const EDITORIAL_PATH = createRoutePattern(createEditorialPath(ROUTE_PARAMETER));
 const FACT_CHECKS_PATH = createRoutePattern(createFactChecksPath(ROUTE_PARAMETER));
 const FACT_CHECK_RESOLUTION_PATH = createRoutePattern(createFactCheckResolutionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
@@ -51,6 +52,7 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.GET, healthPath, (_request, response) => handleHealthRoute(response));
     router.register(HTTP_METHOD.GET, ASSISTANT_MESSAGES_PATH, (_request, response, parameters) => listAssistantMessagesRoute(response, parameters[0]!, assistant));
     router.register(HTTP_METHOD.POST, ASSISTANT_REQUESTS_PATH, (request, response, parameters) => createAssistantRequestRoute(request, response, parameters[0]!, assistant, diagnostics));
+    router.register(HTTP_METHOD.POST, ASSISTANT_TRANSLATION_REJECTION_PATH, (_request, response, parameters) => rejectAssistantTranslationRoute(response, parameters[0]!, parameters[1]!, assistant));
     router.register(HTTP_METHOD.POST, EDITORIAL_PATH, (request, response, parameters) => handleEditorialRoute(request, response, parameters[0]!, editorial));
     router.register(HTTP_METHOD.GET, FACT_CHECKS_PATH, (_request, response, parameters) => listFactChecksRoute(response, parameters[0]!, factChecks));
     router.register(HTTP_METHOD.PUT, FACT_CHECK_RESOLUTION_PATH, (request, response, parameters) => resolveFactCheckRoute(request, response, parameters[0]!, parameters[1]!, factChecks));

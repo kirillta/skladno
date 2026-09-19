@@ -3,6 +3,11 @@ import { defaultInterfaceLocale, getElectronMessagesFor } from "@skladno/shared"
 
 /** Canonical application-owned messages. IDs are stable; English is the source text. */
 export const messages = {
+    "settings.assistantRequestTimeout": "Request time limit",
+    "settings.assistantRequestTimeoutHint": "Stop Assistant requests after this time. Applies to new requests, including retries. Your Article stays unchanged if a request times out.",
+    "settings.requestTimeoutMinutes": "{minutes, plural, one {# minute} other {# minutes}}",
+    "settings.requestTimeoutUnlimited": "Unlimited",
+    "errors.assistantRequestTimedOut": "This Assistant request reached its time limit. Your Article was not changed. Retry or increase the request time limit in General Settings.",
     ...getElectronMessagesFor(defaultInterfaceLocale),
     "article.defaultTitle": "Untitled article",
     "workspace.tabs.write": "Write",
@@ -228,6 +233,7 @@ export const messages = {
     "assistant.status.pending": "Working",
     "assistant.status.failed": "Failed",
     "assistant.status.cancelled": "Cancelled",
+    "assistant.status.rejected": "Rejected",
     "assistant.skillUsed": "Used skill",
     "assistant.skill.talkingPoints.label": "Talking points",
     "assistant.skill.talkingPoints.hint": "Develop the main points you want this Article to make.",
@@ -393,6 +399,10 @@ export const messages = {
     "views.translationPublishingGuidance": "{profile} guidance",
     "views.editTranslationLanguage": "Edit {language} translation",
     "views.editTranslation": "Edit translation",
+    "views.rejectTranslation": "Reject translation",
+    "views.rejectTranslationTitle": "Reject this translation?",
+    "views.rejectTranslationDescription": "This removes the generated {language} translation from approval. Your source Article and accepted translations stay unchanged.",
+    "views.confirmRejectTranslation": "Reject translation",
     "views.characterCount": "{count} / {limit} characters",
     "views.restoreHeading": "Restore Revision?",
     "views.restoreDescription": "Restoring creates a new immutable Revision; it does not rewrite history.",

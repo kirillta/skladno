@@ -12,7 +12,7 @@ export type AssistantMessageRole = "assistant" | "author" | "system";
 export type AssistantMessageKind = "greeting" | "message" | "response" | "status";
 /** Stable application-authored message templates; render these through the interface catalog. */
 export type AssistantMessageTemplate = "greeting" | "request_cancelled" | "request_failed" | "profile_rebuilt";
-export type AssistantMessageStatus = "completed" | "pending" | "failed" | "cancelled";
+export type AssistantMessageStatus = "completed" | "pending" | "failed" | "cancelled" | "rejected";
 export type AssistantRequestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type AssistantSkillSource = "explicit" | "inferred";
 
@@ -45,7 +45,8 @@ export type AssistantAuthorizedAction = "rename_article"
     | "assign_publishing_profile"
     | "set_article_style_rules"
     | "add_revision_to_style_corpus"
-    | "rebuild_style_profile";
+    | "rebuild_style_profile"
+    | "reject_translation";
 
 
 /** Completion data held until the run is valid and its artifacts can be committed. */
@@ -152,6 +153,7 @@ export interface AssistantEditorialResult {
 
 export const createAssistantMessagesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/messages`;
 export const createAssistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
+export const createAssistantTranslationRejectionPath = (articleId: string, editorialArtifactId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(editorialArtifactId)}/translation-rejection`;
 
 
 export interface NewAssistantRequest {
@@ -181,4 +183,5 @@ export type { AssistantEvent, FactCheckClaimPreview } from "./assistant-events.j
 
 export interface AssistantClient {
     streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void>;
+    rejectTranslation(articleId: string, editorialArtifactId: string): Promise<void>;
 }

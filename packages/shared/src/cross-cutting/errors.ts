@@ -22,6 +22,7 @@ export const APPLICATION_ERROR = {
     EDITORIAL_OPERATION_UNSUPPORTED: "editorial_operation_unsupported",
     EDITORIAL_CONFIGURATION_MISSING: "editorial_configuration_missing",
     EDITORIAL_PROVIDER_FAILED: "editorial_provider_failed",
+    ASSISTANT_REQUEST_TIMED_OUT: "assistant_request_timed_out",
     EDITORIAL_STREAM_INCOMPLETE: "editorial_stream_incomplete",
     EDITORIAL_REQUEST_FAILED: "editorial_request_failed",
     INVALID_KEY_BINDING: "invalid_key_binding",

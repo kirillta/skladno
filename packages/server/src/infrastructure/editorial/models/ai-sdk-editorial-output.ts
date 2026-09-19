@@ -13,10 +13,10 @@ export const styleReviewSchema = z.object({
     })),
 });
 
-export const translationSchema = z.object({
+export const translationSchema = (targetLanguage: string) => z.object({
     translation: z.string().min(1),
     title: z.string(),
-    targetLanguage: z.string().min(1),
+    targetLanguage: z.literal(targetLanguage),
 });
 
 

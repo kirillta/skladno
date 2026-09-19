@@ -270,6 +270,11 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
         editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
     }, [editorial]);
     const assistant = useAssistantMessages(client, workspace, selection.assistantSelection, applyAssistantResult, profileRebuilt);
+    const rejectTranslation = useCallback(async (targetLanguage: string) => {
+        await editorial.rejectTranslation(targetLanguage);
+        if (workspace.selectedArticle)
+            await assistant.reload(workspace.selectedArticle.id);
+    }, [assistant, editorial, workspace.selectedArticle]);
     const publishing = usePublishing(client, workspace.selectedArticle, workspace.content, workspace.updateArticle);
     const actions = useWorkspaceActions({ client, intl, notifyError, workspace, generalSettings, layout, assistant, openSettings });
     useWorkspaceLifecycle(workspace, assistant, editorial.restoreAssistantProposal);
@@ -290,7 +295,7 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
 
     return <WorkspaceScreen
         content={{ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings }}
-        actions={{ ...actions, openSettings: actions.enterSettings, openModelSettings }}
+        actions={{ ...actions, rejectTranslation, openSettings: actions.enterSettings, openModelSettings }}
         environment={{ dispatcher, shortcutOverrides: keyBindingOverrides, hasUsableAiConnection, overlays: <>
             <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
             <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />

@@ -5,7 +5,7 @@ import { createId, getCurrentTimestamp, parseObject, type Row } from "./reposito
 
 const roles: readonly AssistantMessageRole[] = ["assistant", "author", "system"];
 const kinds: readonly AssistantMessageKind[] = ["greeting", "message", "response", "status"];
-const statuses: readonly AssistantMessageStatus[] = ["completed", "pending", "failed", "cancelled"];
+const statuses: readonly AssistantMessageStatus[] = ["completed", "pending", "failed", "cancelled", "rejected"];
 const requestStatuses: readonly AssistantRequestStatus[] = ["pending", "running", "completed", "failed", "cancelled"];
 const skillSources: readonly AssistantSkillSource[] = ["explicit", "inferred"];
 
@@ -135,6 +135,12 @@ export class AssistantRepository {
     }
 
 
+    rejectTranslation(articleId: string, editorialArtifactId: string): boolean {
+        return this.database.prepare("UPDATE assistant_messages SET status = 'rejected', updated_at = ? WHERE article_id = ? AND editorial_artifact_id = ? AND response_kind = 'translation_proposal_prepared' AND status = 'completed'")
+            .run(getCurrentTimestamp(), articleId, editorialArtifactId).changes > 0;
+    }
+
+
     failRequest(requestId: string, status: "failed" | "cancelled", errorCode: string): void {
         const timestamp = getCurrentTimestamp();
         this.database.exec("BEGIN IMMEDIATE;");
@@ -146,6 +152,7 @@ export class AssistantRepository {
             }
 
             this.database.prepare("UPDATE assistant_requests SET status = ?, error_code = ?, updated_at = ? WHERE id = ?").run(status, errorCode, timestamp, requestId);
+            this.database.prepare("UPDATE assistant_capability_executions SET status = ?, completed_at = ? WHERE request_id = ? AND status = 'started'").run(status, timestamp, requestId);
             this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, created_at, updated_at) SELECT ?, article_id, id, 'assistant', 'status', ?, ?, ? FROM assistant_requests WHERE id = ? AND NOT EXISTS (SELECT 1 FROM assistant_messages WHERE request_id = ? AND kind = 'status')")
                 .run(createId(), status, timestamp, timestamp, requestId, requestId);
             this.database.exec("COMMIT;");
@@ -276,9 +283,9 @@ export class AssistantRepository {
             return undefined;
 
         try {
-            const parsed = JSON.parse(value) as { proposal?: unknown; translation?: { targetLanguage?: unknown; protectedSpans?: unknown }; proposalSummaries?: unknown; proposalSummaryLocale?: unknown };
+            const parsed = JSON.parse(value) as { proposal?: unknown; translation?: { targetLanguage?: unknown; protectedSpans?: unknown; title?: unknown }; proposalSummaries?: unknown; proposalSummaryLocale?: unknown };
             const translation = typeof parsed.proposal === "string" && typeof parsed.translation?.targetLanguage === "string" && Array.isArray(parsed.translation.protectedSpans) && parsed.translation.protectedSpans.every((span) => typeof span === "string")
-                ? { content: parsed.proposal, metadata: { targetLanguage: parsed.translation.targetLanguage, protectedSpans: parsed.translation.protectedSpans as string[] } }
+                ? { content: parsed.proposal, metadata: { targetLanguage: parsed.translation.targetLanguage, protectedSpans: parsed.translation.protectedSpans as string[], ...(typeof parsed.translation.title === "string" ? { title: parsed.translation.title } : {}) } }
                 : undefined;
 
             return {

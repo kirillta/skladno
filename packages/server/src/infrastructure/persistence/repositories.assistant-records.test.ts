@@ -148,13 +148,19 @@ test("Translation proposals remain recoverable with their Assistant message", ()
         articleId: article.id,
         revisionId: article.currentRevisionId,
         kind: "assistant-proposal",
-        content: JSON.stringify({ proposal: "Hola Node.js", translation: { targetLanguage: "Spanish", protectedSpans: ["Node.js"] } }),
+        content: JSON.stringify({ proposal: "Hola Node.js", translation: { targetLanguage: "Spanish", protectedSpans: ["Node.js"], title: "Hola Node.js" } }),
     });
     repositories.assistant.completeRequest({ requestId: request.id, articleId: article.id, skillId: "translation", responseKind: "translation_proposal_prepared", content: "", editorialArtifactId: artifact.id });
 
     const message = repositories.assistant.listMessages(article.id).find((item) => item.editorialArtifactId === artifact.id);
 
-    assert.deepEqual(message?.translation, { content: "Hola Node.js", metadata: { targetLanguage: "Spanish", protectedSpans: ["Node.js"] } });
+    assert.deepEqual(message?.translation, { content: "Hola Node.js", metadata: { targetLanguage: "Spanish", protectedSpans: ["Node.js"], title: "Hola Node.js" } });
+
+    repositories.assistant.rejectTranslation(article.id, artifact.id);
+
+    const rejected = repositories.assistant.listMessages(article.id).find((item) => item.editorialArtifactId === artifact.id);
+    assert.equal(rejected?.status, "rejected");
+    assert.deepEqual(rejected?.translation, { content: "Hola Node.js", metadata: { targetLanguage: "Spanish", protectedSpans: ["Node.js"], title: "Hola Node.js" } });
 }));
 
 
