@@ -261,12 +261,12 @@ export function EditorialAssistantPanel({ data, actions, layout }: { data: Edito
         </aside>;
 
     return <aside data-workspace-panel="editorial-assistant" className="flex h-full min-h-0 min-w-0 w-full flex-col border-l border-border bg-surface-supporting" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
-        <header className="flex min-h-18 items-center border-b border-border px-5">
-            <AssistantIcon className="size-5 shrink-0 text-brand" />
-            <h2 className="ml-3 text-base font-semibold text-brand">{intl.formatMessage({ id: "assistant.heading" })}</h2>
-            <Button className="ml-auto inline-grid size-9 place-items-center p-1" variant="quiet" title={getShortcutHint(intl.formatMessage({ id: "assistant.collapse" }), KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}>
+        <header className="flex min-h-18 items-center gap-3 border-b border-border px-5">
+            <Button className="inline-grid size-9 place-items-center p-1" variant="quiet" title={getShortcutHint(intl.formatMessage({ id: "assistant.collapse" }), KEY_BINDING_COMMAND.TOGGLE_EDITORIAL_ASSISTANT, shortcutOverrides)} aria-label={intl.formatMessage({ id: "assistant.collapse" })} onClick={() => setCollapsed(true)}>
                 <ChevronRightIcon className="size-3" />
             </Button>
+            <AssistantIcon className="size-5 shrink-0 text-brand" />
+            <h2 className="text-base font-semibold text-brand">{intl.formatMessage({ id: "assistant.heading" })}</h2>
         </header>
         <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, onRetry, openSettings }} />
         <AssistantComposer
