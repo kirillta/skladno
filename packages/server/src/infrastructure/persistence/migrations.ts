@@ -237,4 +237,9 @@ export const migrations = [
         CREATE INDEX articles_active_pins ON articles(archived, pin_order) WHERE pin_order IS NOT NULL;
         `,
     },
+    {
+        version: 19,
+        name: "revision_descriptions",
+        sql: "ALTER TABLE article_revisions ADD COLUMN description TEXT;",
+    },
 ] as const;

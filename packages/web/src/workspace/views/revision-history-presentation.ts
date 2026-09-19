@@ -25,6 +25,11 @@ export function getProvenanceMessageId(revision: ArticleRevision): "revisions.in
 }
 
 
+export function getRevisionTitle(revision: ArticleRevision, provenance: string): string {
+    return revision.description ?? provenance;
+}
+
+
 export type RevisionTimelineKind = "initial" | "manual" | "ai" | "restored";
 
 

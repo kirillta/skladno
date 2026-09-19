@@ -1,7 +1,7 @@
 import type { ArticleRevision, GeneralSettings } from "@skladno/shared";
 import { useIntl } from "react-intl";
 import { formatDateTime } from "../../i18n/formatting.js";
-import { getCharacterCount, getProvenanceMessageId, getTimelineKind, timelineIcons } from "./revision-history-presentation.js";
+import { getCharacterCount, getProvenanceMessageId, getRevisionTitle, getTimelineKind, timelineIcons } from "./revision-history-presentation.js";
 
 
 export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSelect, generalSettings }: {
@@ -31,7 +31,7 @@ export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSel
                         <TimelineIcon className={kind === "ai" || kind === "restored" ? "size-3" : "size-4"} />
                     </span>
                     <button className={`w-full rounded-control border p-3 text-left focus:outline-none ${selected ? "border-brand bg-brand-soft" : "border-transparent hover:bg-surface"}`} type="button" aria-pressed={selected} onClick={() => onSelect(revision)}>
-                        <span className="block text-sm font-medium text-ink">{provenance}</span>
+                        <span className="block text-sm font-medium text-ink">{getRevisionTitle(revision, provenance)}</span>
                         <span className="mt-1 block text-xs text-muted">{formatRevisionDate(revision.createdAt)} · {intl.formatMessage({ id: "revisions.characterCount" }, { count: intl.formatNumber(getCharacterCount(revision.content)) })}</span>
                     </button>
                 </li>;

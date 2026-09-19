@@ -148,7 +148,7 @@ export async function saveRevisionRoute(request: IncomingMessage, response: Serv
         ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion: getDraftVersion(expectedDraftVersion) }),
     };
 
-    writeJson(response, HTTP_STATUS.CREATED, articles.saveRevision(articleId, input));
+    writeJson(response, HTTP_STATUS.CREATED, await articles.saveRevisionWithDescription(articleId, input, new AbortController().signal));
 }
 
 
@@ -173,7 +173,7 @@ export async function acceptProposalRoute(request: IncomingMessage, response: Se
         provenance: provenance as Record<string, unknown>,
     };
 
-    writeJson(response, HTTP_STATUS.CREATED, articles.acceptProposal(articleId, input));
+    writeJson(response, HTTP_STATUS.CREATED, await articles.acceptProposalWithDescription(articleId, input, new AbortController().signal));
 }
 
 

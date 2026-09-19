@@ -14,6 +14,7 @@ export interface ArticleRevision {
     articleId: string;
     content: string;
     createdAt: string;
+    description?: string;
     provenance: Record<string, unknown>;
     restoredFromRevisionId?: string;
 }

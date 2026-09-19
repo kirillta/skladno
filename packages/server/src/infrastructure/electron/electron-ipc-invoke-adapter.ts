@@ -62,9 +62,9 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
             return services.articles.reorderPinnedArticles(args[0]);
         case ELECTRON_APPLICATION_METHOD.saveArticleDraft: return services.articles.saveDraft(String(args[0]), args[1] as import("@skladno/shared").SaveArticleDraftInput);
         case ELECTRON_APPLICATION_METHOD.discardArticleDraft: return services.articles.discardDraft(String(args[0]), Number(args[1]));
-        case ELECTRON_APPLICATION_METHOD.saveArticleRevision: return services.articles.saveRevision(String(args[0]), args[1] as import("@skladno/shared").SaveArticleRevisionInput);
+        case ELECTRON_APPLICATION_METHOD.saveArticleRevision: return services.articles.saveRevisionWithDescription(String(args[0]), args[1] as import("@skladno/shared").SaveArticleRevisionInput, new AbortController().signal);
         case ELECTRON_APPLICATION_METHOD.listArticleRevisions: return services.articles.listRevisions(String(args[0]));
-        case ELECTRON_APPLICATION_METHOD.acceptProposal: return services.articles.acceptProposal(String(args[0]), args[1] as import("@skladno/shared").AcceptProposalInput);
+        case ELECTRON_APPLICATION_METHOD.acceptProposal: return services.articles.acceptProposalWithDescription(String(args[0]), args[1] as import("@skladno/shared").AcceptProposalInput, new AbortController().signal);
         case ELECTRON_APPLICATION_METHOD.summarizeProposal: return services.proposalSummaries.summarize(String(args[0]), args[1], new AbortController().signal);
         case ELECTRON_APPLICATION_METHOD.restoreRevision: return services.articles.restoreRevision(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.listAssistantMessages: return services.assistant.listMessages(String(args[0]));
