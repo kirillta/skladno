@@ -109,7 +109,7 @@ export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceVi
                 layout.setAssistantCollapsed(false);
                 layout.setView("write");
             }, selectedTranslationLanguages: layout.selectedTranslationLanguages, setSelectedTranslationLanguage: layout.setSelectedTranslationLanguage }} />
-        <ArticleStatusBar revisionNumber={revisionNumber} language={article.language ?? "en"} setLanguage={async (language) => {
+        <ArticleStatusBar revisionNumber={revisionNumber} revisionSelector={{ revisions: revisions.revisions.length ? revisions.revisions : [article.currentRevision], currentRevisionId: article.currentRevisionId, selectForRestore: revisions.setCandidate }} language={article.language ?? "en"} setLanguage={async (language) => {
             try {
                 await workspace.updateArticle(article.id, { language });
             } catch (error) {

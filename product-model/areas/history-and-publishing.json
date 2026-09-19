@@ -7,8 +7,8 @@
             "area": "Revision history",
             "title": "Immutable Revision timeline and read-only preview",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "The timeline distinguishes initial, manual, AI-assisted, and restored Revisions. Selecting a Revision is local-only and does not alter the Article or Draft; revision conflicts use an application contract rather than persistence types.",
+            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/components/ArticleStatusBar.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "contract": "The timeline and compact Status Bar selector distinguish initial, manual, AI-assisted, and restored Revisions. Selecting a Revision is local-only, opens a read-only preview, and does not alter the Article or Draft; restoration keeps the existing confirmation flow, and revision conflicts use an application contract rather than persistence types.",
             "persistence": "Revisions are immutable local records ordered by creation."
         },
         {
