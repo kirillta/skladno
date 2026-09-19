@@ -283,9 +283,9 @@ export class AssistantRepository {
             return undefined;
 
         try {
-            const parsed = JSON.parse(value) as { proposal?: unknown; translation?: { targetLanguage?: unknown; protectedSpans?: unknown }; proposalSummaries?: unknown; proposalSummaryLocale?: unknown };
+            const parsed = JSON.parse(value) as { proposal?: unknown; translation?: { targetLanguage?: unknown; protectedSpans?: unknown; title?: unknown }; proposalSummaries?: unknown; proposalSummaryLocale?: unknown };
             const translation = typeof parsed.proposal === "string" && typeof parsed.translation?.targetLanguage === "string" && Array.isArray(parsed.translation.protectedSpans) && parsed.translation.protectedSpans.every((span) => typeof span === "string")
-                ? { content: parsed.proposal, metadata: { targetLanguage: parsed.translation.targetLanguage, protectedSpans: parsed.translation.protectedSpans as string[] } }
+                ? { content: parsed.proposal, metadata: { targetLanguage: parsed.translation.targetLanguage, protectedSpans: parsed.translation.protectedSpans as string[], ...(typeof parsed.translation.title === "string" ? { title: parsed.translation.title } : {}) } }
                 : undefined;
 
             return {
