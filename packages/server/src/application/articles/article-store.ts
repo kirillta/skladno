@@ -12,10 +12,10 @@ export interface ArticleStore {
     reorderPinnedArticles(articleIds: string[]): Article[];
     saveDraft(articleId: string, input: SaveArticleDraftInput): ArticleDraft;
     discardDraft(articleId: string, expectedDraftVersion: number): void;
-    saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision;
+    saveRevision(articleId: string, input: SaveArticleRevisionInput, description?: string): ArticleRevision;
     listRevisions(articleId: string): ArticleRevision[];
     getRevision(articleId: string, revisionId: string): ArticleRevision | undefined;
-    acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision;
+    acceptProposal(articleId: string, input: AcceptProposalInput, description?: string): ArticleRevision;
     restoreRevision(articleId: string, revisionId: string): ArticleRevision;
     appendArticleRevision(articleId: string, content: string, provenance: Record<string, unknown>, restoredFromRevisionId?: string): ArticleRevision;
 }

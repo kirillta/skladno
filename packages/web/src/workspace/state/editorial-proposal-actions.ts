@@ -148,7 +148,17 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
             ? applyProposalChanges(review, wholeProposal ? new Set(review.changes.map((change) => change.id)) : acceptedChangeIds, true)
             : wholeProposal ? review.proposedContent : applyProposalChanges(review, acceptedChangeIds);
         try {
-            const revision = await client.acceptProposal(article.id, { baseRevisionId: base.revisionId, content, provenance: { kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL, baseRevisionId: base.revisionId, ...(base.editorialArtifactId ? { editorialArtifactId: base.editorialArtifactId } : {}), ...(wholeProposal ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] }) } });
+            const revision = await client.acceptProposal(article.id, {
+                baseRevisionId: base.revisionId,
+                content,
+                interfaceLocale: intl.locale,
+                provenance: {
+                    kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL,
+                    baseRevisionId: base.revisionId,
+                    ...(base.editorialArtifactId ? { editorialArtifactId: base.editorialArtifactId } : {}),
+                    ...(wholeProposal ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] })
+                }
+            });
 
             workspace.updateRevision(article.id, revision);
             workspace.setContent(content);

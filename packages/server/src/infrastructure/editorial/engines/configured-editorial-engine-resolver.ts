@@ -7,6 +7,7 @@ import type { ServerConfig } from "../../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
 import { AiSdkProposalSummaryGeneratorAdapter } from "../adapters/ai-sdk-proposal-summary-generator-adaptor.js";
 import { AiSdkArticleTitleGeneratorAdapter } from "../adapters/article-title-generator.js";
+import { AiSdkRevisionDescriptionGeneratorAdapter } from "../adapters/ai-sdk-revision-description-generator-adapter.js";
 import { AiSdkAssistantActionIntentVerifier } from "../adapters/ai-sdk-assistant-action-intent-verifier.js";
 import type { CredentialStore } from "../../../application/settings/credential-store.js";
 import { createProviderModel } from "../adapters/provider-model.js";
@@ -78,6 +79,15 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
             return undefined;
 
         return new AiSdkArticleTitleGeneratorAdapter(createProviderModel(configuration), getSupportingTextProviderOptions(configuration.provider, configuration.reasoningEffort));
+    }
+
+
+    resolveRevisionDescriptionGenerator() {
+        const configuration = this.resolveAppModelConnection();
+        if (!configuration)
+            return undefined;
+
+        return new AiSdkRevisionDescriptionGeneratorAdapter(createProviderModel(configuration), getSupportingTextProviderOptions(configuration.provider, configuration.reasoningEffort));
     }
 
 

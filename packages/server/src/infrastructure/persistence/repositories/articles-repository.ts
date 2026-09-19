@@ -178,7 +178,7 @@ export class ArticlesRepository {
     }
 
 
-    acceptProposal(articleId: string, input: AcceptProposalInput): ArticleRevision {
+    acceptProposal(articleId: string, input: AcceptProposalInput, description?: string): ArticleRevision {
         const revisionId = createId();
         const timestamp = getCurrentTimestamp();
         this.database.exec("BEGIN IMMEDIATE;");
@@ -194,6 +194,7 @@ export class ArticlesRepository {
                 revisionId,
                 articleId,
                 content: input.content,
+                description,
                 provenance: input.provenance,
                 timestamp,
             });
@@ -207,7 +208,7 @@ export class ArticlesRepository {
     }
 
 
-    saveRevision(articleId: string, input: SaveArticleRevisionInput): ArticleRevision {
+    saveRevision(articleId: string, input: SaveArticleRevisionInput, description?: string): ArticleRevision {
         const revisionId = createId();
         const timestamp = getCurrentTimestamp();
         this.database.exec("BEGIN IMMEDIATE;");
@@ -226,8 +227,8 @@ export class ArticlesRepository {
                 throw new ArticleDraftConflictError(current, current.draft);
 
             const provenance = { kind: REVISION_PROVENANCE_KIND.AUTHOR_DRAFT, baseRevisionId: input.baseRevisionId };
-            this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
-                .run(revisionId, articleId, input.content, JSON.stringify(provenance), timestamp);
+            this.database.prepare("INSERT INTO article_revisions (id, article_id, content, description, provenance_json, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+                .run(revisionId, articleId, input.content, description ?? null, JSON.stringify(provenance), timestamp);
             this.database.prepare("UPDATE articles SET current_revision_id = ?, updated_at = ? WHERE id = ?")
                 .run(revisionId, timestamp, articleId);
 

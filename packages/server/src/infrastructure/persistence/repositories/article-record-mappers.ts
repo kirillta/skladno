@@ -9,6 +9,7 @@ export function mapRevisionFromRow(row: Row): ArticleRevision {
         articleId: String(row.article_id),
         content: String(row.content),
         createdAt: String(row.created_at),
+        ...(typeof row.description === "string" && row.description ? { description: row.description } : {}),
         provenance: parseObject(row.provenance_json),
         ...(row.restored_from_revision_id ? { restoredFromRevisionId: String(row.restored_from_revision_id) } : {}),
     };

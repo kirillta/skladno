@@ -94,6 +94,7 @@ describe("Editorial Workspace assistant", () => {
         await waitFor(() => expect(client.acceptProposal).toHaveBeenCalledWith("one", {
             baseRevisionId: "one-revision",
             content: "Improved Draft",
+            interfaceLocale: "en",
             provenance: { kind: "accepted-proposal", baseRevisionId: "one-revision", editorialArtifactId: "proposal-artifact", wholeProposal: true },
         }));
         await waitFor(() => expect(telemetry.captureTelemetry).toHaveBeenCalledWith({ kind: "proposal_reviewed", decision: "accepted" }, 7));

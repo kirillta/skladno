@@ -10,13 +10,14 @@ import { RevisionHistoryView } from "./RevisionHistoryView.js";
 
 // Product scenarios: workspace.revisions.restore, history-and-publishing.revision-history-browsing
 
-function createArticleRevision(id: string, content: string, kind: string, createdAt: string, restoredFromRevisionId?: string): ArticleRevision {
+function createArticleRevision(id: string, content: string, kind: string, createdAt: string, restoredFromRevisionId?: string, description?: string): ArticleRevision {
     return {
         id,
         articleId: "article-one",
         content,
         createdAt,
         provenance: { kind },
+        ...(description ? { description } : {}),
         ...(restoredFromRevisionId ? { restoredFromRevisionId } : {}),
     };
 }
@@ -36,11 +37,12 @@ describe("RevisionHistoryView", () => {
 
     it("selects the current Revision by default and shows history newest first", () => {
         const initial = createArticleRevision("initial", "Initial text", "initial", "2026-01-01T10:00:00.000Z");
-        const current = createArticleRevision("current", "Current text", "author-draft", "2026-01-02T10:00:00.000Z");
+        const current = createArticleRevision("current", "Current text", "author-draft", "2026-01-02T10:00:00.000Z", undefined, "Clarified the opening");
         const view = renderHistory([initial, current]);
         const buttons = view.container.querySelectorAll("nav button");
 
-        expect(buttons[0]?.textContent).toContain("Author Revision");
+        expect(buttons[0]?.textContent).toContain("Clarified the opening");
+        expect(screen.getByRole("heading", { name: "Clarified the opening" })).toBeTruthy();
         expect(buttons[1]?.textContent).toContain("Initial Revision");
         expect(screen.getByText("Current text")).toBeTruthy();
         expect(screen.getByText("This is the current Revision.")).toBeTruthy();

@@ -7,9 +7,9 @@
             "area": "Revision history",
             "title": "Immutable Revision timeline and read-only preview",
             "status": "implemented",
-            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "The timeline distinguishes initial, manual, AI-assisted, and restored Revisions. Selecting a Revision is local-only and does not alter the Article or Draft; revision conflicts use an application contract rather than persistence types.",
-            "persistence": "Revisions are immutable local records ordered by creation."
+            "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/components/ArticleStatusBar.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
+            "contract": "The timeline and compact Status Bar selector distinguish initial, manual, AI-assisted, and restored Revisions. New author and accepted-Proposal Revisions use a concise configured-model summary of the changed context in the interface locale as their accessible history title, with a deterministic local fallback when completion fails or is cancelled; initial and restored Revisions retain service labels. Selecting a Revision is local-only, opens a read-only preview, and does not alter the Article or Draft; restoration keeps the existing confirmation flow, and revision conflicts use an application contract rather than persistence types.",
+            "persistence": "Revisions are immutable local records ordered by creation. New content-changing Revisions persist their generated or fallback description only after completion; existing Revision records remain unchanged."
         },
         {
             "id": "history-and-publishing.revision-restore",
@@ -86,6 +86,16 @@
             "event": "The author requests restoration.",
             "expected": ["The restore request identifies the selected Revision and the repository creates a new Revision."],
             "forbidden": ["Rewriting existing Revision records."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.article-lifecycle.test.ts" }
+        },
+        {
+            "id": "history-and-publishing.revision-descriptions",
+            "title": "New content Revisions retain concise descriptions",
+            "capabilityIds": ["history-and-publishing.revision-history"],
+            "preconditions": ["An author explicitly saves or accepts changed Article content."],
+            "event": "The configured text-generation model completes, fails, or is cancelled while the Revision is being created.",
+            "expected": ["A successful concise description is stored with the new Revision; otherwise a deterministic local fallback is stored and the accepted content remains recoverable."],
+            "forbidden": ["Changing existing Revision records, blocking Revision creation after model failure, or sending unchanged Article context to the model."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.article-lifecycle.test.ts" }
         },
         {

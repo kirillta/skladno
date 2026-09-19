@@ -34,6 +34,7 @@ export interface AcceptProposalInput {
     baseRevisionId: string;
     content: string;
     provenance: Record<string, unknown>;
+    interfaceLocale?: string;
 }
 
 

@@ -13,7 +13,7 @@ import { sortArticlesByActivity, withoutDraft } from "./article-workspace-articl
 export { getArticleContentForWorkspace, sortArticlesByActivity } from "./article-workspace-articles.js";
 
 
-export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelectedArticleId: string | undefined, setPersistedSelectedArticleId: (articleId: string | undefined) => void) {
+export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredSelectedArticleId: string | undefined, setPersistedSelectedArticleId: (articleId: string | undefined) => void, interfaceLocale: string) {
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const [articles, setArticles] = useState<Article[]>([]);
@@ -179,7 +179,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
                 return undefined;
 
             draftLifecycle.send({ articleId, event: { type: "promotion-started" } });
-            const revision = await client.saveArticleRevision(articleId, { content, baseRevisionId: checkpointed.baseRevisionId, expectedDraftVersion: checkpointed.draftVersion });
+            const revision = await client.saveArticleRevision(articleId, { content, baseRevisionId: checkpointed.baseRevisionId, expectedDraftVersion: checkpointed.draftVersion, interfaceLocale });
             updateRevision(articleId, revision);
             return revision;
         } catch (error) {

@@ -1,8 +1,9 @@
-import { beginTelemetryCapture, type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
+import { beginTelemetryCapture, defaultInterfaceLocale, type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
 import type { ArticleStore } from "./article-store.js";
 import type { AssistantGreetingStore } from "./assistant-greeting-store.js";
 import type { TelemetryObserver } from "../telemetry/telemetry-observer.js";
+import type { RevisionDescriptionGenerator } from "../editorial/revision-description-generator.js";
 
 
 export class ArticleService {
@@ -10,6 +11,7 @@ export class ArticleService {
         private readonly store: ArticleStore,
         private readonly assistant: AssistantGreetingStore,
         private readonly telemetry?: TelemetryObserver,
+        private readonly revisionDescriptionGenerator?: () => RevisionDescriptionGenerator | undefined,
     ) { }
 
 
@@ -71,6 +73,11 @@ export class ArticleService {
     }
 
 
+    async saveRevisionWithDescription(articleId: string, input: SaveArticleRevisionInput, signal: AbortSignal): Promise<ArticleRevision> {
+        return this.store.saveRevision(articleId, input, await this.describeChange(articleId, input.content, input.interfaceLocale ?? defaultInterfaceLocale, signal));
+    }
+
+
     listRevisions(articleId: string): ArticleRevision[] {
         return this.store.listRevisions(articleId);
     }
@@ -86,6 +93,11 @@ export class ArticleService {
     }
 
 
+    async acceptProposalWithDescription(articleId: string, input: AcceptProposalInput, signal: AbortSignal): Promise<ArticleRevision> {
+        return this.store.acceptProposal(articleId, input, await this.describeChange(articleId, input.content, input.interfaceLocale ?? defaultInterfaceLocale, signal));
+    }
+
+
     restoreRevision(articleId: string, revisionId: string): ArticleRevision {
         const capture = beginTelemetryCapture(this.telemetry);
         try {
@@ -96,5 +108,27 @@ export class ArticleService {
             capture({ kind: "recovery_finished", recovery: "revision", outcome: "failed", failure: "unknown" });
             throw error;
         }
+    }
+
+
+    private async describeChange(articleId: string, content: string, interfaceLocale: string, signal: AbortSignal): Promise<string> {
+        const previousContent = this.store.getArticle(articleId)?.currentRevision.content ?? "";
+        try {
+            const description = await this.revisionDescriptionGenerator?.()?.generate(previousContent, content, interfaceLocale, signal);
+            if (description?.trim())
+                return description.trim();
+        } catch {
+            // A Revision must remain recoverable when its optional description cannot be generated.
+        }
+
+        const previousLength = Array.from(previousContent).length;
+        const nextLength = Array.from(content).length;
+        if (nextLength > previousLength)
+            return `Added ${nextLength - previousLength} characters`;
+
+        if (nextLength < previousLength)
+            return `Removed ${previousLength - nextLength} characters`;
+
+        return "Updated Article";
     }
 }

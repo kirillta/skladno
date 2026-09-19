@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { APPLICATION_ERROR } from "@skladno/shared";
+import { ArticleService } from "../../application/articles/article-service.js";
 import { withRepository } from "./repositories.test-utils.js";
-// Product scenarios: history-and-publishing.revision-restore-creates-new
+// Product scenarios: history-and-publishing.revision-restore-creates-new, history-and-publishing.revision-descriptions
 test("Draft checkpoints are versioned, recoverable, and separate from Revisions", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Checkpoint", content: "first" });
     const first = repositories.articles.saveDraft(article.id, {
@@ -139,6 +140,39 @@ test("Article metadata updates preserve the current Revision", () => withReposit
     assert.equal(updated.currentRevisionId, article.currentRevisionId);
     assert.equal(repositories.articles.listRevisions(article.id).length, 1);
     assert.throws(() => repositories.articles.updateArticle(article.id, { publishingProfileId: "unknown" }), { code: APPLICATION_ERROR.UNSUPPORTED_PUBLISHING_PROFILE });
+}));
+
+
+test("new content Revisions persist a generated description or a local fallback", () => withRepository(async (repositories) => {
+    const generated = new ArticleService(repositories.articles, repositories.assistant, undefined, () => ({
+        generate: async (_previous, _content, interfaceLocale) => {
+            assert.equal(interfaceLocale, "en");
+            return "Clarified opening";
+        }
+    }));
+    const article = generated.createArticle({ title: "Descriptions", content: "before" });
+    const described = await generated.acceptProposalWithDescription(article.id, {
+        baseRevisionId: article.currentRevisionId,
+        content: "after",
+        provenance: { kind: "accepted-proposal" },
+    }, new AbortController().signal);
+    assert.equal(described.description, "Clarified opening");
+
+    const cancellation = new AbortController();
+    cancellation.abort();
+    const failed = new ArticleService(repositories.articles, repositories.assistant, undefined, () => ({
+        generate: async (_previous, _content, _interfaceLocale, signal) => {
+            assert.equal(signal.aborted, true);
+            throw new Error("cancelled");
+        }
+    }));
+    const fallback = await failed.acceptProposalWithDescription(article.id, {
+        baseRevisionId: described.id,
+        content: "after more",
+        provenance: { kind: "accepted-proposal" },
+    }, cancellation.signal);
+    assert.equal(fallback.description, "Added 5 characters");
+    assert.equal(failed.restoreRevision(article.id, described.id).description, undefined);
 }));
 
 
