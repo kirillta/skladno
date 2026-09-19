@@ -15,7 +15,7 @@ export function SaveStatus({ saveState }: { saveState: SaveState }) {
     const saveLabel = saveLabels[saveState];
     const saveTone = saveState === "saved" || saveState === "draft-saved" ? "text-success" : saveState === "unsaved" || saveState === "saving" ? "text-warning" : "text-danger";
 
-    return <span aria-label={saveLabel} className={`ml-2 inline-flex items-center gap-1 text-xs ${saveTone}`} role="status" title={saveLabel}>
+    return <span aria-label={saveLabel} className={`ml-2 inline-flex items-center gap-1 text-xs pr-1.5 ${saveTone}`} role="status" title={saveLabel}>
         <span aria-hidden="true">&#9679;</span>
         {saveLabel}
     </span>;

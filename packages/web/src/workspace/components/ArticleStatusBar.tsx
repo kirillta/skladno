@@ -76,9 +76,9 @@ function LocalizedArticleStatusBar({ revisionNumber, revisionSelector, language,
 
 
     return <footer ref={statusBar} data-focus-area="article-status" onKeyDown={handleStatusKeyDown} className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
+        <SaveStatus saveState={saveState} />
         <RevisionStatusControl revisionNumber={revisionNumber} revisionSelector={revisionSelector} open={openMenu === "revision"} onToggle={() => toggleMenu("revision")} onOpen={() => setOpenMenu("revision")} onClose={() => setOpenMenu(null)} />
         <LanguageStatusControl language={language} setLanguage={setLanguage} open={openMenu === "language"} onToggle={() => toggleMenu("language")} onOpen={() => setOpenMenu("language")} onClose={() => setOpenMenu(null)} />
-        <SaveStatus saveState={saveState} />
         <PublishingProfileStatusControl length={length} profile={profile} customProfiles={customProfiles} setProfile={setProfile} open={openMenu === "profile"} onToggle={() => toggleMenu("profile")} onOpen={() => setOpenMenu("profile")} onClose={() => setOpenMenu(null)} />
         <CopyStatusControl copyMarkdown={copyMarkdown} copyPlainText={copyPlainText} open={openMenu === "copy"} onToggle={() => toggleMenu("copy")} onOpen={() => setOpenMenu("copy")} onClose={() => setOpenMenu(null)} />
     </footer>;
