@@ -101,7 +101,8 @@ export class AssistantService {
 
             let completed = false;
             const msPerMinute = 60000;
-            const timeoutMs = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).assistantRequestTimeoutMinutes * msPerMinute;
+            const timeout = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).assistantRequestTimeoutMinutes;
+            const timeoutMs = timeout === "unlimited" ? undefined : timeout * msPerMinute;
             for await (const event of streamWithAssistantDeadline((requestSignal) => this.streamEditorialEvents(request, requestSignal), signal, timeoutMs)) {
                 completed ||= event.type === EDITORIAL_ENGINE_EVENT.COMPLETED;
                 yield* this.streamAssistantEvents(request, event);

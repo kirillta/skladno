@@ -68,6 +68,13 @@ test("General settings preserve valid formatting preferences and reject invalid 
             assert.equal(response.status, HTTP_STATUS.BAD_REQUEST);
         }
 
+        const unlimitedUpdate = await fetch(`${settingsUrl}/general`, {
+            method: HTTP_METHOD.PUT, headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ...defaultGeneralSettings, assistantRequestTimeoutMinutes: "unlimited" }),
+        });
+        assert.equal(unlimitedUpdate.status, HTTP_STATUS.OK);
+        assert.equal((await (await fetch(settingsUrl)).json() as { general: GeneralSettings }).general.assistantRequestTimeoutMinutes, "unlimited");
+
         const timeoutUpdate = await fetch(`${settingsUrl}/general`, {
             method: HTTP_METHOD.PUT, headers: { "content-type": "application/json" },
             body: JSON.stringify({ ...defaultGeneralSettings, assistantRequestTimeoutMinutes: 5 }),

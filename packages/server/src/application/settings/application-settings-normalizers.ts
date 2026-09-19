@@ -3,8 +3,8 @@ import { APPLICATION_ERROR, getAiModelPreferenceId, defaultGeneralSettings, defa
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 
 
-function isAssistantRequestTimeout(value: unknown): value is number {
-    return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 30;
+function isAssistantRequestTimeout(value: unknown): value is GeneralSettings["assistantRequestTimeoutMinutes"] {
+    return value === "unlimited" || (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 30);
 }
 
 

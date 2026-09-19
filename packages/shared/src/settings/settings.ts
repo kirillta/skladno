@@ -23,6 +23,7 @@ export type DateFormatPreference = "system" | "day-first" | "day-first-dots" | "
 export type TimeFormatPreference = "system" | "12-hour" | "24-hour";
 export type TimeZonePreference = "system" | string;
 export type AssistantSendMode = "enter" | "ctrl-enter";
+export type AssistantRequestTimeout = number | "unlimited";
 
 
 export function isDateFormatPreference(value: unknown): value is DateFormatPreference {
@@ -73,7 +74,7 @@ export interface GeneralSettings {
     timeFormat: TimeFormatPreference;
     timeZone: TimeZonePreference;
     assistantSendMode: AssistantSendMode;
-    assistantRequestTimeoutMinutes: number;
+    assistantRequestTimeoutMinutes: AssistantRequestTimeout;
     defaultArticleLanguage: string;
     defaultTranslationLanguages: string[];
 }
