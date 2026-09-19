@@ -25,12 +25,12 @@ export function CopyStatusControl({ copyMarkdown, copyPlainText, open, onToggle,
     }
 
 
-    return <div className="relative ml-2 flex items-center border-l border-border pl-2">
-        <button className={`inline-flex h-6 items-center gap-1 px-1.5 transition-colors hover:bg-brand-soft hover:text-brand ${copyStatus === "failed" ? "text-danger" : "text-muted"}`} type="button" aria-live="polite" onClick={() => copy(copyMarkdown)}>
+    return <div className="relative flex items-center">
+        <button className={`inline-flex h-6 items-center gap-1 border-x border-border px-1.5 transition-colors hover:bg-brand-soft hover:text-brand ${copyStatus === "failed" ? "text-danger" : "text-muted"}`} type="button" aria-live="polite" onClick={() => copy(copyMarkdown)}>
             {copyStatus === "copied" ? <SuccessIcon className="size-3 motion-safe:animate-pulse" /> : <CopyIcon className="size-3" />}
             <span>{intl.formatMessage({ id: copyStatus === "copied" ? "articleHeader.copied" : copyStatus === "failed" ? "articleHeader.copyFailed" : "articleHeader.copy" })}</span>
         </button>
-        <button ref={trigger} className="grid size-6 place-items-center text-muted transition-colors hover:bg-brand-soft hover:text-brand" type="button" aria-label={intl.formatMessage({ id: "articleHeader.copyOptions" })} aria-controls={open ? menuId : undefined} aria-expanded={open} aria-haspopup="menu" onClick={onToggle} onKeyDown={(event) => {
+        <button ref={trigger} className="grid size-6 place-items-center border-r border-border text-muted transition-colors hover:bg-brand-soft hover:text-brand" type="button" aria-label={intl.formatMessage({ id: "articleHeader.copyOptions" })} aria-controls={open ? menuId : undefined} aria-expanded={open} aria-haspopup="menu" onClick={onToggle} onKeyDown={(event) => {
             if (event.key === "Escape")
                 onClose();
 

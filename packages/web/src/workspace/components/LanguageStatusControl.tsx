@@ -22,7 +22,7 @@ export function LanguageStatusControl({ language, setLanguage, open, onToggle, o
     }
 
 
-    return <div className="relative ml-2 shrink-0">
+    return <div className="relative shrink-0">
         <button data-focus-area-entry ref={trigger} className="inline-flex h-6 items-center gap-1 border-x border-border px-1.5 text-xs text-muted hover:bg-brand-soft hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" aria-label={intl.formatMessage({ id: "articleHeader.sourceLanguage" })} aria-controls={open ? menuId : undefined} aria-expanded={open} aria-haspopup="menu" onClick={onToggle} onKeyDown={(event) => {
             if (event.key === "Escape")
                 onClose();

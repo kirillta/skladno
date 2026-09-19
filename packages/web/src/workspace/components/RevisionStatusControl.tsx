@@ -26,7 +26,7 @@ export function RevisionStatusControl({ revisionNumber, revisionSelector, open, 
         return <span className="font-normal text-muted">{intl.formatMessage({ id: "status.revision" }, { revisionNumber })}</span>;
 
     return <div className="relative shrink-0">
-        <button data-focus-area-entry ref={trigger} className="inline-flex h-6 items-center gap-1 rounded-control px-1.5 text-xs text-muted hover:bg-brand-soft hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" aria-label={intl.formatMessage({ id: "status.revisionSelector" }, { revisionNumber })} aria-controls={open ? menuId : undefined} aria-expanded={open} aria-haspopup="menu" onClick={onToggle} onKeyDown={(event) => {
+        <button data-focus-area-entry ref={trigger} className="inline-flex h-6 items-center gap-1 border-x border-border px-1.5 text-xs text-muted hover:bg-brand-soft hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" aria-label={intl.formatMessage({ id: "status.revisionSelector" }, { revisionNumber })} aria-controls={open ? menuId : undefined} aria-expanded={open} aria-haspopup="menu" onClick={onToggle} onKeyDown={(event) => {
             if (event.key === "Escape")
                 onClose();
 
