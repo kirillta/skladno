@@ -4,10 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { ELECTRON_APPLICATION_METHOD, ELECTRON_IPC_CHANNEL, type ElectronApplicationMethod, type ElectronApplicationOperationMap, type ElectronIpcError, type ElectronInvokeResult } from "@skladno/shared";
+import { APPLICATION_ERROR, HTTP_STATUS, ELECTRON_APPLICATION_METHOD, ELECTRON_IPC_CHANNEL, type ElectronStreamRequest, type ElectronStreamEvent, type ElectronApplicationMethod, type ElectronApplicationOperationMap, type ElectronIpcError, type ElectronInvokeResult } from "@skladno/shared";
 
 import { createApplicationServices } from "../../application/create-application-services.js";
 import { EditorialService } from "../../application/editorial/editorial-service.js";
+import type { EditorialEngine } from "../../application/editorial/engine/editorial-engine.js";
+import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
 import { openDatabase } from "../persistence/index.js";
 import { createTestPersistence } from "../../test-support/test-persistence.js";
 import { registerElectronIpcApplicationAdapter, type ElectronIpcMain, type ElectronIpcMainEvent } from "./electron-ipc-application-adapter.js";
@@ -33,14 +35,24 @@ class FakeIpcMain implements ElectronIpcMain {
     invoke<Method extends ElectronApplicationMethod>(request: { method: Method; args: ElectronApplicationOperationMap[Method]["args"] }): Promise<ElectronInvokeResult<Method>> | ElectronInvokeResult<Method> {
         return this.handlers.get(ELECTRON_IPC_CHANNEL.invoke)!({ sender: { send: () => undefined } }, request) as Promise<ElectronInvokeResult<Method>> | ElectronInvokeResult<Method>;
     }
+
+
+    stream(request: ElectronStreamRequest): Promise<ElectronStreamEvent> {
+        return new Promise((resolve) => {
+            this.listeners.get(ELECTRON_IPC_CHANNEL.stream)!({ sender: { send: (_channel, event) => {
+                if (event.event.type === "error" || event.event.type === "completed")
+                    resolve(event);
+            } } }, request);
+        });
+    }
 }
 
 
-function createAdapter(): { ipcMain: FakeIpcMain; close: () => void } {
+function createAdapter(engine?: EditorialEngine): { ipcMain: FakeIpcMain; close: () => void } {
     const directory = mkdtempSync(join(tmpdir(), "skladno-electron-ipc-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
-    const engines = { resolve: () => undefined };
+    const engines = { resolve: () => engine };
     const services = createApplicationServices({
         stores: { articles: persistence.articles, styleCorpus: persistence.styleCorpus, assistant: persistence.assistant, artifacts: persistence.editorialArtifacts, engines, factChecks: persistence.factChecks },
         settings: { settings: persistence.settings, dateTimeFormat: { read: async () => ({ locale: "en" }) }, models: { list: async () => [] }, createConnectionId: () => "connection" },
@@ -93,6 +105,29 @@ test("Electron IPC invokes application services and serializes conflict details"
         assert.equal(error.status, 409);
         assert.equal(error.article?.id, article.id);
         assert.equal(error.draft?.version, 1);
+    } finally {
+        adapter.close();
+    }
+});
+
+
+test("Electron IPC delivers the timeout code as a terminal Assistant event", async () => {
+    const adapter = createAdapter({
+        async *stream() {
+            yield* [];
+        },
+        async *streamConversation() {
+            yield* [];
+            throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_REQUEST_TIMED_OUT, HTTP_STATUS.BAD_REQUEST);
+        },
+    });
+    try {
+        const created = await adapter.ipcMain.invoke({ method: "createArticle", args: [{ title: "Timeout", content: "Hello" }] });
+        assert.ok(created.ok);
+        const event = await adapter.ipcMain.stream({ kind: "assistant", streamId: "timeout-stream", articleId: created.value.id, input: { kind: "new", requestId: "timeout-request", authorMessage: "Hello", scope: { kind: "article", baseRevisionId: created.value.currentRevisionId } } });
+        assert.equal(event.event.type, "error");
+        if (event.event.type === "error")
+            assert.equal(event.event.errorCode, APPLICATION_ERROR.ASSISTANT_REQUEST_TIMED_OUT);
     } finally {
         adapter.close();
     }

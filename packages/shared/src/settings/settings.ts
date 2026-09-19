@@ -73,6 +73,7 @@ export interface GeneralSettings {
     timeFormat: TimeFormatPreference;
     timeZone: TimeZonePreference;
     assistantSendMode: AssistantSendMode;
+    assistantRequestTimeoutMinutes: number;
     defaultArticleLanguage: string;
     defaultTranslationLanguages: string[];
 }
@@ -185,6 +186,7 @@ export const defaultGeneralSettings: GeneralSettings = {
     timeFormat: "system",
     timeZone: "system",
     assistantSendMode: "enter",
+    assistantRequestTimeoutMinutes: 2,
     defaultArticleLanguage: "en",
     defaultTranslationLanguages: [],
 };

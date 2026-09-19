@@ -85,3 +85,26 @@ test("editorial prompts route system messages through AI SDK 7 instructions", as
 
     assert.deepEqual(events, [EDITORIAL_ENGINE_EVENT.TEXT_DELTA, EDITORIAL_ENGINE_EVENT.COMPLETED]);
 });
+
+
+test("translation constrains the language metadata to the requested value", async () => {
+    const model = new MockLanguageModelV3({
+        doGenerate: async ({ responseFormat }) => {
+            // A free string lets the model return "español" instead of "Spanish".
+            const schema = JSON.stringify(responseFormat);
+            assert.match(schema, /"const":"Spanish"|"enum":\["Spanish"\]/);
+            return {
+                content: [{ type: "text", text: JSON.stringify({ translation: "Hola mundo.", title: "Prueba", targetLanguage: "Spanish" }) }],
+                finishReason: { unified: "stop", raw: undefined },
+                usage: { inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 1, text: 1, reasoning: 0 } },
+                warnings: [],
+            };
+        },
+    });
+    const engine = new AiSdkEditorialEngine({ provider: AI_PROVIDER.OPENAI, languageModel: model, storeResponses: false });
+    const events = [];
+    for await (const event of engine.stream({ operation: EDITORIAL_OPERATION.TRANSLATION, article: "Hello world.", articleTitle: "Test", authorContext: "Translate to Spanish", targetLanguage: "Spanish" }, new AbortController().signal))
+        events.push(event);
+
+    assert.equal(events.at(-1)?.type, EDITORIAL_ENGINE_EVENT.COMPLETED);
+});

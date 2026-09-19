@@ -18,7 +18,7 @@
             "status": "implemented",
             "owners": ["packages/web/src/workspace/components/EditorialAssistantPanel.tsx", "packages/web/src/application/client.ts", "packages/electron/src/presentation/preload-bridge.ts", "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/presentation/routes/assistant-route.ts"],
             "contract": "Assistant requests stream typed status, renderer-safe capability activity, and response events. Conversational output reveals completed Markdown blocks without rewriting earlier blocks; review artifacts transition directly from the temporary stream to a short result card with an explicit action to their owning Workspace View, and the current View stays unchanged until the Author follows that action. Completed messages identify a used Skill and expose its localized name through a native title. Streaming follows only when the Author is already near the latest output; scrolling away exposes a return-to-end control, while completion brings the outcome control into view unless focus remains in the Assistant. Failed and cancelled requests expose a Retry action that replays only the local persisted input; an unavailable AI connection also offers Application Settings. Incomplete streams do not modify an Article.",
-            "persistence": "Only valid completed request output becomes local message or review-artifact state."
+            "persistence": "Only valid completed request output becomes local message or review-artifact state. Requests have a service-enforced deadline, defaulting to two minutes and configurable in General Settings. Timeout records a failed request and closes outstanding capability executions, aborts provider work, discards late output, and exposes retry guidance without changing the Article."
         },
         {
             "id": "editorial-workflows.thesis-composition",
@@ -106,6 +106,16 @@
         }
     ],
     "scenarios": [
+        {
+            "id": "editorial-workflows.assistant-request-timeout",
+            "title": "Assistant requests stop at their configured deadline",
+            "capabilityIds": ["editorial-workflows.assistant-panel-streaming"],
+            "preconditions": ["A translation capability does not finish before the request time limit."],
+            "event": "The default or configured deadline expires.",
+            "expected": ["The provider signal is aborted and the request and outstanding capability executions become failed."],
+            "forbidden": ["Late provider completion persists an artifact or changes the Article."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.timeout.test.ts" }
+        },
         {
             "id": "editorial-workflows.narrative-draft-source",
             "title": "Narrative Draft develops Author-controlled material",

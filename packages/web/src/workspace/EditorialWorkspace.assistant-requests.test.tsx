@@ -118,6 +118,21 @@ describe("Editorial Workspace assistant requests", () => {
         expect(screen.queryByRole("alert")).toBeNull();
     });
 
+    it("stops progress and displays recovery guidance when an Assistant request times out", async () => {
+        const client = createFakeClient();
+        const user = userEvent.setup();
+        client.streamAssistantRequest = vi.fn().mockRejectedValue(new ApplicationClientError(APPLICATION_ERROR.ASSISTANT_REQUEST_TIMED_OUT, undefined, 400));
+        render(<App client={client} />);
+        await screen.findByRole("heading", { name: "First Article" });
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
+        await screen.findByRole("alert");
+        expect(screen.queryByText(/Working for/)).toBeNull();
+        await user.click(screen.getByText("Error details"));
+        expect(screen.getByText(getMessage("errors.assistantRequestTimedOut"))).toBeTruthy();
+    });
+
     it("opens Application Settings after an unavailable AI connection without changing the Article or Workspace View", async () => {
         const client = createFakeClient();
         const user = userEvent.setup();

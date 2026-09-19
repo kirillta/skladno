@@ -15,6 +15,7 @@ import type { TelemetryObserver } from "../application/telemetry/telemetry-obser
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
+import type { ApplicationServices } from "../application/application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
 import { createTestPersistence, type TestPersistence } from "../test-support/test-persistence.js";
 
@@ -64,7 +65,7 @@ export class CapabilityFixtureEngine extends FixtureEngine {
 }
 
 
-export async function withService(engine: EditorialEngine | undefined, run: (baseUrl: string, persistence: TestPersistence) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier, telemetry?: TelemetryObserver): Promise<void> {
+export async function withService(engine: EditorialEngine | undefined, run: (baseUrl: string, persistence: TestPersistence, services: ApplicationServices) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier, telemetry?: TelemetryObserver): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
@@ -110,7 +111,7 @@ export async function withService(engine: EditorialEngine | undefined, run: (bas
     assert.ok(address && typeof address !== "string");
 
     try {
-        await run(`http://127.0.0.1:${address.port}`, persistence);
+        await run(`http://127.0.0.1:${address.port}`, persistence, services);
     } finally {
         await new Promise<void>((resolve) => service.close(() => resolve()));
         database.close();

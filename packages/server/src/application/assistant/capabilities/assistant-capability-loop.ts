@@ -124,6 +124,7 @@ export class AssistantCapabilityLoop {
 
 
     private async executeCapability(request: PreparedAssistantRequest, excerpt: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<unknown> {
+        signal.throwIfAborted();
         if (!isValidatedEditorialCapabilityCall(definition.id, input))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
@@ -168,6 +169,7 @@ export class AssistantCapabilityLoop {
         if (!verifier || !await verifier.verify(request.authorMessage, action, input, signal))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
+        signal.throwIfAborted();
         request.authorizedActions = [...request.authorizedActions, action];
         request.pendingActions.push({ capability: action, input });
         this.completeCapability(request, definition);
@@ -192,6 +194,7 @@ export class AssistantCapabilityLoop {
 
         const stream = this.dependencies.capabilities!.stream(streamContext, signal, true);
         for await (const event of stream) {
+            signal.throwIfAborted();
             if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED)
                 continue;
 
@@ -202,6 +205,7 @@ export class AssistantCapabilityLoop {
             setPrimary(event);
         }
 
+        signal.throwIfAborted();
         this.completeCapability(request, definition);
         return { status: "prepared" };
     }

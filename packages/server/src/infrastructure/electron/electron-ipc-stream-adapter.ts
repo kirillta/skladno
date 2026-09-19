@@ -65,7 +65,10 @@ function send(event: ElectronIpcMainEvent, value: ElectronStreamEvent): void {
 }
 
 
-function getAssistantErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE | typeof APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED {
+function getAssistantErrorCode(error: unknown) {
+    if (error instanceof ApplicationServiceError)
+        return error.code;
+
     return error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
         ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
         : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;

@@ -56,7 +56,24 @@ test("General settings preserve valid formatting preferences and reject invalid 
 
         repositories.settings.saveSetting("application-general", {});
         const legacy = await fetch(settingsUrl);
-        assert.equal((await legacy.json() as { general: GeneralSettings }).general.timeZone, "system");
+        const legacyGeneral = (await legacy.json() as { general: GeneralSettings }).general;
+        assert.equal(legacyGeneral.timeZone, "system");
+        assert.equal(legacyGeneral.assistantRequestTimeoutMinutes, 2);
+
+        for (const minutes of [0, -1, 31, 1.5, "2", null]) {
+            const response = await fetch(`${settingsUrl}/general`, {
+                method: HTTP_METHOD.PUT, headers: { "content-type": "application/json" },
+                body: JSON.stringify({ ...defaultGeneralSettings, assistantRequestTimeoutMinutes: minutes }),
+            });
+            assert.equal(response.status, HTTP_STATUS.BAD_REQUEST);
+        }
+
+        const timeoutUpdate = await fetch(`${settingsUrl}/general`, {
+            method: HTTP_METHOD.PUT, headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ...defaultGeneralSettings, assistantRequestTimeoutMinutes: 5 }),
+        });
+        assert.equal(timeoutUpdate.status, HTTP_STATUS.OK);
+        assert.equal((await (await fetch(settingsUrl)).json() as { general: GeneralSettings }).general.assistantRequestTimeoutMinutes, 5);
 
         repositories.settings.saveSetting("application-general", { ...defaultGeneralSettings, timeZone: "America/Argentina/Buenos_Aires" });
         const invalid = await fetch(`${settingsUrl}/general`, {

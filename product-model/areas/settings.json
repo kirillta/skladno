@@ -8,7 +8,7 @@
             "title": "Appearance, locale, and date/time/time-zone",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/GeneralSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/settings/settings-store.ts", "packages/server/src/application/settings/system-date-time-format-provider.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "General Settings persists a System, Light, or Dark appearance preference; the shared resolver maps System to the current device appearance for visual application. It also supports the Interface locale, device-local or explicit IANA time zones, device-local date and time formatting, and explicit date and time formats. Revision History honors saved formatting while generated supporting UI text uses the Interface locale independently of Article language.",
+            "contract": "General Settings persists a System, Light, or Dark appearance preference; the shared resolver maps System to the current device appearance for visual application. It also supports the Interface locale, device-local or explicit IANA time zones, device-local date and time formatting, and explicit date and time formats. Revision History honors saved formatting while generated supporting UI text uses the Interface locale independently of Article language. The Assistant request time limit defaults to two minutes and accepts whole minutes from one to thirty, applying to each new request or retry.",
             "persistence": "app_settings.application-general"
         },
         {
@@ -114,6 +114,16 @@
         }
     ],
     "scenarios": [
+        {
+            "id": "settings.assistant-request-timeout",
+            "title": "Assistant request time limit is configurable",
+            "capabilityIds": ["settings.general-preferences"],
+            "preconditions": ["The Author opens General Settings."],
+            "event": "The Author changes the Assistant request time limit.",
+            "expected": ["The default is two minutes. A labeled control with persistent guidance saves the selected whole-minute limit."],
+            "forbidden": ["An invalid limit disables the deadline."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.general.test.tsx" }
+        },
         {
             "id": "settings.general-time-zone-preferences",
             "title": "General time-zone preferences persist with accessible guidance",

@@ -26,10 +26,12 @@ type TranslationResult = EditorialResult<{ metadata: TranslationMetadata; conten
 
 export function withFindingFreshness(factCheck: FactCheck, revisionId: string, content: string): FactCheck {
     const normalizedContent = content.replace(/\s+/g, " ").toLowerCase();
-    return { ...factCheck, findings: factCheck.findings.map((finding) => ({
-        ...finding,
-        stale: factCheck.reviewedRevisionId !== revisionId && !finding.resolution && !normalizedContent.includes(finding.claim.replace(/\s+/g, " ").toLowerCase()),
-    })) };
+    return {
+        ...factCheck, findings: factCheck.findings.map((finding) => ({
+            ...finding,
+            stale: factCheck.reviewedRevisionId !== revisionId && !finding.resolution && !normalizedContent.includes(finding.claim.replace(/\s+/g, " ").toLowerCase()),
+        }))
+    };
 }
 
 
@@ -136,7 +138,13 @@ function useTranslationResults(client: EditorialWorkspaceClient, workspace: Arti
         setTranslationResults((current) => current.filter((result) => result !== translationResult));
     }, [client, translations, workspace.selectedArticle]);
 
-    return { translation: translations.at(-1)?.value.metadata, translations: translations.map((result) => ({ ...result.value, baseRevisionId: result.baseRevisionId })), translationStale, createTranslation, rejectTranslation, retainTranslation };
+    return {
+        translation: translations.at(-1)?.value.metadata,
+        translations: translations.map((result) => ({ ...result.value, baseRevisionId: result.baseRevisionId })),
+        translationStale, createTranslation,
+        rejectTranslation,
+        retainTranslation
+    };
 }
 
 

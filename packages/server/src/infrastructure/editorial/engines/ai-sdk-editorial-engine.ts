@@ -232,7 +232,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 messages: editorialMessage,
                 signal,
             }),
-            output: Output.object({ schema: translationSchema }),
+            output: Output.object({ schema: translationSchema(targetLanguage) }),
         });
 
         if (!result.output || !isAcceptedFinish(result.finishReason) || result.output.targetLanguage.trim() !== targetLanguage)

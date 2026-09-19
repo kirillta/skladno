@@ -6,6 +6,23 @@ test.beforeEach(async ({ page }) => {
 });
 
 
+test("Assistant request time limit persists through Settings reload", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Settings" }).click();
+    const limit = page.getByRole("combobox", { name: "Request time limit" });
+    const saved = page.waitForResponse((response) => response.url().endsWith("/api/settings/general") && response.request().method() === "PUT");
+    await limit.selectOption("5");
+    await saved;
+    await page.reload();
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(limit).toHaveValue("5");
+    const reset = page.waitForResponse((response) => response.url().endsWith("/api/settings/general") && response.request().method() === "PUT");
+    await limit.selectOption("2");
+    await reset;
+    await expect(limit).toHaveValue("2");
+});
+
+
 async function activateWithKeyboard(page: import("@playwright/test").Page, target: Locator): Promise<void> {
     await target.focus();
     await page.keyboard.press("Enter");

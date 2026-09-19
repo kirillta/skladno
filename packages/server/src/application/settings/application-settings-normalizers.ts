@@ -3,6 +3,11 @@ import { APPLICATION_ERROR, getAiModelPreferenceId, defaultGeneralSettings, defa
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 
 
+function isAssistantRequestTimeout(value: unknown): value is number {
+    return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 30;
+}
+
+
 export function normalizeGeneralSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
     const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
     if (rejectInvalidPreferences
@@ -11,6 +16,7 @@ export function normalizeGeneralSettings(value: unknown, rejectInvalidPreference
             || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
             || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
             || (candidate.assistantSendMode !== undefined && !isAssistantSendMode(candidate.assistantSendMode))
+            || (candidate.assistantRequestTimeoutMinutes !== undefined && !isAssistantRequestTimeout(candidate.assistantRequestTimeoutMinutes))
         ))
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -23,6 +29,7 @@ export function normalizeGeneralSettings(value: unknown, rejectInvalidPreference
         timeFormat: isTimeFormatPreference(candidate.timeFormat) ? candidate.timeFormat : defaultGeneralSettings.timeFormat,
         timeZone: isTimeZonePreference(candidate.timeZone) ? candidate.timeZone : defaultGeneralSettings.timeZone,
         assistantSendMode: isAssistantSendMode(candidate.assistantSendMode) ? candidate.assistantSendMode : defaultGeneralSettings.assistantSendMode,
+        assistantRequestTimeoutMinutes: isAssistantRequestTimeout(candidate.assistantRequestTimeoutMinutes) ? candidate.assistantRequestTimeoutMinutes : defaultGeneralSettings.assistantRequestTimeoutMinutes,
         defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages)
             ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))]
             : [],

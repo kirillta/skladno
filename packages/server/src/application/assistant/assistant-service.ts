@@ -16,6 +16,10 @@ import type { EditorialEngineEvent } from "../editorial/engine/editorial-engine-
 import type { StyleCorpusStore } from "../editorial/style/style-corpus-store.js";
 import type { TelemetryObserver } from "../telemetry/telemetry-observer.js";
 import { getConversationHistory } from "./requests/conversation-history.js";
+import { streamWithAssistantDeadline } from "./requests/assistant-request-deadline.js";
+import { normalizeGeneralSettings } from "../settings/application-settings-normalizers.js";
+import type { SettingsStore } from "../settings/settings-store.js";
+import { ApplicationServiceError } from "../errors/application-service-error.js";
 
 
 export type { AssistantServiceRequest } from "./requests/assistant-service-request.js";
@@ -23,6 +27,7 @@ export type { PreparedAssistantRequest } from "./requests/prepared-assistant-req
 
 
 interface AssistantServiceStores {
+    settings: SettingsStore;
     assistant: AssistantStore;
     styleCorpus: StyleCorpusStore;
     factChecks: FactChecksStore;
@@ -95,7 +100,9 @@ export class AssistantService {
             yield* this.initialEvents(request);
 
             let completed = false;
-            for await (const event of this.streamEditorialEvents(request, signal)) {
+            const msPerMinute = 60000;
+            const timeoutMs = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).assistantRequestTimeoutMinutes * msPerMinute;
+            for await (const event of streamWithAssistantDeadline((requestSignal) => this.streamEditorialEvents(request, requestSignal), signal, timeoutMs)) {
                 completed ||= event.type === EDITORIAL_ENGINE_EVENT.COMPLETED;
                 yield* this.streamAssistantEvents(request, event);
             }
@@ -242,7 +249,10 @@ export class AssistantService {
     }
 
 
-    private getErrorCode(error: unknown): typeof APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE | typeof APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED {
+    private getErrorCode(error: unknown) {
+        if (error instanceof ApplicationServiceError)
+            return error.code;
+
         return error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
             ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
             : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;

@@ -26,6 +26,7 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     editorial_operation_unsupported: "errors.editorialOperationUnsupported",
     editorial_configuration_missing: "errors.editorialConfigurationMissing",
     editorial_provider_failed: "errors.editorialProviderFailed",
+    assistant_request_timed_out: "errors.assistantRequestTimedOut",
     editorial_stream_incomplete: "errors.editorialStreamIncomplete",
     editorial_request_failed: "errors.editorialRequestFailed",
     invalid_key_binding: "errors.invalidKeyBinding",

@@ -22,7 +22,9 @@ describe("useAssistantMessageHistory", () => {
     it("does not restore an older response after a reload", async () => {
         let resolveInitial: ((messages: AssistantMessage[]) => void) | undefined;
         const listAssistantMessages = vi.fn()
-            .mockImplementationOnce(() => new Promise<AssistantMessage[]>((resolve) => { resolveInitial = resolve; }))
+            .mockImplementationOnce(() => new Promise<AssistantMessage[]>((resolve) => {
+                resolveInitial = resolve;
+            }))
             .mockResolvedValueOnce([]);
 
         render(<History listAssistantMessages={listAssistantMessages} />);

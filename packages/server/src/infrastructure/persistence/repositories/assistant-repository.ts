@@ -152,6 +152,7 @@ export class AssistantRepository {
             }
 
             this.database.prepare("UPDATE assistant_requests SET status = ?, error_code = ?, updated_at = ? WHERE id = ?").run(status, errorCode, timestamp, requestId);
+            this.database.prepare("UPDATE assistant_capability_executions SET status = ?, completed_at = ? WHERE request_id = ? AND status = 'started'").run(status, timestamp, requestId);
             this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, created_at, updated_at) SELECT ?, article_id, id, 'assistant', 'status', ?, ?, ? FROM assistant_requests WHERE id = ? AND NOT EXISTS (SELECT 1 FROM assistant_messages WHERE request_id = ? AND kind = 'status')")
                 .run(createId(), status, timestamp, timestamp, requestId, requestId);
             this.database.exec("COMMIT;");

@@ -132,6 +132,8 @@ describe("TranslationsView", () => {
         expect(reject).not.toHaveBeenCalled();
         await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: getMessage("views.confirmRejectTranslation") }));
         expect(reject).toHaveBeenCalledWith("Spanish");
+        await waitFor(() => expect(within(screen.getByRole("dialog")).getByRole("status").textContent).toBe("Rejected"));
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     });
 
     it("names and opens the linked source while showing its Revision number and full target language", async () => {

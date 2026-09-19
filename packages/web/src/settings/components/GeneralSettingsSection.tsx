@@ -92,5 +92,13 @@ export function GeneralSettingsSection({ general, save, applyTheme, telemetry }:
             </SettingRow>
         </section>
         {telemetry && <TelemetrySettingsGroup client={telemetry} />}
+        <section className="mt-8 pt-8" aria-labelledby="settings-assistant">
+            <h2 id="settings-assistant" className="text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2>
+            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.assistantRequestTimeout" })} hint={intl.formatMessage({ id: "settings.assistantRequestTimeoutHint" })}>
+                <Select aria-label={intl.formatMessage({ id: "settings.assistantRequestTimeout" })} value={general.assistantRequestTimeoutMinutes} onChange={(event) => void save({ ...general, assistantRequestTimeoutMinutes: Number(event.target.value) })}>
+                    {Array.from({ length: 30 }, (_, index) => index + 1).map((minutes) => <option key={minutes} value={minutes}>{intl.formatMessage({ id: "settings.requestTimeoutMinutes" }, { minutes })}</option>)}
+                </Select>
+            </SettingRow>
+        </section>
     </>;
 }

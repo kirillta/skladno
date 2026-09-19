@@ -3,6 +3,10 @@ import { defaultInterfaceLocale, getElectronMessagesFor } from "@skladno/shared"
 
 /** Canonical application-owned messages. IDs are stable; English is the source text. */
 export const messages = {
+    "settings.assistantRequestTimeout": "Request time limit",
+    "settings.assistantRequestTimeoutHint": "Stop Assistant requests after this time. Applies to new requests, including retries. Your Article stays unchanged if a request times out.",
+    "settings.requestTimeoutMinutes": "{minutes, plural, one {# minute} other {# minutes}}",
+    "errors.assistantRequestTimedOut": "This Assistant request reached its time limit. Your Article was not changed. Retry or increase the request time limit in General Settings.",
     ...getElectronMessagesFor(defaultInterfaceLocale),
     "article.defaultTitle": "Untitled article",
     "workspace.tabs.write": "Write",
