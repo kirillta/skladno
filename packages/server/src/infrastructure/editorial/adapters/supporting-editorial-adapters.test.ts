@@ -42,5 +42,5 @@ test("Revision descriptions reject output stopped by the token limit", async () 
     const model = new MockLanguageModelV3({ doGenerate: generated("Partial description", { unified: "length", raw: undefined }) });
     const adapter = new AiSdkRevisionDescriptionGeneratorAdapter(model);
 
-    await assert.rejects(adapter.generate("Before", "After", new AbortController().signal), { code: EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT });
+    await assert.rejects(adapter.generate("Before", "After", "en", new AbortController().signal), { code: EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT });
 });

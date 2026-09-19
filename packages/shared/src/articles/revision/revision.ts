@@ -25,6 +25,7 @@ export interface SaveArticleRevisionInput {
     content: string;
     baseRevisionId: string;
     expectedDraftVersion?: number;
+    interfaceLocale?: string;
 }
 
 

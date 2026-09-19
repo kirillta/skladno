@@ -144,7 +144,12 @@ test("Article metadata updates preserve the current Revision", () => withReposit
 
 
 test("new content Revisions persist a generated description or a local fallback", () => withRepository(async (repositories) => {
-    const generated = new ArticleService(repositories.articles, repositories.assistant, undefined, () => ({ generate: async () => "Clarified opening" }));
+    const generated = new ArticleService(repositories.articles, repositories.assistant, undefined, () => ({
+        generate: async (_previous, _content, interfaceLocale) => {
+            assert.equal(interfaceLocale, "en");
+            return "Clarified opening";
+        }
+    }));
     const article = generated.createArticle({ title: "Descriptions", content: "before" });
     const described = await generated.acceptProposalWithDescription(article.id, {
         baseRevisionId: article.currentRevisionId,
@@ -156,7 +161,7 @@ test("new content Revisions persist a generated description or a local fallback"
     const cancellation = new AbortController();
     cancellation.abort();
     const failed = new ArticleService(repositories.articles, repositories.assistant, undefined, () => ({
-        generate: async (_previous, _content, signal) => {
+        generate: async (_previous, _content, _interfaceLocale, signal) => {
             assert.equal(signal.aborted, true);
             throw new Error("cancelled");
         }

@@ -142,10 +142,12 @@ export async function saveRevisionRoute(request: IncomingMessage, response: Serv
 
     const body = parseObject(await readJson(request));
     const expectedDraftVersion = body.expectedDraftVersion;
+    const interfaceLocale = body.interfaceLocale === undefined ? undefined : parseString(body.interfaceLocale, "interfaceLocale");
     const input: SaveArticleRevisionInput = {
         content: parseString(body.content, "content"),
         baseRevisionId: parseString(body.baseRevisionId, "baseRevisionId"),
         ...(expectedDraftVersion === undefined ? {} : { expectedDraftVersion: getDraftVersion(expectedDraftVersion) }),
+        ...(interfaceLocale === undefined ? {} : { interfaceLocale }),
     };
 
     writeJson(response, HTTP_STATUS.CREATED, await articles.saveRevisionWithDescription(articleId, input, new AbortController().signal));
@@ -170,6 +172,7 @@ export async function acceptProposalRoute(request: IncomingMessage, response: Se
     const input: AcceptProposalInput = {
         baseRevisionId: parseString(body.baseRevisionId, "baseRevisionId"),
         content: parseString(body.content, "content"),
+        ...(body.interfaceLocale === undefined ? {} : { interfaceLocale: parseString(body.interfaceLocale, "interfaceLocale") }),
         provenance: provenance as Record<string, unknown>,
     };
 

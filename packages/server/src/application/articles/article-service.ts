@@ -1,4 +1,4 @@
-import { beginTelemetryCapture, type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
+import { beginTelemetryCapture, defaultInterfaceLocale, type AcceptedChange, type AcceptProposalInput, Article, ArticleDraft, ArticleRevision, CreateArticleInput, SaveArticleDraftInput, SaveArticleRevisionInput, UpdateArticleInput } from "@skladno/shared";
 
 import type { ArticleStore } from "./article-store.js";
 import type { AssistantGreetingStore } from "./assistant-greeting-store.js";
@@ -74,7 +74,7 @@ export class ArticleService {
 
 
     async saveRevisionWithDescription(articleId: string, input: SaveArticleRevisionInput, signal: AbortSignal): Promise<ArticleRevision> {
-        return this.store.saveRevision(articleId, input, await this.describeChange(articleId, input.content, signal));
+        return this.store.saveRevision(articleId, input, await this.describeChange(articleId, input.content, input.interfaceLocale ?? defaultInterfaceLocale, signal));
     }
 
 
@@ -94,7 +94,7 @@ export class ArticleService {
 
 
     async acceptProposalWithDescription(articleId: string, input: AcceptProposalInput, signal: AbortSignal): Promise<ArticleRevision> {
-        return this.store.acceptProposal(articleId, input, await this.describeChange(articleId, input.content, signal));
+        return this.store.acceptProposal(articleId, input, await this.describeChange(articleId, input.content, input.interfaceLocale ?? defaultInterfaceLocale, signal));
     }
 
 
@@ -111,10 +111,10 @@ export class ArticleService {
     }
 
 
-    private async describeChange(articleId: string, content: string, signal: AbortSignal): Promise<string> {
+    private async describeChange(articleId: string, content: string, interfaceLocale: string, signal: AbortSignal): Promise<string> {
         const previousContent = this.store.getArticle(articleId)?.currentRevision.content ?? "";
         try {
-            const description = await this.revisionDescriptionGenerator?.()?.generate(previousContent, content, signal);
+            const description = await this.revisionDescriptionGenerator?.()?.generate(previousContent, content, interfaceLocale, signal);
             if (description?.trim())
                 return description.trim();
         } catch {

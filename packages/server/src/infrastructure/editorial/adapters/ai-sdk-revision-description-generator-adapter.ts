@@ -10,11 +10,11 @@ export class AiSdkRevisionDescriptionGeneratorAdapter implements RevisionDescrip
     constructor(private readonly model: LanguageModel, private readonly providerOptions: SupportingTextProviderOptions = undefined) { }
 
 
-    async generate(previousContent: string, content: string, signal: AbortSignal): Promise<string> {
+    async generate(previousContent: string, content: string, interfaceLocale: string, signal: AbortSignal): Promise<string> {
         const changedContext = getChangedContext(previousContent, content);
         const result = await generateText({
             ...createAiSdkGenerationOptions({ model: this.model, signal, providerOptions: this.providerOptions }),
-            prompt: `Summarize this editorial change in 2 to 8 neutral words. Return only the summary, without quotation marks or ending punctuation. Do not invent facts.\n\nRemoved text:\n${changedContext.removed}\n\nAdded text:\n${changedContext.added}`,
+            prompt: `Summarize this editorial change in 2 to 8 neutral words in the interface locale ${interfaceLocale}, regardless of the Article language. Return only the summary, without quotation marks or ending punctuation. Do not invent facts.\n\nRemoved text:\n${changedContext.removed}\n\nAdded text:\n${changedContext.added}`,
         });
         const description = result.text.trim().replace(/^['"“”]+|['"“”]+$/g, "").replace(/\s+/g, " ").slice(0, 120);
         if (!isAcceptedFinish(result.finishReason) || !description)

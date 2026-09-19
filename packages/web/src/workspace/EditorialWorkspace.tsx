@@ -255,7 +255,7 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
     const intl = useIntl();
     const { notifyError } = useNotifications();
     const layout = useWorkspaceLayout();
-    const workspace = useArticleWorkspace(client, layout.selectedArticleId, layout.setSelectedArticleId);
+    const workspace = useArticleWorkspace(client, layout.selectedArticleId, layout.setSelectedArticleId, intl.locale);
     const generalSettings = useWorkspaceGeneralSettings(client, screen);
     const hasUsableAiConnection = useUsableAiConnection(client, screen);
     const revisions = useArticleRevisions(client, workspace.selectedArticle, workspace.updateRevision, workspace.save, workspace.discardDraft);
