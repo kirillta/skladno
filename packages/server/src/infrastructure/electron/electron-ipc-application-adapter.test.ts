@@ -111,13 +111,18 @@ test("Electron IPC invokes application services and serializes conflict details"
 });
 
 
-test("Electron IPC delivers the timeout code as a terminal Assistant event", async () => {
+test("Electron IPC starts retries and enforces their two-minute deadline", async (context) => {
+    let calls = 0;
     const adapter = createAdapter({
         async *stream() {
             yield* [];
         },
         async *streamConversation() {
             yield* [];
+            calls += 1;
+            if (calls > 1)
+                await new Promise<void>(() => undefined);
+
             throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_REQUEST_TIMED_OUT, HTTP_STATUS.BAD_REQUEST);
         },
     });
@@ -128,7 +133,31 @@ test("Electron IPC delivers the timeout code as a terminal Assistant event", asy
         assert.equal(event.event.type, "error");
         if (event.event.type === "error")
             assert.equal(event.event.errorCode, APPLICATION_ERROR.ASSISTANT_REQUEST_TIMED_OUT);
+
+        context.mock.timers.enable({ apis: ["setTimeout"] });
+        let finished = false;
+        const retry = adapter.ipcMain.stream({ kind: "assistant", streamId: "retry-stream", articleId: created.value.id, input: { kind: "retry", requestId: "retry-request", retryOfRequestId: "timeout-request" } }).then((result) => {
+            finished = true;
+            return result;
+        });
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.equal(calls, 2, "Retry must reach the service instead of leaving the renderer waiting indefinitely");
+        context.mock.timers.tick(119_999);
+        assert.equal(finished, false);
+        context.mock.timers.tick(1);
+        const retried = await retry;
+        assert.equal(retried.event.type, "error");
+        if (retried.event.type === "error")
+            assert.equal(retried.event.errorCode, APPLICATION_ERROR.ASSISTANT_REQUEST_TIMED_OUT);
+
+        const invalid = await adapter.ipcMain.stream({ kind: "assistant", streamId: "invalid-retry-stream", articleId: created.value.id, input: { kind: "retry", requestId: "invalid-retry-request", retryOfRequestId: "missing-request" } });
+        assert.equal(invalid.event.type, "error");
+        if (invalid.event.type === "error")
+            assert.equal(invalid.event.errorCode, APPLICATION_ERROR.ASSISTANT_RETRY_INVALID);
+
+        assert.equal(calls, 2);
     } finally {
+        context.mock.timers.reset();
         adapter.close();
     }
 });

@@ -17,7 +17,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 
 function isValidAssistantRequest(value: unknown): value is Extract<ElectronStreamRequest, { kind: "assistant" }>["input"] {
-    if (!isRecord(value) || typeof value.requestId !== "string" || typeof value.authorMessage !== "string" || !isRecord(value.scope))
+    if (!isRecord(value) || typeof value.requestId !== "string" || !value.requestId)
+        return false;
+
+    if (value.kind === "retry")
+        return typeof value.retryOfRequestId === "string" && Boolean(value.retryOfRequestId);
+
+    if ((value.kind !== undefined && value.kind !== "new") || typeof value.authorMessage !== "string" || !isRecord(value.scope))
         return false;
 
     if (typeof value.scope.baseRevisionId !== "string")
