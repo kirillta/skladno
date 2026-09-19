@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useIntl } from "react-intl";
 import type { ArticleRevision, CustomPublishLimitProfile, PublishLimitProfile, PublishLimitProfileId, PublishingLength } from "@skladno/shared";
 import type { DraftPresentationState as SaveState } from "../drafts/draft-lifecycle.js";
@@ -42,6 +42,18 @@ export function ArticleStatusBar(props: ArticleStatusBarProps) {
 function LocalizedArticleStatusBar({ revisionNumber, revisionSelector, language, setLanguage, saveState, length, profile, customProfiles, setProfile, copyMarkdown, copyPlainText }: ArticleStatusBarProps) {
     const intl = useIntl();
     const [openMenu, setOpenMenu] = useState<StatusMenu | null>(null);
+    const statusBar = useRef<HTMLElement>(null);
+
+    useEffect(() => {
+        function closeOnOutsideMouseDown(event: MouseEvent) {
+            if (event.target instanceof Node && !statusBar.current?.contains(event.target))
+                setOpenMenu(null);
+        }
+
+
+        document.addEventListener("mousedown", closeOnOutsideMouseDown);
+        return () => document.removeEventListener("mousedown", closeOnOutsideMouseDown);
+    }, []);
 
 
     function handleStatusKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -63,7 +75,7 @@ function LocalizedArticleStatusBar({ revisionNumber, revisionSelector, language,
     }
 
 
-    return <footer data-focus-area="article-status" onKeyDown={handleStatusKeyDown} className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
+    return <footer ref={statusBar} data-focus-area="article-status" onKeyDown={handleStatusKeyDown} className="flex h-6 shrink-0 items-center border-t border-border px-5 text-xs text-muted" aria-label={intl.formatMessage({ id: "status.article" })}>
         <RevisionStatusControl revisionNumber={revisionNumber} revisionSelector={revisionSelector} open={openMenu === "revision"} onToggle={() => toggleMenu("revision")} onOpen={() => setOpenMenu("revision")} onClose={() => setOpenMenu(null)} />
         <LanguageStatusControl language={language} setLanguage={setLanguage} open={openMenu === "language"} onToggle={() => toggleMenu("language")} onOpen={() => setOpenMenu("language")} onClose={() => setOpenMenu(null)} />
         <SaveStatus saveState={saveState} />

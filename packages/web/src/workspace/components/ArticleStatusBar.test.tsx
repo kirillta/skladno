@@ -37,6 +37,31 @@ it("moves between status controls with Left and Right", () => {
 });
 
 
+it("closes an open menu when the Author clicks outside the Status Bar", async () => {
+    const user = userEvent.setup();
+    const statusBar = render(<IntlProvider locale="en" messages={messages}><ArticleStatusBar
+        revisionNumber={1}
+        language="en"
+        setLanguage={vi.fn().mockResolvedValue(undefined)}
+        saveState="saved"
+        length={{ count: 100, state: "within-limit" }}
+        profile={publishLimitProfiles.find((profile) => profile.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS)!}
+        customProfiles={[]}
+        setProfile={vi.fn().mockResolvedValue(undefined)}
+        copyMarkdown={vi.fn().mockResolvedValue(true)}
+        copyPlainText={vi.fn().mockResolvedValue(true)}
+    /></IntlProvider>);
+
+    const scope = within(statusBar.container);
+    await user.click(scope.getByRole("button", { name: "Source language" }));
+    expect(scope.getByRole("menu", { name: "Source language" })).toBeTruthy();
+
+    await user.click(document.body);
+
+    expect(scope.queryByRole("menu", { name: "Source language" })).toBeNull();
+});
+
+
 it("lists Revisions newest first, previews a selection, and keeps restore explicit", async () => {
     const user = userEvent.setup();
     const selectForRestore = vi.fn();
