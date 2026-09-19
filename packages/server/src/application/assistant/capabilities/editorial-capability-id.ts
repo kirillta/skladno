@@ -16,6 +16,7 @@ export const EDITORIAL_CAPABILITY = {
     SET_ARTICLE_STYLE_RULES: "set_article_style_rules",
     ADD_REVISION_TO_STYLE_CORPUS: "add_revision_to_style_corpus",
     REBUILD_STYLE_PROFILE: "rebuild_style_profile",
+    REJECT_TRANSLATION: "reject_translation",
     GENERATE_PROPOSAL: "generate_proposal",
     GENERATE_FINDING_CORRECTIONS: "generate_finding_corrections",
     FACT_CHECK: "fact_check",

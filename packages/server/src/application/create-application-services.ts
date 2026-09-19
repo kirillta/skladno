@@ -66,7 +66,7 @@ export function createApplicationServices({ stores, settings, integration = {} }
     const factCheckService = new FactCheckService(factChecks);
     const styleCorpusService = new StyleCorpusService(stores.styleCorpus, stores.engines, stores.articles);
     const capabilities = integration.editorial
-        ? new EditorialCapabilityCatalog(articleService, stores.artifacts, publishing, integration.editorial, styleCorpusService, factChecks)
+        ? new EditorialCapabilityCatalog(articleService, stores.artifacts, publishing, integration.editorial, styleCorpusService, factChecks, stores.assistant)
         : undefined;
     const skills = new AssistantSkillCatalog([builtInSkillSource]);
     const preparation = new AssistantRequestPreparation({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, engines: stores.engines, capabilities });

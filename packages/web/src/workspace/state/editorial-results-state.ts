@@ -4,6 +4,7 @@ import {
     defaultPublishLimitProfileId,
     isPublishLimitProfileId,
     type AssistantEditorialResult,
+    type AssistantMessage,
     type FactCheck,
     type StyleReview,
     type TranslationMetadata,
@@ -97,6 +98,13 @@ function useTranslationResults(client: EditorialWorkspaceClient, workspace: Arti
         setTranslationResults((current) => [...current.filter((item) => item.articleId !== result.articleId || item.value.metadata.targetLanguage !== result.value.metadata.targetLanguage), result]);
     }, []);
 
+    const replaceTranslations = useCallback((articleId: string, messages: readonly AssistantMessage[] | undefined) => {
+        const translations = (messages ?? []).flatMap((message) => message.status === "completed" && message.translation && message.baseRevisionId
+            ? [{ articleId, baseRevisionId: message.baseRevisionId, value: { ...message.translation, editorialArtifactId: message.editorialArtifactId } }]
+            : []);
+        setTranslationResults((current) => [...current.filter((result) => result.articleId !== articleId), ...translations]);
+    }, []);
+
     const translations = translationResults.filter((result) => result.articleId === selectedArticleId);
     const translationStale = translations.some((result) => result.baseRevisionId !== workspace.selectedArticle?.currentRevisionId);
 
@@ -143,7 +151,8 @@ function useTranslationResults(client: EditorialWorkspaceClient, workspace: Arti
         translations: translations.map((result) => ({ ...result.value, baseRevisionId: result.baseRevisionId })),
         translationStale, createTranslation,
         rejectTranslation,
-        retainTranslation
+        retainTranslation,
+        replaceTranslations
     };
 }
 

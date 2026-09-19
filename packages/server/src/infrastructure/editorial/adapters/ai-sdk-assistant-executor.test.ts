@@ -6,7 +6,12 @@ import { AI_PROVIDER } from "@skladno/shared";
 
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
 import { EDITORIAL_ENGINE_EVENT } from "../../../application/editorial/engine/editorial-engine-events.js";
-import { AiSdkAssistantExecutor } from "./ai-sdk-assistant-executor.js";
+import { AiSdkAssistantExecutor, createAssistantInstructions } from "./ai-sdk-assistant-executor.js";
+
+
+test("Assistant distinguishes prepared translations from linked translation Articles before rejection", () => {
+    assert.match(createAssistantInstructions({ instructions: [], skills: [] }), /inspect_translations first.*artifactId.*reject_translation.*never use inspect_linked_articles/s);
+});
 
 
 test("Assistant completes only after a successful final finish reason", async () => {

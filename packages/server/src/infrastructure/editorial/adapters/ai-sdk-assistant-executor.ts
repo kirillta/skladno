@@ -19,6 +19,17 @@ interface AiSdkAssistantExecutorOptions {
 }
 
 
+export function createAssistantInstructions(request: Pick<EditorialAssistantRequest, "instructions" | "skills">): string {
+    return [
+        "You are Skladno's editorial assistant. Use only the supplied tools when an editorial result is needed.",
+        "Never claim that a tool ran when it did not. Preserve author control. Finish with a concise response after the necessary work.",
+        "To reject a prepared translation, call inspect_translations first, use its artifactId with reject_translation, and never use inspect_linked_articles; that tool is only for created linked Articles.",
+        `Available Skills:\n${request.skills.map((skill) => `${skill.id}: ${skill.name}. ${skill.description}`).join("\n")}`,
+        ...request.instructions,
+    ].join("\n\n");
+}
+
+
 export class AiSdkAssistantExecutor {
     constructor(private readonly options: AiSdkAssistantExecutorOptions) { }
 
@@ -76,12 +87,7 @@ export class AiSdkAssistantExecutor {
 
         return new ToolLoopAgent<never, ToolSet>({
             model: this.options.languageModel,
-            instructions: [
-                "You are Skladno's editorial assistant. Use only the supplied tools when an editorial result is needed.",
-                "Never claim that a tool ran when it did not. Preserve author control. Finish with a concise response after the necessary work.",
-                `Available Skills:\n${request.skills.map((skill) => `${skill.id}: ${skill.name}. ${skill.description}`).join("\n")}`,
-                ...request.instructions,
-            ].join("\n\n"),
+            instructions: createAssistantInstructions(request),
             tools,
             activeTools: getActiveTools(),
             prepareStep: ({ stepNumber }) => getAssistantStepOptions(stepNumber, state.activeCapabilities),

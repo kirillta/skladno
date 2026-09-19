@@ -6,6 +6,7 @@ import type { EditorialService } from "../../editorial/editorial-service.js";
 import type { PublishingService } from "../../publishing/publishing-service.js";
 import type { EditorialEngineEvent } from "../../editorial/engine/editorial-engine-event.js";
 import type { StyleCorpusService } from "../../editorial/style/style-corpus-service.js";
+import type { AssistantStore } from "../assistant-store.js";
 import { EDITORIAL_CAPABILITY } from "./editorial-capability-id.js";
 import { EDITORIAL_CAPABILITY_INPUT } from "./editorial-capability-input.js";
 import type { EditorialCapabilityContext } from "./editorial-capability-context.js";
@@ -84,7 +85,8 @@ export class EditorialCapabilityCatalog {
         private readonly publishing: PublishingService,
         private readonly editorial: EditorialService,
         private readonly styleCorpus: StyleCorpusService,
-        private readonly factChecks: FactChecksStore = { listFactChecks: () => [] }
+        private readonly factChecks: FactChecksStore = { listFactChecks: () => [] },
+        private readonly assistant?: Pick<AssistantStore, "rejectTranslation">
     ) { }
 
 
@@ -151,10 +153,10 @@ export class EditorialCapabilityCatalog {
     executeAction(capability: Extract<EditorialCapabilityId, "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext): StyleCorpus;
 
 
-    executeAction(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>>): Article | { rules: string } | StyleCorpus;
+    executeAction(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile" | "reject_translation">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>>): Article | { rules: string } | StyleCorpus | { rejected: true };
 
 
-    executeAction(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>> = {}): Article | { rules: string } | StyleCorpus {
+    executeAction(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile" | "reject_translation">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>> = {}): Article | { rules: string } | StyleCorpus | { rejected: true } {
         if (!context.authorizedActions?.includes(capability) || !isValidatedEditorialCapabilityCall(capability, input))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -177,6 +179,11 @@ export class EditorialCapabilityCatalog {
                 return this.styleCorpus.addArticleRevision(article.id, article.currentRevisionId);
             case EDITORIAL_CAPABILITY.REBUILD_STYLE_PROFILE:
                 return this.styleCorpus.rebuild();
+            case EDITORIAL_CAPABILITY.REJECT_TRANSLATION:
+                if (!this.assistant?.rejectTranslation(article.id, input.artifactId!))
+                    throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+                return { rejected: true };
         }
     }
 

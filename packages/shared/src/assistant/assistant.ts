@@ -45,7 +45,8 @@ export type AssistantAuthorizedAction = "rename_article"
     | "assign_publishing_profile"
     | "set_article_style_rules"
     | "add_revision_to_style_corpus"
-    | "rebuild_style_profile";
+    | "rebuild_style_profile"
+    | "reject_translation";
 
 
 /** Completion data held until the run is valid and its artifacts can be committed. */

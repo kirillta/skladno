@@ -11,6 +11,6 @@ export interface AssistantStore {
     setExecution(requestId: string, capability: string, status?: "started" | "completed" | "failed" | "cancelled"): void;
     completeRun<T>(run: () => T): T;
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage;
-    rejectTranslation(articleId: string, editorialArtifactId: string): void;
+    rejectTranslation(articleId: string, editorialArtifactId: string): boolean;
     failRequest(requestId: string, status: "failed" | "cancelled", errorCode: string): void;
 }
