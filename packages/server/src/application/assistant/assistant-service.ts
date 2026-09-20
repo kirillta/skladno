@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, BUILT_IN_SKILL, EDITORIAL_OPERATION, type AssistantEvent, type AssistantMessage, type TimedTelemetryCapture } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantEvent, type AssistantMessage, type RestoreAssistantCheckpointResult, type TimedTelemetryCapture } from "@skladno/shared";
 
 import { AssistantCapabilityLoop } from "./capabilities/assistant-capability-loop.js";
 import { AssistantCompletion, getResponseKind } from "./completion/assistant-completion.js";
@@ -20,6 +20,7 @@ import { streamWithAssistantDeadline } from "./requests/assistant-request-deadli
 import { normalizeGeneralSettings } from "../settings/application-settings-normalizers.js";
 import type { SettingsStore } from "../settings/settings-store.js";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
+import { AssistantCheckpointError } from "./assistant-store.js";
 
 
 export type { AssistantServiceRequest } from "./requests/assistant-service-request.js";
@@ -67,6 +68,36 @@ export class AssistantService {
 
     rejectTranslation(articleId: string, editorialArtifactId: string): void {
         this.stores.assistant.rejectTranslation(articleId, editorialArtifactId);
+    }
+
+
+    previewCheckpoint(articleId: string, messageId: string): AssistantCheckpointPreview {
+        return this.runCheckpoint(() => this.stores.assistant.previewCheckpoint(articleId, messageId));
+    }
+
+
+    restoreCheckpoint(articleId: string, messageId: string, tailToken: string, draftMode?: AssistantCheckpointDraftMode): RestoreAssistantCheckpointResult {
+        return this.runCheckpoint(() => this.stores.assistant.restoreCheckpoint(articleId, messageId, tailToken, draftMode));
+    }
+
+
+    private runCheckpoint<T>(operation: () => T): T {
+        try {
+            return operation();
+        } catch (error) {
+            if (error instanceof AssistantCheckpointError) {
+                const errorCode = error.kind === "conflict"
+                    ? APPLICATION_ERROR.ASSISTANT_CHECKPOINT_CONFLICT
+                    : APPLICATION_ERROR.ASSISTANT_CHECKPOINT_INVALID;
+                const httpStatus = error.kind === "conflict"
+                    ? HTTP_STATUS.CONFLICT
+                    : HTTP_STATUS.BAD_REQUEST;
+
+                throw new ApplicationServiceError(errorCode, httpStatus);
+            }
+
+            throw error;
+        }
     }
 
 

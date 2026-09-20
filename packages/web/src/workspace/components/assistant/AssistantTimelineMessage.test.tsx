@@ -58,4 +58,15 @@ describe("AssistantTimelineMessage", () => {
         await userEvent.setup().click(within(view.container).getByRole("button", { name: "Retry" }));
         expect(onRetry).toHaveBeenCalledWith("original-request");
     });
+
+
+    it("places the checkpoint edit action beside the Author message date", async () => {
+        const onCheckpoint = vi.fn();
+        const view = renderMessage({ id: "author-message", articleId: "article", requestId: "request", role: "author", kind: "message", status: "completed", content: "Author message", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }, { onCheckpoint });
+
+        const action = within(view.container).getByRole("button", { name: /Edit from Author message at/ });
+        expect(action.previousElementSibling?.textContent).toBe("2026-01-01, 00:00");
+        await userEvent.setup().click(action);
+        expect(onCheckpoint).toHaveBeenCalledWith("author-message");
+    });
 });

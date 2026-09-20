@@ -152,6 +152,12 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
     }
 
 
+    function applyPersistedArticle(article: Article) {
+        draftLifecycle.replace({ ...draftLifecycle.sessionsRef.current, [article.id]: hydrateDraftLifecycle(article) });
+        replaceArticles((items) => items.map((item) => item.id === article.id ? article : item));
+    }
+
+
     const actions = createArticleWorkspaceActions({
         client, articlesRef, draftLifecycle, timers, checkpoint, replaceArticles, selectedArticleId,
         setSelectedArticleId, setPersistedSelectedArticleId, comparisonArticleId, setComparisonArticleId,
@@ -241,7 +247,7 @@ export function useArticleWorkspace(client: EditorialWorkspaceClient, preferredS
         hasUncommittedChanges: Boolean(selectedArticle && selectedDraft && hasUncommittedDraftChanges(selectedDraft, selectedArticle.currentRevision.content)),
         conflict: selectedDraft?.conflict, comparisonArticleId,
         openComparison: () => selectedArticleId && setComparisonArticleId(selectedArticleId), closeComparison: () => setComparisonArticleId(undefined),
-        ...actions, updateRevision,
+        ...actions, updateRevision, applyPersistedArticle,
     };
 }
 

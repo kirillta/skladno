@@ -6,6 +6,8 @@ import {
     createArticleRevisionsPath,
     articlesPath,
     createAssistantMessagesPath,
+    createAssistantCheckpointPreviewPath,
+    createAssistantCheckpointRestorePath,
     createAssistantRequestsPath,
     createAssistantTranslationRejectionPath,
     createEditorialPath,
@@ -21,6 +23,9 @@ import {
     type ArticleRevision,
     type AssistantEvent,
     type AssistantMessage,
+    type AssistantCheckpointPreview,
+    type RestoreAssistantCheckpointInput,
+    type RestoreAssistantCheckpointResult,
     type CreateArticleInput,
     type EditorialEvent,
     type FactCheck,
@@ -142,6 +147,16 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
     async rejectTranslation(articleId: string, editorialArtifactId: string): Promise<void> {
         await this.request<void>(createAssistantTranslationRejectionPath(articleId, editorialArtifactId), { method: HTTP_METHOD.POST });
+    }
+
+
+    async previewAssistantCheckpoint(articleId: string, messageId: string): Promise<AssistantCheckpointPreview> {
+        return this.request<AssistantCheckpointPreview>(createAssistantCheckpointPreviewPath(articleId, messageId));
+    }
+
+
+    async restoreAssistantCheckpoint(articleId: string, messageId: string, input: RestoreAssistantCheckpointInput): Promise<RestoreAssistantCheckpointResult> {
+        return this.request<RestoreAssistantCheckpointResult>(createAssistantCheckpointRestorePath(articleId, messageId), { method: HTTP_METHOD.POST, body: JSON.stringify(input) });
     }
 
 

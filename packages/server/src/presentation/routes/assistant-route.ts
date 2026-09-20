@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { APPLICATION_ERROR, HTTP_STATUS, resolveBuiltInSkillId, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, HTTP_STATUS, resolveBuiltInSkillId, type AssistantCheckpointDraftMode, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
 
 import { AssistantService, type PreparedAssistantRequest } from "../../application/assistant/assistant-service.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../application/editorial/engine/editorial-engine-errors.js";
@@ -111,6 +111,21 @@ export function rejectAssistantTranslationRoute(response: ServerResponse, articl
     assistant.rejectTranslation(articleId, editorialArtifactId);
     response.writeHead(HTTP_STATUS.NO_CONTENT);
     response.end();
+}
+
+
+export function previewAssistantCheckpointRoute(response: ServerResponse, articleId: string, messageId: string, assistant: AssistantService): void {
+    writeJson(response, HTTP_STATUS.OK, assistant.previewCheckpoint(articleId, messageId));
+}
+
+
+export async function restoreAssistantCheckpointRoute(request: IncomingMessage, response: ServerResponse, articleId: string, messageId: string, assistant: AssistantService): Promise<void> {
+    const body = parseObject(await readJson(request));
+    const draftMode = body.draftMode;
+    if (draftMode !== undefined && draftMode !== "preserve" && draftMode !== "discard")
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    writeJson(response, HTTP_STATUS.OK, assistant.restoreCheckpoint(articleId, messageId, parseString(body.tailToken, "tailToken"), draftMode as AssistantCheckpointDraftMode | undefined));
 }
 
 

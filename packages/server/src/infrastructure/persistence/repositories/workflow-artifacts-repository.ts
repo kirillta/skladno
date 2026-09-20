@@ -46,7 +46,7 @@ export class EditorialArtifactsRepository {
 
 
     listEditorialArtifacts(articleId: string): EditorialArtifact[] {
-        return (this.database.prepare("SELECT * FROM editorial_artifacts WHERE article_id = ? ORDER BY created_at ASC, id ASC").all(articleId) as Row[])
+        return (this.database.prepare("SELECT * FROM editorial_artifacts WHERE article_id = ? AND rejected_at IS NULL ORDER BY created_at ASC, id ASC").all(articleId) as Row[])
             .map((row) => ({
                 id: String(row.id),
                 articleId: String(row.article_id),

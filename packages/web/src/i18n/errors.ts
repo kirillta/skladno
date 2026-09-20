@@ -35,6 +35,8 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     assistant_skill_scope_incompatible: "errors.assistantSkillScopeIncompatible",
     assistant_selection_invalid: "errors.assistantSelectionInvalid",
     assistant_request_conflict: "errors.assistantRequestConflict",
+    assistant_checkpoint_conflict: "errors.assistantCheckpointConflict",
+    assistant_checkpoint_invalid: "errors.assistantCheckpointInvalid",
     assistant_retry_invalid: "errors.assistantRetryInvalid",
     assistant_coordinator_failed: "errors.assistantCoordinatorFailed",
 };

@@ -79,6 +79,16 @@ describe("RevisionHistoryView", () => {
     });
 
 
+    it("identifies a restored Revision by its target number and description", () => {
+        const target = createArticleRevision("target", "Target", "author-draft", "2026-01-01T10:00:00.000Z", undefined, "Добавлен совет");
+        const restored = createArticleRevision("restored", "Target", "restore", "2026-01-02T10:00:00.000Z", "target");
+        renderHistory([target, restored], restored.id);
+
+        expect(screen.getAllByText("Restored Revision #1 — Добавлен совет").length).toBeGreaterThan(0);
+        expect(screen.getByTitle("Restored Revision #1 — Добавлен совет")).toBeTruthy();
+    });
+
+
     it("uses distinct timeline icons for initial, manual, AI-assisted, and restored Revisions", () => {
         const initial = createArticleRevision("initial", "Initial", "initial", "2026-01-01T10:00:00.000Z");
         const manual = createArticleRevision("manual", "Manual", "author-draft", "2026-01-02T10:00:00.000Z");

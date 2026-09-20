@@ -52,6 +52,19 @@
             "persistence": "Per-Article Assistant records, minimal capability execution history, and explicit Editorial Requests."
         },
         {
+            "id": "workspace.assistant.conversation-checkpoints",
+            "area": "Editorial Assistant Panel",
+            "title": "Author-message conversation checkpoints with Composer restoration",
+            "status": "implemented",
+            "owners": [
+                "packages/web/src/workspace/components/assistant/AssistantTimeline.tsx",
+                "packages/web/src/workspace/components/assistant/AssistantCheckpointDialog.tsx",
+                "packages/web/src/workspace/state/assistant-messages-state.ts"
+            ],
+            "contract": "Every persisted Author message can restore the active conversation to the moment before it was sent. Confirmation reports rejected work and warns before replacing unsent Composer content. Restoration returns the message text, Skill, target language, and caret to the Composer without recreating an old Article selection. Conversation actions support Left, Right, Home, End, Enter, and Space without changing Workspace focus-area navigation.",
+            "persistence": "The renderer applies conversation, Article, Draft, and Composer state only after the atomic local-service restore succeeds."
+        },
+        {
             "id": "workspace.empty.create-article",
             "area": "Empty Article Workspace",
             "title": "Quiet empty state creates an Article using the configured default language",
@@ -351,6 +364,28 @@
             "evidence": {
                 "kind": "automated",
                 "path": "packages/web/src/workspace/EditorialWorkspace.assistant-selection.test.tsx"
+            }
+        },
+        {
+            "id": "workspace.assistant.checkpoint-keyboard",
+            "title": "Conversation checkpoints remain keyboard and screen-reader operable",
+            "capabilityIds": [
+                "workspace.assistant.conversation-checkpoints"
+            ],
+            "preconditions": [
+                "The Assistant contains persisted Author messages."
+            ],
+            "event": "The Author navigates conversation actions and activates a checkpoint.",
+            "expected": [
+                "Left, Right, Home, and End move through actions and Enter or Space activates the focused checkpoint.",
+                "The accessible name identifies the message time and rejected later work, and the confirmation owns focus."
+            ],
+            "forbidden": [
+                "A Ctrl-modified navigation scheme or loss of Workspace focus-area behavior."
+            ],
+            "evidence": {
+                "kind": "automated",
+                "path": "packages/web/src/workspace/components/assistant/AssistantTimeline.test.tsx"
             }
         },
         {

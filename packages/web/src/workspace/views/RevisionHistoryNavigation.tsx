@@ -1,7 +1,7 @@
 import type { ArticleRevision, GeneralSettings } from "@skladno/shared";
 import { useIntl } from "react-intl";
 import { formatDateTime } from "../../i18n/formatting.js";
-import { getCharacterCount, getProvenanceMessageId, getRevisionTitle, getTimelineKind, timelineIcons } from "./revision-history-presentation.js";
+import { getCharacterCount, getProvenanceMessageId, getRestoredRevisionTarget, getRevisionTitle, getTimelineKind, timelineIcons } from "./revision-history-presentation.js";
 
 
 export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSelect, generalSettings }: {
@@ -23,6 +23,9 @@ export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSel
             {newestFirst.map((revision) => {
                 const selected = revision.id === selectedRevisionId;
                 const provenance = intl.formatMessage({ id: getProvenanceMessageId(revision) });
+                const target = getRestoredRevisionTarget(revisions, revision);
+                const title = getRevisionTitle(revision, provenance);
+                const displayTitle = target ? intl.formatMessage({ id: target.description ? "revisions.restoredTargetDescribed" : "revisions.restoredTarget" }, target) : title;
                 const kind = getTimelineKind(revision);
                 const TimelineIcon = timelineIcons[kind];
 
@@ -31,7 +34,7 @@ export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSel
                         <TimelineIcon className={kind === "ai" || kind === "restored" ? "size-3" : "size-4"} />
                     </span>
                     <button className={`w-full rounded-control border p-3 text-left focus:outline-none ${selected ? "border-brand bg-brand-soft" : "border-transparent hover:bg-surface"}`} type="button" aria-pressed={selected} onClick={() => onSelect(revision)}>
-                        <span className="block text-sm font-medium text-ink">{getRevisionTitle(revision, provenance)}</span>
+                        <span className="line-clamp-2 text-sm font-medium text-ink" title={displayTitle}>{displayTitle}</span>
                         <span className="mt-1 block text-xs text-muted">{formatRevisionDate(revision.createdAt)} · {intl.formatMessage({ id: "revisions.characterCount" }, { count: intl.formatNumber(getCharacterCount(revision.content)) })}</span>
                     </button>
                 </li>;

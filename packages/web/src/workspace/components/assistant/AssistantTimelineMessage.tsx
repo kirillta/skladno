@@ -1,6 +1,6 @@
 import { BUILT_IN_SKILL, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
-import { Button } from "../../../ui/primitives.js";
-import { StatusIcon } from "../../../ui/icons.js";
+import { Button, IconButton } from "../../../ui/primitives.js";
+import { StatusIcon, UndoIcon } from "../../../ui/icons.js";
 import { formatDateTime } from "../../../i18n/formatting.js";
 import { useIntl } from "react-intl";
 import { getSelectionPreview, responseMessages, skillMessages } from "./assistant-messages.js";
@@ -99,7 +99,7 @@ function getViewLabel(view: AssistantView, intl: ReturnType<typeof useIntl>) {
 }
 
 
-export function AssistantTimelineMessage({ message, factCheckClaims, openView, onRetry, generalSettings, skillByRequest }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; onRetry?: (requestId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, BuiltInSkillId> }) {
+export function AssistantTimelineMessage({ message, factCheckClaims, openView, onRetry, onCheckpoint, generalSettings, skillByRequest }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, BuiltInSkillId> }) {
     const intl = useIntl();
     const authorMessage = message.role === "author";
     const skillId = message.skillId ?? (message.requestId ? skillByRequest.get(message.requestId) : undefined);
@@ -140,6 +140,11 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
             <span>·</span>
             <time>{messageDateTime}</time>
         </p>}
-        {authorMessage && <time className="mt-2 block text-xs text-muted">{messageDateTime}</time>}
+        {authorMessage && <div className="mt-2 flex items-center justify-end gap-2">
+            <time className="text-xs text-muted">{messageDateTime}</time>
+            {message.requestId && <IconButton className="!size-6" variant="secondary" label={intl.formatMessage({ id: "assistant.checkpoint.accessible" }, { time: messageDateTime })} title={intl.formatMessage({ id: "assistant.checkpoint.action" })} onClick={() => onCheckpoint?.(message.id)}>
+                <UndoIcon className="size-3" />
+            </IconButton>}
+        </div>}
     </article>;
 }

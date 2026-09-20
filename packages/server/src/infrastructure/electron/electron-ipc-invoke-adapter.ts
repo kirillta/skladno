@@ -69,6 +69,14 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
         case ELECTRON_APPLICATION_METHOD.restoreRevision: return services.articles.restoreRevision(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.listAssistantMessages: return services.assistant.listMessages(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.rejectTranslation: return services.assistant.rejectTranslation(String(args[0]), String(args[1]));
+        case ELECTRON_APPLICATION_METHOD.previewAssistantCheckpoint: return services.assistant.previewCheckpoint(String(args[0]), String(args[1]));
+        case ELECTRON_APPLICATION_METHOD.restoreAssistantCheckpoint: {
+            const input = args[2] as { tailToken?: unknown; draftMode?: unknown };
+            if (!input || typeof input.tailToken !== "string" || (input.draftMode !== undefined && input.draftMode !== "preserve" && input.draftMode !== "discard"))
+                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+            return services.assistant.restoreCheckpoint(String(args[0]), String(args[1]), input.tailToken, input.draftMode);
+        }
         case ELECTRON_APPLICATION_METHOD.listFactChecks: return services.factChecks.list(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.resolveFactCheckFinding:
             if (!isFactCheckResolution(args[2]))

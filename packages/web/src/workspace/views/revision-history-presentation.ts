@@ -8,7 +8,7 @@ export function getCharacterCount(content: string): number {
 }
 
 
-export function getProvenanceMessageId(revision: ArticleRevision): "revisions.initial" | "revisions.author" | "revisions.acceptedProposal" | "revisions.restored" | "revisions.saved" {
+export function getProvenanceMessageId(revision: Pick<ArticleRevision, "provenance" | "restoredFromRevisionId">): "revisions.initial" | "revisions.author" | "revisions.acceptedProposal" | "revisions.restored" | "revisions.saved" {
     if (revision.restoredFromRevisionId || revision.provenance.kind === REVISION_PROVENANCE_KIND.RESTORE)
         return "revisions.restored";
 
@@ -27,6 +27,22 @@ export function getProvenanceMessageId(revision: ArticleRevision): "revisions.in
 
 export function getRevisionTitle(revision: ArticleRevision, provenance: string): string {
     return revision.description ?? provenance;
+}
+
+
+export function getRestoredRevisionTarget(revisions: ArticleRevision[], revision: ArticleRevision): { number: number; description?: string } | undefined {
+    if (!revision.restoredFromRevisionId)
+        return undefined;
+
+    const targetIndex = revisions.findIndex((item) => item.id === revision.restoredFromRevisionId);
+    const target = targetIndex < 0 ? undefined : revisions[targetIndex];
+
+    return target
+        ? {
+            number: targetIndex + 1,
+            ...(target.description ? { description: target.description } : {})
+        }
+        : undefined;
 }
 
 

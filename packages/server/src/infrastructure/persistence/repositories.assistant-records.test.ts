@@ -73,6 +73,46 @@ test("Assistant author messages retain their resolved skill", () => withReposito
 }));
 
 
+// Product scenario: editorial-workflows.assistant-checkpoint-atomic
+test("Assistant checkpoints reject the selected tail and restore linked Article content atomically", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Checkpoint", content: "before" });
+    repositories.assistant.createRequest({ id: "a-request", articleId: article.id, authorMessage: "Try this", scope: { kind: "selection", baseRevisionId: article.currentRevisionId, startOffset: 0, endOffset: 3 }, explicitSkillId: "flow_and_clarity", skillOffset: 3 });
+    repositories.assistant.resolveRequest("a-request", "flow_and_clarity", "explicit");
+    const artifact = repositories.editorialArtifacts.createEditorialArtifact({ articleId: article.id, revisionId: article.currentRevisionId, kind: "assistant-proposal", content: "proposal" });
+    repositories.assistant.completeRequest({ requestId: "a-request", articleId: article.id, responseKind: "proposal_prepared", content: "Done", editorialArtifactId: artifact.id });
+    const later = repositories.articleService.acceptChange(article.id, { content: "later", provenance: { kind: "author-draft", baseRevisionId: article.currentRevisionId } });
+    repositories.articles.saveDraft(article.id, { content: "unsaved", baseRevisionId: later.id });
+    repositories.assistant.createRequest({ id: "b-request", articleId: article.id, authorMessage: "Later", scope: { kind: "article", baseRevisionId: later.id } });
+
+    const anchor = repositories.assistant.listMessages(article.id).find((message) => message.requestId === "a-request" && message.role === "author")!;
+    const preview = repositories.assistant.previewCheckpoint(article.id, anchor.id);
+    assert.equal(preview.counts.requests, 2);
+    assert.equal(preview.counts.proposals, 1);
+    assert.equal(preview.draftDecisionRequired, true);
+    assert.equal(preview.composer.usedSelection, true);
+
+    const restored = repositories.assistant.restoreCheckpoint(article.id, anchor.id, preview.tailToken, "preserve");
+    assert.equal(restored.article.currentRevision.content, "before");
+    assert.equal(restored.article.draft, undefined);
+    assert.equal(restored.composer.text, "Try this");
+    assert.deepEqual(restored.messages.map((message) => message.kind), ["greeting"]);
+    assert.deepEqual(repositories.articles.listRevisions(article.id).map((revision) => revision.content), ["before", "later", "unsaved", "before"]);
+    assert.deepEqual(repositories.editorialArtifacts.listEditorialArtifacts(article.id), []);
+}));
+
+
+test("Assistant checkpoint restore rejects a changed tail token without changing state", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Race", content: "before" });
+    repositories.assistant.createRequest({ id: "a-request", articleId: article.id, authorMessage: "First", scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+    const anchor = repositories.assistant.listMessages(article.id).find((message) => message.requestId === "a-request" && message.role === "author")!;
+    const preview = repositories.assistant.previewCheckpoint(article.id, anchor.id);
+    repositories.assistant.createRequest({ id: "b-request", articleId: article.id, authorMessage: "Second", scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+
+    assert.throws(() => repositories.assistant.restoreCheckpoint(article.id, anchor.id, preview.tailToken), { message: "conflict" });
+    assert.equal(repositories.assistant.listMessages(article.id).filter((message) => message.role === "author").length, 2);
+}));
+
+
 test("Assistant capability history is minimal and completion transactions roll back staged writes", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Bounded run", content: "Draft" });
     const request = repositories.assistant.createRequest({ id: "bounded-run", articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId } });

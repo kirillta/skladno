@@ -15,7 +15,7 @@ export class FactChecksRepository {
 
 
     listFactChecks(articleId: string): FactCheck[] {
-        return (this.database.prepare("SELECT a.content, r.revision_id, r.created_at FROM fact_check_runs r JOIN editorial_artifacts a ON a.id = r.editorial_artifact_id WHERE r.article_id = ? ORDER BY r.created_at DESC").all(articleId) as Row[])
+        return (this.database.prepare("SELECT a.content, r.revision_id, r.created_at FROM fact_check_runs r JOIN editorial_artifacts a ON a.id = r.editorial_artifact_id WHERE r.article_id = ? AND a.rejected_at IS NULL ORDER BY r.created_at DESC").all(articleId) as Row[])
             .flatMap((row) => {
                 try {
                     const factCheck = JSON.parse(String(row.content)) as { factCheck?: FactCheck };
