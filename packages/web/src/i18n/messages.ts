@@ -112,6 +112,8 @@ export const messages = {
     "revisions.author": "Author Revision",
     "revisions.acceptedProposal": "Accepted Proposal",
     "revisions.restored": "Restored Revision",
+    "revisions.restoredTarget": "Restored Revision #{number}",
+    "revisions.restoredTargetDescribed": "Restored Revision #{number} — {description}",
     "revisions.saved": "Saved Revision",
     "revisions.restoredFromEarlier": "Restored from an earlier Revision",
     "revisions.currentRevision": "Current Revision",

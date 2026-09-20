@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { Badge, Button, Select } from "../../ui/primitives.js";
 import { formatDateTime } from "../../i18n/formatting.js";
 import { RevisionArticlePreview } from "../editor/RevisionArticlePreview.js";
-import { getCharacterCount, getProvenanceMessageId, getRevisionTitle } from "./revision-history-presentation.js";
+import { getCharacterCount, getProvenanceMessageId, getRestoredRevisionTarget, getRevisionTitle } from "./revision-history-presentation.js";
 
 
 export function RevisionHistoryDetails({ revisions, selected, currentRevisionId, select, generalSettings }: {
@@ -17,7 +17,8 @@ export function RevisionHistoryDetails({ revisions, selected, currentRevisionId,
     const newestFirst = [...revisions].reverse();
     const selectedIsCurrent = selected.id === currentRevisionId;
     const selectedProvenance = intl.formatMessage({ id: getProvenanceMessageId(selected) });
-    const selectedTitle = getRevisionTitle(selected, selectedProvenance);
+    const selectedTarget = getRestoredRevisionTarget(revisions, selected);
+    const selectedTitle = selectedTarget ? intl.formatMessage({ id: selectedTarget.description ? "revisions.restoredTargetDescribed" : "revisions.restoredTarget" }, selectedTarget) : getRevisionTitle(selected, selectedProvenance);
     const formatRevisionDate = (createdAt: string) => formatDateTime(createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
 
     return <section className="flex min-w-0 flex-1 flex-col" aria-label={intl.formatMessage({ id: "revisions.articleContent" })}>
@@ -25,7 +26,11 @@ export function RevisionHistoryDetails({ revisions, selected, currentRevisionId,
             <label className="block md:hidden">
                 <span className="text-xs font-semibold text-ink">{intl.formatMessage({ id: "revisions.select" })}</span>
                 <Select className="mt-1" value={selected.id} onChange={(event) => select(revisions.find((revision) => revision.id === event.target.value)!)}>
-                    {newestFirst.map((revision) => <option key={revision.id} value={revision.id}>{getRevisionTitle(revision, intl.formatMessage({ id: getProvenanceMessageId(revision) }))} — {formatRevisionDate(revision.createdAt)}</option>)}
+                    {newestFirst.map((revision) => {
+                        const target = getRestoredRevisionTarget(revisions, revision);
+                        const title = target ? intl.formatMessage({ id: target.description ? "revisions.restoredTargetDescribed" : "revisions.restoredTarget" }, target) : getRevisionTitle(revision, intl.formatMessage({ id: getProvenanceMessageId(revision) }));
+                        return <option key={revision.id} value={revision.id}>{title} — {formatRevisionDate(revision.createdAt)}</option>;
+                    })}
                 </Select>
             </label>
             <div className="mt-3 flex flex-wrap items-start gap-3 md:mt-0">

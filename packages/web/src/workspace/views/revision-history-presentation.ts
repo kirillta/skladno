@@ -30,6 +30,22 @@ export function getRevisionTitle(revision: ArticleRevision, provenance: string):
 }
 
 
+export function getRestoredRevisionTarget(revisions: ArticleRevision[], revision: ArticleRevision): { number: number; description?: string } | undefined {
+    if (!revision.restoredFromRevisionId)
+        return undefined;
+
+    const targetIndex = revisions.findIndex((item) => item.id === revision.restoredFromRevisionId);
+    const target = targetIndex < 0 ? undefined : revisions[targetIndex];
+
+    return target
+        ? {
+            number: targetIndex + 1,
+            ...(target.description ? { description: target.description } : {})
+        }
+        : undefined;
+}
+
+
 export type RevisionTimelineKind = "initial" | "manual" | "ai" | "restored";
 
 
