@@ -19,7 +19,7 @@ export function RestoreRevisionDialog({ candidate, hasUncommittedChanges, close,
     if (!candidate)
         return null;
 
-    return <Dialog open>
+    return <Dialog className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl" open>
         <h2 className="font-semibold">{intl.formatMessage({ id: "views.restoreHeading" })}</h2>
         <p className="mt-2 text-sm">{intl.formatMessage({ id: "views.restoreDescription" })}</p>
         {hasUncommittedChanges && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.restoreDraftDescription" })}</p>}

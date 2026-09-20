@@ -30,7 +30,7 @@ export function AssistantCheckpointDialog({ preview, replacingComposer, close, r
     ].filter((item) => item !== undefined);
     const revisionProvenance = preview.revision ? intl.formatMessage({ id: getProvenanceMessageId(preview.revision) }) : undefined;
 
-    return <Dialog ref={dialog} aria-labelledby="assistant-checkpoint-title" onCancel={(event) => {
+    return <Dialog ref={dialog} className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl" aria-labelledby="assistant-checkpoint-title" onCancel={(event) => {
         event.preventDefault();
         close();
     }}>

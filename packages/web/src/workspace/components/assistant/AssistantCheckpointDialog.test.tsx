@@ -22,6 +22,7 @@ it("shows only nonzero, non-obvious checkpoint effects", () => {
     </IntlProvider>);
 
     expect(screen.getByText("1 Finding")).toBeDefined();
+    expect(screen.getByRole("dialog", { hidden: true }).className).toContain("sm:max-w-3xl");
     expect(screen.getByText('Article content will return to Revision #6, "Tightened opening" (Author Revision). The current and later Revisions remain in Revision History.')).toBeDefined();
     expect(screen.queryByText(/2 messages|Proposal|translation|request|retry/i)).toBeNull();
 });
