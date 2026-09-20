@@ -31,6 +31,8 @@ export const APPLICATION_ERROR = {
     ASSISTANT_SKILL_SCOPE_INCOMPATIBLE: "assistant_skill_scope_incompatible",
     ASSISTANT_SELECTION_INVALID: "assistant_selection_invalid",
     ASSISTANT_REQUEST_CONFLICT: "assistant_request_conflict",
+    ASSISTANT_CHECKPOINT_CONFLICT: "assistant_checkpoint_conflict",
+    ASSISTANT_CHECKPOINT_INVALID: "assistant_checkpoint_invalid",
     ASSISTANT_RETRY_INVALID: "assistant_retry_invalid",
     ASSISTANT_COORDINATOR_FAILED: "assistant_coordinator_failed",
 } as const;

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type KeyboardEventHandler } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEventHandler } from "react";
 import { useIntl, type IntlShape } from "react-intl";
-import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, areKeyBindingsEqual, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, resolveKeyBindings, type AssistantCapabilityActivity, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
+import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, areKeyBindingsEqual, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, resolveKeyBindings, type AssistantCapabilityActivity, type AssistantCheckpointComposer, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
 import { getEventKeyBinding, type KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
@@ -9,6 +9,7 @@ import { AssistantComposer, type AssistantComposerValue } from "./assistant/Assi
 import { AssistantTimeline } from "./assistant/AssistantTimeline.js";
 import { skillMessages } from "./assistant/assistant-messages.js";
 import type { AssistantSelectionScope, StreamedAssistantMessage } from "../state/assistant-messages-state.js";
+import { AssistantCheckpointDialog } from "./assistant/AssistantCheckpointDialog.js";
 
 
 type AssistantState = "idle" | "streaming" | "error";
@@ -42,7 +43,7 @@ function getSlashQueryAt(guidance: string, caretOffset: number): { start: number
 }
 
 
-function useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode, shortcutOverrides }: {
+function useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode, shortcutOverrides, restoredComposer }: {
     intl: IntlShape;
     state: AssistantState;
     onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
@@ -53,6 +54,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
     clearSelection?: () => void;
     assistantSendMode: GeneralSettings["assistantSendMode"];
     shortcutOverrides: KeyBindingOverrides;
+    restoredComposer?: AssistantCheckpointComposer;
 }) {
     const [guidance, setGuidance] = useState("");
     const [quickActionsOpen, setQuickActionsOpen] = useState(false);
@@ -62,6 +64,19 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
     const [slashQuery, setSlashQuery] = useState("");
     const [caretOffset, setCaretOffset] = useState(0);
     const [activeSkillIndex, setActiveSkillIndex] = useState(0);
+    const [restoredTargetLanguage, setRestoredTargetLanguage] = useState<string>();
+    useEffect(() => {
+        if (!restoredComposer)
+            return;
+
+        setGuidance(restoredComposer.text);
+        setSelectedSkill(restoredComposer.skillId);
+        setSkillOffset(restoredComposer.skillOffset ?? 0);
+        setCaretOffset(restoredComposer.text.length);
+        setRestoredTargetLanguage(restoredComposer.targetLanguage);
+        clearSelection?.();
+        window.requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-assistant-composer]")?.focus());
+    }, [clearSelection, restoredComposer]);
     const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0) && (!selection || !selectedSkill || builtInSkillScopeCompatibility[selectedSkill].includes("selection"));
     const availableSkills = builtInSkills;
     const pickerSkills = slashRange === undefined ? availableSkills : availableSkills.filter((skill) => {
@@ -91,6 +106,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
             : guidance;
         setQuickActionsOpen(false);
         setSelectedSkill(skill);
+        setRestoredTargetLanguage(undefined);
         setSkillOffset(insertionOffset);
         setCaretOffset(insertionOffset);
         setSlashRange(undefined);
@@ -109,8 +125,9 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
 
         setGuidance("");
         setSelectedSkill(undefined);
-        void onRequest(authorMessage, requestSkill, requestSkill === BUILT_IN_SKILL.TRANSLATION ? translationLanguages : undefined, selectedSkillOffset);
-    }, [canSend, guidance, onRequest, selectedSkill, skillOffset, translationLanguages]);
+        void onRequest(authorMessage, requestSkill, requestSkill === BUILT_IN_SKILL.TRANSLATION ? restoredTargetLanguage ?? translationLanguages : undefined, selectedSkillOffset);
+        setRestoredTargetLanguage(undefined);
+    }, [canSend, guidance, onRequest, restoredTargetLanguage, selectedSkill, skillOffset, translationLanguages]);
 
     useEffect(() => {
         const unregisterSend = dispatcher?.register(KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST, send);
@@ -226,6 +243,8 @@ interface EditorialAssistantData {
     selection?: AssistantSelectionScope;
     generalSettings?: GeneralSettings;
     hasUnavailableAiConnection?: boolean;
+    checkpointPreview?: AssistantCheckpointPreview;
+    restoredComposer?: AssistantCheckpointComposer;
 }
 
 
@@ -238,6 +257,9 @@ interface EditorialAssistantActions {
     openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
     clearSelection?: () => void;
     openSettings?: () => void;
+    previewCheckpoint?: (messageId: string) => Promise<void>;
+    restoreCheckpoint?: (mode?: AssistantCheckpointDraftMode) => Promise<unknown>;
+    closeCheckpoint?: () => void;
 }
 
 
@@ -248,12 +270,21 @@ interface EditorialAssistantLayout {
 
 
 export function EditorialAssistantPanel({ data, actions, layout }: { data: EditorialAssistantData; actions: EditorialAssistantActions; layout: EditorialAssistantLayout }) {
-    const { state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection } = data;
-    const { onRequest, onCancel, onRetry, dispatcher, shortcutOverrides, openView, clearSelection, openSettings } = actions;
+    const { state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, checkpointPreview, restoredComposer } = data;
+    const { onRequest, onCancel, onRetry, dispatcher, shortcutOverrides, openView, clearSelection, openSettings, previewCheckpoint, restoreCheckpoint, closeCheckpoint } = actions;
     const { collapsed, setCollapsed } = layout;
     const intl = useIntl();
-    const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {} });
+    const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {}, restoredComposer });
     const elapsedDuration = useElapsedDuration(state, intl);
+    const checkpointOrigin = useRef<HTMLElement>();
+    const openCheckpoint = useCallback((messageId: string) => {
+        checkpointOrigin.current = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+        return previewCheckpoint?.(messageId);
+    }, [previewCheckpoint]);
+    const closeCheckpointAndRestoreFocus = useCallback(() => {
+        closeCheckpoint?.();
+        checkpointOrigin.current?.focus();
+    }, [closeCheckpoint]);
 
     if (collapsed)
         return <aside data-workspace-panel="editorial-assistant" data-focus-area="assistant-chat" className="flex h-full min-w-0 w-full flex-col border-l border-border bg-surface-supporting p-1" aria-label={intl.formatMessage({ id: "assistant.panel" })}>
@@ -268,10 +299,11 @@ export function EditorialAssistantPanel({ data, actions, layout }: { data: Edito
             <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="text-base font-semibold text-brand">{intl.formatMessage({ id: "assistant.heading" })}</h2>
         </header>
-        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, onRetry, openSettings }} />
+        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, onRetry, openSettings, onCheckpoint: openCheckpoint }} />
         <AssistantComposer
             state={{ state, canSend: composerState.canSend, guidance: composerState.guidance, selectedSkill: composerState.selectedSkill, skillOffset: composerState.skillOffset, caretOffset: composerState.caretOffset, selection, clearSelection, incompatibleSelectionSkill: composerState.incompatibleSelectionSkill }}
             picker={{ quickActionsOpen: composerState.quickActionsOpen, availableSkills: composerState.availableSkills, activeSkillIndex: composerState.activeSkillIndex, setQuickActionsOpen: composerState.setQuickActionsOpen, setActiveSkillIndex: composerState.setActiveSkillIndex, selectSkill: composerState.selectSkill, focusQuickAction: composerState.focusQuickAction }}
             actions={{ send: composerState.send, onCancel, onChange: composerState.onChange, onKeyDown: composerState.onKeyDown, shortcutOverrides }} />
+        {checkpointPreview && restoreCheckpoint && closeCheckpoint && <AssistantCheckpointDialog preview={checkpointPreview} replacingComposer={Boolean(composerState.guidance || composerState.selectedSkill)} close={closeCheckpointAndRestoreFocus} restore={restoreCheckpoint} />}
     </aside>;
 }

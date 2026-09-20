@@ -8,7 +8,10 @@ import { getMessage } from "../../../i18n/test-message.js";
 import { AssistantTimeline as RenderAssistantTimeline } from "./AssistantTimeline.js";
 
 
-function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, openView, onRetry, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings }: {
+// Product scenario: workspace.assistant.checkpoint-keyboard
+
+
+function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, openView, onRetry, onCheckpoint, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings }: {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
@@ -19,12 +22,13 @@ function AssistantTimeline({ state, message, errorDetails, activity, factCheckCl
     streamedMessage?: Parameters<typeof RenderAssistantTimeline>[0]["data"]["streamedMessage"];
     openView?: Parameters<typeof RenderAssistantTimeline>[0]["actions"]["openView"];
     onRetry?: Parameters<typeof RenderAssistantTimeline>[0]["actions"]["onRetry"];
+    onCheckpoint?: Parameters<typeof RenderAssistantTimeline>[0]["actions"]["onCheckpoint"];
     generalSettings: GeneralSettings;
     elapsedDuration: string;
     hasUnavailableAiConnection?: boolean;
     openSettings?: () => void;
 }) {
-    return <RenderAssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, onRetry, openSettings }} />;
+    return <RenderAssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, onRetry, onCheckpoint, openSettings }} />;
 }
 
 
@@ -49,6 +53,25 @@ describe("AssistantTimeline", () => {
         expect(fireEvent.keyDown(timeline, { key: "ArrowDown" })).toBe(true);
         fireEvent.keyDown(timeline, { key: "ArrowRight" });
         expect(document.activeElement).toBe(screen.getByRole("button", { name: "Review Proposal" }));
+    });
+
+
+    it("offers persisted Author checkpoints and supports Home and End action navigation", async () => {
+        const onCheckpoint = vi.fn();
+        const assistantMessages: AssistantMessage[] = [
+            { id: "first", requestId: "request-1", articleId: "article", role: "author", kind: "message", status: "completed", content: "First", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+            { id: "second", requestId: "request-2", articleId: "article", role: "author", kind: "message", status: "completed", content: "Second", createdAt: "2026-01-01T00:01:00.000Z", updatedAt: "2026-01-01T00:01:00.000Z" },
+        ];
+        const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={assistantMessages} onCheckpoint={onCheckpoint} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+        const timeline = view.container.querySelector<HTMLElement>("[aria-live='polite']")!;
+        const actions = screen.getAllByRole("button", { name: /later conversation and work will be rejected/ });
+
+        fireEvent.keyDown(timeline, { key: "End" });
+        expect(document.activeElement).toBe(actions[1]);
+        fireEvent.keyDown(timeline, { key: "Home" });
+        expect(document.activeElement).toBe(actions[0]);
+        await userEvent.click(actions[0]!);
+        expect(onCheckpoint).toHaveBeenCalledWith("first");
     });
 
 

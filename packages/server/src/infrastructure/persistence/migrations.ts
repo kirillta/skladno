@@ -242,4 +242,9 @@ export const migrations = [
         name: "revision_descriptions",
         sql: "ALTER TABLE article_revisions ADD COLUMN description TEXT;",
     },
+    {
+        version: 20,
+        name: "assistant_checkpoint_artifact_rejection",
+        sql: "ALTER TABLE editorial_artifacts ADD COLUMN rejected_at TEXT;",
+    },
 ] as const;

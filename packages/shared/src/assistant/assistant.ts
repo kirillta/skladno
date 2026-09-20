@@ -2,6 +2,7 @@ export { BUILT_IN_SKILL, builtInSkillScopeCompatibility, builtInSkills, isBuiltI
 export type { BuiltInSkillId } from "./assistant-skills.js";
 import type { BuiltInSkillId } from "./assistant-skills.js";
 import type { AssistantEvent } from "./assistant-events.js";
+import type { Article } from "../articles/article/article.js";
 
 
 export type AssistantRequestScope =
@@ -154,6 +155,53 @@ export interface AssistantEditorialResult {
 export const createAssistantMessagesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/messages`;
 export const createAssistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
 export const createAssistantTranslationRejectionPath = (articleId: string, editorialArtifactId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(editorialArtifactId)}/translation-rejection`;
+export const createAssistantCheckpointPreviewPath = (articleId: string, messageId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(messageId)}/checkpoint`;
+export const createAssistantCheckpointRestorePath = (articleId: string, messageId: string) => `${createAssistantCheckpointPreviewPath(articleId, messageId)}/restore`;
+
+
+export interface AssistantCheckpointCounts {
+    messages: number;
+    requests: number;
+    proposals: number;
+    findings: number;
+    translations: number;
+    retries: number;
+}
+
+
+export interface AssistantCheckpointComposer {
+    text: string;
+    skillId?: BuiltInSkillId;
+    skillOffset?: number;
+    targetLanguage?: string;
+    usedSelection: boolean;
+}
+
+
+export interface AssistantCheckpointPreview {
+    messageId: string;
+    tailToken: string;
+    counts: AssistantCheckpointCounts;
+    composer: AssistantCheckpointComposer;
+    revision?: { id: string; number: number; description?: string; provenance: Record<string, unknown>; restoredFromRevisionId?: string };
+    draftDecisionRequired: boolean;
+}
+
+
+export type AssistantCheckpointDraftMode = "preserve" | "discard";
+
+
+export interface RestoreAssistantCheckpointInput {
+    tailToken: string;
+    draftMode?: AssistantCheckpointDraftMode;
+}
+
+
+export interface RestoreAssistantCheckpointResult {
+    messages: AssistantMessage[];
+    article: Article;
+    composer: AssistantCheckpointComposer;
+}
 
 
 export interface NewAssistantRequest {
@@ -184,4 +232,6 @@ export type { AssistantEvent, FactCheckClaimPreview } from "./assistant-events.j
 export interface AssistantClient {
     streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void>;
     rejectTranslation(articleId: string, editorialArtifactId: string): Promise<void>;
+    previewAssistantCheckpoint(articleId: string, messageId: string): Promise<AssistantCheckpointPreview>;
+    restoreAssistantCheckpoint(articleId: string, messageId: string, input: RestoreAssistantCheckpointInput): Promise<RestoreAssistantCheckpointResult>;
 }

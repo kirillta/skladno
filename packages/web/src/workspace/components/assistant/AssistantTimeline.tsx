@@ -28,12 +28,13 @@ interface AssistantTimelineActions {
     openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
     onRetry?: (requestId: string) => void;
     openSettings?: () => void;
+    onCheckpoint?: (messageId: string) => void;
 }
 
 
 export function AssistantTimeline({ data, actions }: { data: AssistantTimelineData; actions: AssistantTimelineActions }) {
     const { state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection } = data;
-    const { openView, onRetry, openSettings } = actions;
+    const { openView, onRetry, openSettings, onCheckpoint } = actions;
     const intl = useIntl();
     const timeline = useRef<HTMLDivElement>(null);
     const followStream = useRef(true);
@@ -102,7 +103,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
 
 
     function handleChatKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Home" && event.key !== "End")
             return;
 
         const actions = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
@@ -111,14 +112,15 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
 
         event.preventDefault();
         const index = actions.indexOf(document.activeElement as HTMLButtonElement);
-        actions[(index + (event.key === "ArrowRight" ? 1 : actions.length - 1)) % actions.length]?.focus();
+        const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? actions.length - 1 : (index + (event.key === "ArrowRight" ? 1 : actions.length - 1)) % actions.length;
+        actions[nextIndex]?.focus();
     }
 
 
     return <div data-focus-area="assistant-chat" onKeyDown={handleChatKeyDown} className="relative min-h-0 flex-1">
         <div ref={timeline} data-focus-area-entry tabIndex={0} onScroll={trackScroll} className="h-full select-text cursor-default space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "assistant.response.conversation" })} aria-live="polite">
             {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} />}
-            {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
+            {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} onRetry={onRetry} onCheckpoint={onCheckpoint} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
             {streamedMessage?.responseKind
                 ? <AssistantTimelineMessage message={{ id: streamedMessage.id, articleId: streamedMessage.articleId, role: "assistant", kind: "response", status: streamedMessage.status, responseKind: streamedMessage.responseKind, createdAt: streamedMessage.createdAt, updatedAt: streamedMessage.createdAt }} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />
                 : streamedMessage?.blocks.length ? <article className="p-0">

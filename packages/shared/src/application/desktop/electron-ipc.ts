@@ -51,6 +51,8 @@ export interface ElectronApplicationOperationMap {
     restoreRevision: { args: [string, string]; result: ArticleRevision };
     listAssistantMessages: { args: [string]; result: import("../../assistant/assistant.js").AssistantMessage[] };
     rejectTranslation: { args: [string, string]; result: void };
+    previewAssistantCheckpoint: { args: [string, string]; result: import("../../assistant/assistant.js").AssistantCheckpointPreview };
+    restoreAssistantCheckpoint: { args: [string, string, import("../../assistant/assistant.js").RestoreAssistantCheckpointInput]; result: import("../../assistant/assistant.js").RestoreAssistantCheckpointResult };
     listFactChecks: { args: [string]; result: FactCheck[] };
     resolveFactCheckFinding: { args: [string, string, NonNullable<FactCheckFinding["resolution"]>]; result: void };
     getStyleCorpus: { args: []; result: StyleCorpus };
@@ -99,6 +101,8 @@ export const ELECTRON_APPLICATION_METHOD = {
     restoreRevision: "restoreRevision",
     listAssistantMessages: "listAssistantMessages",
     rejectTranslation: "rejectTranslation",
+    previewAssistantCheckpoint: "previewAssistantCheckpoint",
+    restoreAssistantCheckpoint: "restoreAssistantCheckpoint",
     listFactChecks: "listFactChecks",
     resolveFactCheckFinding: "resolveFactCheckFinding",
     getStyleCorpus: "getStyleCorpus",

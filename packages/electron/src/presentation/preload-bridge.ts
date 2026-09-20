@@ -174,6 +174,8 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         restoreRevision: (articleId, revisionId) => invoke(ELECTRON_APPLICATION_METHOD.restoreRevision, articleId, revisionId),
         listAssistantMessages: (articleId) => invoke(ELECTRON_APPLICATION_METHOD.listAssistantMessages, articleId),
         rejectTranslation: (articleId, editorialArtifactId) => invoke(ELECTRON_APPLICATION_METHOD.rejectTranslation, articleId, editorialArtifactId),
+        previewAssistantCheckpoint: (articleId, messageId) => invoke(ELECTRON_APPLICATION_METHOD.previewAssistantCheckpoint, articleId, messageId),
+        restoreAssistantCheckpoint: (articleId, messageId, input) => invoke(ELECTRON_APPLICATION_METHOD.restoreAssistantCheckpoint, articleId, messageId, input),
         listFactChecks: (articleId) => invoke(ELECTRON_APPLICATION_METHOD.listFactChecks, articleId),
         resolveFactCheckFinding: (articleId, occurrenceId, resolution) => invoke(ELECTRON_APPLICATION_METHOD.resolveFactCheckFinding, articleId, occurrenceId, resolution),
         streamAssistantRequest: (articleId, input, onEvent, signal) => {

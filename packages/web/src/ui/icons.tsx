@@ -189,3 +189,8 @@ export function RevisionAiIcon(props: SVGProps<SVGSVGElement>) {
 export function RevisionRestoreIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="1.8" {...props}><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></Icon>;
 }
+
+
+export function UndoIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="m9 14-5-5 5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-1" /></Icon>;
+}

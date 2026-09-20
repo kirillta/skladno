@@ -1,4 +1,11 @@
-import type { AssistantMessage, AssistantRequest, AssistantRequestScope, AssistantResponseKind, AssistantSkillSource, BuiltInSkillId } from "@skladno/shared";
+import type { AssistantCheckpointDraftMode, AssistantCheckpointPreview, AssistantMessage, AssistantRequest, AssistantRequestScope, AssistantResponseKind, AssistantSkillSource, BuiltInSkillId, RestoreAssistantCheckpointResult } from "@skladno/shared";
+
+
+export class AssistantCheckpointError extends Error {
+    constructor(readonly kind: "invalid" | "conflict") {
+        super(kind);
+    }
+}
 
 
 export interface AssistantStore {
@@ -13,4 +20,6 @@ export interface AssistantStore {
     completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage;
     rejectTranslation(articleId: string, editorialArtifactId: string): boolean;
     failRequest(requestId: string, status: "failed" | "cancelled", errorCode: string): void;
+    previewCheckpoint(articleId: string, messageId: string): AssistantCheckpointPreview;
+    restoreCheckpoint(articleId: string, messageId: string, tailToken: string, draftMode?: AssistantCheckpointDraftMode): RestoreAssistantCheckpointResult;
 }
