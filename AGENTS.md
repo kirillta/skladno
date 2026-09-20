@@ -26,6 +26,10 @@ When proposing a change, identify its benefit to Authors and any tradeoff agains
 
 ## Plans and delegation
 
+Assume plans will almost always be executed by a less capable model. Write executable plans, not aspirational outlines: ground each step in the current codebase, name the affected files or symbols, specify the concrete change and dependencies, and give verification commands with expected results. Resolve design decisions during planning and make required context explicit so the executing model can proceed without reconstructing your reasoning.
+
+When planning or implementing incrementally, make each step self-contained within its business scope. Split work by business task or capability, and include all applicable application conventions in every step: i18n, exception handling, tracing and diagnostics, validation, accessibility, and required verification. A step is complete only when its behavior and these conventions are implemented together; never skip them or defer them to a later cleanup step.
+
 When creating a plan, assess complexity, dependencies, and opportunities for independent work. Record `solo` or `delegated` execution with a brief reason. Delegate only when parallel work is likely to save time or improve quality; complexity alone does not require subagents.
 
 For delegated work, use a short Markdown table recording each task's scope, owner, owned files or areas, dependencies, deliverable and verification, model, and reasoning level. Keep tightly coupled work with one owner and sequence edits to shared files.

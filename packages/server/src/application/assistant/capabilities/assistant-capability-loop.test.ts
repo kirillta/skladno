@@ -3,7 +3,8 @@ import test from "node:test";
 import { BUILT_IN_SKILL, type AssistantSkillReference, type AssistantSkillSummary } from "@skladno/shared";
 
 import { AssistantCapabilityLoop } from "./assistant-capability-loop.js";
-import { AssistantSkillCatalog, type AssistantSkillSource } from "../skills/assistant-skill-catalog.js";
+import { AssistantSkillCatalog } from "../skills/assistant-skill-catalog.js";
+import type { AssistantSkillSource } from "../skills/assistant-skill-source.js";
 import type { PreparedAssistantRequest } from "../requests/prepared-assistant-request.js";
 import type { EditorialAssistantRequest } from "../../editorial/engine/editorial-assistant-request.js";
 import { EDITORIAL_ENGINE_EVENT } from "../../editorial/engine/editorial-engine-events.js";

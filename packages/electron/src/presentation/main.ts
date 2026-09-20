@@ -178,7 +178,9 @@ if (supportsNativeUpdates() && squirrelStartup) {
         const pendingRestore = applyPendingRestore({ runtimePath, databasePath: config.databasePath, telemetry });
         let application;
         try {
-            application = createLocalApplication(config, telemetry);
+            application = createLocalApplication(config, telemetry, { builtInRoot: app.isPackaged
+                ? join(process.resourcesPath, "built-in")
+                : join(import.meta.dirname, "..", "..", "..", "server", "src", "application", "assistant", "skills", "built-in") });
             if (pendingRestore) {
                 validateDatabaseSnapshot(config.databasePath);
                 pendingRestore.complete();

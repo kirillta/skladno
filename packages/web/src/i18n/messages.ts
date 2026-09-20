@@ -802,6 +802,12 @@ export const messages = {
     "errors.assistantCheckpointInvalid": "That conversation checkpoint is no longer available. Choose another Author message.",
     "errors.assistantRetryInvalid": "That Assistant action can't be retried. Start it again from the Assistant.",
     "errors.assistantCoordinatorFailed": "Couldn't finish that Assistant action. Your Article was not changed. Try again.",
+    "skills.validation.invalid_frontmatter": "This Skill's SKILL.md file is missing a valid details block at the top. Add its ID, name, description, and version, then try again.",
+    "skills.validation.invalid_metadata": "Review this Skill's details. Use a unique lowercase ID, a clear name and description, and a numeric version.",
+    "skills.validation.invalid_instructions": "Add the Markdown guidance this Skill should follow. Keep the instructions within the supported size.",
+    "skills.validation.invalid_reference": "This Skill names a reference Skladno can't use. Keep references as Markdown files inside its references folder and within the supported size.",
+    "skills.validation.unsafe_package": "Skladno can't use this Skill package because it includes an unsupported file or file location. Keep only SKILL.md and declared Markdown references.",
+    "skills.validation.package_too_large": "This Skill package is too large for Skladno to load. Shorten its instructions or reference files, then try again.",
 } as const;
 
 export type MessageId = keyof typeof messages;

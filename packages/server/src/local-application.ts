@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { dirname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { createApplicationServices } from "./application/create-application-services.js";
 import type { ApplicationServices } from "./application/application-services.js";
@@ -33,7 +34,7 @@ function createCredentialStore(): CredentialStore | undefined {
 }
 
 
-export function createLocalApplication(config: ServerConfig = loadServerConfig(), telemetry?: TelemetryObserver): LocalApplication {
+export function createLocalApplication(config: ServerConfig = loadServerConfig(), telemetry?: TelemetryObserver, skillPackages?: { builtInRoot?: string }): LocalApplication {
     const database = openDatabase(config.databasePath);
     const articles = new ArticlesRepository(database);
     const editorialArtifacts = new EditorialArtifactsRepository(database);
@@ -76,6 +77,7 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
                 credentialStore,
             },
             integration: { editorial, telemetry },
+            skillPackages: { ...skillPackages, authorRoot: join(dirname(config.databasePath), "skills") },
         }),
         editorial,
         database,

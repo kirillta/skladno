@@ -25,7 +25,11 @@ export default {
         appBundleId: "io.github.kirillta.skladno",
         executableName: "Skladno",
         icon: path.join(import.meta.dirname, "assets", "icon.ico"),
-        extraResource: [path.join(import.meta.dirname, "..", "web", "dist"), ...(existsSync(telemetryConfig) ? [telemetryConfig] : [])],
+        extraResource: [
+            path.join(import.meta.dirname, "..", "web", "dist"),
+            path.join(import.meta.dirname, "..", "server", "src", "application", "assistant", "skills", "built-in"),
+            ...(existsSync(telemetryConfig) ? [telemetryConfig] : [])
+        ],
     },
     makers: [
         {

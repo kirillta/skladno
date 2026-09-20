@@ -41,7 +41,8 @@ export class AssistantCapabilityLoop {
         const tools = this.createCapabilityTools(request, excerpt, () => primary, (event) => {
             primary = event;
         });
-        const skills = this.dependencies.skills.load(this.dependencies.skills.discover().map((skill) => skill.reference));
+        const summaries = this.dependencies.skills.discover();
+        const skills = this.dependencies.skills.load(summaries.map((skill) => skill.reference));
         const selectedSkills = request.resolvedSkillId
             ? skills.filter((skill) => skill.reference.id === request.resolvedSkillId)
             : [];
@@ -50,9 +51,9 @@ export class AssistantCapabilityLoop {
             message: request.authorMessage,
             article: excerpt,
             scope: request.scope.kind,
-            instructions: selectedSkills.map((skill) => skill.instructions),
+            instructions: selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])]),
             history: this.dependencies.conversationHistory(request.articleId, 12),
-            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: skill.instructions })),
+            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: [skill.instructions, ...(skill.references ?? [])].join("\n\n") })),
             tools,
             ...(request.resolvedSkillId ? { initialActiveCapabilities: this.initialCapabilities(request.resolvedSkillId) } : {}),
         };

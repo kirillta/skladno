@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { BUILT_IN_SKILL, builtInSkills } from "@skladno/shared";
 
-import { AssistantSkillCatalog, builtInSkillSource } from "./assistant-skill-catalog.js";
+import { AssistantSkillCatalog } from "./assistant-skill-catalog.js";
+import { builtInSkillSource } from "./built-in-skill-source.js";
 
 
 test("built-in Skills publish compact discovery data and load versioned instructions only when selected", () => {
