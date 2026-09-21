@@ -23,6 +23,7 @@ When proposing a change, identify its benefit to Authors and any tradeoff agains
 2. When changing existing product behavior or its owner paths, run `npm run product:impact -- <affected paths>` and preserve every matched implemented capability unless the task changes it. Update `product-model/areas` only when capability, status, contract, persistence, or visible behavior changes.
 3. Read the matching references below before editing. Follow their dependencies when the change crosses those boundaries.
 4. For broad exploration, TypeScript or TSX work, or a second verification loop, follow the [context-efficient agent-work guide](docs/development/guides/context-efficient-agent-work.md).
+5. Read and apply the [refactoring skill](.codex/skills/refactoring/SKILL.md) when writing, modifying, reviewing, or planning code. It owns code structure, complexity, naming, and export rules; the ADRs below own project architecture.
 
 ## Plans and delegation
 
