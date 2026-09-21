@@ -5,6 +5,7 @@ import type { AssistantSkillReference, AssistantSkillSummary } from "@skladno/sh
 
 import type { AssistantSkillPackage } from "./assistant-skill-package.js";
 import type { AuthorSkillPackageStatus } from "./author-skill-package-status.js";
+import { normalizeSkillName } from "./normalize-skill-name.js";
 import { parseSkillPackage } from "./skill-package-parser.js";
 
 
@@ -47,24 +48,30 @@ export class FileAssistantSkillSource {
         if (!existsSync(this.root))
             return;
 
-        for (const entry of readdirSync(this.root, { withFileTypes: true })) {
+        const reserved = this.reserved();
+        const names = new Set<string>();
+        for (const entry of readdirSync(this.root, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name))) {
+            if (entry.name.endsWith(".staged") || entry.name.endsWith(".previous"))
+                continue;
+
             if (!entry.isDirectory()) {
                 this.invalid.push({ directory: entry.name, issues: [{ code: "unsafe_package", messageId: "skills.validation.unsafe_package" }] });
                 continue;
             }
 
-            const parsed = parseSkillPackage({ root: resolve(this.root, entry.name), source: this.id, reservedIds: this.reserved().ids, reservedNames: this.reserved().names });
+            const parsed = parseSkillPackage({ root: resolve(this.root, entry.name), source: this.id, reservedIds: reserved.ids, reservedNames: reserved.names });
             if (!parsed.ok) {
                 this.invalid.push({ directory: entry.name, issues: parsed.issues });
                 continue;
             }
 
-            if (this.packages.has(parsed.skillPackage.reference.id)) {
+            if (this.packages.has(parsed.skillPackage.reference.id) || names.has(normalizeSkillName(parsed.skillPackage.name))) {
                 this.invalid.push({ directory: entry.name, issues: [{ code: "invalid_metadata", messageId: "skills.validation.invalid_metadata" }] });
                 continue;
             }
 
             this.packages.set(parsed.skillPackage.reference.id, parsed.skillPackage);
+            names.add(normalizeSkillName(parsed.skillPackage.name));
         }
     }
 
@@ -74,12 +81,18 @@ export class FileAssistantSkillSource {
         if (existsSync(root))
             throw new Error("skill_package_conflict");
 
+        this.refresh();
         const staged = `${root}.staged`;
         this.writeStaged(staged, input.files);
         const parsed = parseSkillPackage({ root: staged, source: this.id, reservedIds: this.reserved().ids, reservedNames: this.reserved().names });
         if (!parsed.ok) {
             rmSync(staged, { recursive: true, force: true });
             throw new Error(parsed.issues[0]!.code);
+        }
+
+        if (!this.isAvailable(parsed.skillPackage)) {
+            rmSync(staged, { recursive: true, force: true });
+            throw new Error("skill_package_conflict");
         }
 
         mkdirSync(dirname(root), { recursive: true });
@@ -92,14 +105,15 @@ export class FileAssistantSkillSource {
 
     replace(input: { directory: string; files: Readonly<Record<string, string>>; expectedHash: string }): AssistantSkillPackage {
         const root = this.packageRoot(input.directory);
+        this.refresh();
         const current = this.loadByDirectory(input.directory);
         if (!current || current.contentHash !== input.expectedHash)
             throw new Error("skill_package_conflict");
 
         const staged = `${root}.staged`;
         this.writeStaged(staged, input.files);
-        const parsed = parseSkillPackage({ root: staged, source: this.id });
-        if (!parsed.ok || parsed.skillPackage.reference.id !== current.reference.id || parsed.skillPackage.name !== current.name) {
+        const parsed = parseSkillPackage({ root: staged, source: this.id, reservedIds: this.reserved().ids, reservedNames: this.reserved().names });
+        if (!parsed.ok || parsed.skillPackage.reference.id !== current.reference.id || !this.isAvailable(parsed.skillPackage, current.reference.id)) {
             rmSync(staged, { recursive: true, force: true });
             throw new Error(parsed.ok ? "invalid_metadata" : parsed.issues[0]!.code);
         }
@@ -124,8 +138,15 @@ export class FileAssistantSkillSource {
 
 
     private loadByDirectory(directory: string): AssistantSkillPackage | undefined {
-        const parsed = parseSkillPackage({ root: this.packageRoot(directory), source: this.id });
+        const reserved = this.reserved();
+        const parsed = parseSkillPackage({ root: this.packageRoot(directory), source: this.id, reservedIds: reserved.ids, reservedNames: reserved.names });
         return parsed.ok ? parsed.skillPackage : undefined;
+    }
+
+
+    private isAvailable(skillPackage: AssistantSkillPackage, replacedId?: string): boolean {
+        return !Array.from(this.packages.values()).some((candidate) => candidate.reference.id !== replacedId
+            && (candidate.reference.id === skillPackage.reference.id || normalizeSkillName(candidate.name) === normalizeSkillName(skillPackage.name)));
     }
 
 

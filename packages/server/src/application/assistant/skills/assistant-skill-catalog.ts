@@ -2,6 +2,7 @@ import type { AssistantSkillReference, AssistantSkillSummary } from "@skladno/sh
 
 import type { AssistantSkillPackage } from "./assistant-skill-package.js";
 import type { AssistantSkillSource } from "./assistant-skill-source.js";
+import { normalizeSkillName } from "./normalize-skill-name.js";
 
 
 function areSkillReferencesEqual(left: AssistantSkillReference, right: AssistantSkillReference): boolean {
@@ -17,7 +18,7 @@ export class AssistantSkillCatalog {
         const ids = new Set<string>();
         const names = new Set<string>();
         return this.sources.flatMap((source) => source.summaries()).filter((summary) => {
-            const name = summary.name.normalize("NFKC").toLocaleLowerCase();
+            const name = normalizeSkillName(summary.name);
             if (ids.has(summary.reference.id) || names.has(name))
                 return false;
 
@@ -29,9 +30,13 @@ export class AssistantSkillCatalog {
 
 
     load(references: readonly AssistantSkillReference[]): AssistantSkillPackage[] {
+        const discoverable = this.discover();
         const loaded: AssistantSkillPackage[] = [];
         for (const reference of references) {
             if (loaded.some((skillPackage) => areSkillReferencesEqual(skillPackage.reference, reference)))
+                continue;
+
+            if (!discoverable.some((summary) => areSkillReferencesEqual(summary.reference, reference)))
                 continue;
 
             const source = this.sources.find((candidate) => candidate.id === reference.source);

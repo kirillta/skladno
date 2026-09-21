@@ -1,8 +1,9 @@
-import { lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { parseDocument } from "yaml";
 
 import { createSkillPackage } from "./create-skill-package.js";
+import { normalizeSkillName } from "./normalize-skill-name.js";
 import type { SkillPackageIssue } from "./skill-package-issue.js";
 import type { SkillPackageParseResult } from "./skill-package-parse-result.js";
 
@@ -106,6 +107,9 @@ export function parseSkillPackage(input: { root: string; source: string; reserve
 
     let text: string;
     try {
+        if (statSync(skillPath).size > maximumPackageBytes)
+            return issue("package_too_large");
+
         text = readFileSync(skillPath, "utf8");
     } catch {
         return issue("unsafe_package");
@@ -136,7 +140,7 @@ export function parseSkillPackage(input: { root: string; source: string; reserve
     if (typeof id !== "string" || !skillId.test(id) || typeof name !== "string" || !name.trim() || name.length > 80 || typeof description !== "string" || !description.trim() || description.length > 280 || !versionText || !/^\d+(?:\.\d+){0,2}$/.test(versionText))
         return issue("invalid_metadata");
 
-    if ((input.reservedIds ?? []).includes(id) || (input.reservedNames ?? []).some((candidate) => candidate.localeCompare(name, undefined, { sensitivity: "accent" }) === 0))
+    if ((input.reservedIds ?? []).includes(id) || (input.reservedNames ?? []).some((candidate) => normalizeSkillName(candidate) === normalizeSkillName(name)))
         return issue("invalid_metadata");
 
     if (!Array.isArray(references) || references.length > maximumReferenceCount || !references.every((reference) => typeof reference === "string" && isSafeReferencePath(reference)))
@@ -161,11 +165,11 @@ export function parseSkillPackage(input: { root: string; source: string; reserve
             if (!isInside(root, path) || !lstatSync(path).isFile() || lstatSync(path).isSymbolicLink() || dirname(path) !== resolve(root, "references"))
                 return issue("unsafe_package");
 
-            const content = readFileSync(path, "utf8");
-            if (utf8Length(content) > maximumReferenceBytes)
+            if (statSync(path).size > maximumReferenceBytes)
                 return issue("invalid_reference");
 
-            totalBytes += utf8Length(content);
+            const content = readFileSync(path, "utf8");
+            totalBytes += Buffer.byteLength(content, "utf8");
             loadedReferences.push(content);
         } catch {
             return issue("invalid_reference");

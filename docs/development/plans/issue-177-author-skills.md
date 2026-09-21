@@ -45,9 +45,9 @@ Server paths below are relative to `packages/server/src`.
 | Owner | Observed implementation | Remaining work |
 | --- | --- | --- |
 | `application/assistant/skills/built-in-skill-packages.ts`, `skills/built-in/*/SKILL.md` | Built-ins load Markdown packages | Preserve IDs and edited instructions; add Creator without hard-coded instructions |
-| `skills/skill-package-parser.ts`, `skills/create-skill-package.ts` | Installed `yaml` parser, metadata/reference limits, path checks, content hash | Reuse; bound reads before allocation and apply consistent conflict/path checks |
-| `skills/file-assistant-skill-source.ts` | Refresh, install, replace, delete, staging | Add immutable history, typed errors and crash recovery; current `.previous` is deleted after replacement |
-| `skills/assistant-skill-catalog.ts` | Multiple sources; discovery filters duplicate IDs/names | Enforce reservations on direct load/mutations and snapshot consistently per run |
+| `skills/skill-package-parser.ts`, `skills/create-skill-package.ts` | Installed `yaml` parser, metadata/reference limits, path checks, bounded reads and content hash | Reuse in lifecycle storage and keep every filesystem operation contained |
+| `skills/file-assistant-skill-source.ts` | Refresh, install, replace, delete, staging; transient staging is excluded and normalized duplicate names are rejected | Add immutable history, typed errors and crash recovery; current `.previous` is deleted after replacement |
+| `skills/assistant-skill-catalog.ts` | Multiple sources; discovery filters duplicate IDs/names and direct loads require discovery | Snapshot consistently per run |
 | `application/create-application-services.ts` and its options | Optional Author root and file source composition | Expose lifecycle service and wire active roots in both runtimes |
 | `application/assistant/capabilities/assistant-capability-loop.ts` | Instructions and references reach the model | Generalize explicit built-in IDs and add non-editorial Skill results |
 | `application/assistant/requests/assistant-request-preparation.ts`, `presentation/routes/assistant-route.ts` | Built-in selection and Article-scoped parsing | Add Creator context, Skill references, provenance and retries |

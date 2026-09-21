@@ -28,3 +28,18 @@ test("explicit and complementary Skill references load through the same catalog"
 
     assert.deepEqual(catalog.load([translation.reference, flow.reference, translation.reference]).map((skillPackage) => skillPackage.reference.id), [BUILT_IN_SKILL.TRANSLATION, BUILT_IN_SKILL.FLOW_AND_CLARITY]);
 });
+
+
+test("direct loading cannot bypass discovery reservations", () => {
+    const reserved = builtInSkillSource.summaries()[0]!;
+    const catalog = new AssistantSkillCatalog([
+        builtInSkillSource,
+        {
+            id: "author",
+            summaries: () => [{ ...reserved, reference: { ...reserved.reference, source: "author" } }],
+            load: () => ({ ...reserved, instructions: "Must not load." }),
+        },
+    ]);
+
+    assert.deepEqual(catalog.load([{ ...reserved.reference, source: "author" }]), []);
+});
