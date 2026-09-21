@@ -17,6 +17,7 @@ Apply these rules within the requested scope. A review or plan does not authoriz
 
 ## File names and exports
 
+- Keep source files under 300 lines where practical and always below 350 lines, counting blank lines and comments. Split larger files along meaningful responsibility boundaries; do not compress formatting to meet the limit.
 - Every file name must meaningfully identify its responsibility or principal declaration, using the repository's naming convention. Prefer domain-specific names such as `article-revision-store.ts` over vague names such as `helpers.ts`, `misc.ts`, or `manager.ts`. Required framework and tool filenames retain their required names.
 - Each source file has at most one major exported entry, such as a class, interface, type, or component. Separate independently meaningful exported declarations into appropriately named files. Private implementation helpers may remain beside their only caller.
 - Cohesive standalone functions may share a file. This exception does not permit an unrelated utility collection or multiple major classes or interfaces in the same file.
@@ -27,5 +28,5 @@ Apply these rules within the requested scope. A review or plan does not authoriz
 
 1. Locate the affected declarations, all direct callers, and existing focused tests. Identify the violated rule and the behavior to preserve. Follow repository product-impact requirements before moving behavior owners.
 2. Make the smallest change that satisfies the rules and preserves the applicable architecture. Update imports and callers when moving or renaming files. Keep unrelated work outside the diff.
-3. Check every added or changed function, file name, and export against the rules. Use an available cognitive-complexity analyzer when configured; otherwise review nesting and control flow manually and disclose that the limit was not tool-verified. Never present a cyclomatic-complexity check as evidence for this limit.
+3. Check every added or changed function, file name, file line count, and export against the rules. Use an available cognitive-complexity analyzer when configured; otherwise review nesting and control flow manually and disclose that the limit was not tool-verified. Never present a cyclomatic-complexity check as evidence for this limit.
 4. Run the repository's required checks and focused behavior tests. Verify behavior through existing callers rather than adding a test for every extracted helper. Report checks run, unresolved violations, and any remaining manual verification.
