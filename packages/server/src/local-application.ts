@@ -11,6 +11,7 @@ import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/en
 import { SqliteBackupManager } from "./infrastructure/persistence/sqlite-backup-manager.js";
 import { WindowsCredentialStore } from "./infrastructure/configuration/windows-credential-store.js";
 import { LinuxCredentialStore } from "./infrastructure/configuration/linux-credential-store.js";
+import { SkillRevisionStore } from "./infrastructure/skills/skill-revision-store.js";
 import type { CredentialStore } from "./application/settings/credential-store.js";
 import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, SettingsRepository, StyleCorpusRepository, openDatabase } from "./infrastructure/persistence/index.js";
 import type { TelemetryObserver } from "./application/telemetry/telemetry-observer.js";
@@ -77,7 +78,11 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
                 credentialStore,
             },
             integration: { editorial, telemetry },
-            skillPackages: { ...skillPackages, authorRoot: join(dirname(config.databasePath), "skills") },
+            skillPackages: {
+                ...skillPackages,
+                authorRoot: join(dirname(config.databasePath), "skills"),
+                revisions: new SkillRevisionStore(dirname(config.databasePath)),
+            },
         }),
         editorial,
         database,

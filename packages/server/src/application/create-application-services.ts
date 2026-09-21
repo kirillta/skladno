@@ -24,6 +24,7 @@ import { getConversationHistory } from "./assistant/requests/conversation-histor
 import { AssistantSkillCatalog } from "./assistant/skills/assistant-skill-catalog.js";
 import { createBuiltInSkillSource } from "./assistant/skills/create-built-in-skill-source.js";
 import { FileAssistantSkillSource } from "./assistant/skills/file-assistant-skill-source.js";
+import { AuthorSkillService } from "./assistant/skills/author-skill-service.js";
 import { loadBuiltInSkillPackages } from "./assistant/skills/built-in-skill-packages.js";
 import type { EditorialService } from "./editorial/editorial-service.js";
 import type { TelemetryObserver } from "./telemetry/telemetry-observer.js";
@@ -72,6 +73,9 @@ export function createApplicationServices({ stores, settings, integration = {}, 
             return { ids: packages.map((skillPackage) => skillPackage.reference.id), names: packages.map((skillPackage) => skillPackage.name) };
         })
         : undefined;
+    const authorSkillService = authorSkills && skillPackages.revisions
+        ? new AuthorSkillService(authorSkills, skillPackages.revisions)
+        : undefined;
     const skills = new AssistantSkillCatalog(authorSkills ? [builtIns, authorSkills] : [builtIns]);
     const preparation = new AssistantRequestPreparation({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, engines: stores.engines, capabilities });
     const capabilityLoop = new AssistantCapabilityLoop({ assistant: stores.assistant, engines: stores.engines, capabilities, skills, conversationHistory: (articleId, limit) => getConversationHistory(stores.assistant, articleId, limit) });
@@ -86,6 +90,7 @@ export function createApplicationServices({ stores, settings, integration = {}, 
         proposalSummaries: new ProposalSummaryService(stores.engines, stores.artifacts),
         factChecks: factCheckService,
         skills,
+        ...(authorSkillService ? { authorSkills: authorSkillService } : {}),
         ...(capabilities ? { capabilities } : {}),
     };
 }

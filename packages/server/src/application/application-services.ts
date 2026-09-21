@@ -7,6 +7,7 @@ import type { ProposalSummaryService } from "./editorial/proposals/proposal-summ
 import type { FactCheckService } from "./editorial/fact-checking/fact-check-service.js";
 import type { EditorialCapabilityCatalog } from "./assistant/capabilities/editorial-capability-catalog.js";
 import type { AssistantSkillCatalog } from "./assistant/skills/assistant-skill-catalog.js";
+import type { AuthorSkillService } from "./assistant/skills/author-skill-service.js";
 
 
 export interface ApplicationServices {
@@ -19,4 +20,5 @@ export interface ApplicationServices {
     factChecks: FactCheckService;
     capabilities?: EditorialCapabilityCatalog;
     skills: AssistantSkillCatalog;
+    authorSkills?: AuthorSkillService;
 }

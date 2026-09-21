@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 import type { AssistantSkillReference, AssistantSkillSummary } from "@skladno/shared";
@@ -33,6 +33,33 @@ export class FileAssistantSkillSource {
         this.refresh();
         const loaded = this.packages.get(reference.id);
         return loaded && loaded.reference.source === reference.source && loaded.reference.version === reference.version ? loaded : undefined;
+    }
+
+
+    get(id: string): AssistantSkillPackage | undefined {
+        this.refresh();
+        return this.packages.get(id);
+    }
+
+
+    readFiles(directory: string): Readonly<Record<string, string>> | undefined {
+        if (!this.loadByDirectory(directory))
+            return undefined;
+
+        const root = this.packageRoot(directory);
+        const files: Record<string, string> = { "SKILL.md": readFileSync(resolve(root, "SKILL.md"), "utf8") };
+        const references = resolve(root, "references");
+        if (!existsSync(references))
+            return files;
+
+        for (const entry of readdirSync(references, { withFileTypes: true })) {
+            if (!entry.isFile())
+                return undefined;
+
+            files[`references/${entry.name}`] = readFileSync(resolve(references, entry.name), "utf8");
+        }
+
+        return files;
     }
 
 
@@ -88,6 +115,11 @@ export class FileAssistantSkillSource {
         if (!parsed.ok) {
             rmSync(staged, { recursive: true, force: true });
             throw new Error(parsed.issues[0]!.code);
+        }
+
+        if (parsed.skillPackage.reference.id !== input.directory) {
+            rmSync(staged, { recursive: true, force: true });
+            throw new Error("invalid_metadata");
         }
 
         if (!this.isAvailable(parsed.skillPackage)) {
