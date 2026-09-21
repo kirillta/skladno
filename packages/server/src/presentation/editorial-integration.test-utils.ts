@@ -17,6 +17,7 @@ import { createLocalService } from "./server.js";
 import { createApplicationServices } from "../application/create-application-services.js";
 import type { ApplicationServices } from "../application/application-services.js";
 import { openDatabase } from "../infrastructure/persistence/index.js";
+import { SkillRevisionStore } from "../infrastructure/skills/skill-revision-store.js";
 import { createTestPersistence, type TestPersistence } from "../test-support/test-persistence.js";
 
 
@@ -69,7 +70,7 @@ export async function withService(engine: EditorialEngine | undefined, run: (bas
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
-    const engines: EditorialEngineResolver = { resolve: () => engine, resolveAssistantActionIntentVerifier: () => actionVerifier };
+    const engines: EditorialEngineResolver = { resolve: () => engine, resolveAssistant: () => engine, resolveAssistantActionIntentVerifier: () => actionVerifier };
 
     const config = {
         host: "127.0.0.1",
@@ -102,6 +103,7 @@ export async function withService(engine: EditorialEngine | undefined, run: (bas
             createConnectionId: () => "test-connection",
         },
         integration: { editorial, telemetry },
+        skillPackages: { authorRoot: join(directory, "skills"), revisions: new SkillRevisionStore(directory) },
     });
     const service = createLocalService(config, editorial, services);
     service.listen(0, "127.0.0.1");

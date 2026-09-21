@@ -78,7 +78,7 @@ export function createApplicationServices({ stores, settings, integration = {}, 
         : undefined;
     const skills = new AssistantSkillCatalog(authorSkills ? [builtIns, authorSkills] : [builtIns]);
     const preparation = new AssistantRequestPreparation({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, engines: stores.engines, capabilities });
-    const capabilityLoop = new AssistantCapabilityLoop({ assistant: stores.assistant, engines: stores.engines, capabilities, skills, conversationHistory: (articleId, limit) => getConversationHistory(stores.assistant, articleId, limit) });
+    const capabilityLoop = new AssistantCapabilityLoop({ assistant: stores.assistant, engines: stores.engines, capabilities, authorSkills: authorSkillService, skills, conversationHistory: (articleId, limit) => getConversationHistory(stores.assistant, articleId, limit) });
     const completion = new AssistantCompletion({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, artifacts: stores.artifacts, factChecks, capabilities });
 
     return {

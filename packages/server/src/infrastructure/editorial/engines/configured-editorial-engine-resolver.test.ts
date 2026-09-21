@@ -26,7 +26,7 @@ test("resolves the active connection's provider and isolated model preference", 
     const original = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "test-key";
     try {
-        assert.deepEqual(resolver.resolve("flow_revision")?.continuationScope, { connectionId: "anthropic", provider: "anthropic", model: "claude-sonnet" });
+        assert.deepEqual(resolver.resolveAssistant()?.continuationScope, { connectionId: "anthropic", provider: "anthropic", model: "claude-sonnet" });
     } finally {
         if (original === undefined)
             delete process.env.ANTHROPIC_API_KEY;

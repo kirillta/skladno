@@ -5,6 +5,7 @@ export const BUILT_IN_SKILL = {
     FACT_CHECKING: "fact_checking",
     STYLE_REVIEW: "style_review",
     TRANSLATION: "translation",
+    SKILL_CREATOR: "skill_creator",
 } as const;
 
 export type BuiltInSkillId = typeof BUILT_IN_SKILL[keyof typeof BUILT_IN_SKILL];
@@ -16,6 +17,7 @@ export const builtInSkills: readonly BuiltInSkillId[] = [
     BUILT_IN_SKILL.FACT_CHECKING,
     BUILT_IN_SKILL.STYLE_REVIEW,
     BUILT_IN_SKILL.TRANSLATION,
+    BUILT_IN_SKILL.SKILL_CREATOR,
 ];
 
 export const builtInSkillScopeCompatibility: Record<BuiltInSkillId, readonly ("article" | "selection")[]> = {
@@ -25,6 +27,7 @@ export const builtInSkillScopeCompatibility: Record<BuiltInSkillId, readonly ("a
     fact_checking: ["article", "selection"],
     style_review: ["article", "selection"],
     translation: ["article"],
+    skill_creator: ["article", "selection"],
 };
 
 

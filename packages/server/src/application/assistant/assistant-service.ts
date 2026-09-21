@@ -205,7 +205,7 @@ export class AssistantService {
                 ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {})
             },
             ...(
-                !request.usesCapabilityLoop
+                !request.usesCapabilityLoop && request.operation
                     ? [{
                         type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY,
                         requestId: request.requestId,
@@ -238,7 +238,7 @@ export class AssistantService {
 
         yield { type: ASSISTANT_EVENT.STAGED_COMPLETION, requestId: request.requestId, completion: { responseKind: kind } };
         const completion = this.completion.persist(request, event);
-        if (!request.usesCapabilityLoop)
+        if (!request.usesCapabilityLoop && request.operation)
             yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: getActivityForEditorialOperation(request.operation), status: "completed" } };
 
         yield { type: ASSISTANT_EVENT.COMPLETED, requestId: request.requestId, ...completion };
@@ -262,6 +262,9 @@ export class AssistantService {
 
 
     private createEngineRequest(request: PreparedAssistantRequest, excerpt: string) {
+        if (!request.operation)
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
         return {
             operation: request.operation,
             article: excerpt,

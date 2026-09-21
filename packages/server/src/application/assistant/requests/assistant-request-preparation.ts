@@ -12,8 +12,8 @@ import type { ReplayedAssistantRequest } from "./replayed-assistant-request.js";
 import type { AssistantServiceRequest } from "./assistant-service-request.js";
 
 
-function getEditorialOperationFor(skill: BuiltInSkillId): EditorialOperation {
-    const operations: Record<BuiltInSkillId, EditorialOperation> = {
+function getEditorialOperationFor(skill: BuiltInSkillId): EditorialOperation | undefined {
+    const operations: Partial<Record<BuiltInSkillId, EditorialOperation>> = {
         talking_points: "thesis_to_narrative",
         narrative_draft: "thesis_to_narrative",
         flow_and_clarity: "flow_revision",
@@ -64,7 +64,7 @@ export class AssistantRequestPreparation {
             capabilityActivities: [],
             pendingActions: [],
             authorizedActions: [],
-            ...(!routing.usesCapabilityLoop && routing.resolvedSkillId ? { completedCapability: getCapabilityForEditorialOperation(routing.operation) } : {})
+            ...(!routing.usesCapabilityLoop && routing.operation ? { completedCapability: getCapabilityForEditorialOperation(routing.operation) } : {})
         };
     }
 
@@ -103,9 +103,19 @@ export class AssistantRequestPreparation {
     }
 
 
-    private resolveRequestRouting(request: ReplayedAssistantRequest): { resolvedSkillId?: BuiltInSkillId; operation: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
+    private resolveRequestRouting(request: ReplayedAssistantRequest): { resolvedSkillId?: BuiltInSkillId; operation?: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
         const resolvedSkillId = request.explicitSkillId;
-        const operation = getEditorialOperationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
+        if (!resolvedSkillId) {
+            const engine = this.resolveAssistantEngine();
+            return { engine, usesCapabilityLoop: Boolean(engine.streamAssistant && this.dependencies.capabilities) };
+        }
+
+        const operation = getEditorialOperationFor(resolvedSkillId);
+        if (!operation) {
+            const engine = this.resolveAssistantEngine();
+            return { resolvedSkillId, engine, usesCapabilityLoop: Boolean(engine.streamAssistant && this.dependencies.capabilities) };
+        }
+
         const engine = this.resolveEngine(operation, resolvedSkillId);
         const usesCapabilityLoop = Boolean(engine.streamAssistant && this.dependencies.capabilities);
 
@@ -115,6 +125,15 @@ export class AssistantRequestPreparation {
 
     private resolveEngine(operation: EditorialOperation, skillId?: BuiltInSkillId): EditorialEngine {
         const engine = this.dependencies.engines.resolve(operation, skillId);
+        if (!engine)
+            throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
+
+        return engine;
+    }
+
+
+    private resolveAssistantEngine(): EditorialEngine {
+        const engine = this.dependencies.engines.resolveAssistant?.();
         if (!engine)
             throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
 

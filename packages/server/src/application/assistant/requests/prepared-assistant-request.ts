@@ -11,7 +11,7 @@ export interface PreparedAssistantRequest extends ReplayedAssistantRequest {
     articleTitle: string;
     publishingCharacterLimit?: number;
     resolvedSkillId?: BuiltInSkillId;
-    operation: EditorialOperation;
+    operation?: EditorialOperation;
     engine: EditorialEngine;
     usesCapabilityLoop: boolean;
     completedCapability?: string;

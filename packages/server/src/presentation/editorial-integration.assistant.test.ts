@@ -8,7 +8,7 @@ import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editoria
 import { EditorialEngineError } from "../application/editorial/engine/editorial-engine-error.js";
 import { CapabilityFixtureEngine, FixtureEngine, createEmptyConversationStream, withService } from "./editorial-integration.test-utils.js";
 
-// Product scenarios: editorial-workflows.assistant-request-proposal, editorial-workflows.proposal-operations-remain-separate
+// Product scenarios: editorial-workflows.assistant-request-proposal, editorial-workflows.proposal-operations-remain-separate, editorial-workflows.author-skill-creation
 test("assistant requests persist a revision-bound proposal and splice only the selected Markdown", async () => {
     const engine = new FixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "improved" },
@@ -308,4 +308,36 @@ test("assistant streams include a stable failure code", async () => {
 
         assert.match(await response.text(), /"errorCode":"editorial_provider_failed"/);
     });
+});
+
+
+test("the Assistant model creates an Author-requested Skill without changing the Article", async () => {
+    const engine = new CapabilityFixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "created-author-skill", text: "Created the reusable Skill." },
+    ], "create_author_skill", {
+        skillId: "no-em-dashes",
+        skillMarkdown: "---\nid: no-em-dashes\nname: No em dashes\ndescription: Rephrase writing without em dashes.\nversion: 1\n---\n# Rewrite\n\nRewrite without em dashes.\n",
+    });
+
+    const verifier: AssistantActionIntentVerifier = {
+        verify: async (_message, action) => action === "create_author_skill",
+    };
+
+    await withService(engine, async (baseUrl, repositories, services) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                requestId: "create-author-skill",
+                authorMessage: "Create a reusable Skill that rephrases an Article without em dashes.",
+                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
+            }),
+        });
+
+        assert.match(await response.text(), /"responseKind":"editorial_conversation"/);
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Original Article");
+        assert.ok(services.skills.discover().some((skill) => skill.reference.id === "no-em-dashes"));
+        assert.equal(services.authorSkills?.listRevisions("no-em-dashes").length, 1);
+    }, true, verifier);
 });

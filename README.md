@@ -69,6 +69,7 @@ On Windows, you control update checks, downloads, and restarts in **Settings > A
 ## Help
 
 - [Using the Editorial Assistant](docs/user/Assistant.md)
+- [Creating Skills](docs/user/Skills.md)
 - [Backups and recovery](docs/user/Backups-and-recovery.md)
 - [Report a problem or suggest an improvement](https://github.com/kirillta/skladno/issues)
 

@@ -56,7 +56,7 @@ Assistant first receives compact Skill descriptions and loads the full instructi
 
 Quick Actions remain compact, discoverable Skill starters. They have the same capability access as ordinary conversation and do not invoke a separate hard-coded workflow. Dedicated Workspace Views remain usable without an Assistant conversation and may seed Assistant with a Skill and context when conversation helps.
 
-Built-in Skills are versioned application assets. Author-created Skills, their storage scope, editing, import, sharing, executable resources, and custom tools are deferred. The catalog accepts more than one Skill source so built-ins do not become a permanent closed set.
+Built-in Skills are versioned application assets. Author-created Skills use the same local Markdown package format and a separate immutable Skill Revision history. The configured Assistant model selects relevant catalog Skills for an untagged request rather than routing it to a default editorial workflow. It may create a local Skill through a bounded server tool only when the Author explicitly asks. The initial orchestration turn receives no Article body, and a later classified capability receives only the Article context it needs. Skills cannot grant custom tools, filesystem access, or permissions. Editing, import, sharing, and custom tools remain deferred. The catalog accepts more than one Skill source so built-ins do not become a permanent closed set.
 
 ### One bounded foreground run
 
@@ -86,7 +86,7 @@ Skills remain optional procedural guidance. Capability coverage does not require
 
 The capability catalog becomes an allowlist and trust boundary. Every visible capability therefore needs deterministic contract tests for validation, context authority, completion, cancellation, failure, and stale Revision handling. HTTP and Electron transports continue to expose the same renderer-safe application client and typed events.
 
-Skill Creator, Author Skill persistence and management, MCP transport, third-party tools, background runs, direct publishing, and arbitrary or provider-supplied capability discovery remain outside this decision. Bounded discovery searches only the classified server-owned allowlist described above.
+MCP transport, third-party tools, background runs, direct publishing, arbitrary or provider-supplied capability discovery, and Author Skill import or sharing remain outside this decision. Bounded discovery searches only the classified server-owned allowlist described above.
 
 ## Verification
 

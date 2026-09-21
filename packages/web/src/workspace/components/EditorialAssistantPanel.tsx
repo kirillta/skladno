@@ -27,6 +27,8 @@ function getSkillAliasKey(skill: BuiltInSkillId) {
             return "factChecking";
         case BUILT_IN_SKILL.STYLE_REVIEW:
             return "styleReview";
+        case BUILT_IN_SKILL.SKILL_CREATOR:
+            return "skillCreator";
         default:
             return "translation";
     }
@@ -78,7 +80,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
         window.requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-assistant-composer]")?.focus());
     }, [clearSelection, restoredComposer]);
     const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0) && (!selection || !selectedSkill || builtInSkillScopeCompatibility[selectedSkill].includes("selection"));
-    const availableSkills = builtInSkills;
+    const availableSkills = builtInSkills.filter((skill) => skill !== BUILT_IN_SKILL.SKILL_CREATOR);
     const pickerSkills = slashRange === undefined ? availableSkills : availableSkills.filter((skill) => {
         const aliases = intl.formatMessage({ id: `assistant.skill.${getSkillAliasKey(skill)}.aliases` });
         const query = slashQuery.toLocaleLowerCase();

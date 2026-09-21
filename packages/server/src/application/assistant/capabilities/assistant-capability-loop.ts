@@ -15,6 +15,7 @@ import type { AssistantStore } from "../assistant-store.js";
 import type { EditorialEngineResolver } from "../../editorial/engine/editorial-engine-resolver.js";
 import type { ConversationHistory } from "../requests/conversation-history.js";
 import { AssistantSkillCatalog } from "../skills/assistant-skill-catalog.js";
+import type { AuthorSkillService } from "../skills/author-skill-service.js";
 
 
 function isTransientReadFailure(error: unknown): boolean {
@@ -27,6 +28,7 @@ export class AssistantCapabilityLoop {
         assistant: Pick<AssistantStore, "setExecution">;
         engines: Pick<EditorialEngineResolver, "resolveAssistantActionIntentVerifier">;
         capabilities?: Pick<EditorialCapabilityCatalog, "getDefinitions" | "discover" | "read" | "executeAction" | "stream">;
+        authorSkills?: AuthorSkillService;
         skills: AssistantSkillCatalog;
         conversationHistory: (articleId: string, limit?: number) => ConversationHistory;
     }) { }
@@ -49,7 +51,7 @@ export class AssistantCapabilityLoop {
 
         const editorialRequest = {
             message: request.authorMessage,
-            article: excerpt,
+            article: "",
             scope: request.scope.kind,
             instructions: selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])]),
             history: this.dependencies.conversationHistory(request.articleId, 12),
@@ -70,7 +72,7 @@ export class AssistantCapabilityLoop {
                 continue;
             }
 
-            if (request.resolvedSkillId)
+            if (request.operation)
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
             yield event;
@@ -93,6 +95,8 @@ export class AssistantCapabilityLoop {
                 return [EDITORIAL_CAPABILITY.STYLE_REVIEW, EDITORIAL_CAPABILITY.INSPECT_STYLE_CORPUS, EDITORIAL_CAPABILITY.INSPECT_ARTICLE_STYLE_RULES];
             case BUILT_IN_SKILL.TRANSLATION:
                 return [EDITORIAL_CAPABILITY.TRANSLATE, EDITORIAL_CAPABILITY.INSPECT_TRANSLATIONS];
+            case BUILT_IN_SKILL.SKILL_CREATOR:
+                return ["create_author_skill"];
             default:
                 return [EDITORIAL_CAPABILITY.GENERATE_PROPOSAL];
         }
@@ -120,7 +124,30 @@ export class AssistantCapabilityLoop {
             execute: async (input) => this.dependencies.capabilities!.discover(input.query ?? "", request.scope.kind),
         });
 
+        if (this.dependencies.authorSkills)
+            tools.push({
+                capability: "create_author_skill",
+                description: "Save a validated local Author Skill Markdown package.",
+                input: "author-skill",
+                execute: async (input, signal) => this.createAuthorSkill(request, input, signal),
+            });
+
         return tools;
+    }
+
+
+    private async createAuthorSkill(request: PreparedAssistantRequest, input: Readonly<Record<string, string>>, signal: AbortSignal): Promise<{ skillId: string; revisionId: string }> {
+        const skillId = input.skillId;
+        const skillMarkdown = input.skillMarkdown;
+        if (!skillId || !skillMarkdown)
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
+        const verifier = this.dependencies.engines.resolveAssistantActionIntentVerifier?.();
+        if (!verifier || !await verifier.verify(request.authorMessage, "create_author_skill", {}, signal))
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+        const revision = this.dependencies.authorSkills!.create({ skillId, files: { "SKILL.md": skillMarkdown }, requestId: request.requestId });
+        return { skillId, revisionId: revision.id };
     }
 
 

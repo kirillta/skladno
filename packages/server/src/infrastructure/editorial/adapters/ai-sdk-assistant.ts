@@ -64,6 +64,12 @@ function createAssistantTool(candidate: AssistantTool, execute: AssistantToolExe
                 inputSchema: z.object({ query: z.string().min(1) }),
                 execute: ({ query }) => execute(candidate.capability, { query })
             });
+        case "author-skill":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), skillMarkdown: z.string().min(1).max(96 * 1024) }),
+                execute: ({ skillId, skillMarkdown }) => execute(candidate.capability, { skillId, skillMarkdown })
+            });
         case "none":
             return tool({
                 description: candidate.description,
@@ -92,7 +98,7 @@ export function createAssistantTools(request: EditorialAssistantRequest, execute
 
 export function getAssistantStepOptions(stepNumber: number, activeCapabilities?: readonly string[]): { activeTools: string[]; toolChoice?: { type: "tool"; toolName: string } } {
     const activeTools = activeCapabilities ? [...activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
-    const requiredCapability = activeCapabilities?.[0];
+    const requiredCapability = activeCapabilities?.find((capability) => capability !== "create_author_skill");
 
     return stepNumber === 0 && requiredCapability
         ? { activeTools, toolChoice: { type: "tool", toolName: requiredCapability } }
@@ -101,11 +107,15 @@ export function getAssistantStepOptions(stepNumber: number, activeCapabilities?:
 
 
 export function createAssistantConversationPrompt(request: Pick<EditorialAssistantRequest, "article" | "history" | "message" | "scope">): ModelMessage[] {
+    const context = request.article
+        ? `${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${getBoundedArticleContext(request.article)}`
+        : "No Article context was provided for this request.";
+
     return [
         ...request.history.map((turn): ModelMessage => ({ role: turn.role === "author" ? "user" : "assistant", content: turn.content })),
         {
             role: "user",
-            content: `Author request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${getBoundedArticleContext(request.article)}`,
+            content: `Author request:\n${request.message}\n\n${context}`,
         },
     ];
 }

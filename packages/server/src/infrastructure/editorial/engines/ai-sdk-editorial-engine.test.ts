@@ -88,6 +88,25 @@ test("editorial prompts route system messages through AI SDK 7 instructions", as
 });
 
 
+test("Skill Creator may clarify before it writes", () => {
+    assert.deepEqual(getAssistantStepOptions(0, ["create_author_skill"]), {
+        activeTools: ["create_author_skill", "find_capabilities", "load_skill"],
+    });
+});
+
+
+test("does not send Article context when the Assistant does not need it", () => {
+    assert.deepEqual(createAssistantConversationPrompt({
+        article: "",
+        history: [],
+        message: "Create a reusable Skill.",
+        scope: "article",
+    }), [
+        { role: "user", content: "Author request:\nCreate a reusable Skill.\n\nNo Article context was provided for this request." },
+    ]);
+});
+
+
 test("fact-check workflow passes the packaged instructions to its provider", async () => {
     let instructions = "";
     const factCheckProvider: FactCheckProvider = {

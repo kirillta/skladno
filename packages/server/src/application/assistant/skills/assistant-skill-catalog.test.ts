@@ -20,6 +20,15 @@ test("built-in Skills publish compact discovery data and load versioned instruct
 });
 
 
+test("Skill Creator keeps its model instructions in the built-in package", () => {
+    const catalog = new AssistantSkillCatalog([builtInSkillSource]);
+    const creator = catalog.discover().find((summary) => summary.reference.id === BUILT_IN_SKILL.SKILL_CREATOR);
+
+    assert.equal(creator?.name, "Skill Creator");
+    assert.match(catalog.load([creator!.reference])[0]?.instructions ?? "", /Ask a concise clarifying question/);
+});
+
+
 test("explicit and complementary Skill references load through the same catalog", () => {
     const catalog = new AssistantSkillCatalog([builtInSkillSource]);
     const summaries = catalog.discover();

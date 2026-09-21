@@ -13,6 +13,7 @@ test("resolves current skill IDs and legacy editorial operations through one com
     assert.equal(legacyEditorialOperationSkillMap.translation, BUILT_IN_SKILL.TRANSLATION);
     assert.deepEqual(builtInSkillScopeCompatibility.talking_points, ["article", "selection"]);
     assert.deepEqual(builtInSkillScopeCompatibility.narrative_draft, ["article", "selection"]);
+    assert.deepEqual(builtInSkillScopeCompatibility.skill_creator, ["article", "selection"]);
 });
 
 

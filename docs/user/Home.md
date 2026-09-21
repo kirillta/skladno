@@ -8,5 +8,6 @@ AI output never silently changes an Article. The author reviews each Proposal, a
 
 - [Glossary](Glossary.md): Skladno's product language.
 - [Editorial Assistant](Assistant.md): Skills, request scope, activity, and review handoffs.
+- [Skills](Skills.md): creating local reusable Skills in Assistant chat.
 
 Setup and development commands are in the [project README](../../README.md).
