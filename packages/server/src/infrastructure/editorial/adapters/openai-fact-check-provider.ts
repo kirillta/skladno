@@ -43,17 +43,18 @@ interface OpenAIFactCheckProviderOptions {
 export function createOpenAIFactCheckProvider({ client, model, providerOptions }: OpenAIFactCheckProviderOptions): FactCheckProvider {
     return {
         researchStage: "openai_web_research",
-        extractClaims: (article, signal) => extractClaims(article, signal, client, model, providerOptions),
-        researchClaims: (claims, signal) => researchClaims(claims, signal, client, model, providerOptions),
-        evaluateClaims: (research, signal) => evaluateClaims(research, signal, client, model, providerOptions),
+        extractClaims: (article, instructions, signal) => extractClaims(article, instructions, signal, client, model, providerOptions),
+        researchClaims: (claims, instructions, signal) => researchClaims(claims, instructions, signal, client, model, providerOptions),
+        evaluateClaims: (research, instructions, signal) => evaluateClaims(research, instructions, signal, client, model, providerOptions),
     };
 }
 
 
-async function extractClaims(article: string, signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<{ responseId: string; claims: { claim: string }[] }> {
+async function extractClaims(article: string, instructions: string, signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<{ responseId: string; claims: { claim: string }[] }> {
     const result = await generateText({
         ...createAiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
-        prompt: `Extract up to 12 externally verifiable factual claims from this article. Exclude opinions and advice.\n\n${article}`,
+        system: instructions,
+        prompt: `Phase: claim extraction\n\nArticle:\n${article}`,
         output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12) }) }),
     });
     const completedResponseId = getOpenAiResponseId(result.providerMetadata);
@@ -64,12 +65,13 @@ async function extractClaims(article: string, signal: AbortSignal, client: OpenA
 }
 
 
-async function researchClaims(claims: { claim: string }[], signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<FactCheckResearch[]> {
+async function researchClaims(claims: { claim: string }[], instructions: string, signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<FactCheckResearch[]> {
     const research: FactCheckResearch[] = [];
     for (const { claim } of claims) {
         const result = await generateText({
             ...createAiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
-            prompt: `Research this factual claim using web search. Prefer primary sources, report source URLs, publication dates when available, and brief supporting or contradicting evidence. Do not infer missing evidence.\n\nClaim: ${claim}`,
+            system: instructions,
+            prompt: `Phase: web research\n\nClaim:\n${claim}`,
             tools: { web_search: client.tools.webSearch({ externalWebAccess: true, searchContextSize: "high" }) },
             toolChoice: { type: "tool", toolName: "web_search" },
         });
@@ -81,10 +83,11 @@ async function researchClaims(claims: { claim: string }[], signal: AbortSignal, 
 }
 
 
-async function evaluateClaims(research: FactCheckResearch[], signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<{ responseId: string; findings: FactCheckFindingDraft[] }> {
+async function evaluateClaims(research: FactCheckResearch[], instructions: string, signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<{ responseId: string; findings: FactCheckFindingDraft[] }> {
     const result = await generateText({
         ...createAiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
-        prompt: `Evaluate each article claim using the web-research evidence below. A missing source must be classified as unverifiable. Return only sources actually present in the evidence, with an explicit source-quality rating and uncertainty.\n\n${JSON.stringify(research)}`,
+        system: instructions,
+        prompt: `Phase: evidence evaluation\n\nResearch evidence:\n${JSON.stringify(research)}`,
         output: Output.object({ schema: z.object({ findings: z.array(findingSchema) }) }),
     });
     const completedResponseId = getOpenAiResponseId(result.providerMetadata);

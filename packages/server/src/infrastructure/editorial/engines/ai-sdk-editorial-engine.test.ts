@@ -8,6 +8,7 @@ import { EDITORIAL_ENGINE_EVENT } from "../../../application/editorial/engine/ed
 import { AiSdkEditorialEngine, createAssistantConversationPrompt, getAssistantStepOptions } from "./ai-sdk-editorial-engine.js";
 import { getSupportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";
 import { getOpenAiResponsesProviderOptions } from "../adapters/openai-responses.js";
+import type { FactCheckProvider } from "../models/fact-check-provider.js";
 
 
 test("keeps previous Assistant output separate from the next Author request", () => {
@@ -84,6 +85,39 @@ test("editorial prompts route system messages through AI SDK 7 instructions", as
         events.push(event.type);
 
     assert.deepEqual(events, [EDITORIAL_ENGINE_EVENT.TEXT_DELTA, EDITORIAL_ENGINE_EVENT.COMPLETED]);
+});
+
+
+test("fact-check workflow passes the packaged instructions to its provider", async () => {
+    let instructions = "";
+    const factCheckProvider: FactCheckProvider = {
+        researchStage: "web_research",
+        async extractClaims(_article, value) {
+            instructions = value;
+            return { responseId: "claim-extraction", claims: [] };
+        },
+        async researchClaims() {
+            return [];
+        },
+        async evaluateClaims() {
+            return { responseId: "evaluation", findings: [] };
+        },
+    };
+    const engine = new AiSdkEditorialEngine({
+        provider: AI_PROVIDER.OPENAI,
+        languageModel: new MockLanguageModelV3({}),
+        factCheckProvider,
+        storeResponses: false,
+    });
+
+    let completed = false;
+    for await (const event of engine.stream({ operation: EDITORIAL_OPERATION.FACT_CHECK, article: "HTTP was standardized in 1999.", authorContext: "" }, new AbortController().signal))
+        completed ||= event.type === EDITORIAL_ENGINE_EVENT.COMPLETED;
+
+    assert.ok(completed);
+    assert.match(instructions, /For claim extraction, extract up to 12 externally verifiable factual claims/);
+    assert.match(instructions, /For web research, research the factual claim using web search/);
+    assert.match(instructions, /For evidence evaluation, evaluate each Article claim/);
 });
 
 

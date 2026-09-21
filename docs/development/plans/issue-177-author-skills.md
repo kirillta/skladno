@@ -1,215 +1,424 @@
-# Issue #177: Skill Creator and Markdown Skill packages
+# Issue #177: Create and revise Skills in Assistant chat
 
 Issue: <https://github.com/kirillta/skladno/issues/177>
 
-Status: planned, implementation not started.
+Status: partially implemented; remaining work replanned against the current tree.
+The observations below come from source inspection, not a passing test run.
+Preserve existing implementation and concurrent uncommitted changes.
 
-Execution: solo. Package validation, request handling, and storage share contracts;
-implement them sequentially with one owner. Reassess independent verification
-work after those contracts are stable.
+Execution: solo. Chat results, file-backed Skill Revisions, and file updates share
+contracts and completion rules. Implement the business slices below in order.
+Each slice includes errors, localization, diagnostics, accessibility, product
+evidence, and verification. These are completion requirements, not later cleanup.
 
-## Goal and agreed decisions
+## Author decisions and scope
 
-Help an Author turn an editorial goal into a validated Skladno Skill, test it
-against a Draft, and explicitly install it for reuse across Articles. Skills
-guide existing approved capabilities and grant no new authority.
+- Creation happens entirely in Assistant chat. The model infers a reusable Skill
+  from the conversation. When unsure about the purpose, triggers, instructions or
+  references, it asks clarifying questions in chat. Follow-up questions are supported;
+  a mandatory questionnaire, separate creation screen or Skill Article is not needed.
+- There is no validation workflow, approval score, or mandatory test stage. Authors
+  refine Skills conversationally and recover earlier content through Skill Revisions.
+- Both built-in and Author Skills are Markdown packages. Built-ins ship read-only.
+  Author packages belong to the active application data directory and work across
+  Articles. Neither installed definitions nor Skill history belong in SQLite.
+- An Author's request to create a Skill authorizes saving its Markdown package.
+  Successful creation makes it available immediately, without an Install button or
+  another approval. Requests to edit, restore or delete likewise authorize that
+  change. An unsolicited suggestion alone does not authorize saving a Skill.
+- Author edits to Markdown files update the Assistant's Skill on the next catalog
+  refresh; deleting `SKILL.md` or its package removes it. No registration record,
+  reinstallation, version bump or application restart is required.
+- Keep internal parsing, bounded reads, safe paths, completion gates, and capability
+  checks. Revisions recover unwanted instructions; they cannot make unsafe file
+  access acceptable. Show ordinary load/save errors beside the chat action without
+  creating a validation screen or checklist.
 
-Both built-in and Author Skills use Markdown files as their source of truth.
-Do not store package definitions in SQLite or hard-code instruction strings.
-Built-ins ship as read-only application assets. Author Skills live under the
-active application data directory and belong to that local application data
-collection, rather than an individual Article or workspace.
+The benefit is reusable editorial help without leaving the conversation. The cost
+is a small file-backed history for Skills, separate from Article Revisions. Reuse
+append-only recovery semantics, not Article database tables or Article screens.
 
-This makes Skills readable and editable outside Skladno. It also requires
-filesystem validation, refresh after external edits, and backup support beyond
-the current SQLite snapshots.
+## Current baseline
+
+Server paths below are relative to `packages/server/src`.
+
+| Owner | Observed implementation | Remaining work |
+| --- | --- | --- |
+| `application/assistant/skills/built-in-skill-packages.ts`, `skills/built-in/*/SKILL.md` | Built-ins load Markdown packages | Preserve IDs and edited instructions; add Creator without hard-coded instructions |
+| `skills/skill-package-parser.ts`, `skills/create-skill-package.ts` | Installed `yaml` parser, metadata/reference limits, path checks, content hash | Reuse; bound reads before allocation and apply consistent conflict/path checks |
+| `skills/file-assistant-skill-source.ts` | Refresh, install, replace, delete, staging | Add immutable history, typed errors and crash recovery; current `.previous` is deleted after replacement |
+| `skills/assistant-skill-catalog.ts` | Multiple sources; discovery filters duplicate IDs/names | Enforce reservations on direct load/mutations and snapshot consistently per run |
+| `application/create-application-services.ts` and its options | Optional Author root and file source composition | Expose lifecycle service and wire active roots in both runtimes |
+| `application/assistant/capabilities/assistant-capability-loop.ts` | Instructions and references reach the model | Generalize explicit built-in IDs and add non-editorial Skill results |
+| `application/assistant/requests/assistant-request-preparation.ts`, `presentation/routes/assistant-route.ts` | Built-in selection and Article-scoped parsing | Add Creator context, Skill references, provenance and retries |
+| `scripts/copy-skill-assets.mjs`, server build, Electron composition | Asset copying and built-in root selection exist | Verify packaged resources independently of working directory |
+| `packages/web/src/workspace/state/assistant-request-state.ts` | Ordinary sending calls `workspace.save()` | Creator must not save or transmit unrelated Article content |
+
+Abbreviated `skills/` paths mean `application/assistant/skills/`. Existing source
+tests establish basic loading and error cases, not the complete lifecycle below.
+Recheck this baseline before implementing; do not repeat completed conversion work.
+
+## Fixed contracts
+
+### Markdown packages
+
+Keep implemented YAML keys `id`, `name`, `description`, `version`, and optional
+`references`. Instructions are the Markdown body. Keep current limits: ID regex
+`^[a-z][a-z0-9_-]{2,63}$`, name 80 characters, description 280 characters,
+instructions 64 KiB, eight references of 16 KiB each, whole package 96 KiB.
+Versions retain the existing one-to-three numeric components. References are
+single-level `references/<name>.md` files explicitly listed in frontmatter.
+
+Keep using the installed `yaml` dependency. No new parser, Skill framework or
+package registry. Links inside prose remain text and never trigger remote imports.
+Reject scripts, custom tool/permission declarations, path traversal and symlink or
+junction escapes. Application capabilities remain the authority boundary.
+
+### Skill Revisions and file updates
+
+Use server-owned directories beneath the active data root:
 
 ```text
-skills/
-  flow-and-clarity/
-    SKILL.md
-    references/
-      guidance.md
+skills/<skill-id>/SKILL.md                 installed execution source
+skills/<skill-id>/references/*.md
+skill-history/<skill-id>/<revision-id>/   immutable complete package snapshot
+  package/SKILL.md
+  package/references/*.md
+  revision.json                          request, hash, time, parent, restoration source
+skill-history/<skill-id>/state.json       latest recorded Revision identity
+skill-staging/<operation-id>/             pending writes and recovery journal
 ```
 
-Each `SKILL.md` has YAML frontmatter containing a stable ID, name, description,
-and version, followed by Markdown instructions. Optional references are bundled
-local Markdown text. Finalize the reference declaration syntax, ID grammar,
-supported frontmatter keys, field limits, reference count, and total UTF-8 byte
-limit before implementing the parser. Reuse an installed safe YAML parser if
-available; do not create a partial YAML parser.
+Revision IDs are server-generated UUIDs. Parse the snapshot's `package/` directory.
+Metadata lives outside package roots;
+the existing strict parser must not interpret it as a package resource.
+A completed, Author-requested creation writes the package and records a Skill
+Revision as one recoverable operation. The Skill is then available to the Assistant.
+Conversational edits update the live package and append a Revision. An Author's
+restore request copies an older snapshot into the live package and appends a new
+Revision. Delete removes the live package from discovery and keeps recorded history
+recoverable. History never recreates a deleted package without an Author's restore
+request. Permanent erasure remains the explicit application-data deletion operation.
 
-The database may retain request provenance, including source, ID, version, and
-content hash. It is not a second store for Skill definitions.
+Markdown files determine availability; history metadata is not an activation flag.
+Refresh before each Assistant request, when opening the Skill picker/list, and after
+app-managed writes; no watcher is required. External edits never get overwritten
+from history. Missing or malformed files remove the Skill from new requests rather
+than retaining stale cached instructions. Unrelated Skills keep working; explain a
+malformed package when the Author tries to use or manage it.
+Before replacing/deleting, compare the expected installed hash and preserve the
+current package in history if it is not already represented. On conflict, keep
+both versions and ask the Author to reload before retrying. Active requests use
+their already loaded snapshots; later requests see edits/deletions. Record valid
+externally changed snapshots when observed. Intermediate external edits or deletions
+between refreshes cannot all be recovered; history preserves observed versions only.
 
-## Confirmed starting points
+Use NFKC plus locale-independent lowercase for name conflicts. Reserve built-in
+IDs and names on discovery, direct load, install and replace. Replacement preserves
+ID; name changes are allowed when available. The service increments the last
+numeric version component for managed replacement. Restoring old content gets a
+new version when restored, rather than moving the installed version backwards.
+External edits take effect through content hashing even if their version is unchanged.
 
-- Dependency #113 is closed. The bounded capability loop and multi-source
-  `AssistantSkillCatalog` exist.
-- `built-in-skill-packages.ts` currently contains instruction strings and the
-  general package interface.
-- Shared contracts already have source, ID, and version references, but explicit
-  request paths still use `BuiltInSkillId`.
-- The loop supplies compact descriptions for discovery and instructions through
-  `load_skill`. Bundled references currently do not reach that loading path.
-- Request preparation reads the current Revision. Draft testing needs a
-  temporary snapshot path that does not promote a Draft or create a Revision.
-- Explicit built-in Skill completion currently expects an editorial artifact.
-  Creator interviews and package candidates need valid non-editorial completion.
-- `product:impact` was inspected for Assistant application, shared contracts, and
-  renderer request ownership. Rerun it with the final affected paths, including
-  desktop storage and backup owners, before implementation.
+### Chat and persistence
 
-## Implementation sequence
+Reuse the current Article-associated chat as host, without creating a Skill Article.
+Creator receives the request and existing bounded, scope-permitted chat history;
+it gets no Article body by default. References come from explicitly supplied text.
+Truncated context leads to a concise question, not an unbounded history fetch.
 
-### 1. Define and load the shared file format
+An ordinary conversation may suggest creating a Skill. An explicit create/revise
+request permits the model to infer its content, clarify uncertainty and save it.
+A typed chat result
+contains a server-issued Skill Revision identity. UI actions never parse commands
+from model prose or code fences.
 
-Move the general package contract out of the built-in package module. Implement
-one server-owned parser and validator used by both sources, generated candidates,
-preview tests, installation, and replacement.
+SQLite may store result references and execution provenance, not canonical Skill
+definitions or Skill history. Chat text may quote instructions but is never the
+installed package store. The file-backed Revision survives loss of its chat link.
 
-Validate required metadata, stable identity, instructions, references, size limits,
-and unsupported content. Reserve built-in IDs and normalized names. Reject
-duplicate Author IDs and normalized name conflicts deterministically. Explicit
-replacement may retain its own identity and name.
+## 1. Finish recoverable file lifecycle and backup support
 
-Accept only the documented package files. Reject executable resources, custom
-tool or permission declarations, remote imports, absolute reference paths, path
-traversal, and symlink or junction escapes. Links in ordinary reference prose
-remain text and do not authorize fetching their targets. Treat instructions as
-untrusted guidance; textual validation cannot establish that a Skill is safe.
+Dependency: none. Keep new lifecycle actions unexposed until recovery checks pass.
+Read ADR-001, ADR-004, ADR-006, ADR-008, ADR-009 and the release/recovery guide.
 
-Return specific corrections without exposing private paths or raw parser errors.
-Invalid Author packages are unavailable for execution and appear with corrections
-in management. A broken package must not disable unrelated valid Skills.
+Impact command, repository root:
 
-Convert existing built-ins to `SKILL.md` packages while preserving IDs and
-behavior. Ensure development and packaged Electron builds resolve the same
-assets without relying on the process working directory.
+```powershell
+npm run product:impact -- packages/server/src/application/assistant/skills packages/server/src/infrastructure/persistence packages/electron/src/presentation/settings packages/electron/src/infrastructure/recovery packages/web/src/settings/web-backups.ts
+```
 
-### 2. Integrate discovery and execution
+Owners:
 
-Load both filesystem sources through the existing catalog. Refresh before each
-request and after management operations; do not add a filesystem watcher initially.
-Expose descriptions for discovery and load instructions plus bundled references
-only when selected. Bound aggregate discovery and loaded context as well as
-individual package sizes.
+- Existing parser, catalog, `FileAssistantSkillSource`, service composition and roots.
+- New `packages/server/src/application/assistant/skills/author-skill-service.ts`
+  for use cases and `packages/server/src/infrastructure/skills/skill-revision-store.ts`
+  for snapshot/journal I/O. Keep one installed-package source.
+- `packages/server/src/application/settings/backup-manager.ts`,
+  `packages/server/src/infrastructure/persistence/sqlite-backup-manager.ts`.
+- `packages/electron/src/presentation/settings/desktop-settings.ts`,
+  `src/infrastructure/recovery/pending-restore.ts`, `pending-restore-contract.ts`,
+  `src/infrastructure/runtime/runtime-settings.ts` within the Electron package,
+  and `packages/electron/src/presentation/main.ts`.
+- `packages/web/src/settings/web-backups.ts`, its settings HTTP client and existing
+  backup Settings controls.
 
-Carry full Skill references through explicit selection, request preparation,
-streaming, history, and retry. Preserve compatibility with stored built-in IDs.
-Do not add Creator or Author Skills to the built-in editorial-operation mapping.
-Retain legacy editorial behavior at its existing compatibility boundary.
+Implement:
 
-Keep an immutable in-memory package snapshot for each active request. A file edit,
-replacement, or deletion must not change a running request. Record its content
-hash because external edits may leave the declared version unchanged. A retry
-must not silently substitute changed instructions; explain when the recorded
-package is missing or different and offer a new request with the current package.
+1. Add list/read, create, update, restore and delete use cases that save live Markdown
+   and record history together. Reuse internal install/replace methods as needed;
+   they are implementation details, not extra Author steps.
+   Inputs use Skill/Revision identities and expected hashes, never renderer paths.
+   Check file sizes before reading and containment before every filesystem operation.
+   Apply the same duplicate/reserved-name rules to all entry points.
+2. Serialize mutations per Skill. Stage writes and journal intent, preserve the old
+   snapshot, activate by rename, then commit the journal. Startup completes or rolls
+   back interrupted operations idempotently. Exclude staging/history from discovery.
+3. Add a directory backup bundle: `manifest.json`, `database.sqlite`, `skills/`,
+   `skill-history/`. Manifest format 1 lists relative paths, sizes and SHA-256 hashes;
+   write it last. Pause application Skill writes during capture and compare external
+   file hashes before/after capture. Changed files cause a recoverable backup failure.
+   Exclude built-ins/staging. This uses filesystem operations, not an archive library.
+4. Treat each native bundle as one backup for selection/retention. Extend the browser
+   folder handle with directory support; serve staged export files through opaque
+   IDs and a manifest, never arbitrary paths. Clean up exports after completion or
+   failure. Keep existing `.sqlite` backup recognition. Restore legacy backups with
+   current Skill files retained and an explanatory localized message. New bundles
+   restore their exact saved Skill set after retaining a complete recovery bundle.
+5. Stage and switch database plus Skill directories on restart, rolling back the
+   complete set on failure. Carry Skills/history during data relocation and retain
+   the old directory. Check the actual relocation owner before extending it: ADR-009
+   describes a contract and is not proof that every path exists. Reject unsafe or
+   corrupt manifests before activation; do not require valid editorial instructions
+   to back up an Author's files.
+6. Translate filesystem failures into shared application error codes, mapped through
+   `packages/web/src/i18n/errors.ts`, `messages.ts`, and `locales/en.ts`. Reuse redacted
+   local diagnostics with operation/safe failure class only. No paths, Skill names,
+   bodies, hashes or raw errors. Preserve backup telemetry outcomes without adding
+   content or new remote payloads. Localize backup labels and accessible names; keep
+   existing Settings focus and keyboard behavior.
+7. Update ADR-006/009, applicable `product-model/areas/settings.json` and application
+   scenarios, and `docs/user/Backups-and-recovery.md` with this slice.
 
-Existing capability allowlists, scope validation, action-intent checks, model
-selection, step limits, and completion gates remain authoritative. Skill text
-cannot widen any of them.
+Checks, all must exit 0:
 
-### 3. Add the Creator conversation and candidate preview
+```powershell
+# packages/server; add the new store suite at this path
+npx tsx --test src/application/assistant/skills/file-assistant-skill-source.test.ts src/application/assistant/skills/assistant-skill-catalog.test.ts src/infrastructure/skills/skill-revision-store.test.ts src/infrastructure/persistence/sqlite-backup-manager.test.ts
+# packages/electron
+npx tsx --test src/presentation/settings/desktop-settings.backups.test.ts src/infrastructure/recovery/pending-restore.test.ts
+# repository root
+npm test --workspace @skladno/web -- src/settings/ApplicationSettings.backups.test.tsx
+```
 
-Ship Skill Creator as another built-in Markdown package. Interview the Author
-about their goal, discovery description, instructions, and necessary reference
-text. Do not attach Article content merely to conduct the interview.
+Prove append-only restoration, deletion recovery, external-edit conflicts, duplicate
+rejection, interrupted activation/restart, new/legacy backup restore and failed-switch
+rollback. Run the per-slice gates below and manually test native backup selection.
+Done when failures retain a usable prior database/package/history set.
 
-Use a narrow structured candidate result, validated by the package validator,
-after valid model completion. Reuse the Assistant conversation and streaming
-infrastructure without representing a Skill candidate as an Article Proposal.
-The candidate remains uninstalled and separate from the discovery catalog.
+## 2. Use Author Skills through the ordinary Assistant
 
-Show editable package content, validation corrections, the exact discovery
-description, and relevant existing capabilities. Explain that discovery is
-semantic and capability suggestions grant no permissions. Generation, preview,
-and testing never install or replace a Skill.
+Dependency: slice 1. Read ADR-002, ADR-007, ADR-008, ADR-011 and the i18n guide.
 
-### 4. Test candidates against a Draft safely
+```powershell
+# repository root
+npm run product:impact -- packages/shared/src/assistant packages/server/src/application/assistant packages/server/src/presentation/routes/assistant-route.ts packages/web/src/workspace
+```
 
-Capture an explicit temporary snapshot of the current Draft, its base Revision,
-and any selection. Do not use the ordinary Draft-promotion path. Validate selection
-offsets against this snapshot and send only the selected text and required context
-for selection-scoped tests.
+Owners: `packages/shared/src/assistant/assistant.ts`, `assistant-events.ts`;
+server `presentation/routes/assistant-route.ts`, Assistant `requests/` preparation,
+prepared/replayed request types, `capabilities/assistant-capability-loop.ts`,
+`infrastructure/editorial/adapters/ai-sdk-assistant.ts`; persistence
+`repositories/assistant-repository.ts`, `assistant-record-mappers.ts`, `migrations.ts`;
+web `application/client.ts` and HTTP adapters, `workspace/state/assistant-request-state.ts`,
+`workspace/components/assistant/AssistantComposer.tsx` and its plugins.
 
-Reuse the Assistant loop, provider behavior, cancellation, privacy rules, and
-completion validation. Allow existing reads and temporary generated results.
-Exclude deterministic mutations, installation, and durable editorial artifacts.
-Enforce this restriction server-side before dispatch, not by prompt instruction.
-Capabilities whose implementations read persisted Revision text must use the
-authorized snapshot or be unavailable for testing; do not silently test old text.
+1. Carry source/ID/version/hash selection and loaded-Skill provenance through
+   requests, streaming, history and retry. Read legacy built-in IDs at the existing
+   compatibility boundary. Snapshot discovery/loaded packages once per run.
+2. Reuse description discovery and `load_skill`; references already reach the model.
+   Bound discovery to 50 summaries per step and loaded Skill text to 192 KiB per run.
+   For larger catalogs, use bounded paged discovery, with explicit selection always
+   directly addressable. Do not silently discard later Skills or widen capability
+   authority. Preserve the existing six-step run bound.
+3. Generalize explicit composer selection. Retry fails with a localized new-request
+   action if the recorded package is missing or changed. An active request retains
+   its snapshot during file edits/replacement/deletion.
+4. Preserve scope checks, action-intent verification, purpose-specific models,
+   cancellation and completion gates. Keep the built-in editorial-operation mapping
+   at its compatibility boundary; do not map arbitrary Skills to an editorial operation.
+5. Add shared error codes and ICU mappings for missing/changed/unsupported Skills.
+   Reuse request tracing and redacted diagnostics, excluding private package text.
+   Preserve composer keyboard selection, focus and accessible names. Update ADR-011
+   and editorial-workflows product scenarios with matching test markers.
 
-Stop on a base Revision conflict. Cancel or mark the result obsolete when the
-Draft changes. Show completed test output separately without Article acceptance
-actions. Failure, cancellation, or incomplete output leaves no valid result.
+Checks:
 
-### 5. Implement explicit file lifecycle and recovery
+```powershell
+# packages/server
+npx tsx --test src/application/assistant/skills/assistant-skill-catalog.test.ts src/application/assistant/capabilities/assistant-capability-loop.test.ts src/presentation/editorial-integration.assistant.test.ts
+# repository root
+npm test --workspace @skladno/web -- src/workspace/EditorialWorkspace.assistant-composer.test.tsx src/workspace/EditorialWorkspace.assistant-requests.test.tsx
+```
 
-Provide Install, Replace, and Delete through the renderer-safe application client
-and validated server operations. Classify management endpoints as outside
-Assistant mutation authority. The renderer receives no filesystem access.
+All pass for built-in compatibility, explicit/inferred Author Skills, reference
+loading, scope restrictions, changed retries and replacement during a run. Run
+per-slice gates. Done when Author Skills use the same bounded execution path.
 
-Revalidate before writing. Use application-derived package paths, staged writes,
-and recoverable replacement so interruption cannot leave a partially installed
-package. Check the expected existing content hash before replacement or deletion
-to catch external edits. Reject conflicting changes instead of overwriting them.
-Increment the version on application-managed replacement and preserve the ID.
+Also prove that editing instructions or reference text without changing `version`
+affects the next request, removing `SKILL.md` removes discovery and explicit use,
+recreating a valid file makes it available again, and history cannot resurrect a
+deleted Skill. Check picker/list refresh without restart or reinstallation.
 
-Include Author Skill files in backup, restore, and data relocation. Extend the
-existing backup workflow with a documented snapshot format that contains SQLite
-and validated Skill files; finalize the format before writing lifecycle code.
-Preserve restore support for older database-only backups and explicitly define
-what happens to existing Author Skills when restoring one. Do not silently delete
-them or claim that an older backup contains them. Built-ins come from the installed
-application and are not copied into Author backups.
+## 3. Infer, create, revise and manage Skills entirely in chat
 
-Validate restored paths and packages before activation. Define interruption
-recovery for the database and Skill set together and test it in Electron. Do not
-ship file persistence before its backup and relocation behavior is implemented.
+Dependency: slices 1-2. Read ADR-003, ADR-005, ADR-007, ADR-011, ADR-012,
+the design system, i18n guide and Assistant panel UI guardrails.
 
-### 6. Add Author controls and documentation
+```powershell
+# repository root
+npm run product:impact -- packages/server/src/application/assistant packages/server/src/infrastructure/editorial packages/shared/src/assistant packages/web/src/workspace/components/assistant packages/web/src/workspace/state
+```
 
-Provide an application-wide Skills management entry with built-ins read-only and
-Author packages editable through the Creator flow. Use explicit Install, Replace,
-and Delete controls. Preserve the established Settings and workspace hierarchy,
-keyboard access, focus behavior, and localized corrections.
+Owners: new server `application/assistant/skills/built-in/skill-creator/SKILL.md`,
+shared built-in inventory and loader count checks; Assistant capability loop,
+`completion/assistant-completion.ts`, `completion/completion-event.ts`,
+`assistant-service.ts`, and AI SDK Assistant adapter/executor. Add a narrow
+`presentation/routes/author-skills-route.ts`, register in `presentation/server.ts`,
+and expose through the application client. Classify new operations in the existing
+capability/transport coverage registry. Register narrowly scoped Skill lifecycle
+operations for Author-requested chat changes. Reuse the existing action-intent
+verification for the requested operation/target. Requests phrased as questions,
+such as "Can you create a Skill from this?", authorize creation. Informational
+questions, hypotheticals and unsolicited suggestions do not authorize writes.
+These application-owned operations
+grant no custom tools or arbitrary filesystem access. Remove the prior blanket
+classification excluding all Skill writes from Assistant authority.
 
-Update ADR-011 for file packages and Author lifecycle, ADR-006 and the recovery
-guide for expanded backups, and any affected request or transport contracts.
-Update canonical product-model records and Author guidance to cover ownership,
-external editing, validation, Draft testing, installation, replacement, deletion,
-retry, and recovery. Regenerate product inventories after those records change.
+Renderer owners: `AssistantTimeline.tsx`, `AssistantTimelineMessage.tsx`,
+`AssistantComposer.tsx` under `packages/web/src/workspace/components/assistant`,
+and workspace state `assistant-request-state.ts`, `assistant-stream-events-state.ts`.
+Add one focused `AssistantSkillResult.tsx` beside the timeline components.
 
-## Verification
+1. Creator instructions infer the goal, name, discovery description, procedure and
+   reference text from conversation. Ask whenever uncertainty about the intended
+   Skill would change its behavior, and continue the conversation until resolved.
+   Use model routing, not a new intent regex or fixed interview sequence.
+2. Add a discriminated Creator request context using the existing chat host/history
+   without calling `workspace.save()` or attaching Article content. Existing ordinary
+   Article requests keep their behavior. No new Skill Article, editor or Settings page.
+3. Add a typed completed Skill write carrying metadata, Markdown and reference
+   text. Use the configured Assistant model and existing structured-output facilities.
+   Stage until valid completion, then save the live package and append a file-backed
+   Revision. Refresh discovery before reporting success; the Skill is available now.
+   Clarifying turns finish as plain conversation without a file write. Creator
+   success does not require an Article Proposal or a second install action.
+4. Make writes idempotent by request ID. Use slice 1's journal to save history and
+   the live package, then commit the chat reference. A failed chat commit after
+   package activation reports that the Skill was saved but its chat result could
+   not be recorded. Retry repairs that link without another write or Revision.
+   Startup reconciles interrupted operations; SQLite cannot roll back filesystem
+   writes. Cancellation/incomplete generation before commit changes no live Skill.
+   Cancellation after a completed save must not claim the save was undone.
+5. Show a compact chat result with name/description, expandable Markdown/references,
+   Revise, Revisions, and Delete. Report created/updated availability directly; omit
+   Install, Apply and Replace approval buttons. Revise sets
+   composer context to the selected Skill identity and focuses the composer. Revisions
+   lists timestamped snapshots; restore writes the selected content and appends a
+   new Revision. History and available
+   Skills remain reachable through a chat list action even after their originating
+   conversation is removed. Read/list access needs no new mutation capability.
+   Externally deleted files must also disappear from this list on its next refresh;
+   retained Revision history may be shown separately as recoverable deleted work.
+6. Bind operations to server-issued Skill/Revision IDs and expected hashes. An
+   Author's chat request or direct Revision/Delete action is sufficient authority
+   for that operation; no extra confirmation button is required. Use structured
+   operations, not parsed model prose. Creation, editing, restoration and deletion
+   update the live files. There is no validation checklist, creation form, separate
+   management screen or mandatory trial. Ordinary Skill use never self-modifies it.
+7. Return localized creation/save/conflict/missing-Revision errors beside the action,
+   with correction/retry and prior Revisions intact. Add ICU messages and accessible
+   names in `i18n/messages.ts` and `locales/en.ts`, mappings in `i18n/errors.ts`.
+   Reuse UI primitives/tokens, keyboard controls, pending disabling, visible focus,
+   status announcements and focus return. Reuse request tracing; log no Skill/chat
+   content or raw provider errors.
+8. Update ADR-011, `product-model/areas/editorial-workflows.json` and new
+   `docs/user/Skills.md`, linked from the existing user documentation entry point.
+   Explain clarifying questions, availability immediately after creation, direct
+   file editing/deletion, refresh timing and Skill versus Article Revisions.
+   Restoring a Skill Revision updates the available Skill immediately. Record that
+   these decisions supersede the issue's separate installation approval flow.
 
-- Parser and catalog tests cover malformed metadata, limits, duplicate IDs and
-  names, built-in shadowing, unknown declarations, unsafe paths, bundled references,
-  external edits, and continued availability of unrelated valid packages.
-- Request tests cover explicit Author selection, inferred discovery, legacy
-  built-in history, reference loading, changed-package retries, and active-run
-  stability during replacement or deletion.
-- Creator tests cover interviews, correction and regeneration, valid candidate
-  completion, and no implicit installation on any generation or test path.
-- Preview tests prove that Draft text is used without promotion, selection excludes
-  unselected content, stale runs stop, mutations are rejected, and failed or
-  incomplete runs persist no valid editorial artifact.
-- Filesystem tests cover create conflicts, stale hash rejection, partial writes,
-  restart recovery, packaged built-in assets, backup/restore, legacy backups, and
-  data relocation.
-- Add a deterministic renderer-to-service journey from interview through invalid
-  candidate correction, preview, Draft test, install, replace, and delete.
-- Run focused tests, lint, typecheck, affected E2E and Electron checks. Run
-  `npm run product:docs` and `npm run product:check` after product-model changes.
-- Manually verify the packaged Electron journey, keyboard and screen-reader
-  behavior, and recovery. Record any checks that remain unrun.
+Checks:
 
-Before editing, read the affected ADRs listed in `AGENTS.md`, the UI design and
-internationalization guides for renderer work, and the testing guide. After
-completion, move lasting decisions into their owning ADRs or guides and remove
-this plan.
+```powershell
+# packages/server; add the two new focused suites
+npx tsx --test src/application/assistant/skills/author-skill-service.test.ts src/presentation/server.author-skills.test.ts src/presentation/editorial-integration.assistant.test.ts
+# repository root; add the focused result-card suite
+npm test --workspace @skladno/web -- src/workspace/components/assistant/AssistantSkillResult.test.tsx src/workspace/components/assistant/AssistantTimeline.test.tsx src/workspace/EditorialWorkspace.assistant-requests.test.tsx src/i18n/catalog-validation.test.ts
+npm run test:e2e -- --grep "Author Skills"
+```
 
-## Deferred
+Add an `Author Skills` journey in `e2e/author-journeys.spec.ts` using
+`packages/server/src/test-support/e2e-service.ts`. Prove inference, necessary
+follow-up, creation with immediate discovery, edit, restore, delete and restart.
+Assert no Article/Draft mutation, no save from a suggestion or unanswered clarifying
+turn, no live changes after failed generation, idempotent recovery and working
+keyboard/focus behavior. Include file edits/deletion while the app stays open. All
+commands exit 0; run per-slice gates. Done when creation and recovery stay in chat.
 
-Executable scripts, custom tools, permission grants, remote imports, sharing,
-filesystem watchers, per-Article Skill ownership, and a package registry.
+## 4. Optional chat trial against current writing
+
+Dependency: slices 1-3. This retains the issue's Draft-testing capability as an
+optional Author request, never a prerequisite to creation or availability. Read
+ADR-005/007/011; rerun slice 3's impact command for the same execution/UI owners.
+
+1. Add `Try on current Draft` to the chat result, carrying the saved Skill Revision ID,
+   current Draft version/base Revision and optional selection. Bypass ordinary
+   Draft promotion in `assistant-request-state.ts` for this request kind only.
+2. Request preparation obtains the Draft through the existing Article store, checks
+   its version and validates offsets against that snapshot. Reuse the capability loop
+   with reads/temporary results only. Reject mutations server-side before dispatch.
+   Operations that reload saved Article text must use the authorized snapshot or be
+   unavailable for trial; never silently run against different text.
+3. Show output in chat without an actionable Article artifact or Skill mutation.
+   Base Revision changes stop the run; Draft changes invalidate the result. Preserve
+   normal cancellation, minimum context, provider storage and completion boundaries.
+4. Add localized start/stale/failure/retry copy, keyboard access and accessible status
+   beside the action. Reuse tracing without private diagnostic content. Update trial
+   product scenarios and `docs/user/Skills.md` in this slice.
+
+Rerun slice 2's capability-loop and request suites, slice 3's result-card suite and
+the Author Skills E2E journey. Add assertions for exact Draft/selection input,
+zero Article Revision creation, rejected mutations, stale Draft/base Revision,
+cancellation and no valid output on incomplete completion. All exit 0. Run per-slice
+gates and inspect the trial in Electron. Done when trial cannot change saved work.
+
+## Per-slice gates and final acceptance
+
+From the repository root after each completed business slice:
+
+```powershell
+npm run lint
+npm run typecheck
+npm run product:docs
+npm run product:check
+git diff --check
+```
+
+Expected: exit 0, no missing/unknown scenario markers, stale generated inventories
+or whitespace errors. After typecheck refreshes shared output, run
+`node --test dist/assistant/assistant.test.js` from `packages/shared` for modified
+Assistant contracts. Automated AI checks use deterministic fixtures, not live keys.
+
+Final integration: `npm run verify`, the Author Skills E2E journey and
+`npm run package:electron`. Launch packaged Electron from another working directory.
+Check chat inference, keyboard/screen-reader behavior, collapsed Assistant layout,
+external file edits, restart, backup/restore and retained Skill Revisions on supported
+desktop targets. Browser E2E is not evidence for Electron packaging or recovery.
+Report environments, results, and every unrun manual/desktop check.
+
+Move lasting decisions into their ADRs/guides and remove this plan when all slices
+are complete. No executable resources, custom tools, permission grants, remote
+imports, sharing or filesystem watcher are in scope. Saving an Author-requested
+Skill makes it available automatically; a separate installation workflow is omitted.

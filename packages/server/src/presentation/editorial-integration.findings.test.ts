@@ -115,7 +115,7 @@ test("Assistant Fact Check reuses an unchanged supported claim without researchi
 
     const engine: EditorialEngine = {
         async *stream(request, signal) {
-            yield* streamFactCheck({ request: { article: request.article, reusableFactFindings: request.reusableFactFindings }, signal, provider });
+            yield* streamFactCheck({ request: { article: request.article, instructions: "Fact-check instructions.", reusableFactFindings: request.reusableFactFindings }, signal, provider });
         },
         async *streamConversation() {
             return;

@@ -168,6 +168,9 @@ if (supportsNativeUpdates() && squirrelStartup) {
 
         loadServerEnvironment();
         const config = loadServerConfig();
+        process.env.SKLADNO_BUILT_IN_SKILLS_DIR = app.isPackaged
+            ? join(process.resourcesPath, "built-in")
+            : join(import.meta.dirname, "..", "..", "..", "server", "src", "application", "assistant", "skills", "built-in");
         const runtimePath = join(app.getPath("userData"), "runtime-settings.json");
         const telemetryDelivery = createTelemetryDelivery({
             packaged: app.isPackaged,
@@ -178,9 +181,7 @@ if (supportsNativeUpdates() && squirrelStartup) {
         const pendingRestore = applyPendingRestore({ runtimePath, databasePath: config.databasePath, telemetry });
         let application;
         try {
-            application = createLocalApplication(config, telemetry, { builtInRoot: app.isPackaged
-                ? join(process.resourcesPath, "built-in")
-                : join(import.meta.dirname, "..", "..", "..", "server", "src", "application", "assistant", "skills", "built-in") });
+            application = createLocalApplication(config, telemetry);
             if (pendingRestore) {
                 validateDatabaseSnapshot(config.databasePath);
                 pendingRestore.complete();

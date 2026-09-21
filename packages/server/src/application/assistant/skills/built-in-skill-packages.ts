@@ -7,7 +7,7 @@ import type { AssistantSkillPackage } from "./assistant-skill-package.js";
 import { parseSkillPackage } from "./skill-package-parser.js";
 
 
-export function loadBuiltInSkillPackages(root = resolve(import.meta.dirname, "built-in")): readonly AssistantSkillPackage[] {
+export function loadBuiltInSkillPackages(root = process.env.SKLADNO_BUILT_IN_SKILLS_DIR ?? resolve(import.meta.dirname, "built-in")): readonly AssistantSkillPackage[] {
     const packages: AssistantSkillPackage[] = [];
     for (const entry of readdirSync(root, { withFileTypes: true })) {
         if (!entry.isDirectory())

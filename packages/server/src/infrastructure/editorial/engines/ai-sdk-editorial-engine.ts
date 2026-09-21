@@ -1,6 +1,6 @@
 import { generateText, Output, streamText, type LanguageModel, type ModelMessage, type SystemModelMessage } from "ai";
 import { randomUUID } from "node:crypto";
-import { EDITORIAL_OPERATION, type AiProvider } from "@skladno/shared";
+import { BUILT_IN_SKILL, EDITORIAL_OPERATION, type AiProvider } from "@skladno/shared";
 
 import type { EditorialConversationRequest } from "../../../application/editorial/engine/editorial-conversation-request.js";
 import type { EditorialAssistantRequest } from "../../../application/editorial/engine/editorial-assistant-request.js";
@@ -12,6 +12,7 @@ import { EditorialEngineError } from "../../../application/editorial/engine/edit
 import type { EditorialEngineRequest } from "../../../application/editorial/engine/editorial-engine-request.js";
 import { protectArticleSpans, restoreProtectedSpans } from "../../../application/editorial/translation/translation.js";
 import { authorControlInstruction, createEditorialMessages } from "../../../application/editorial/workflow-prompt.js";
+import { getBuiltInSkillInstructions } from "../../../application/assistant/skills/get-built-in-skill-instructions.js";
 import { streamFactCheck } from "../workflows/fact-check-workflow.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
 import { getBoundedArticleContext } from "../models/editorial-context.js";
@@ -53,7 +54,11 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                     throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
                 yield* streamFactCheck({
-                    request: { article: getBoundedArticleContext(request.article), reusableFactFindings: request.reusableFactFindings },
+                    request: {
+                        article: getBoundedArticleContext(request.article),
+                        instructions: getBuiltInSkillInstructions(BUILT_IN_SKILL.FACT_CHECKING),
+                        reusableFactFindings: request.reusableFactFindings,
+                    },
                     signal,
                     provider,
                 });

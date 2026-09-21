@@ -11,7 +11,7 @@ export async function* streamFactCheck({ request, signal, provider }: { request:
     for (const tool of stages)
         yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "started" };
 
-    const extraction = await provider.extractClaims(request.article, signal);
+    const extraction = await provider.extractClaims(request.article, request.instructions, signal);
     const reusableByClaim = new Map<string, FactCheckFinding>();
     for (const finding of request.reusableFactFindings ?? []) {
         const key = normalizeClaim(finding.claim);
@@ -40,8 +40,8 @@ export async function* streamFactCheck({ request, signal, provider }: { request:
         return;
     }
 
-    const research = await provider.researchClaims(claimsToCheck, signal);
-    const evaluation = await provider.evaluateClaims(research, signal);
+    const research = await provider.researchClaims(claimsToCheck, request.instructions, signal);
+    const evaluation = await provider.evaluateClaims(research, request.instructions, signal);
     const factCheck: FactCheck = {
         findings: [...reusedFindings, ...evaluation.findings.map((finding) => ({
             ...finding,
