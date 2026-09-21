@@ -53,6 +53,16 @@ describe("Editorial Assistant composer", () => {
         expect(onRequest).toHaveBeenCalledWith("", "narrative_draft", undefined, 0);
     });
 
+    it("shows built-in Skills by default", async () => {
+        const user = userEvent.setup();
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn().mockResolvedValue(undefined)} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} assistantMessages={[]} authorSkills={[{ reference: { source: "author", id: "house-style", version: "1" }, name: "House style", description: "Apply the Author's preferred house style." }]} />);
+        const panelScope = within(panel.container);
+
+        await user.click(panelScope.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        expect(panelScope.getByRole("option", { name: "Skill Creator" })).toBeTruthy();
+        expect(panelScope.queryByRole("option", { name: "House style" })).toBeNull();
+    });
+
     it("undoes composer edits with Ctrl+Z", async () => {
         const user = userEvent.setup();
         const execute = vi.fn();

@@ -193,6 +193,7 @@ export { articlesPath, createArticleArchivePath, createArticlePinPath, pinnedArt
 export {
     ASSISTANT_EVENT,
     BUILT_IN_SKILL,
+    assistantSkillsPath,
     createAssistantMessagesPath,
     createAssistantRequestsPath,
     createAssistantTranslationRejectionPath,

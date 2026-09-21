@@ -1,4 +1,4 @@
-import type { AssistantAuthorizedAction, BuiltInSkillId, EditorialOperation } from "@skladno/shared";
+import type { AssistantAuthorizedAction, EditorialOperation } from "@skladno/shared";
 
 import type { EditorialEngine } from "../../editorial/engine/editorial-engine.js";
 import type { ActionCapability } from "../capabilities/action-capability.js";
@@ -10,7 +10,7 @@ export interface PreparedAssistantRequest extends ReplayedAssistantRequest {
     articleContent: string;
     articleTitle: string;
     publishingCharacterLimit?: number;
-    resolvedSkillId?: BuiltInSkillId;
+    resolvedSkillId?: string;
     operation?: EditorialOperation;
     engine: EditorialEngine;
     usesCapabilityLoop: boolean;

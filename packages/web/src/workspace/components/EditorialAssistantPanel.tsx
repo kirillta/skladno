@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEventHandler } from "react";
 import { useIntl, type IntlShape } from "react-intl";
-import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, areKeyBindingsEqual, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, resolveKeyBindings, type AssistantCapabilityActivity, type AssistantCheckpointComposer, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
+import { BUILT_IN_SKILL, KEY_BINDING_COMMAND, areKeyBindingsEqual, builtInSkillScopeCompatibility, builtInSkills, defaultGeneralSettings, isBuiltInSkillId, resolveKeyBindings, type AssistantCapabilityActivity, type AssistantCheckpointComposer, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantMessage, type AssistantSkillSummary, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
 import { getEventKeyBinding, type KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
@@ -10,6 +10,7 @@ import { AssistantTimeline } from "./assistant/AssistantTimeline.js";
 import { skillMessages } from "./assistant/assistant-messages.js";
 import type { AssistantSelectionScope, StreamedAssistantMessage } from "../state/assistant-messages-state.js";
 import { AssistantCheckpointDialog } from "./assistant/AssistantCheckpointDialog.js";
+import type { AssistantComposerSkill } from "./assistant/AssistantSkillTagNode.js";
 
 
 type AssistantState = "idle" | "streaming" | "error";
@@ -29,8 +30,12 @@ function getSkillAliasKey(skill: BuiltInSkillId) {
             return "styleReview";
         case BUILT_IN_SKILL.SKILL_CREATOR:
             return "skillCreator";
-        default:
+        case BUILT_IN_SKILL.TRANSLATION:
             return "translation";
+        default: {
+            const unhandledSkill: never = skill;
+            return unhandledSkill;
+        }
     }
 }
 
@@ -45,12 +50,14 @@ function getSlashQueryAt(guidance: string, caretOffset: number): { start: number
 }
 
 
-function useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode, shortcutOverrides, restoredComposer }: {
+function useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, authorSkills = [], loadAuthorSkills, dispatcher, selection, clearSelection, assistantSendMode, shortcutOverrides, restoredComposer }: {
     intl: IntlShape;
     state: AssistantState;
-    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
+    onRequest: (authorMessage: string, skillId?: string, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
     onCancel: () => void;
     translationLanguages: readonly string[];
+    authorSkills?: readonly AssistantSkillSummary[];
+    loadAuthorSkills?: () => Promise<void>;
     dispatcher?: KeyBindingDispatcher;
     selection?: AssistantSelectionScope;
     clearSelection?: () => void;
@@ -60,7 +67,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
 }) {
     const [guidance, setGuidance] = useState("");
     const [quickActionsOpen, setQuickActionsOpen] = useState(false);
-    const [selectedSkill, setSelectedSkill] = useState<BuiltInSkillId>();
+    const [selectedSkill, setSelectedSkill] = useState<AssistantComposerSkill>();
     const [skillOffset, setSkillOffset] = useState(0);
     const [slashRange, setSlashRange] = useState<{ start: number; end: number }>();
     const [slashQuery, setSlashQuery] = useState("");
@@ -72,23 +79,31 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
             return;
 
         setGuidance(restoredComposer.text);
-        setSelectedSkill(restoredComposer.skillId);
+        setSelectedSkill(restoredComposer.skillId ? { id: restoredComposer.skillId, name: isBuiltInSkillId(restoredComposer.skillId) ? intl.formatMessage({ id: skillMessages[restoredComposer.skillId] }) : restoredComposer.skillId } : undefined);
         setSkillOffset(restoredComposer.skillOffset ?? 0);
         setCaretOffset(restoredComposer.text.length);
         setRestoredTargetLanguage(restoredComposer.targetLanguage);
         clearSelection?.();
         window.requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-assistant-composer]")?.focus());
-    }, [clearSelection, restoredComposer]);
-    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0) && (!selection || !selectedSkill || builtInSkillScopeCompatibility[selectedSkill].includes("selection"));
-    const availableSkills = builtInSkills.filter((skill) => skill !== BUILT_IN_SKILL.SKILL_CREATOR);
-    const pickerSkills = slashRange === undefined ? availableSkills : availableSkills.filter((skill) => {
-        const aliases = intl.formatMessage({ id: `assistant.skill.${getSkillAliasKey(skill)}.aliases` });
+    }, [clearSelection, intl, restoredComposer]);
+    const canSend = state !== "streaming" && Boolean(guidance.trim() || selectedSkill) && (selectedSkill?.id !== BUILT_IN_SKILL.TRANSLATION || translationLanguages.length > 0) && (!selection || !selectedSkill || !isBuiltInSkillId(selectedSkill.id) || builtInSkillScopeCompatibility[selectedSkill.id].includes("selection"));
+    const builtInPickerSkills = builtInSkills.map((id) => ({ id, name: intl.formatMessage({ id: skillMessages[id] }) }));
+    const pickerSkills = (slashRange === undefined ? builtInPickerSkills : [...builtInPickerSkills, ...authorSkills.map(({ reference, name }) => ({ id: reference.id, name }))]).filter((skill) => {
+        const aliases = isBuiltInSkillId(skill.id) ? intl.formatMessage({ id: `assistant.skill.${getSkillAliasKey(skill.id)}.aliases` }) : "";
         const query = slashQuery.toLocaleLowerCase();
 
         return !query
-            || intl.formatMessage({ id: skillMessages[skill] }).toLocaleLowerCase().includes(query)
+            || skill.name.toLocaleLowerCase().includes(query)
             || aliases.toLocaleLowerCase().split(",").some((alias) => alias.trim().startsWith(query));
     });
+
+    const slashPickerWasOpen = useRef(false);
+    useEffect(() => {
+        if (slashRange && !slashPickerWasOpen.current)
+            void loadAuthorSkills?.();
+
+        slashPickerWasOpen.current = slashRange !== undefined;
+    }, [loadAuthorSkills, slashRange]);
 
 
     function focusQuickAction(index: number) {
@@ -101,7 +116,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
     }
 
 
-    const selectSkill = useCallback((skill: BuiltInSkillId) => {
+    const selectSkill = useCallback((skill: AssistantComposerSkill) => {
         const insertionOffset = selectedSkill ? skillOffset : slashRange?.start ?? caretOffset;
         const nextGuidance = slashRange
             ? `${guidance.slice(0, slashRange.start)}${guidance.slice(slashRange.end)}`
@@ -122,7 +137,7 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
 
         const authorMessage = guidance.trim();
         const leadingWhitespace = guidance.length - guidance.trimStart().length;
-        const requestSkill = selectedSkill;
+        const requestSkill = selectedSkill?.id;
         const selectedSkillOffset = requestSkill ? Math.max(0, skillOffset - leadingWhitespace) : undefined;
 
         setGuidance("");
@@ -205,7 +220,26 @@ function useAssistantComposer({ intl, state, onRequest, onCancel, translationLan
         }
     };
 
-    return { canSend, guidance, selectedSkill, skillOffset, caretOffset, selection, clearSelection, quickActionsOpen, availableSkills: pickerSkills, activeSkillIndex, incompatibleSelectionSkill: Boolean(selection && selectedSkill && !builtInSkillScopeCompatibility[selectedSkill].includes("selection")), setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction, send, onChange, onKeyDown };
+    return {
+        canSend,
+        guidance,
+        selectedSkill,
+        skillOffset,
+        caretOffset,
+        selection,
+        clearSelection,
+        quickActionsOpen,
+        availableSkills: pickerSkills,
+        activeSkillIndex,
+        incompatibleSelectionSkill: Boolean(selection && selectedSkill && isBuiltInSkillId(selectedSkill.id) && !builtInSkillScopeCompatibility[selectedSkill.id].includes("selection")),
+        setQuickActionsOpen,
+        setActiveSkillIndex,
+        selectSkill,
+        focusQuickAction,
+        send,
+        onChange,
+        onKeyDown
+    };
 }
 
 
@@ -247,11 +281,13 @@ interface EditorialAssistantData {
     hasUnavailableAiConnection?: boolean;
     checkpointPreview?: AssistantCheckpointPreview;
     restoredComposer?: AssistantCheckpointComposer;
+    authorSkills?: readonly AssistantSkillSummary[];
 }
 
 
 interface EditorialAssistantActions {
-    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
+    onRequest: (authorMessage: string, skillId?: string, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
+    loadAuthorSkills?: () => Promise<void>;
     onCancel: () => void;
     onRetry?: (requestId: string) => void;
     dispatcher?: KeyBindingDispatcher;
@@ -272,11 +308,11 @@ interface EditorialAssistantLayout {
 
 
 export function EditorialAssistantPanel({ data, actions, layout }: { data: EditorialAssistantData; actions: EditorialAssistantActions; layout: EditorialAssistantLayout }) {
-    const { state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, checkpointPreview, restoredComposer } = data;
-    const { onRequest, onCancel, onRetry, dispatcher, shortcutOverrides, openView, clearSelection, openSettings, previewCheckpoint, restoreCheckpoint, closeCheckpoint } = actions;
+    const { state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, checkpointPreview, restoredComposer, authorSkills } = data;
+    const { onRequest, onCancel, onRetry, loadAuthorSkills, dispatcher, shortcutOverrides, openView, clearSelection, openSettings, previewCheckpoint, restoreCheckpoint, closeCheckpoint } = actions;
     const { collapsed, setCollapsed } = layout;
     const intl = useIntl();
-    const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {}, restoredComposer });
+    const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, authorSkills, loadAuthorSkills, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {}, restoredComposer });
     const elapsedDuration = useElapsedDuration(state, intl);
     const checkpointOrigin = useRef<HTMLElement>();
     const openCheckpoint = useCallback((messageId: string) => {

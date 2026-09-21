@@ -1,4 +1,4 @@
-import type { GeneralSettings, KeyBindingOverrides } from "@skladno/shared";
+import type { AssistantSkillSummary, GeneralSettings, KeyBindingOverrides } from "@skladno/shared";
 import type { ReactNode } from "react";
 import { useIntl } from "react-intl";
 
@@ -28,6 +28,7 @@ interface WorkspaceScreenContent {
     corpus: StyleCorpusState;
     publishing: PublishingState;
     generalSettings: GeneralSettings;
+    authorSkills: readonly AssistantSkillSummary[];
 }
 
 
@@ -45,6 +46,7 @@ interface WorkspaceScreenEnvironment {
     dispatcher: KeyBindingDispatcher;
     shortcutOverrides: KeyBindingOverrides;
     hasUsableAiConnection: boolean | undefined;
+    loadAuthorSkills: () => Promise<void>;
     overlays: ReactNode;
 }
 
@@ -62,9 +64,9 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
     environment: WorkspaceScreenEnvironment;
     selection: WorkspaceScreenSelection;
 }) {
-    const { layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings } = content;
+    const { layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings, authorSkills } = content;
     const { createBlank, runFactCheck, runTranslation, rejectTranslation, openSettings, openModelSettings } = actions;
-    const { dispatcher, shortcutOverrides, hasUsableAiConnection, overlays } = environment;
+    const { dispatcher, shortcutOverrides, hasUsableAiConnection, loadAuthorSkills, overlays } = environment;
     const { assistantSelection, onSelectionChange, clearAssistantSelection } = selection;
     const { notifyError } = useNotifications();
     return <WorkspaceShell
@@ -100,8 +102,9 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
                     generalSettings,
                     checkpointPreview: assistant.checkpointPreview,
                     restoredComposer: assistant.restoredComposer,
+                    authorSkills,
                 }}
-                actions={{ onRequest: assistant.request, onCancel: assistant.cancel, onRetry: assistant.retry, dispatcher, shortcutOverrides, openView: layout.setView, openSettings, clearSelection: clearAssistantSelection, previewCheckpoint: assistant.previewCheckpoint, restoreCheckpoint: assistant.restoreCheckpoint, closeCheckpoint: assistant.closeCheckpoint }}
+                actions={{ onRequest: assistant.request, onCancel: assistant.cancel, onRetry: assistant.retry, loadAuthorSkills, dispatcher, shortcutOverrides, openView: layout.setView, openSettings, clearSelection: clearAssistantSelection, previewCheckpoint: assistant.previewCheckpoint, restoreCheckpoint: assistant.restoreCheckpoint, closeCheckpoint: assistant.closeCheckpoint }}
                 layout={{ collapsed: layout.assistantCollapsed, setCollapsed: layout.setAssistantCollapsed }} />,
             children: <>
                 {hasUsableAiConnection === false && <AiConnectionWarning openModelSettings={openModelSettings} />}

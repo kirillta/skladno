@@ -1,6 +1,5 @@
 export { BUILT_IN_SKILL, builtInSkillScopeCompatibility, builtInSkills, isBuiltInSkillId, legacyEditorialOperationSkillMap, resolveBuiltInSkillId } from "./assistant-skills.js";
 export type { BuiltInSkillId } from "./assistant-skills.js";
-import type { BuiltInSkillId } from "./assistant-skills.js";
 import type { AssistantEvent } from "./assistant-events.js";
 import type { Article } from "../articles/article/article.js";
 
@@ -92,8 +91,8 @@ export interface AssistantRequest {
     articleId: string;
     baseRevisionId: string;
     scope: AssistantRequestScope;
-    explicitSkillId?: BuiltInSkillId;
-    resolvedSkillId?: BuiltInSkillId;
+    explicitSkillId?: string;
+    resolvedSkillId?: string;
     skillSource?: AssistantSkillSource;
     status: AssistantRequestStatus;
     retryOfRequestId?: string;
@@ -123,7 +122,7 @@ export interface AssistantMessage {
     status: AssistantMessageStatus;
     template?: AssistantMessageTemplate;
     content?: string;
-    skillId?: BuiltInSkillId;
+    skillId?: string;
     skillSource?: AssistantSkillSource;
     skillOffset?: number;
     selectionText?: string;
@@ -155,6 +154,7 @@ export interface AssistantEditorialResult {
 
 export const createAssistantMessagesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/messages`;
 export const createAssistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
+export const assistantSkillsPath = "/api/assistant/skills";
 export const createAssistantTranslationRejectionPath = (articleId: string, editorialArtifactId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(editorialArtifactId)}/translation-rejection`;
 export const createAssistantCheckpointPreviewPath = (articleId: string, messageId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(messageId)}/checkpoint`;
 export const createAssistantCheckpointRestorePath = (articleId: string, messageId: string) => `${createAssistantCheckpointPreviewPath(articleId, messageId)}/restore`;
@@ -172,7 +172,7 @@ export interface AssistantCheckpointCounts {
 
 export interface AssistantCheckpointComposer {
     text: string;
-    skillId?: BuiltInSkillId;
+    skillId?: string;
     skillOffset?: number;
     targetLanguage?: string;
     usedSelection: boolean;
@@ -210,7 +210,7 @@ export interface NewAssistantRequest {
     requestId: string;
     authorMessage: string;
     scope: AssistantRequestScope;
-    explicitSkillId?: BuiltInSkillId;
+    explicitSkillId?: string;
     skillOffset?: number;
     targetLanguage?: string;
 }
@@ -231,6 +231,7 @@ export type { AssistantEvent, FactCheckClaimPreview } from "./assistant-events.j
 
 
 export interface AssistantClient {
+    listAssistantSkills(): Promise<AssistantSkillSummary[]>;
     streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void>;
     rejectTranslation(articleId: string, editorialArtifactId: string): Promise<void>;
     previewAssistantCheckpoint(articleId: string, messageId: string): Promise<AssistantCheckpointPreview>;

@@ -5,14 +5,14 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import type { BuiltInSkillId, KeyBindingOverrides } from "@skladno/shared";
+import type { KeyBindingOverrides } from "@skladno/shared";
 import { KEY_BINDING_COMMAND } from "@skladno/shared";
 import { IconButton } from "../../../ui/primitives.js";
 import { SendIcon, StopIcon } from "../../../ui/icons.js";
 import { getShortcutHint } from "../../../key-bindings/shortcut-hint.js";
 import type { AssistantSelectionScope } from "../../state/assistant-messages-state.js";
 import { AssistantQuickActions, SelectionChip } from "./AssistantComposerActions.js";
-import { AssistantSkillTagNode } from "./AssistantSkillTagNode.js";
+import { AssistantSkillTagNode, type AssistantComposerSkill } from "./AssistantSkillTagNode.js";
 import { ComposerBridge, PickerKeyboard, PlainTextPaste, type AssistantComposerValue, type AssistantSkillPickerControls } from "./assistant-composer-plugins.js";
 
 export type { AssistantComposerValue } from "./assistant-composer-plugins.js";
@@ -22,7 +22,7 @@ type AssistantComposerProps = AssistantSkillPickerControls & {
     state: "idle" | "streaming" | "error";
     canSend: boolean;
     guidance: string;
-    selectedSkill?: BuiltInSkillId;
+    selectedSkill?: AssistantComposerSkill;
     skillOffset: number;
     caretOffset: number;
     selection?: AssistantSelectionScope;
@@ -41,7 +41,7 @@ interface AssistantComposerState {
     state: AssistantComposerProps["state"];
     canSend: boolean;
     guidance: string;
-    selectedSkill?: BuiltInSkillId;
+    selectedSkill?: AssistantComposerSkill;
     skillOffset: number;
     caretOffset: number;
     selection?: AssistantSelectionScope;
@@ -74,7 +74,7 @@ export function AssistantComposer({ state, picker, actions }: { state: Assistant
             <div className="min-h-11 flex-1">
                 <SelectionChip selection={selection} clearSelection={clearSelection} />
                 <LexicalComposer initialConfig={{ namespace: "skladno-assistant-composer", nodes: [AssistantSkillTagNode], onError: () => undefined }}>
-                    <RichTextPlugin contentEditable={<ContentEditable ref={composer} data-focus-area-entry data-assistant-composer role="combobox" aria-autocomplete="list" aria-expanded={quickActionsOpen} aria-activedescendant={quickActionsOpen && activeSkill ? `assistant-skill-option-${activeSkill}` : undefined} aria-multiline="true" aria-label={intl.formatMessage({ id: "assistant.guidance" })} aria-controls={quickActionsOpen ? "assistant-skill-picker" : undefined} className="min-h-11 whitespace-pre-wrap text-sm leading-5 text-ink outline-none focus-visible:outline focus-visible:outline-brand empty:before:content-[attr(data-placeholder)] empty:before:text-ink/45" data-placeholder={!guidance && !selectedSkill ? intl.formatMessage({ id: "assistant.guidancePlaceholder" }) : undefined} onKeyDown={onKeyDown} />} placeholder={null} ErrorBoundary={LexicalErrorBoundary} />
+                    <RichTextPlugin contentEditable={<ContentEditable ref={composer} data-focus-area-entry data-assistant-composer role="combobox" aria-autocomplete="list" aria-expanded={quickActionsOpen} aria-activedescendant={quickActionsOpen && activeSkill ? `assistant-skill-option-${activeSkill.id}` : undefined} aria-multiline="true" aria-label={intl.formatMessage({ id: "assistant.guidance" })} aria-controls={quickActionsOpen ? "assistant-skill-picker" : undefined} className="min-h-11 whitespace-pre-wrap text-sm leading-5 text-ink outline-none focus-visible:outline focus-visible:outline-brand empty:before:content-[attr(data-placeholder)] empty:before:text-ink/45" data-placeholder={!guidance && !selectedSkill ? intl.formatMessage({ id: "assistant.guidancePlaceholder" }) : undefined} onKeyDown={onKeyDown} />} placeholder={null} ErrorBoundary={LexicalErrorBoundary} />
                     <HistoryPlugin />
                     <ComposerBridge value={value} onChange={onChange} />
                     <PlainTextPaste />

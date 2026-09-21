@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, BUILT_IN_SKILL, HTTP_STATUS, type BuiltInSkillId } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, HTTP_STATUS, isBuiltInSkillId } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
 import { EDITORIAL_ENGINE_EVENT } from "../../editorial/engine/editorial-engine-events.js";
@@ -87,7 +87,10 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private initialCapabilities(skill: BuiltInSkillId): readonly string[] {
+    private initialCapabilities(skill: string): readonly string[] {
+        if (!isBuiltInSkillId(skill))
+            return [];
+
         switch (skill) {
             case BUILT_IN_SKILL.FACT_CHECKING:
                 return [EDITORIAL_CAPABILITY.FACT_CHECK, EDITORIAL_CAPABILITY.INSPECT_FACT_CHECKS];
@@ -212,7 +215,7 @@ export class AssistantCapabilityLoop {
             context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
             requestId: request.requestId,
             authorContext: request.authorMessage,
-            ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId } : {}),
+            ...(request.resolvedSkillId && isBuiltInSkillId(request.resolvedSkillId) ? { skillId: request.resolvedSkillId } : {}),
             ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
             ...(input.operation ? { operation: input.operation as StreamContext["operation"] } : {}),
             ...(input.targetLanguage ? { targetLanguage: input.targetLanguage } : {}),

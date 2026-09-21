@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantEvent, type AssistantMessage, type RestoreAssistantCheckpointResult, type TimedTelemetryCapture } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, isBuiltInSkillId, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantEvent, type AssistantMessage, type RestoreAssistantCheckpointResult, type TimedTelemetryCapture } from "@skladno/shared";
 
 import { AssistantCapabilityLoop } from "./capabilities/assistant-capability-loop.js";
 import { AssistantCompletion, getResponseKind } from "./completion/assistant-completion.js";
@@ -271,7 +271,7 @@ export class AssistantService {
             ...(request.operation === EDITORIAL_OPERATION.TRANSLATION ? { articleTitle: request.articleTitle } : {}),
             ...(request.scope.kind === "selection" ? { articleSelection: true } : {}),
             authorContext: request.authorMessage,
-            skillId: request.resolvedSkillId!,
+            skillId: isBuiltInSkillId(request.resolvedSkillId) ? request.resolvedSkillId : undefined,
             ...(request.scope.kind === "selection" ? { surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
             ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
             ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),

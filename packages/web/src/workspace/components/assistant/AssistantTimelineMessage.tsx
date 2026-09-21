@@ -1,4 +1,4 @@
-import { BUILT_IN_SKILL, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
+import { BUILT_IN_SKILL, isBuiltInSkillId, type AssistantMessage, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
 import { Button, IconButton } from "../../../ui/primitives.js";
 import { StatusIcon, UndoIcon } from "../../../ui/icons.js";
 import { formatDateTime } from "../../../i18n/formatting.js";
@@ -10,7 +10,12 @@ import { AssistantMarkdown } from "./AssistantMarkdown.js";
 type AssistantView = "proposal" | "fact-check" | "style-profile" | "translations";
 
 
-function getMessageLabel(message: AssistantMessage, skillId: BuiltInSkillId | undefined, intl: ReturnType<typeof useIntl>) {
+function getSkillLabel(skillId: string, intl: ReturnType<typeof useIntl>) {
+    return isBuiltInSkillId(skillId) ? intl.formatMessage({ id: skillMessages[skillId] }) : skillId;
+}
+
+
+function getMessageLabel(message: AssistantMessage, skillId: string | undefined, intl: ReturnType<typeof useIntl>) {
     if (message.responseKind === "proposal_prepared" && skillId === BUILT_IN_SKILL.TALKING_POINTS)
         return intl.formatMessage({ id: "assistant.response.talkingPointsProposal" });
 
@@ -18,10 +23,10 @@ function getMessageLabel(message: AssistantMessage, skillId: BuiltInSkillId | un
         return intl.formatMessage({ id: "assistant.response.narrativeDraftProposal" });
 
     if (message.responseKind)
-        return intl.formatMessage({ id: responseMessages[message.responseKind] }, skillId ? { skill: intl.formatMessage({ id: skillMessages[skillId] }) } : {});
+        return intl.formatMessage({ id: responseMessages[message.responseKind] }, skillId ? { skill: getSkillLabel(skillId, intl) } : {});
 
     if (skillId)
-        return intl.formatMessage({ id: skillMessages[skillId] });
+        return getSkillLabel(skillId, intl);
 
     return message.role === "author"
         ? intl.formatMessage({ id: "assistant.authorMessage" })
@@ -99,7 +104,7 @@ function getViewLabel(view: AssistantView, intl: ReturnType<typeof useIntl>) {
 }
 
 
-export function AssistantTimelineMessage({ message, factCheckClaims, openView, onRetry, onCheckpoint, generalSettings, skillByRequest }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, BuiltInSkillId> }) {
+export function AssistantTimelineMessage({ message, factCheckClaims, openView, onRetry, onCheckpoint, generalSettings, skillByRequest }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, string> }) {
     const intl = useIntl();
     const authorMessage = message.role === "author";
     const skillId = message.skillId ?? (message.requestId ? skillByRequest.get(message.requestId) : undefined);
@@ -114,7 +119,7 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
     const messageStatusLabel = getStatusLabel(message.status, intl);
     const messageDateTime = formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
     const skillUsedLabel = message.skillSource ? intl.formatMessage({ id: "assistant.skillUsed" }) : undefined;
-    const skillTitle = skillId ? intl.formatMessage({ id: skillMessages[skillId] }) : undefined;
+    const skillTitle = skillId ? getSkillLabel(skillId, intl) : undefined;
 
     return <article className={authorMessage ? "ml-6 rounded-panel border border-brand/45 bg-brand-soft p-3" : "p-0"} aria-label={authorMessage ? label : undefined}>
         {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
@@ -123,7 +128,7 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
                 <span className="relative -top-px max-w-48 truncate">{getSelectionPreview(selectionText)}</span>
             </span>}
             {skillOffset === undefined ? messageContent : <>{messageContent.slice(0, skillOffset)}
-                <span className="mx-1 inline-flex h-5 items-center align-middle rounded-full border border-brand/45 bg-surface-raised px-1.5 text-xs font-semibold text-brand">{skillId && intl.formatMessage({ id: skillMessages[skillId] })}</span>
+                <span className="mx-1 inline-flex h-5 items-center align-middle rounded-full border border-brand/45 bg-surface-raised px-1.5 text-xs font-semibold text-brand">{skillId && getSkillLabel(skillId, intl)}</span>
                 {messageContent.slice(skillOffset)}
             </>}
         </p>}

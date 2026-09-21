@@ -279,6 +279,7 @@ export const messages = {
     "assistant.skill.skillCreator.label": "Skill Creator",
     "assistant.skill.skillCreator.aliases": "create skill,skill creator",
     "assistant.skillResultCount": "{count, plural, =0 {No skills} one {# skill} other {# skills}} available",
+    "assistant.skillNoMatches": "No matching Skills",
     "assistant.selectionSkillUnavailable": "Translation uses the whole Article. Clear the selection to send it.",
     "operations.thesisToNarrative": "Thesis to narrative",
     "operations.flowRevision": "Flow revision",

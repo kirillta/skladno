@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { BUILT_IN_SKILL, defaultPublishLimitProfileId, ELECTRON_LIFECYCLE_EVENT, isArticleLanguage, isPublishLimitProfileId, KEY_BINDING_COMMAND, type KeyBindingOverrides } from "@skladno/shared";
+import { BUILT_IN_SKILL, defaultPublishLimitProfileId, ELECTRON_LIFECYCLE_EVENT, isArticleLanguage, isPublishLimitProfileId, KEY_BINDING_COMMAND, type AssistantSkillSummary, type KeyBindingOverrides } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../application/client.js";
 import { Banner } from "../ui/primitives.js";
 import { ApplicationSettings } from "../settings/ApplicationSettings.js";
@@ -101,6 +101,17 @@ function useAssistantSelection(workspace: ArticleWorkspaceState) {
     }, []);
 
     return { assistantSelection, onSelectionChange, clearAssistantSelection };
+}
+
+
+function useAuthorSkills(client: EditorialWorkspaceClient) {
+    const [authorSkills, setAuthorSkills] = useState<readonly AssistantSkillSummary[]>([]);
+    const loadAuthorSkills = useCallback(async () => {
+        const skills = await client.listAssistantSkills();
+        setAuthorSkills(skills.filter((skill) => skill.reference.source === "author"));
+    }, [client]);
+
+    return { authorSkills, loadAuthorSkills };
 }
 
 
@@ -266,6 +277,7 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
             setProfileRebuilt({ articleId: workspace.selectedArticle.id, count, token: Date.now() });
     });
     const selection = useAssistantSelection(workspace);
+    const authorSkills = useAuthorSkills(client);
     const applyAssistantResult = useCallback((articleId: string, baseRevisionId: string, result: import("@skladno/shared").AssistantEditorialResult, editorialArtifactId?: string) => {
         editorial.applyAssistantResult(articleId, baseRevisionId, result, editorialArtifactId);
     }, [editorial]);
@@ -294,9 +306,9 @@ export function EditorialWorkspaceProvider({ context, navigation, bindings, upda
         return <ApplicationSettings client={client} back={backToWorkspace} initialSection={settingsSection} onKeyBindingsUpdated={onKeyBindingsUpdated} onThemeApplied={onThemeApplied} focusUpdates={focusUpdates} onUpdatesFocused={onUpdatesFocused} openQuickStart={openQuickStart} />;
 
     return <WorkspaceScreen
-        content={{ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings }}
+        content={{ layout, workspace, assistant, editorial, revisions, corpus, publishing, generalSettings, authorSkills: authorSkills.authorSkills }}
         actions={{ ...actions, rejectTranslation, openSettings: actions.enterSettings, openModelSettings }}
-        environment={{ dispatcher, shortcutOverrides: keyBindingOverrides, hasUsableAiConnection, overlays: <>
+        environment={{ dispatcher, shortcutOverrides: keyBindingOverrides, hasUsableAiConnection, loadAuthorSkills: authorSkills.loadAuthorSkills, overlays: <>
             <ExtractedRestoreRevisionDialog candidate={revisions.candidate} hasUncommittedChanges={workspace.hasUncommittedChanges} close={() => revisions.setCandidate(undefined)} restore={revisions.restore} />
             <DraftConflictDialog conflict={workspace.conflict} open={Boolean(workspace.comparisonArticleId)} close={workspace.closeComparison} resolve={workspace.resolveConflict} />
         </> }}

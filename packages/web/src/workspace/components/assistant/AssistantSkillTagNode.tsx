@@ -2,20 +2,24 @@ import { useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $applyNodeReplacement, $getNodeByKey, DecoratorNode, type LexicalNode, type NodeKey, type SerializedLexicalNode, type Spread } from "lexical";
-import type { BuiltInSkillId } from "@skladno/shared";
 import { CloseIcon } from "../../../ui/icons.js";
-import { skillMessages } from "./assistant-messages.js";
+
+
+export interface AssistantComposerSkill {
+    id: string;
+    name: string;
+}
 
 
 type SerializedAssistantSkillTagNode = Spread<{
-    skill: BuiltInSkillId;
+    skill: AssistantComposerSkill;
 }, SerializedLexicalNode>;
 
 
-function SkillTag({ skill, nodeKey }: { skill: BuiltInSkillId; nodeKey: NodeKey }) {
+function SkillTag({ skill, nodeKey }: { skill: AssistantComposerSkill; nodeKey: NodeKey }) {
     const intl = useIntl();
     const [editor] = useLexicalComposerContext();
-    const label = intl.formatMessage({ id: skillMessages[skill] });
+    const label = skill.name;
     const remove = useCallback(() => {
         editor.update(() => $getNodeByKey(nodeKey)?.remove());
         editor.focus();
@@ -29,7 +33,7 @@ function SkillTag({ skill, nodeKey }: { skill: BuiltInSkillId; nodeKey: NodeKey 
 
 
 export class AssistantSkillTagNode extends DecoratorNode<JSX.Element> {
-    __skill: BuiltInSkillId;
+    __skill: AssistantComposerSkill;
 
 
     static getType(): string {
@@ -47,7 +51,7 @@ export class AssistantSkillTagNode extends DecoratorNode<JSX.Element> {
     }
 
 
-    constructor(skill: BuiltInSkillId, key?: NodeKey) {
+    constructor(skill: AssistantComposerSkill, key?: NodeKey) {
         super(key);
         this.__skill = skill;
     }
@@ -68,7 +72,7 @@ export class AssistantSkillTagNode extends DecoratorNode<JSX.Element> {
     }
 
 
-    getSkill(): BuiltInSkillId {
+    getSkill(): AssistantComposerSkill {
         return this.getLatest().__skill;
     }
 
@@ -89,7 +93,7 @@ export class AssistantSkillTagNode extends DecoratorNode<JSX.Element> {
 }
 
 
-export function $createAssistantSkillTagNode(skill: BuiltInSkillId): AssistantSkillTagNode {
+export function $createAssistantSkillTagNode(skill: AssistantComposerSkill): AssistantSkillTagNode {
     return $applyNodeReplacement(new AssistantSkillTagNode(skill));
 }
 

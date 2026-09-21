@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { APPLICATION_ERROR, HTTP_STATUS, resolveBuiltInSkillId, type AssistantCheckpointDraftMode, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
 
 import { AssistantService, type PreparedAssistantRequest } from "../../application/assistant/assistant-service.js";
+import type { AssistantSkillCatalog } from "../../application/assistant/skills/assistant-skill-catalog.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../application/editorial/engine/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../application/editorial/engine/editorial-engine-error.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
@@ -41,9 +42,7 @@ function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequ
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
     const explicitSkillValue = body.explicitSkillId === undefined ? undefined : parseString(body.explicitSkillId, "explicitSkillId");
-    const explicitSkillId = explicitSkillValue && resolveBuiltInSkillId(explicitSkillValue);
-    if (explicitSkillValue && !explicitSkillId)
-        throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
+    const explicitSkillId = explicitSkillValue && (resolveBuiltInSkillId(explicitSkillValue) ?? explicitSkillValue);
 
     const targetLanguage = body.targetLanguage === undefined ? undefined : parseString(body.targetLanguage, "targetLanguage");
     const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
@@ -104,6 +103,11 @@ async function streamAssistantRequest(request: PreparedAssistantRequest, incomin
 
 export function listAssistantMessagesRoute(response: ServerResponse, articleId: string, assistant: AssistantService): void {
     writeJson(response, HTTP_STATUS.OK, assistant.listMessages(articleId));
+}
+
+
+export function listAssistantSkillsRoute(response: ServerResponse, skills: AssistantSkillCatalog): void {
+    writeJson(response, HTTP_STATUS.OK, skills.discover());
 }
 
 

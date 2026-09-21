@@ -1,11 +1,11 @@
-import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantCheckpointPreviewPath, createAssistantCheckpointRestorePath, createAssistantMessagesPath, createAssistantRequestsPath, createAssistantTranslationRejectionPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
+import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, assistantSkillsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantCheckpointPreviewPath, createAssistantCheckpointRestorePath, createAssistantMessagesPath, createAssistantRequestsPath, createAssistantTranslationRejectionPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, reorderPinnedArticlesRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, setArticleArchivedRoute, setArticlePinnedRoute, updateArticleRoute } from "./articles-route.js";
-import { createAssistantRequestRoute, listAssistantMessagesRoute, previewAssistantCheckpointRoute, rejectAssistantTranslationRoute, restoreAssistantCheckpointRoute } from "./assistant-route.js";
+import { createAssistantRequestRoute, listAssistantMessagesRoute, listAssistantSkillsRoute, previewAssistantCheckpointRoute, rejectAssistantTranslationRoute, restoreAssistantCheckpointRoute } from "./assistant-route.js";
 import { handleEditorialRoute } from "./editorial-route.js";
 import { handleHealthRoute } from "./health-route.js";
 import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publish-settings-route.js";
@@ -48,10 +48,11 @@ const TEST_AI_CONNECTION_PATH = createRoutePattern(`${aiConnectionsPath}/${ROUTE
 
 
 export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics, restoreBackup?: (snapshot: Uint8Array) => Promise<void>): Router {
-    const { articles, assistant, factChecks, proposalSummaries, publishing, settings, styleCorpus } = services;
+    const { articles, assistant, factChecks, proposalSummaries, publishing, settings, skills, styleCorpus } = services;
     const router = new Router();
 
     router.register(HTTP_METHOD.GET, healthPath, (_request, response) => handleHealthRoute(response));
+    router.register(HTTP_METHOD.GET, assistantSkillsPath, (_request, response) => listAssistantSkillsRoute(response, skills));
     router.register(HTTP_METHOD.GET, ASSISTANT_MESSAGES_PATH, (_request, response, parameters) => listAssistantMessagesRoute(response, parameters[0]!, assistant));
     router.register(HTTP_METHOD.POST, ASSISTANT_REQUESTS_PATH, (request, response, parameters) => createAssistantRequestRoute(request, response, parameters[0]!, assistant, diagnostics));
     router.register(HTTP_METHOD.POST, ASSISTANT_TRANSLATION_REJECTION_PATH, (_request, response, parameters) => rejectAssistantTranslationRoute(response, parameters[0]!, parameters[1]!, assistant));

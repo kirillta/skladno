@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { IntlShape } from "react-intl";
-import { APPLICATION_ERROR, ApplicationClientError, type AssistantCapabilityActivity, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, type AssistantCapabilityActivity, type AssistantEvent, type AssistantMessage, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { getErrorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
@@ -150,7 +150,7 @@ async function performNewAssistantRequest({ options, article, authorMessage, exp
     options: AssistantRequestActionsOptions;
     article: SelectedArticle;
     authorMessage: string;
-    explicitSkillId: BuiltInSkillId | undefined;
+    explicitSkillId: string | undefined;
     targetLanguage: string | undefined;
     skillOffset: number | undefined;
 }) {
@@ -201,7 +201,7 @@ function appendPendingMessage({ store, articleId, requestId, authorMessage, expl
     articleId: string;
     requestId: string;
     authorMessage: string;
-    explicitSkillId: BuiltInSkillId | undefined;
+    explicitSkillId: string | undefined;
     skillOffset: number | undefined;
     selection: AssistantSelectionScope | undefined;
 }) {
@@ -219,7 +219,7 @@ function appendPendingMessage({ store, articleId, requestId, authorMessage, expl
 }
 
 
-async function requestAssistant(options: AssistantRequestActionsOptions & { authorMessage: string; explicitSkillId?: BuiltInSkillId; targetLanguage?: string | readonly string[]; skillOffset?: number }): Promise<void> {
+async function requestAssistant(options: AssistantRequestActionsOptions & { authorMessage: string; explicitSkillId?: string; targetLanguage?: string | readonly string[]; skillOffset?: number }): Promise<void> {
     const { workspace, targetLanguage, authorMessage, explicitSkillId, skillOffset } = options;
     const article = workspace.selectedArticle;
     if (!article)
@@ -256,7 +256,7 @@ async function retryAssistant(options: AssistantRequestActionsOptions & { retryO
 
 
 export function useAssistantRequestActions(options: AssistantRequestActionsOptions) {
-    const request = useCallback((authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string | readonly string[], skillOffset?: number) => requestAssistant({ ...options, authorMessage, explicitSkillId, targetLanguage, skillOffset }), [options]);
+    const request = useCallback((authorMessage: string, explicitSkillId?: string, targetLanguage?: string | readonly string[], skillOffset?: number) => requestAssistant({ ...options, authorMessage, explicitSkillId, targetLanguage, skillOffset }), [options]);
     const retry = useCallback((retryOfRequestId: string) => retryAssistant({ ...options, retryOfRequestId }), [options]);
     return { request, retry };
 }

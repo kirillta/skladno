@@ -172,6 +172,7 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         acceptProposal: (articleId, input) => invoke(ELECTRON_APPLICATION_METHOD.acceptProposal, articleId, input),
         summarizeProposal: (articleId, input) => invoke(ELECTRON_APPLICATION_METHOD.summarizeProposal, articleId, input),
         restoreRevision: (articleId, revisionId) => invoke(ELECTRON_APPLICATION_METHOD.restoreRevision, articleId, revisionId),
+        listAssistantSkills: () => invoke(ELECTRON_APPLICATION_METHOD.listAssistantSkills),
         listAssistantMessages: (articleId) => invoke(ELECTRON_APPLICATION_METHOD.listAssistantMessages, articleId),
         rejectTranslation: (articleId, editorialArtifactId) => invoke(ELECTRON_APPLICATION_METHOD.rejectTranslation, articleId, editorialArtifactId),
         previewAssistantCheckpoint: (articleId, messageId) => invoke(ELECTRON_APPLICATION_METHOD.previewAssistantCheckpoint, articleId, messageId),

@@ -1,13 +1,12 @@
 import { useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_ESCAPE_COMMAND, KEY_TAB_COMMAND, PASTE_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical";
-import type { BuiltInSkillId } from "@skladno/shared";
-import { $createAssistantSkillTagNode, $isAssistantSkillTagNode, type AssistantSkillTagNode } from "./AssistantSkillTagNode.js";
+import { $createAssistantSkillTagNode, $isAssistantSkillTagNode, type AssistantComposerSkill, type AssistantSkillTagNode } from "./AssistantSkillTagNode.js";
 
 
 export interface AssistantComposerValue {
     guidance: string;
-    selectedSkill?: BuiltInSkillId;
+    selectedSkill?: AssistantComposerSkill;
     skillOffset: number;
     caretOffset: number;
 }
@@ -15,10 +14,10 @@ export interface AssistantComposerValue {
 
 export interface AssistantSkillPickerControls {
     quickActionsOpen: boolean;
-    availableSkills: readonly BuiltInSkillId[];
+    availableSkills: readonly AssistantComposerSkill[];
     activeSkillIndex: number;
     setQuickActionsOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-    selectSkill: (skill: BuiltInSkillId) => void;
+    selectSkill: (skill: AssistantComposerSkill) => void;
     focusQuickAction: (index: number) => void;
 }
 
@@ -26,7 +25,7 @@ export interface AssistantSkillPickerControls {
 function composerValue(): AssistantComposerValue {
     const blocks = $getRoot().getChildren();
     let guidance = "";
-    let selectedSkill: BuiltInSkillId | undefined;
+    let selectedSkill: AssistantComposerSkill | undefined;
     let skillOffset = 0;
 
     blocks.forEach((block, index) => {

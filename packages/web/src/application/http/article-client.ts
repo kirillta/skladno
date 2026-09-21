@@ -1,5 +1,6 @@
 import {
     acceptProposalPath,
+    assistantSkillsPath,
     createArticleArchivePath,
     createArticleDraftPath,
     createArticlePinPath,
@@ -23,6 +24,7 @@ import {
     type ArticleRevision,
     type AssistantEvent,
     type AssistantMessage,
+    type AssistantSkillSummary,
     type AssistantCheckpointPreview,
     type RestoreAssistantCheckpointInput,
     type RestoreAssistantCheckpointResult,
@@ -45,6 +47,11 @@ import { HttpSettingsClient } from "./settings-client.js";
 
 
 export abstract class HttpArticleClient extends HttpSettingsClient {
+    async listAssistantSkills(): Promise<AssistantSkillSummary[]> {
+        return this.request<AssistantSkillSummary[]>(assistantSkillsPath);
+    }
+
+
     async listArticles(): Promise<Article[]> {
         return this.request<Article[]>(articlesPath);
     }

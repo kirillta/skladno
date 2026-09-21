@@ -1,6 +1,6 @@
 /* eslint-disable project-style/no-production-intl-provider -- This is a test-only render helper. */
 import { cleanup, render } from "@testing-library/react";
-import { defaultGeneralSettings, defaultPublishingSettings, type Article, type ArticleRevision, type AssistantCapabilityActivity, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
+import { defaultGeneralSettings, defaultPublishingSettings, type Article, type ArticleRevision, type AssistantCapabilityActivity, type AssistantMessage, type AssistantSkillSummary, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
 import { IntlProvider } from "react-intl";
 import type { ReactElement } from "react";
 import { vi } from "vitest";
@@ -18,7 +18,9 @@ export function TestEditorialAssistantPanel(props: {
     errorDetails?: string;
     activity?: AssistantCapabilityActivity;
     factCheckClaims?: FactCheckClaimPreview[];
-    onRequest: (authorMessage: string, skillId?: BuiltInSkillId, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
+    onRequest: (authorMessage: string, skillId?: string, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
+    authorSkills?: readonly AssistantSkillSummary[];
+    loadAuthorSkills?: () => Promise<void>;
     onCancel: () => void;
     onRetry?: (requestId: string) => void;
     collapsed: boolean;
@@ -38,10 +40,10 @@ export function TestEditorialAssistantPanel(props: {
     article?: Article;
     updateArticle?: (articleId: string, input: unknown) => Promise<unknown>;
 }) {
-    const { state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages, assistantMessages, streamedMessage, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings, hasUnavailableAiConnection, openSettings } = props;
+    const { state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages, assistantMessages, streamedMessage, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings, hasUnavailableAiConnection, openSettings, authorSkills, loadAuthorSkills } = props;
     return <EditorialAssistantPanel
-        data={{ state, message, errorDetails, activity, factCheckClaims, translationLanguages, assistantMessages, streamedMessage, selection, generalSettings, hasUnavailableAiConnection }}
-        actions={{ onRequest, onCancel, onRetry, dispatcher, shortcutOverrides, openView, clearSelection, openSettings }}
+        data={{ state, message, errorDetails, activity, factCheckClaims, translationLanguages, assistantMessages, streamedMessage, selection, generalSettings, hasUnavailableAiConnection, authorSkills }}
+        actions={{ onRequest, onCancel, onRetry, loadAuthorSkills, dispatcher, shortcutOverrides, openView, clearSelection, openSettings }}
         layout={{ collapsed, setCollapsed }} />;
 }
 
@@ -69,6 +71,7 @@ export function createFakeClient(): EditorialWorkspaceClient {
         discardArticleDraft: vi.fn(),
         saveArticleRevision: vi.fn(),
         listArticleRevisions: vi.fn().mockResolvedValue([]),
+        listAssistantSkills: vi.fn().mockResolvedValue([]),
         listAssistantMessages: vi.fn().mockResolvedValue([]),
         streamAssistantRequest: vi.fn(),
         acceptProposal: vi.fn(),
