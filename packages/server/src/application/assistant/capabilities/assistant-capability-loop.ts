@@ -56,9 +56,9 @@ export class AssistantCapabilityLoop {
             scope: request.scope.kind,
             instructions: selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])]),
             history: this.dependencies.conversationHistory(request.articleId, 12),
-            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: [skill.instructions, ...(skill.references ?? [])].join("\n\n"), capabilities: this.initialCapabilities(skill.reference.id) })),
+            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: [skill.instructions, ...(skill.references ?? [])].join("\n\n"), capabilities: this.initialCapabilities(skill.reference.id, request.scope.kind) })),
             tools,
-            ...(request.resolvedSkillId ? { initialActiveCapabilities: this.initialCapabilities(request.resolvedSkillId) } : {}),
+            ...(request.resolvedSkillId ? { initialActiveCapabilities: this.initialCapabilities(request.resolvedSkillId, request.scope.kind) } : {}),
         };
 
         const stream = request.engine.streamAssistant(editorialRequest, signal);
@@ -88,9 +88,9 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private initialCapabilities(skill: string): readonly string[] {
+    private initialCapabilities(skill: string, scope: "article" | "selection"): readonly string[] {
         if (!isBuiltInSkillId(skill))
-            return [];
+            return scope === "article" ? [EDITORIAL_CAPABILITY.INSPECT_ARTICLE] : [];
 
         switch (skill) {
             case BUILT_IN_SKILL.FACT_CHECKING:

@@ -63,6 +63,53 @@ test("Assistant execution loads Skills from its catalog", async () => {
 });
 
 
+test("an Author Skill inspects the current Article before following its instructions", async () => {
+    const reference: AssistantSkillReference = { source: "author", id: "no-em-dashes", version: "test" };
+    const summary: AssistantSkillSummary = { reference, name: "No em dashes", description: "Rephrase without em dashes." };
+    const source: AssistantSkillSource = {
+        id: "author",
+        summaries: () => [summary],
+        load: (candidate) => candidate === reference ? { ...summary, instructions: "Rephrase without em dashes." } : undefined,
+    };
+    const engine = {
+        async *stream() {
+            return;
+        },
+        async *streamConversation() {
+            return;
+        },
+        async *streamAssistant(modelRequest: EditorialAssistantRequest) {
+            assert.equal(modelRequest.article, "");
+            assert.deepEqual(modelRequest.initialActiveCapabilities, ["inspect_article"]);
+            const inspect = modelRequest.tools.find((tool) => tool.capability === "inspect_article");
+            assert.ok(inspect);
+            assert.deepEqual(await inspect.execute({}, new AbortController().signal), { content: "Article" });
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "response", text: "Rephrased without em dashes." } as const;
+        },
+    };
+    const request: PreparedAssistantRequest = {
+        kind: "new", requestId: "request", articleId: "article", authorMessage: "",
+        scope: { kind: "article", baseRevisionId: "revision" }, articleContent: "Article", articleTitle: "Title",
+        resolvedSkillId: reference.id, engine, usesCapabilityLoop: true,
+        capabilityActivities: [], pendingActions: [], authorizedActions: [],
+    };
+    const loop = new AssistantCapabilityLoop({
+        assistant: { setExecution: () => undefined }, engines: {},
+        capabilities: {
+            getDefinitions: () => [{ id: "inspect_article", execution: "read", allowedContext: "article", input: "none", result: "article", retry: "transient-read", activity: "Reviewing the current Article." }],
+            discover: () => [], read: () => ({ content: "Article" }), executeAction: () => ({ items: [], rules: "", status: "empty" }),
+            stream: async function* () {
+                return;
+            },
+        },
+        skills: new AssistantSkillCatalog([source]), conversationHistory: () => [],
+    });
+
+    for await (const event of loop.stream(request, new AbortController().signal))
+        assert.equal(event.type, EDITORIAL_ENGINE_EVENT.COMPLETED);
+});
+
+
 test("a resolved Skill cannot complete as a chat response without its artifact", async () => {
     const engine = {
         async *stream() {
