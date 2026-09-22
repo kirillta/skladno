@@ -10,8 +10,10 @@ import { AiSdkAssistantExecutor, createAssistantInstructions } from "./ai-sdk-as
 
 
 test("Assistant distinguishes prepared translations from linked translation Articles before rejection", () => {
-    assert.match(createAssistantInstructions({ instructions: [], skills: [] }), /matches an available Skill, load that Skill before choosing capabilities/);
-    assert.match(createAssistantInstructions({ instructions: [], skills: [] }), /inspect_translations first.*artifactId.*reject_translation.*never use inspect_linked_articles/s);
+    const instructions = createAssistantInstructions({ instructions: [], skills: [], interfaceLocale: "en" });
+    assert.match(instructions, /service messages.*Interface locale en.*ordinary conversational answers.*language of the Author's question/s);
+    assert.match(instructions, /matches an available Skill, load that Skill before choosing capabilities/);
+    assert.match(instructions, /inspect_translations first.*artifactId.*reject_translation.*never use inspect_linked_articles/s);
 });
 
 

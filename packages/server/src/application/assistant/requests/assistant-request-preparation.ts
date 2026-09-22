@@ -84,6 +84,7 @@ export class AssistantRequestPreparation {
             requestId: request.requestId,
             authorMessage: original.authorMessage,
             scope: original.scope,
+            ...(request.interfaceLocale ? { interfaceLocale: request.interfaceLocale } : {}),
             ...(original.explicitSkillId ? { explicitSkillId: original.explicitSkillId } : {}),
             ...(original.skillOffset === undefined ? {} : { skillOffset: original.skillOffset }),
             ...(original.targetLanguage ? { targetLanguage: original.targetLanguage } : {}),

@@ -3,6 +3,7 @@ import { EditorialAssistantTool } from "./editorial-assistant-tool.js";
 
 export interface EditorialAssistantRequest {
     message: string;
+    interfaceLocale?: string;
     article: string;
     scope: "article" | "selection";
     instructions: readonly string[];

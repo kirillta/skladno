@@ -174,6 +174,7 @@ async function performNewAssistantRequest({ options, article, authorMessage, exp
 
     await options.client.streamAssistantRequest(article.id, {
         kind: "new", requestId, authorMessage,
+        interfaceLocale: options.intl.locale,
         scope: matchingSelection
             ? { kind: "selection", baseRevisionId: revision.id, startOffset: matchingSelection.startOffset, endOffset: matchingSelection.endOffset }
             : { kind: "article", baseRevisionId: revision.id },
@@ -191,7 +192,7 @@ async function performRetryAssistantRequest(options: AssistantRequestActionsOpti
     options.store.controller.current = new AbortController();
     const streamedId = `streaming-${crypto.randomUUID()}`;
     await options.client.streamAssistantRequest(article.id, {
-        kind: "retry", requestId: crypto.randomUUID(), retryOfRequestId: options.retryOfRequestId,
+        kind: "retry", requestId: crypto.randomUUID(), retryOfRequestId: options.retryOfRequestId, interfaceLocale: options.intl.locale,
     }, (event) => options.handleAssistantEvent(event, article.id, article.currentRevisionId, streamedId), options.store.controller.current.signal);
 }
 

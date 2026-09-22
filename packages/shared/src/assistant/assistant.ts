@@ -213,6 +213,7 @@ export interface NewAssistantRequest {
     explicitSkillId?: string;
     skillOffset?: number;
     targetLanguage?: string;
+    interfaceLocale?: string;
 }
 
 
@@ -220,6 +221,7 @@ export interface RetryAssistantRequest {
     kind: "retry";
     requestId: string;
     retryOfRequestId: string;
+    interfaceLocale?: string;
 }
 
 

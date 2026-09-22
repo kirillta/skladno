@@ -51,6 +51,7 @@ export class AssistantCapabilityLoop {
 
         const editorialRequest = {
             message: request.authorMessage,
+            interfaceLocale: request.interfaceLocale,
             article: "",
             scope: request.scope.kind,
             instructions: selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])]),

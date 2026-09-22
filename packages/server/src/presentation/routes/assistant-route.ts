@@ -36,7 +36,12 @@ function getAssistantRequestScope(value: unknown): AssistantRequestScope {
 function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequest {
     const requestId = parseString(body.requestId, "requestId");
     if (body.kind === "retry")
-        return { kind: "retry", requestId, retryOfRequestId: parseString(body.retryOfRequestId, "retryOfRequestId") };
+        return {
+            kind: "retry",
+            requestId,
+            retryOfRequestId: parseString(body.retryOfRequestId, "retryOfRequestId"),
+            ...(body.interfaceLocale === undefined ? {} : { interfaceLocale: parseString(body.interfaceLocale, "interfaceLocale") }),
+        };
 
     if (body.kind !== "new" && body.kind !== undefined)
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
@@ -45,6 +50,7 @@ function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequ
     const explicitSkillId = explicitSkillValue && (resolveBuiltInSkillId(explicitSkillValue) ?? explicitSkillValue);
 
     const targetLanguage = body.targetLanguage === undefined ? undefined : parseString(body.targetLanguage, "targetLanguage");
+    const interfaceLocale = body.interfaceLocale === undefined ? undefined : parseString(body.interfaceLocale, "interfaceLocale");
     const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
     if (skillOffset !== undefined && (!explicitSkillValue || !Number.isInteger(skillOffset) || skillOffset < 0 || skillOffset > String(body.authorMessage ?? "").length))
         throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
@@ -57,6 +63,7 @@ function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequ
         ...(explicitSkillId ? { explicitSkillId } : {}),
         ...(skillOffset === undefined ? {} : { skillOffset }),
         ...(targetLanguage ? { targetLanguage } : {}),
+        ...(interfaceLocale ? { interfaceLocale } : {}),
     };
 }
 
