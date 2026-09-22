@@ -1,6 +1,7 @@
 import { AuthorSkillRevision } from "./author-skill-revision.js";
 import { CreateAuthorSkillRevisionInput } from "./create-author-skill-revision-input.js";
 
+
 export interface AuthorSkillRevisionStore {
     create(input: CreateAuthorSkillRevisionInput): AuthorSkillRevision;
     list(skillId: string): readonly AuthorSkillRevision[];

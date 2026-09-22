@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import { setup } from "./desktop-settings.test-utils.js";
@@ -22,6 +22,28 @@ test("a separate backup folder with snapshots and unrelated files can be reused"
             assert.fail("Expected a backup telemetry event.");
 
         assert.equal(event.outcome, "completed");
+    } finally {
+        fixture.cleanup();
+    }
+});
+
+
+test("a native backup includes Author Skills and their history", async () => {
+    const fixture = setup(0);
+    const skill = join(fixture.dataDirectory, "skills", "clarity");
+    const history = join(fixture.dataDirectory, "skill-history", "clarity", "revision");
+    try {
+        mkdirSync(skill, { recursive: true });
+        mkdirSync(history, { recursive: true });
+        writeFileSync(join(skill, "SKILL.md"), "skill");
+        writeFileSync(join(history, "revision.json"), "history");
+        await fixture.invokeCreateBackup();
+        const snapshot = readdirSync(fixture.backupDirectory).find((file) => file.endsWith(".sqlite"));
+        assert.ok(snapshot);
+        const files = join(fixture.backupDirectory, `${snapshot}.skills`);
+        assert.equal(readFileSync(join(files, "skills", "clarity", "SKILL.md"), "utf8"), "skill");
+        assert.equal(readFileSync(join(files, "skill-history", "clarity", "revision", "revision.json"), "utf8"), "history");
+        assert.equal(existsSync(files), true);
     } finally {
         fixture.cleanup();
     }

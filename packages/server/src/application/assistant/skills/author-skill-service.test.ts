@@ -7,10 +7,30 @@ import test from "node:test";
 import { SkillRevisionStore } from "../../../infrastructure/skills/skill-revision-store.js";
 import { AuthorSkillService } from "./author-skill-service.js";
 import { FileAssistantSkillSource } from "./file-assistant-skill-source.js";
+import { builtInSkillSource } from "./built-in-skill-source.js";
 
 
 const initial = "---\nid: author-review\nname: Author review\ndescription: Review a draft with the Author's editorial preferences.\nversion: 1\n---\n# Review\n";
 const revised = initial.replace("version: 1", "version: 2").replace("# Review", "# Revised review");
+
+
+test("Skill Creator supplies a package example that the real store accepts", () => {
+    const creator = builtInSkillSource.summaries().find((skill) => skill.reference.id === "skill_creator");
+    assert.ok(creator);
+    const instructions = builtInSkillSource.load(creator.reference)?.instructions ?? "";
+    const markdown = /```markdown\r?\n([\s\S]*?)```/.exec(instructions)?.[1];
+    assert.ok(markdown, "The model needs the required package metadata format");
+    const root = mkdtempSync(join(tmpdir(), "skladno-creator-example-"));
+    const source = new FileAssistantSkillSource("author", join(root, "skills"));
+    const service = new AuthorSkillService(source, new SkillRevisionStore(root));
+    try {
+        service.create({ skillId: "concise-review", files: { "SKILL.md": markdown } });
+        assert.equal(service.listRevisions("concise-review").length, 1);
+        assert.ok(source.get("concise-review"));
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
 
 
 test("creates, updates, restores and deletes Author Skills without deleting their history", () => {

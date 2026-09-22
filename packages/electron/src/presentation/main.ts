@@ -11,6 +11,7 @@ import { readWindowBounds, writeWindowBounds } from "../infrastructure/window/wi
 import { createTelemetryOwner } from "../infrastructure/telemetry/telemetry-owner.js";
 import { createTelemetryDelivery, readTelemetryDelivery } from "../infrastructure/telemetry/telemetry-delivery.js";
 import { createApplicationFailureEvent } from "./telemetry/application-failure-telemetry.js";
+import { getBuiltInSkillRoot } from "./desktop-skill-path.js";
 import { registerDesktopSettingsAdapter } from "./settings/desktop-settings.js";
 import { registerDesktopTelemetryAdapter } from "./telemetry/desktop-telemetry.js";
 import { registerDesktopShellAdapter } from "./shell/desktop-shell.js";
@@ -168,9 +169,7 @@ if (supportsNativeUpdates() && squirrelStartup) {
 
         loadServerEnvironment();
         const config = loadServerConfig();
-        process.env.SKLADNO_BUILT_IN_SKILLS_DIR = app.isPackaged
-            ? join(process.resourcesPath, "built-in")
-            : join(import.meta.dirname, "..", "..", "..", "server", "src", "application", "assistant", "skills", "built-in");
+        process.env.SKLADNO_BUILT_IN_SKILLS_DIR = getBuiltInSkillRoot({ packaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath });
         const runtimePath = join(app.getPath("userData"), "runtime-settings.json");
         const telemetryDelivery = createTelemetryDelivery({
             packaged: app.isPackaged,

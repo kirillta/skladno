@@ -35,7 +35,7 @@ function isValidAssistantRequest(value: unknown): value is Extract<ElectronStrea
     if (value.scope.kind !== "article" && value.scope.kind !== "selection")
         return false;
 
-    return (value.explicitSkillId === undefined || Boolean(resolveBuiltInSkillId(value.explicitSkillId)))
+    return (value.explicitSkillId === undefined || typeof value.explicitSkillId === "string" && Boolean(value.explicitSkillId))
         && (value.skillOffset === undefined || typeof value.skillOffset === "number")
         && (value.targetLanguage === undefined || typeof value.targetLanguage === "string")
         && (value.retryOfRequestId === undefined || typeof value.retryOfRequestId === "string");
@@ -107,7 +107,7 @@ function createEditorialFailure(error: unknown): { category: Extract<EditorialEv
 async function streamAssistant(event: ElectronIpcMainEvent, request: Extract<ElectronStreamRequest, { kind: "assistant" }>, services: ApplicationServices, controller: AbortController): Promise<void> {
     const input = request.input;
     try {
-        const explicitSkillId = input.kind === "new" && input.explicitSkillId ? resolveBuiltInSkillId(input.explicitSkillId) : undefined;
+        const explicitSkillId = input.kind === "new" && input.explicitSkillId ? resolveBuiltInSkillId(input.explicitSkillId) ?? input.explicitSkillId : undefined;
         const prepared = services.assistant.prepare({ ...input, articleId: request.articleId, ...(explicitSkillId ? { explicitSkillId } : {}) });
         for await (const item of services.assistant.stream(prepared, controller.signal))
             send(event, { streamId: request.streamId, kind: "assistant", event: item });

@@ -55,7 +55,7 @@ export class AssistantCapabilityLoop {
             scope: request.scope.kind,
             instructions: selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])]),
             history: this.dependencies.conversationHistory(request.articleId, 12),
-            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: [skill.instructions, ...(skill.references ?? [])].join("\n\n") })),
+            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: [skill.instructions, ...(skill.references ?? [])].join("\n\n"), capabilities: this.initialCapabilities(skill.reference.id) })),
             tools,
             ...(request.resolvedSkillId ? { initialActiveCapabilities: this.initialCapabilities(request.resolvedSkillId) } : {}),
         };

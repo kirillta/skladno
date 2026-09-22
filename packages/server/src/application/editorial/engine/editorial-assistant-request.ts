@@ -7,7 +7,7 @@ export interface EditorialAssistantRequest {
     scope: "article" | "selection";
     instructions: readonly string[];
     history: readonly { role: "author" | "assistant"; content: string }[];
-    skills: readonly { id: string; name: string; description: string; instructions: string }[];
+    skills: readonly { id: string; name: string; description: string; instructions: string; capabilities?: readonly string[] }[];
     tools: readonly EditorialAssistantTool[];
     initialActiveCapabilities?: readonly string[];
 }

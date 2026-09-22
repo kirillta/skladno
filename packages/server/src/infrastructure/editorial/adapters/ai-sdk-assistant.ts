@@ -84,13 +84,20 @@ function createAssistantTool(candidate: AssistantTool, execute: AssistantToolExe
 }
 
 
-export function createAssistantTools(request: EditorialAssistantRequest, execute: AssistantToolExecutor): ToolSet {
+export function createAssistantTools(request: EditorialAssistantRequest, execute: AssistantToolExecutor, onSkillLoaded?: (capabilities: readonly string[]) => void): ToolSet {
     return {
         ...Object.fromEntries(request.tools.map((candidate) => [candidate.capability, createAssistantTool(candidate, execute)])),
         load_skill: tool({
             description: "Load the full instructions for one relevant Skladno Skill.",
             inputSchema: z.object({ id: z.string().min(1) }),
-            execute: ({ id }) => request.skills.find((skill) => skill.id === id)?.instructions ?? "Unknown Skill.",
+            execute: ({ id }) => {
+                const skill = request.skills.find((candidate) => candidate.id === id);
+                if (!skill)
+                    return "Unknown Skill.";
+
+                onSkillLoaded?.(skill.capabilities ?? []);
+                return skill.instructions;
+            },
         }),
     };
 }
