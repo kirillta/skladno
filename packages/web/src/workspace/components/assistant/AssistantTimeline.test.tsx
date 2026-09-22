@@ -75,6 +75,18 @@ describe("AssistantTimeline", () => {
     });
 
 
+    it("only offers Retry for the last conversation message", () => {
+        const assistantMessages: AssistantMessage[] = [
+            { id: "failed", requestId: "failed-request", articleId: "article", role: "assistant", kind: "response", status: "failed", content: "", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+            { id: "continued", requestId: "continued-request", articleId: "article", role: "author", kind: "message", status: "completed", content: "Continue the chat", createdAt: "2026-01-01T00:01:00.000Z", updatedAt: "2026-01-01T00:01:00.000Z" },
+        ];
+
+        render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={assistantMessages} onRetry={vi.fn()} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+
+        expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    });
+
+
     it("shows persisted Fact Check claims in their Findings prepared message", () => {
         render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={[{ id: "findings", articleId: "article", role: "assistant", kind: "response", status: "completed", responseKind: "findings_prepared", createdAt: "2026-08-13T20:30:00.000Z", updatedAt: "2026-08-13T20:30:00.000Z" }]} factCheckClaims={[{ claim: "HTTP was standardized in 1999.", checked: true }]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
 

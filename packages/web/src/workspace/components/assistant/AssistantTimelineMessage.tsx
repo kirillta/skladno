@@ -140,7 +140,7 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
         {!authorMessage && skillId === BUILT_IN_SKILL.SKILL_CREATOR && message.status === "completed" && message.requestId && openSkillFolder && <Button className="mt-3" variant="secondary" onClick={() => openSkillFolder(message.requestId!)}>
             {intl.formatMessage({ id: "assistant.openSkillFolder" })}
         </Button>}
-        {(message.status === "failed" || message.status === "cancelled") && retryRequestId && <Button className="mt-3" variant="secondary" onClick={() => onRetry?.(retryRequestId)}>{intl.formatMessage({ id: "assistant.retry" })}</Button>}
+        {(message.status === "failed" || message.status === "cancelled") && retryRequestId && onRetry && <Button className="mt-3" variant="secondary" onClick={() => onRetry(retryRequestId)}>{intl.formatMessage({ id: "assistant.retry" })}</Button>}
         {!authorMessage && <p className="mt-2 flex items-center gap-1 text-xs text-muted">
             <StatusIcon className="size-3" tone={getStatusTone(message.status)} />
             <span>{messageStatusLabel}</span>
