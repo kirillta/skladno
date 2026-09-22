@@ -71,6 +71,36 @@ function createAssistantTool(candidate: AssistantTool, execute: AssistantToolExe
                 inputSchema: z.object({ skillId: z.string().min(3).max(64), skillMarkdown: z.string().min(1).max(96 * 1024) }),
                 execute: ({ skillId, skillMarkdown }) => execute(candidate.capability, { skillId, skillMarkdown })
             });
+        case "author-skill-id":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64) }),
+                execute: ({ skillId }) => execute(candidate.capability, { skillId })
+            });
+        case "author-skill-write":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), expectedHash: z.string().length(64), skillMarkdown: z.string().min(1).max(96 * 1024) }),
+                execute: ({ skillId, expectedHash, skillMarkdown }) => execute(candidate.capability, { skillId, expectedHash, skillMarkdown })
+            });
+        case "author-skill-restore":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), revisionId: z.uuid(), expectedHash: z.union([z.string().length(64), z.literal("")]) }),
+                execute: ({ skillId, revisionId, expectedHash }) => execute(candidate.capability, { skillId, revisionId, expectedHash })
+            });
+        case "author-skill-delete":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), expectedHash: z.string().length(64) }),
+                execute: ({ skillId, expectedHash }) => execute(candidate.capability, { skillId, expectedHash })
+            });
+        case "author-skill-revision":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), revisionId: z.uuid() }),
+                execute: ({ skillId, revisionId }) => execute(candidate.capability, { skillId, revisionId })
+            });
         case "none":
             return tool({
                 description: candidate.description,
@@ -106,6 +136,9 @@ export function createAssistantTools(request: EditorialAssistantRequest, execute
 
 export function getAssistantStepOptions(stepNumber: number, activeCapabilities?: readonly string[]): { activeTools: string[]; toolChoice?: { type: "tool"; toolName: string } } {
     const activeTools = activeCapabilities ? [...activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
+    if (activeCapabilities?.includes("create_author_skill"))
+        return { activeTools };
+
     const authorSkillProposal = activeCapabilities?.[0] === EDITORIAL_CAPABILITY.INSPECT_ARTICLE && activeCapabilities[1] === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL;
     const requiredCapability = stepNumber === 1 && authorSkillProposal
         ? EDITORIAL_CAPABILITY.GENERATE_PROPOSAL

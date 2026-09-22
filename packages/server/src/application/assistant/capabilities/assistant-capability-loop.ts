@@ -16,7 +16,8 @@ import type { EditorialEngineResolver } from "../../editorial/engine/editorial-e
 import type { ConversationHistory } from "../requests/conversation-history.js";
 import { AssistantSkillCatalog } from "../skills/assistant-skill-catalog.js";
 import type { AuthorSkillService } from "../skills/author-skill-service.js";
-import type { AuthorSkillRevision } from "../skills/author-skill-revision.js";
+import { AuthorSkillChatActions } from "../skills/author-skill-chat-actions.js";
+import type { CommittedAuthorSkillChange } from "../skills/committed-author-skill-change.js";
 
 
 function isTransientReadFailure(error: unknown): boolean {
@@ -25,6 +26,9 @@ function isTransientReadFailure(error: unknown): boolean {
 
 
 export class AssistantCapabilityLoop {
+    private readonly authorSkillActions?: AuthorSkillChatActions;
+
+
     constructor(private readonly dependencies: {
         assistant: Pick<AssistantStore, "setExecution">;
         engines: Pick<EditorialEngineResolver, "resolveAssistantActionIntentVerifier">;
@@ -32,7 +36,10 @@ export class AssistantCapabilityLoop {
         authorSkills?: AuthorSkillService;
         skills: AssistantSkillCatalog;
         conversationHistory: (articleId: string, limit?: number) => ConversationHistory;
-    }) { }
+    }) {
+        if (dependencies.authorSkills)
+            this.authorSkillActions = new AuthorSkillChatActions(dependencies.authorSkills, dependencies.engines);
+    }
 
 
     async *stream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
@@ -106,7 +113,7 @@ export class AssistantCapabilityLoop {
             case BUILT_IN_SKILL.TRANSLATION:
                 return [EDITORIAL_CAPABILITY.TRANSLATE, EDITORIAL_CAPABILITY.INSPECT_TRANSLATIONS];
             case BUILT_IN_SKILL.SKILL_CREATOR:
-                return ["create_author_skill"];
+                return ["create_author_skill", "get_author_skill", "list_author_skill_revisions", "read_author_skill_revision", "update_author_skill", "restore_author_skill", "delete_author_skill"];
             default:
                 return [EDITORIAL_CAPABILITY.GENERATE_PROPOSAL];
         }
@@ -134,51 +141,20 @@ export class AssistantCapabilityLoop {
             execute: async (input) => this.dependencies.capabilities!.discover(input.query ?? "", request.scope.kind),
         });
 
-        if (this.dependencies.authorSkills)
-            tools.push({
-                capability: "create_author_skill",
-                description: "Save a validated local Author Skill Markdown package.",
-                input: "author-skill",
-                execute: async (input, signal) => this.createAuthorSkill(request, input, signal),
-            });
+        if (this.authorSkillActions)
+            tools.push(...this.authorSkillActions.tools(request));
 
         return tools;
     }
 
 
-    private async createAuthorSkill(request: PreparedAssistantRequest, input: Readonly<Record<string, string>>, signal: AbortSignal): Promise<{ skillId: string; status: "pending" }> {
-        const skillId = input.skillId;
-        const skillMarkdown = input.skillMarkdown;
-        if (!skillId || !skillMarkdown)
-            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
-
-        const verifier = this.dependencies.engines.resolveAssistantActionIntentVerifier?.();
-        if (!verifier || !await verifier.verify(request.authorMessage, "create_author_skill", {}, signal))
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
-
-        signal.throwIfAborted();
-        if (request.pendingSkillCreate)
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
-
-        this.dependencies.authorSkills!.validateCreate({ skillId, files: { "SKILL.md": skillMarkdown } });
-        request.pendingSkillCreate = { skillId, skillMarkdown };
-        return { skillId, status: "pending" };
+    commitPendingSkill(request: PreparedAssistantRequest): CommittedAuthorSkillChange | undefined {
+        return this.authorSkillActions?.commit(request);
     }
 
 
-    commitPendingSkill(request: PreparedAssistantRequest): AuthorSkillRevision | undefined {
-        const pending = request.pendingSkillCreate;
-        if (!pending)
-            return;
-
-        const revision = this.dependencies.authorSkills!.create({ skillId: pending.skillId, files: { "SKILL.md": pending.skillMarkdown }, requestId: request.requestId });
-        request.pendingSkillCreate = undefined;
-        return revision;
-    }
-
-
-    rollbackCreatedSkill(revision: AuthorSkillRevision): void {
-        this.dependencies.authorSkills!.rollbackCreate(revision);
+    rollbackCreatedSkill(change: CommittedAuthorSkillChange): void {
+        this.authorSkillActions?.rollback(change);
     }
 
 

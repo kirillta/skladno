@@ -46,3 +46,49 @@ test("rolls Author Skills back when restored startup fails", () => {
         rmSync(root, { recursive: true, force: true });
     }
 });
+
+
+test("restores revised Skill content and history after deletion", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-author-skill-revision-backup-"));
+    const snapshotPath = join(root, "backup.sqlite");
+    const skillPath = join(root, "skills", "clarity", "SKILL.md");
+    const historyPath = join(root, "skill-history", "clarity");
+    try {
+        mkdirSync(join(historyPath, "revision-1"), { recursive: true });
+        mkdirSync(join(historyPath, "revision-2"), { recursive: true });
+        mkdirSync(join(root, "skills", "clarity"), { recursive: true });
+        writeFileSync(skillPath, "restored revision");
+        writeFileSync(join(historyPath, "revision-1", "SKILL.md"), "original revision");
+        writeFileSync(join(historyPath, "revision-2", "SKILL.md"), "restored revision");
+        createAuthorSkillBackup({ dataDirectory: root, snapshotPath });
+
+        rmSync(join(root, "skills", "clarity"), { recursive: true });
+        applyAuthorSkillRestore({ dataDirectory: root, snapshotPath });
+        assert.equal(readFileSync(skillPath, "utf8"), "restored revision");
+        assert.equal(readFileSync(join(historyPath, "revision-1", "SKILL.md"), "utf8"), "original revision");
+        assert.equal(readFileSync(join(historyPath, "revision-2", "SKILL.md"), "utf8"), "restored revision");
+        completeAuthorSkillRestore(root);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("keeps deleted Skill history in a backup", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-deleted-skill-backup-"));
+    const snapshotPath = join(root, "backup.sqlite");
+    const historyPath = join(root, "skill-history", "clarity", "revision-1", "SKILL.md");
+    try {
+        mkdirSync(join(root, "skill-history", "clarity", "revision-1"), { recursive: true });
+        writeFileSync(historyPath, "original revision");
+        createAuthorSkillBackup({ dataDirectory: root, snapshotPath });
+        rmSync(join(root, "skill-history"), { recursive: true });
+
+        applyAuthorSkillRestore({ dataDirectory: root, snapshotPath });
+        assert.equal(existsSync(join(root, "skills", "clarity")), false);
+        assert.equal(readFileSync(historyPath, "utf8"), "original revision");
+        completeAuthorSkillRestore(root);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});

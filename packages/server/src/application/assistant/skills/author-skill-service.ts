@@ -1,6 +1,8 @@
 import type { AssistantSkillPackage } from "./assistant-skill-package.js";
 import type { AuthorSkillRevisionStore } from "./author-skill-revision-store.js";
 import type { AuthorSkillRevision } from "./author-skill-revision.js";
+import type { AuthorSkillChange } from "./author-skill-change.js";
+import type { CommittedAuthorSkillChange } from "./committed-author-skill-change.js";
 import { FileAssistantSkillSource } from "./file-assistant-skill-source.js";
 
 
@@ -13,6 +15,100 @@ export class AuthorSkillService {
 
     validateCreate(input: { skillId: string; files: Readonly<Record<string, string>> }): void {
         this.source.validateInstall({ directory: input.skillId, files: input.files });
+    }
+
+
+    readCurrent(skillId: string): { contentHash: string; files: Readonly<Record<string, string>> } | undefined {
+        const skillPackage = this.source.get(skillId);
+        const files = this.source.readFiles(skillId);
+        return skillPackage?.contentHash && files ? { contentHash: skillPackage.contentHash, files } : undefined;
+    }
+
+
+    readRevision(skillId: string, revisionId: string): Readonly<Record<string, string>> | undefined {
+        return this.revisions.readFiles({ skillId, revisionId });
+    }
+
+
+    validateChange(change: AuthorSkillChange): void {
+        if (change.kind === "create") {
+            this.validateCreate({ skillId: change.skillId, files: { "SKILL.md": change.skillMarkdown } });
+            return;
+        }
+
+        const current = this.readCurrent(change.skillId);
+        if (current ? current.contentHash !== change.expectedHash : change.kind !== "restore" || change.expectedHash !== "")
+            throw new Error("skill_package_conflict");
+
+        if (change.kind === "delete")
+            return;
+
+        if (change.kind === "update") {
+            if (!current)
+                throw new Error("skill_package_conflict");
+
+            this.source.validateReplace({ directory: change.skillId, expectedHash: change.expectedHash, files: this.withNextVersion(change.skillId, { ...current.files, "SKILL.md": change.skillMarkdown }) });
+            return;
+        }
+
+        const files = this.readRevision(change.skillId, change.revisionId);
+        if (!files)
+            throw new Error("skill_revision_not_found");
+
+        const replacement = current ? this.withNextVersion(change.skillId, files) : this.withVersionAfterHistory(change.skillId, files);
+        if (current)
+            this.source.validateReplace({ directory: change.skillId, expectedHash: change.expectedHash, files: replacement });
+        else
+            this.source.validateInstall({ directory: change.skillId, files: replacement });
+    }
+
+
+    commitChange(change: AuthorSkillChange, requestId: string): CommittedAuthorSkillChange {
+        this.validateChange(change);
+        if (change.kind === "create")
+            return { kind: "create", revision: this.create({ skillId: change.skillId, files: { "SKILL.md": change.skillMarkdown }, requestId }) };
+
+        const previousFiles = this.readCurrent(change.skillId)?.files;
+        if (change.kind === "delete") {
+            if (!previousFiles)
+                throw new Error("skill_package_conflict");
+
+            this.delete(change);
+            return { kind: "delete", skillId: change.skillId, previousFiles };
+        }
+
+        let revision: AuthorSkillRevision;
+        if (change.kind === "update") {
+            if (!previousFiles)
+                throw new Error("skill_package_conflict");
+
+            revision = this.update({ skillId: change.skillId, files: { ...previousFiles, "SKILL.md": change.skillMarkdown }, expectedHash: change.expectedHash, requestId });
+        } else {
+            revision = this.restore({ skillId: change.skillId, revisionId: change.revisionId, expectedHash: change.expectedHash, requestId });
+        }
+
+        return { kind: change.kind, revision, ...(previousFiles ? { previousFiles } : {}) };
+    }
+
+
+    rollbackChange(change: CommittedAuthorSkillChange): void {
+        if (change.kind === "create") {
+            this.rollbackCreate(change.revision);
+            return;
+        }
+
+        if (change.kind === "delete") {
+            this.source.install({ directory: change.skillId, files: change.previousFiles });
+            return;
+        }
+
+        if (!change.previousFiles) {
+            this.rollbackCreate(change.revision);
+            return;
+        }
+
+        this.source.replace({ directory: change.revision.skillId, files: change.previousFiles, expectedHash: change.revision.contentHash });
+        this.revisions.removeCreated(change.revision);
     }
 
 
@@ -51,13 +147,23 @@ export class AuthorSkillService {
         if (!files)
             throw new Error("skill_revision_not_found");
 
-        const previous = this.snapshotCurrent(input.skillId);
-        const replacement = this.withNextVersion(input.skillId, files);
-        const skillPackage = this.source.replace({ directory: input.skillId, files: replacement, expectedHash: input.expectedHash });
+        const current = this.source.get(input.skillId);
+        if (!current && input.expectedHash !== "")
+            throw new Error("skill_package_conflict");
+
+        const previous = current ? this.snapshotCurrent(input.skillId) : undefined;
+        const replacement = current ? this.withNextVersion(input.skillId, files) : this.withVersionAfterHistory(input.skillId, files);
+        const skillPackage = current
+            ? this.source.replace({ directory: input.skillId, files: replacement, expectedHash: input.expectedHash })
+            : this.source.install({ directory: input.skillId, files: replacement });
         try {
             return this.record({ skillPackage, files: replacement, requestId: input.requestId, restoredFromId: input.revisionId });
         } catch (error) {
-            this.source.replace({ directory: input.skillId, files: previous.files, expectedHash: skillPackage.contentHash ?? "" });
+            if (previous)
+                this.source.replace({ directory: input.skillId, files: previous.files, expectedHash: skillPackage.contentHash ?? "" });
+            else
+                this.source.delete({ directory: input.skillId, expectedHash: skillPackage.contentHash ?? "" });
+
             throw error;
         }
     }
@@ -118,7 +224,23 @@ export class AuthorSkillService {
         if (!current)
             throw new Error("skill_package_conflict");
 
-        const parts = current.reference.version.split(".");
+        return this.withVersionAfter(current.reference.version, files);
+    }
+
+
+    private withVersionAfterHistory(skillId: string, files: Readonly<Record<string, string>>): Readonly<Record<string, string>> {
+        const latest = this.revisions.list(skillId).at(-1);
+        const markdown = latest && this.revisions.readFiles({ skillId, revisionId: latest.id })?.["SKILL.md"];
+        const version = markdown && /^version:\s*["']?(\d+(?:\.\d+){0,2})["']?\s*$/m.exec(markdown)?.[1];
+        if (!version)
+            throw new Error("invalid_skill_revision");
+
+        return this.withVersionAfter(version, files);
+    }
+
+
+    private withVersionAfter(version: string, files: Readonly<Record<string, string>>): Readonly<Record<string, string>> {
+        const parts = version.split(".");
         const last = parts.at(-1);
         if (!last)
             throw new Error("invalid_skill_package");

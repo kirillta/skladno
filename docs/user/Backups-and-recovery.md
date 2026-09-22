@@ -2,6 +2,8 @@
 
 Choose a **Backup folder** in **Settings → Data & backups**, then select **Create backup**. In supported web browsers, Skladno asks the browser for permission to write snapshots only in that folder. Snapshots contain your local Articles, Revisions, Draft checkpoints, Assistant records, and Settings. They never include `.env` files or API keys.
 
+In the Electron app, each database snapshot also has a neighboring `.sqlite.skills` folder containing current Author Skills and their Skill Revision history. Keep the file and folder together when copying or restoring a backup. Browser backups currently contain only the database; they do not recover Author Skill files or history.
+
 Set **Automatic backups** to Daily to create one snapshot the first time Skladno opens each day, while the browser still permits the chosen folder. Retention removes only older automatic snapshots; manually created backups are always kept.
 
 ## Restore a backup

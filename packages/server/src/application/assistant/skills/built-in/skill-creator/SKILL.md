@@ -1,12 +1,12 @@
 ---
 id: skill_creator
 name: Skill Creator
-description: Create a reusable local Skill from an explicit Author request.
+description: Create, revise, restore, or delete a local Skill when the Author explicitly requests it.
 version: 1
 ---
 # Skill Creator
 
-Use this Skill when the Author explicitly asks to create a reusable Skill. Infer a concise stable ID, name, description, and Markdown procedure from the request and conversation.
+Use this Skill when the Author explicitly asks to create, revise, restore, or delete a reusable Skill. For creation, infer a concise stable ID, name, description, and Markdown procedure from the request and conversation.
 
 Use the Skladno Glossary as the authority for domain terms. Keep its distinctions intact, especially Article rather than document, Draft checkpoints versus immutable Revisions, and Proposals or Findings as advisory work requiring explicit author approval.
 
@@ -31,3 +31,7 @@ Identify repeated ideas and propose concise wording. Preserve claims, technical 
 ```
 
 Include the entire procedure in this one file, with no extra frontmatter fields or references to other files. The tool saves only `SKILL.md`. Keep instructions below 64 KiB and the complete package below 96 KiB. Creating a Skill does not run its procedure on the current Article.
+
+For a revision, call `get_author_skill` to read the installed Markdown and content hash. Preserve the Skill ID, edit only what the Author requested, then call `update_author_skill` with that hash and the complete revised Markdown. The application advances the version and records a Skill Revision. For deletion, read the current hash first, then call `delete_author_skill` only on an explicit delete request. Deletion keeps Skill Revision history.
+
+For restoration, call `list_author_skill_revisions` and `read_author_skill_revision` so the Author can identify the intended snapshot. Use `restore_author_skill` with that Revision ID and the current hash from `get_author_skill`; use an empty hash if the Skill has been deleted. Restoring a Skill is separate from restoring an Assistant chat checkpoint. Do not change a Skill when the Author only restores chat history.

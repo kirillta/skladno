@@ -165,6 +165,24 @@ export class FileAssistantSkillSource {
     }
 
 
+    validateReplace(input: { directory: string; files: Readonly<Record<string, string>>; expectedHash: string }): void {
+        this.refresh();
+        const current = this.loadByDirectory(input.directory);
+        if (!current || current.contentHash !== input.expectedHash)
+            throw new Error("skill_package_conflict");
+
+        const staged = `${this.packageRoot(input.directory)}.${randomUUID()}.staged`;
+        try {
+            this.writeStaged(staged, input.files);
+            const parsed = parseSkillPackage({ root: staged, source: this.id, reservedIds: this.reserved().ids, reservedNames: this.reserved().names });
+            if (!parsed.ok || parsed.skillPackage.reference.id !== current.reference.id || !this.isAvailable(parsed.skillPackage, current.reference.id))
+                throw new Error(parsed.ok ? "invalid_metadata" : parsed.issues[0]!.code);
+        } finally {
+            rmSync(staged, { recursive: true, force: true });
+        }
+    }
+
+
     replace(input: { directory: string; files: Readonly<Record<string, string>>; expectedHash: string }): AssistantSkillPackage {
         const root = this.packageRoot(input.directory);
         this.refresh();

@@ -54,6 +54,50 @@ test("creates, updates, restores and deletes Author Skills without deleting thei
         service.delete({ skillId: "author-review", expectedHash: source.get("author-review")!.contentHash! });
         assert.equal(source.get("author-review"), undefined);
         assert.equal(service.listRevisions("author-review").length, 3);
+
+        const recovered = service.restore({ skillId: "author-review", revisionId: created.id, expectedHash: "" });
+        assert.equal(source.get("author-review")?.reference.version, "4");
+        assert.equal(source.get("author-review")?.instructions, "# Review");
+        assert.equal(service.listRevisions("author-review").at(-1)?.id, recovered.id);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("a failed chat completion can roll back a Skill revision", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-author-skill-rollback-"));
+    const source = new FileAssistantSkillSource("author", join(root, "skills"));
+    const service = new AuthorSkillService(source, new SkillRevisionStore(root));
+    try {
+        service.create({ skillId: "author-review", files: { "SKILL.md": initial } });
+        const expectedHash = service.readCurrent("author-review")!.contentHash;
+        assert.throws(() => service.validateChange({ kind: "update", skillId: "author-review", skillMarkdown: revised, expectedHash: "wrong" }), /skill_package_conflict/);
+
+        const change = service.commitChange({ kind: "update", skillId: "author-review", skillMarkdown: revised, expectedHash }, "request-2");
+        assert.equal(service.listRevisions("author-review").length, 2);
+        service.rollbackChange(change);
+
+        assert.equal(service.readCurrent("author-review")?.files["SKILL.md"], initial);
+        assert.equal(service.listRevisions("author-review").length, 1);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("chat revision preserves bundled references", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-author-skill-references-"));
+    const source = new FileAssistantSkillSource("author", join(root, "skills"));
+    const service = new AuthorSkillService(source, new SkillRevisionStore(root));
+    const markdown = initial.replace("version: 1", "version: 1\nreferences:\n  - references/guide.md");
+    try {
+        service.create({ skillId: "author-review", files: { "SKILL.md": markdown, "references/guide.md": "Keep citations." } });
+        const change = { kind: "update" as const, skillId: "author-review", skillMarkdown: markdown.replace("# Review", "# Revised review"), expectedHash: service.readCurrent("author-review")!.contentHash };
+        service.commitChange(change, "request-2");
+
+        assert.equal(service.readCurrent("author-review")?.files["references/guide.md"], "Keep citations.");
+        assert.equal(service.listRevisions("author-review").length, 2);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

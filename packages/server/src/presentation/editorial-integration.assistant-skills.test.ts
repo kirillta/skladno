@@ -150,3 +150,55 @@ test("an Author Skill persists its Article result as a Proposal instead of chat"
         assert.equal(repositories.editorialArtifacts.listEditorialArtifacts(article.id).at(-1)?.kind, "assistant-proposal");
     });
 });
+
+
+// Product scenarios: editorial-workflows.author-skill-creation
+test("Assistant chat revises, restores, and deletes an Author Skill only on explicit requests", async () => {
+    let capability = "update_author_skill";
+    let input: Readonly<Record<string, string>> = {};
+    const engine: EditorialEngine = {
+        async *stream() {
+            return;
+        },
+        streamConversation: createEmptyConversationStream,
+        async *streamAssistant(request: EditorialAssistantRequest) {
+            const selected = request.tools.find((tool) => tool.capability === capability);
+            assert.ok(selected);
+            await selected.execute(input, new AbortController().signal);
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: capability, text: "Skill change completed." };
+        },
+    };
+    const verifier: AssistantActionIntentVerifier = {
+        verify: async (_message, action) => action === capability,
+    };
+
+    await withService(engine, async (baseUrl, repositories, services) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
+        const initial = services.authorSkills!.create({ skillId: "author-review", files: { "SKILL.md": "---\nid: author-review\nname: Author review\ndescription: Review writing.\nversion: 1\n---\n# Review\n" } });
+        const send = async (requestId: string, authorMessage: string) => {
+            const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+                method: HTTP_METHOD.POST,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ requestId, authorMessage, explicitSkillId: "skill_creator", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+            });
+            assert.match(await response.text(), /"type":"completed"/);
+        };
+
+        input = { skillId: "author-review", expectedHash: services.authorSkills!.readCurrent("author-review")!.contentHash, skillMarkdown: "---\nid: author-review\nname: Author review\ndescription: Review writing.\nversion: 1\n---\n# Revised review\n" };
+        await send("revise-skill", "Revise author-review to use the new review procedure.");
+        assert.equal(services.authorSkills!.readCurrent("author-review")?.files["SKILL.md"]?.includes("# Revised review"), true);
+        assert.equal(services.authorSkills!.listRevisions("author-review").length, 2);
+
+        capability = "restore_author_skill";
+        input = { skillId: "author-review", revisionId: initial.id, expectedHash: services.authorSkills!.readCurrent("author-review")!.contentHash };
+        await send("restore-skill", "Restore author-review to its first Skill Revision.");
+        assert.equal(services.authorSkills!.readCurrent("author-review")?.files["SKILL.md"]?.includes("# Revised review"), false);
+        assert.equal(services.authorSkills!.listRevisions("author-review").length, 3);
+
+        capability = "delete_author_skill";
+        input = { skillId: "author-review", expectedHash: services.authorSkills!.readCurrent("author-review")!.contentHash };
+        await send("delete-skill", "Delete author-review.");
+        assert.equal(services.skills.discover().some((skill) => skill.reference.id === "author-review"), false);
+        assert.equal(services.authorSkills!.listRevisions("author-review").length, 3);
+    }, true, verifier);
+});

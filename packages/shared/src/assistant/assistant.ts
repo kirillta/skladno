@@ -47,7 +47,10 @@ export type AssistantAuthorizedAction = "rename_article"
     | "add_revision_to_style_corpus"
     | "rebuild_style_profile"
     | "reject_translation"
-    | "create_author_skill";
+    | "create_author_skill"
+    | "update_author_skill"
+    | "restore_author_skill"
+    | "delete_author_skill";
 
 
 /** Completion data held until the run is valid and its artifacts can be committed. */

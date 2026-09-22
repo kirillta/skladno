@@ -26,8 +26,8 @@
             "title": "Model-selected Skills and Author-requested Skill creation",
             "status": "partial",
             "owners": ["packages/server/src/application/assistant/capabilities/assistant-capability-loop.ts", "packages/server/src/application/assistant/skills/author-skill-service.ts", "packages/server/src/infrastructure/editorial/adapters/ai-sdk-assistant.ts", "packages/server/src/infrastructure/skills/skill-revision-store.ts"],
-            "contract": "An untagged Assistant request uses the configured Assistant model and the discoverable Skill catalog rather than a default editorial workflow. The model may load a relevant Skill and, only for an explicit Author request, create a validated local Markdown Skill through a bounded server tool. Selecting Skill Creator keeps the Article as the chat host without promoting its Draft or using an Article selection as request context. The initial Assistant turn receives no Article body; a later classified editorial capability receives only the context it needs. Creator uncertainty remains conversational. The selected Creator path changes no Article content, Draft, Proposal, or Revision.",
-            "persistence": "A completed creation makes the local Skill immediately discoverable and records an immutable file-backed Skill Revision. Incomplete or failed Assistant runs leave no installed Skill or Skill Revision. Skill Revision history is separate from Article history."
+            "contract": "An untagged Assistant request uses the configured Assistant model and the discoverable Skill catalog rather than a default editorial workflow. The model may load a relevant Skill and, only for an explicit Author request, create or manage a validated local Markdown Skill through bounded server tools. Revision, restoration, and deletion require the exact Author-requested action and target plus the expected current package hash. Selecting Skill Creator keeps the Article as the chat host without promoting its Draft or using an Article selection as request context. The initial Assistant turn receives no Article body; a later classified editorial capability receives only the context it needs. Creator uncertainty remains conversational. The selected Creator path changes no Article content, Draft, Proposal, or Revision. Restoring an Assistant chat checkpoint does not change Skills.",
+            "persistence": "Completed creation, revision, or restoration makes the local Skill immediately discoverable and records an immutable file-backed Skill Revision. Deletion removes the live package while retaining history; an explicit Skill Revision restoration can recover it. Incomplete or failed Assistant runs leave no new installed Skill or Skill Revision. Skill Revision history is separate from Article history."
         },
         {
             "id": "editorial-workflows.thesis-composition",
@@ -157,13 +157,13 @@
         },
         {
             "id": "editorial-workflows.author-skill-creation",
-            "title": "Author-requested Skills are created without Article changes",
+            "title": "Author-requested Skills are managed without Article changes",
             "capabilityIds": ["editorial-workflows.author-skill-creation"],
-            "preconditions": ["A configured Assistant model can use the bounded Skill creation tool."],
-            "event": "The Author explicitly asks the Assistant to create a reusable Skill." ,
-            "expected": ["The model can create the local Skill, which is immediately discoverable with one immutable Skill Revision.", "The initial model request receives no Article body."],
-            "forbidden": ["A default Flow workflow, an Article or Draft change, or a Proposal created as part of Skill creation."],
-            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
+            "preconditions": ["A configured Assistant model can use bounded Skill management tools."],
+            "event": "The Author explicitly asks the Assistant to create, revise, restore, or delete an Author Skill." ,
+            "expected": ["Creation, revision, and restoration update the live Skill and append immutable Skill Revisions; deletion removes the live package but retains history.", "The initial model request receives no Article body, and restoring an Assistant chat checkpoint never changes a Skill."],
+            "forbidden": ["A default Flow workflow, an Article or Draft change, or a Proposal created as part of Skill management."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant-skills.test.ts" }
         },
         {
             "id": "editorial-workflows.assistant-checkpoint-atomic",

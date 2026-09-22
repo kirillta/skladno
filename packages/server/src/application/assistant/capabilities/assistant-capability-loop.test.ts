@@ -228,7 +228,8 @@ test("the Assistant model can create an explicitly requested Author Skill withou
             const creator = request.tools.find((tool) => tool.capability === "create_author_skill");
             assert.ok(creator);
             assert.equal(creator.description, "Save a validated local Author Skill Markdown package.");
-            assert.deepEqual(request.initialActiveCapabilities, ["create_author_skill"]);
+            assert.ok(request.initialActiveCapabilities?.includes("create_author_skill"));
+            assert.ok(request.initialActiveCapabilities?.includes("update_author_skill"));
             assert.match(request.skills.find((skill) => skill.id === "skill_creator")?.instructions ?? "", /Ask a concise clarifying question/);
             await creator.execute({
                 skillId: "no-em-dashes",
