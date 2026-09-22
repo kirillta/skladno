@@ -8,6 +8,8 @@ version: 1
 
 Use this Skill when the Author explicitly asks to create a reusable Skill. Infer a concise stable ID, name, description, and Markdown procedure from the request and conversation.
 
+Use the Skladno Glossary as the authority for domain terms. Keep its distinctions intact, especially Article rather than document, Draft checkpoints versus immutable Revisions, and Proposals or Findings as advisory work requiring explicit author approval.
+
 Ask a concise clarifying question when uncertainty about the purpose, triggers, procedure, or reference material would change the resulting Skill. Do not create a Skill for a suggestion, hypothetical, or ordinary editorial request.
 
 When the request is clear, create complete `SKILL.md` Markdown with valid frontmatter. Use the `create_author_skill` tool to save it. The tool gives no extra permissions. Do not claim that you changed the Article, Draft, Proposal, or Article Revision.
