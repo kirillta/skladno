@@ -10,6 +10,30 @@ import { createArticleFixture, createFakeClient, resetWorkspaceTestEnvironment }
 describe("Editorial Workspace assistant requests", () => {
     afterEach(resetWorkspaceTestEnvironment);
 
+
+    // Product scenarios: editorial-workflows.author-skill-creation
+    it("sends Skill Creator without promoting or selecting an Article Draft", async () => {
+        const client = createFakeClient();
+        const source = createArticleFixture("one", "First Article");
+        source.draft = { articleId: source.id, content: "Private unfinished Draft", baseRevisionId: source.currentRevisionId, version: 1, updatedAt: source.updatedAt };
+        client.listArticles = vi.fn().mockResolvedValue([source]);
+        const user = userEvent.setup();
+
+        render(<App client={client} />);
+        await screen.findByRole("heading", { name: "First Article" });
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: "Skill Creator" }));
+        await user.type(screen.getByRole("combobox", { name: getMessage("assistant.guidance") }), "Create a reusable Skill for concise editing.");
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
+
+        await waitFor(() => expect(client.streamAssistantRequest).toHaveBeenCalled());
+        expect(client.saveArticleRevision).not.toHaveBeenCalled();
+        expect(client.streamAssistantRequest).toHaveBeenCalledWith("one", expect.objectContaining({
+            explicitSkillId: "skill_creator",
+            scope: { kind: "article", baseRevisionId: source.currentRevisionId },
+        }), expect.any(Function), expect.any(AbortSignal));
+    });
+
     it("removes a rejected translation after Assistant messages reload", async () => {
         const client = createFakeClient();
         const user = userEvent.setup();

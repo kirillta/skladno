@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { IntlShape } from "react-intl";
-import { APPLICATION_ERROR, ApplicationClientError, type AssistantCapabilityActivity, type AssistantEvent, type AssistantMessage, type FactCheckClaimPreview } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, BUILT_IN_SKILL, type AssistantCapabilityActivity, type AssistantEvent, type AssistantMessage, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { getErrorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
@@ -154,16 +154,17 @@ async function performNewAssistantRequest({ options, article, authorMessage, exp
     targetLanguage: string | undefined;
     skillOffset: number | undefined;
 }) {
-    const saved = await options.workspace.save(article.id);
+    const creatorRequest = explicitSkillId === BUILT_IN_SKILL.SKILL_CREATOR;
+    const saved = creatorRequest ? undefined : await options.workspace.save(article.id);
     const revision = saved ?? article.currentRevision;
     clearNewRequestFeedback(options.store, article.id);
     options.store.setStateByArticle((states) => ({ ...states, [article.id]: "streaming" }));
     options.store.setFactCheckClaimsByArticle((claims) => ({ ...claims, [article.id]: [] }));
     options.store.controller.current = new AbortController();
-    const selectionMatchesRevision = options.selection && options.selection.articleId === article.id
+    const selectionMatchesRevision = !creatorRequest && options.selection && options.selection.articleId === article.id
         && options.selection.fingerprint === await fingerprintArticleContent(revision.content);
 
-    if (options.selection && !selectionMatchesRevision)
+    if (!creatorRequest && options.selection && !selectionMatchesRevision)
         throw new ApplicationClientError("assistant_selection_invalid", undefined, 400);
 
     const matchingSelection = selectionMatchesRevision ? options.selection : undefined;
