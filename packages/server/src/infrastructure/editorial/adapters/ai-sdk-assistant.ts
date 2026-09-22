@@ -1,6 +1,7 @@
 import { tool, type ModelMessage, type ToolSet } from "ai";
 import { z } from "zod";
 
+import { EDITORIAL_CAPABILITY } from "../../../application/assistant/capabilities/editorial-capability-id.js";
 import type { EditorialAssistantRequest } from "../../../application/editorial/engine/editorial-assistant-request.js";
 import { getBoundedArticleContext } from "../models/editorial-context.js";
 
@@ -105,9 +106,12 @@ export function createAssistantTools(request: EditorialAssistantRequest, execute
 
 export function getAssistantStepOptions(stepNumber: number, activeCapabilities?: readonly string[]): { activeTools: string[]; toolChoice?: { type: "tool"; toolName: string } } {
     const activeTools = activeCapabilities ? [...activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
-    const requiredCapability = activeCapabilities?.find((capability) => capability !== "create_author_skill");
+    const authorSkillProposal = activeCapabilities?.[0] === EDITORIAL_CAPABILITY.INSPECT_ARTICLE && activeCapabilities[1] === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL;
+    const requiredCapability = stepNumber === 1 && authorSkillProposal
+        ? EDITORIAL_CAPABILITY.GENERATE_PROPOSAL
+        : activeCapabilities?.find((capability) => capability !== "create_author_skill");
 
-    return stepNumber === 0 && requiredCapability
+    return (stepNumber === 0 || (stepNumber === 1 && authorSkillProposal)) && requiredCapability
         ? { activeTools, toolChoice: { type: "tool", toolName: requiredCapability } }
         : { activeTools };
 }

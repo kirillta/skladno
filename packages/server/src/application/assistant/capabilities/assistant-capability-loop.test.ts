@@ -71,6 +71,7 @@ test("an Author Skill inspects the current Article before following its instruct
         summaries: () => [summary],
         load: (candidate) => candidate === reference ? { ...summary, instructions: "Rephrase without em dashes." } : undefined,
     };
+    let proposalAuthorContext = "";
     const engine = {
         async *stream() {
             return;
@@ -80,10 +81,13 @@ test("an Author Skill inspects the current Article before following its instruct
         },
         async *streamAssistant(modelRequest: EditorialAssistantRequest) {
             assert.equal(modelRequest.article, "");
-            assert.deepEqual(modelRequest.initialActiveCapabilities, ["inspect_article"]);
+            assert.deepEqual(modelRequest.initialActiveCapabilities, ["inspect_article", "generate_proposal"]);
             const inspect = modelRequest.tools.find((tool) => tool.capability === "inspect_article");
             assert.ok(inspect);
             assert.deepEqual(await inspect.execute({}, new AbortController().signal), { content: "Article" });
+            const proposal = modelRequest.tools.find((tool) => tool.capability === "generate_proposal");
+            assert.ok(proposal);
+            await proposal.execute({ operation: "flow_revision" }, new AbortController().signal);
             yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "response", text: "Rephrased without em dashes." } as const;
         },
     };
@@ -96,10 +100,14 @@ test("an Author Skill inspects the current Article before following its instruct
     const loop = new AssistantCapabilityLoop({
         assistant: { setExecution: () => undefined }, engines: {},
         capabilities: {
-            getDefinitions: () => [{ id: "inspect_article", execution: "read", allowedContext: "article", input: "none", result: "article", retry: "transient-read", activity: "Reviewing the current Article." }],
+            getDefinitions: () => [
+                { id: "inspect_article", execution: "read", allowedContext: "article", input: "none", result: "article", retry: "transient-read", activity: "Reviewing the current Article." },
+                { id: "generate_proposal", execution: "artifact", allowedContext: "article", selectionCompatible: true, input: "proposal-operation", result: "proposal", retry: "never", activity: "Preparing a Proposal." },
+            ],
             discover: () => [], read: () => ({ content: "Article" }), executeAction: () => ({ items: [], rules: "", status: "empty" }),
-            stream: async function* () {
-                return;
+            stream: async function* (input) {
+                proposalAuthorContext = input.authorContext;
+                yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "proposal", text: "Rephrased without em dashes." } as const;
             },
         },
         skills: new AssistantSkillCatalog([source]), conversationHistory: () => [],
@@ -107,10 +115,65 @@ test("an Author Skill inspects the current Article before following its instruct
 
     for await (const event of loop.stream(request, new AbortController().signal))
         assert.equal(event.type, EDITORIAL_ENGINE_EVENT.COMPLETED);
+
+    assert.equal(request.completedCapability, "generate_proposal");
+    assert.equal(proposalAuthorContext, "Rephrase without em dashes.");
 });
 
 
-test("a resolved Skill cannot complete as a chat response without its artifact", async () => {
+test("an Author Skill prepares a Proposal from only the selected text", async () => {
+    const reference: AssistantSkillReference = { source: "author", id: "no-em-dashes", version: "test" };
+    const summary: AssistantSkillSummary = { reference, name: "No em dashes", description: "Rephrase without em dashes." };
+    const source: AssistantSkillSource = {
+        id: "author",
+        summaries: () => [summary],
+        load: (candidate) => candidate === reference ? { ...summary, instructions: "Rephrase without em dashes." } : undefined,
+    };
+    let streamInput: { articleContent?: string; articleSelection?: boolean; authorContext: string } | undefined;
+    const engine = {
+        async *stream() {
+            return;
+        },
+        async *streamConversation() {
+            return;
+        },
+        async *streamAssistant(modelRequest: EditorialAssistantRequest) {
+            assert.deepEqual(modelRequest.initialActiveCapabilities, ["generate_proposal"]);
+            const proposal = modelRequest.tools.find((tool) => tool.capability === "generate_proposal");
+            assert.ok(proposal);
+            await proposal.execute({ operation: "flow_revision" }, new AbortController().signal);
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "response", text: "Rephrased selection." } as const;
+        },
+    };
+    const request: PreparedAssistantRequest = {
+        kind: "new", requestId: "request", articleId: "article", authorMessage: "",
+        scope: { kind: "selection", baseRevisionId: "revision", startOffset: 7, endOffset: 15 }, articleContent: "before selected after", articleTitle: "Title",
+        resolvedSkillId: reference.id, engine, usesCapabilityLoop: true,
+        capabilityActivities: [], pendingActions: [], authorizedActions: [],
+    };
+    const loop = new AssistantCapabilityLoop({
+        assistant: { setExecution: () => undefined }, engines: {},
+        capabilities: {
+            getDefinitions: () => [{ id: "generate_proposal", execution: "artifact", allowedContext: "article", selectionCompatible: true, input: "proposal-operation", result: "proposal", retry: "never", activity: "Preparing a Proposal." }],
+            discover: () => [], read: () => undefined, executeAction: () => ({ items: [], rules: "", status: "empty" }),
+            stream: async function* (input) {
+                streamInput = input;
+                yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "proposal", text: "Rephrased selection." } as const;
+            },
+        },
+        skills: new AssistantSkillCatalog([source]), conversationHistory: () => [],
+    });
+
+    for await (const event of loop.stream(request, new AbortController().signal))
+        assert.equal(event.type, EDITORIAL_ENGINE_EVENT.COMPLETED);
+
+    assert.equal(streamInput?.articleContent, "selected");
+    assert.equal(streamInput?.articleSelection, true);
+    assert.equal(streamInput?.authorContext, "Rephrase without em dashes.");
+});
+
+
+test("an Author Skill cannot complete as chat instead of a Proposal", async () => {
     const engine = {
         async *stream() {
             return;
@@ -125,7 +188,7 @@ test("a resolved Skill cannot complete as a chat response without its artifact",
     const request: PreparedAssistantRequest = {
         kind: "new", requestId: "request", articleId: "article", authorMessage: "Prepare this.",
         scope: { kind: "article", baseRevisionId: "revision" }, articleContent: "Article", articleTitle: "Title",
-        resolvedSkillId: BUILT_IN_SKILL.TALKING_POINTS, operation: "thesis_to_narrative", engine, usesCapabilityLoop: true,
+        resolvedSkillId: "no-em-dashes", engine, usesCapabilityLoop: true,
         capabilityActivities: [], pendingActions: [], authorizedActions: [],
     };
     const loop = new AssistantCapabilityLoop({
@@ -144,7 +207,7 @@ test("a resolved Skill cannot complete as a chat response without its artifact",
             void event;
     };
 
-    await assert.rejects(consume, { code: "invalid_output" });
+    await assert.rejects(consume(), { code: "invalid_output" });
 });
 
 

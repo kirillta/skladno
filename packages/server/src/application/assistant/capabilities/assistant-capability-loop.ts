@@ -39,15 +39,18 @@ export class AssistantCapabilityLoop {
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
         const excerpt = this.getArticleExcerpt(request);
-        let primary: CompletionEvent | undefined;
-        const tools = this.createCapabilityTools(request, excerpt, () => primary, (event) => {
-            primary = event;
-        });
         const summaries = this.dependencies.skills.discover();
         const skills = this.dependencies.skills.load(summaries.map((skill) => skill.reference));
         const selectedSkills = request.resolvedSkillId
             ? skills.filter((skill) => skill.reference.id === request.resolvedSkillId)
             : [];
+        const authorContext = !isBuiltInSkillId(request.resolvedSkillId ?? "")
+            ? [request.authorMessage, ...selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])])].filter(Boolean).join("\n\n")
+            : request.authorMessage;
+        let primary: CompletionEvent | undefined;
+        const tools = this.createCapabilityTools(request, excerpt, authorContext, () => primary, (event) => {
+            primary = event;
+        });
 
         const editorialRequest = {
             message: request.authorMessage,
@@ -73,7 +76,7 @@ export class AssistantCapabilityLoop {
                 continue;
             }
 
-            if (request.operation)
+            if (request.operation || (request.resolvedSkillId && !isBuiltInSkillId(request.resolvedSkillId)))
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
             yield event;
@@ -90,7 +93,9 @@ export class AssistantCapabilityLoop {
 
     private initialCapabilities(skill: string, scope: "article" | "selection"): readonly string[] {
         if (!isBuiltInSkillId(skill))
-            return scope === "article" ? [EDITORIAL_CAPABILITY.INSPECT_ARTICLE] : [];
+            return scope === "article"
+                ? [EDITORIAL_CAPABILITY.INSPECT_ARTICLE, EDITORIAL_CAPABILITY.GENERATE_PROPOSAL]
+                : [EDITORIAL_CAPABILITY.GENERATE_PROPOSAL];
 
         switch (skill) {
             case BUILT_IN_SKILL.FACT_CHECKING:
@@ -107,7 +112,7 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private createCapabilityTools(request: PreparedAssistantRequest, excerpt: string, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): EditorialAssistantTool[] {
+    private createCapabilityTools(request: PreparedAssistantRequest, excerpt: string, authorContext: string, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): EditorialAssistantTool[] {
         if (!this.dependencies.capabilities)
             return [];
 
@@ -118,7 +123,7 @@ export class AssistantCapabilityLoop {
             capability: definition.id,
             description: definition.activity,
             input: definition.input,
-            execute: (input, signal) => this.executeCapability(request, excerpt, definition, input, signal, primary, setPrimary),
+            execute: (input, signal) => this.executeCapability(request, excerpt, authorContext, definition, input, signal, primary, setPrimary),
         }));
 
         tools.push({
@@ -155,7 +160,7 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private async executeCapability(request: PreparedAssistantRequest, excerpt: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<unknown> {
+    private async executeCapability(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<unknown> {
         signal.throwIfAborted();
         if (!isValidatedEditorialCapabilityCall(definition.id, input))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
@@ -169,7 +174,7 @@ export class AssistantCapabilityLoop {
         if (definition.execution === "action")
             return this.stageAction(request, definition, input, signal);
 
-        return this.streamArtifactCapability(request, excerpt, definition, input, signal, primary, setPrimary);
+        return this.streamArtifactCapability(request, excerpt, authorContext, definition, input, signal, primary, setPrimary);
     }
 
 
@@ -210,12 +215,12 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private async streamArtifactCapability(request: PreparedAssistantRequest, excerpt: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<{ status: "prepared" }> {
+    private async streamArtifactCapability(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<{ status: "prepared" }> {
         const streamContext = {
             capability: definition.id as StreamContext["capability"],
             context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
             requestId: request.requestId,
-            authorContext: request.authorMessage,
+            authorContext,
             ...(request.resolvedSkillId && isBuiltInSkillId(request.resolvedSkillId) ? { skillId: request.resolvedSkillId } : {}),
             ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
             ...(input.operation ? { operation: input.operation as StreamContext["operation"] } : {}),

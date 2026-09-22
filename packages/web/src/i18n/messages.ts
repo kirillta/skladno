@@ -795,7 +795,7 @@ export const messages = {
     "errors.editorialConfigurationMissing": "Couldn't start that AI-assisted action. Choose a compatible model in Settings, then try again.",
     "errors.editorialProviderFailed": "Couldn't finish that AI-assisted action. Your Article was not changed. Try again, or check your AI connection in Settings.",
     "errors.editorialStreamIncomplete": "Couldn't finish that AI-assisted action. Your Article was not changed. Try again.",
-    "errors.editorialRequestFailed": "Couldn't start that AI-assisted action. Your Article was not changed. Try again, or check your AI connection in Settings.",
+    "errors.editorialRequestFailed": "Couldn't complete that AI-assisted action. Your Article was not changed. Try again, or check your AI connection in Settings.",
     "errors.invalidKeyBinding": "Enter a complete shortcut using a non-modifier key.",
     "errors.keyBindingConflict": "Choose a shortcut that is not already assigned.",
     "errors.assistantSkillUnsupported": "That Assistant action isn't available. Choose another action.",

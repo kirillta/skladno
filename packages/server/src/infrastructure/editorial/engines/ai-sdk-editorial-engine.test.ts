@@ -50,6 +50,14 @@ test("a resolved skill must call its artifact tool before it can answer", () => 
     assert.deepEqual(getAssistantStepOptions(1, ["translate", "inspect_translations"]), {
         activeTools: ["translate", "inspect_translations", "find_capabilities", "load_skill"],
     });
+    assert.deepEqual(getAssistantStepOptions(0, ["inspect_article", "generate_proposal"]), {
+        activeTools: ["inspect_article", "generate_proposal", "find_capabilities", "load_skill"],
+        toolChoice: { type: "tool", toolName: "inspect_article" },
+    });
+    assert.deepEqual(getAssistantStepOptions(1, ["inspect_article", "generate_proposal"]), {
+        activeTools: ["inspect_article", "generate_proposal", "find_capabilities", "load_skill"],
+        toolChoice: { type: "tool", toolName: "generate_proposal" },
+    });
 });
 
 
