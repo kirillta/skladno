@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HTTP_METHOD } from "@skladno/shared";
+import type { AssistantActionIntentVerifier } from "../application/editorial/assistant-action-intent-verifier.js";
 import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
 import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
