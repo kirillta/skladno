@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { basename, join, parse, relative, resolve } from "node:path";
 import type { Dialog, IpcMain, Shell } from "electron";
@@ -6,6 +6,7 @@ import type { ApplicationServices } from "@skladno/server/electron";
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
 import { beginTimedTelemetryCapture, type DesktopSettingsLocations, type ElectronMessages, type TelemetryCaptureSource } from "@skladno/shared";
 import { readRuntimeSettings, updateRuntimeSettings } from "../../infrastructure/runtime/runtime-settings.js";
+import { createAuthorSkillBackup, getAuthorSkillBackupPath, hasAuthorSkillBackup } from "../../infrastructure/recovery/author-skill-backup.js";
 import { desktopSettingsChannel } from "./desktop-settings-client.js";
 
 
@@ -15,7 +16,7 @@ function areSettingsKeysOverlapping(first: string, second: string): boolean {
 }
 
 
-function createNativeBackup(database: { exec(sql: string): void }, backupDirectory: string, telemetry?: TelemetryCaptureSource): { path: string; createdAt: string } {
+function createNativeBackup(database: { exec(sql: string): void }, dataDirectory: string, backupDirectory: string, telemetry?: TelemetryCaptureSource): { path: string; createdAt: string } {
     const observed = beginTimedTelemetryCapture(telemetry);
     try {
         mkdirSync(backupDirectory, { recursive: true });
@@ -28,6 +29,8 @@ function createNativeBackup(database: { exec(sql: string): void }, backupDirecto
 
         if (statSync(path).size === 0)
             throw new Error("Backup is empty.");
+
+        createAuthorSkillBackup({ dataDirectory, snapshotPath: path });
 
         observed.capture({ kind: "backup_finished", outcome: "completed", elapsedMs: observed.elapsedMs() });
         return { path, createdAt: created.toISOString() };
@@ -70,7 +73,7 @@ function createLocalDataDeletion({ dataDirectory, backupDirectory, database, clo
                 if (!backupAvailable || !backupDirectory)
                     return "editorial_request_failed";
 
-                createNativeBackup(database, backupDirectory, telemetry);
+                createNativeBackup(database, dataDirectory, backupDirectory, telemetry);
             }
 
             closeApplication();
@@ -94,8 +97,9 @@ interface NativeBackupRestoration {
 }
 
 
-function createNativeBackupRestoration({ runtimePath, backupDirectory, database, chooseBackupSnapshot, requestCheckpoint, closeApplication, restart, telemetry }: {
+function createNativeBackupRestoration({ runtimePath, dataDirectory, backupDirectory, database, chooseBackupSnapshot, requestCheckpoint, closeApplication, restart, telemetry }: {
     runtimePath: string;
+    dataDirectory: string;
     backupDirectory?: string;
     database: { exec(sql: string): void };
     chooseBackupSnapshot(directory: string): Promise<string | undefined>;
@@ -130,8 +134,10 @@ function createNativeBackupRestoration({ runtimePath, backupDirectory, database,
             const stagedSnapshotPath = join(stagingDirectory, `${randomUUID()}.sqlite`);
             copyFileSync(selected, stagedSnapshotPath);
             validateDatabaseSnapshot(stagedSnapshotPath);
+            if (hasAuthorSkillBackup(selected))
+                cpSync(getAuthorSkillBackupPath(selected), getAuthorSkillBackupPath(stagedSnapshotPath), { recursive: true, errorOnExist: true });
 
-            const recoverySnapshotPath = createNativeBackup(database, stagingDirectory, telemetry).path;
+            const recoverySnapshotPath = createNativeBackup(database, dataDirectory, stagingDirectory, telemetry).path;
             updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } }));
             closeApplication();
             restart();
@@ -197,11 +203,11 @@ async function revealDataDirectory({ dataDirectory, shell }: Pick<DesktopSetting
 }
 
 
-function createBackup({ runtime, database, telemetry }: Pick<DesktopSettingsContext, "runtime" | "database" | "telemetry">): unknown {
+function createBackup({ runtime, dataDirectory, database, telemetry }: Pick<DesktopSettingsContext, "runtime" | "dataDirectory" | "database" | "telemetry">): unknown {
     if (!runtime.backupDirectory)
         return { ok: false, error: "editorial_request_failed" };
 
-    return { ok: true, value: createNativeBackup(database, runtime.backupDirectory, telemetry) };
+    return { ok: true, value: createNativeBackup(database, dataDirectory, runtime.backupDirectory, telemetry) };
 }
 
 
@@ -304,6 +310,7 @@ export function registerDesktopSettingsAdapter({ ipcMain, userDataPath, ...optio
                         messages: context.messages,
                         restoration: createNativeBackupRestoration({
                             runtimePath: context.runtimePath,
+                            dataDirectory: context.dataDirectory,
                             backupDirectory: context.runtime.backupDirectory,
                             database: context.database,
                             chooseBackupSnapshot: context.chooseBackupSnapshot,

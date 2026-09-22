@@ -1,4 +1,5 @@
 import { copyFileSync, existsSync, renameSync, rmSync } from "node:fs";
+import { dirname } from "node:path";
 
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
 import { beginTelemetryCapture, type TelemetryCaptureSource } from "@skladno/shared";
@@ -6,6 +7,7 @@ import { beginTelemetryCapture, type TelemetryCaptureSource } from "@skladno/sha
 import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings } from "../runtime/runtime-settings.js";
 import type { PendingRestore } from "./pending-restore-contract.js";
 import { PendingRestoreError } from "./pending-restore-error.js";
+import { applyAuthorSkillRestore, completeAuthorSkillRestore, getAuthorSkillBackupPath, hasAuthorSkillBackup, rollbackAuthorSkillRestore } from "./author-skill-backup.js";
 
 
 function getDatabaseSidecars(databasePath: string): string[] {
@@ -25,6 +27,9 @@ function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath
     const temporary = `${databasePath}.restore`;
     let originalMoved = false;
     let restored = false;
+    let authorSkillsRestored = false;
+    const dataDirectory = dirname(databasePath);
+    const restoresAuthorSkills = hasAuthorSkillBackup(pending.stagedSnapshotPath);
     try {
         validateDatabaseSnapshot(pending.stagedSnapshotPath);
         validateDatabaseSnapshot(pending.recoverySnapshotPath);
@@ -42,6 +47,11 @@ function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath
 
         renameSync(temporary, databasePath);
         restored = true;
+        if (restoresAuthorSkills) {
+            authorSkillsRestored = true;
+            applyAuthorSkillRestore({ dataDirectory, snapshotPath: pending.stagedSnapshotPath });
+        }
+
         updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: { ...pending, phase: "applied" } }));
     } catch (error) {
         if (restored)
@@ -50,6 +60,9 @@ function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath
         const canRestoreOriginal = originalMoved && existsSync(originalPath);
         if (canRestoreOriginal)
             renameSync(originalPath, databasePath);
+
+        if (authorSkillsRestored)
+            rollbackAuthorSkillRestore(dataDirectory);
 
         updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: undefined }));
         throw new PendingRestoreError(error);
@@ -66,6 +79,8 @@ export function applyPendingRestore({ runtimePath, databasePath, telemetry }: { 
 
     const capture = beginTelemetryCapture(telemetry);
     const originalPath = `${databasePath}.before-restore`;
+    const dataDirectory = dirname(databasePath);
+    const restoresAuthorSkills = hasAuthorSkillBackup(pending.stagedSnapshotPath);
     try {
         if (pending.phase === "ready")
             applyReadyRestore({ runtimePath, databasePath, pending });
@@ -78,6 +93,10 @@ export function applyPendingRestore({ runtimePath, databasePath, telemetry }: { 
         complete: () => {
             removeDatabase(originalPath);
             rmSync(pending.stagedSnapshotPath, { force: true });
+            rmSync(getAuthorSkillBackupPath(pending.stagedSnapshotPath), { recursive: true, force: true });
+            if (restoresAuthorSkills)
+                completeAuthorSkillRestore(dataDirectory);
+
             writeRuntimeSettings(runtimePath, { ...readRuntimeSettings(runtimePath), pendingRestore: undefined });
             capture({ kind: "recovery_finished", recovery: "restore", outcome: "completed" });
         },
@@ -87,6 +106,10 @@ export function applyPendingRestore({ runtimePath, databasePath, telemetry }: { 
             removeDatabase(databasePath);
             copyFileSync(pending.recoverySnapshotPath, databasePath);
             rmSync(pending.stagedSnapshotPath, { force: true });
+            rmSync(getAuthorSkillBackupPath(pending.stagedSnapshotPath), { recursive: true, force: true });
+            if (restoresAuthorSkills)
+                rollbackAuthorSkillRestore(dataDirectory);
+
             writeRuntimeSettings(runtimePath, { ...readRuntimeSettings(runtimePath), pendingRestore: undefined });
         },
     };
