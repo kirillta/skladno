@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { dirname, resolve } from "node:path";
 
 import type { AssistantSkillReference, AssistantSkillSummary } from "@skladno/shared";
@@ -137,6 +138,30 @@ export class FileAssistantSkillSource {
         this.refresh();
 
         return parsed.skillPackage;
+    }
+
+
+    validateInstall(input: { directory: string; files: Readonly<Record<string, string>> }): void {
+        const root = this.packageRoot(input.directory);
+        if (existsSync(root))
+            throw new Error("skill_package_conflict");
+
+        this.refresh();
+        const staged = `${root}.${randomUUID()}.staged`;
+        try {
+            this.writeStaged(staged, input.files);
+            const parsed = parseSkillPackage({ root: staged, source: this.id, reservedIds: this.reserved().ids, reservedNames: this.reserved().names });
+            if (!parsed.ok)
+                throw new Error(parsed.issues[0]!.code);
+
+            if (parsed.skillPackage.reference.id !== input.directory)
+                throw new Error("invalid_metadata");
+
+            if (!this.isAvailable(parsed.skillPackage))
+                throw new Error("skill_package_conflict");
+        } finally {
+            rmSync(staged, { recursive: true, force: true });
+        }
     }
 
 

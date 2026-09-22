@@ -260,6 +260,9 @@ test("the Assistant model can create an explicitly requested Author Skill withou
             assert.equal(event.type, EDITORIAL_ENGINE_EVENT.COMPLETED);
 
         assert.equal(modelRequest?.article, "");
+        assert.equal(source.get("no-em-dashes"), undefined);
+        assert.equal(authorSkills.listRevisions("no-em-dashes").length, 0);
+        loop.commitPendingSkill(request);
         assert.match(source.get("no-em-dashes")?.instructions ?? "", /Rewrite without em dashes/);
         assert.equal(authorSkills.listRevisions("no-em-dashes").length, 1);
     } finally {

@@ -11,6 +11,17 @@ export class AuthorSkillService {
     ) { }
 
 
+    validateCreate(input: { skillId: string; files: Readonly<Record<string, string>> }): void {
+        this.source.validateInstall({ directory: input.skillId, files: input.files });
+    }
+
+
+    rollbackCreate(revision: AuthorSkillRevision): void {
+        this.source.delete({ directory: revision.skillId, expectedHash: revision.contentHash });
+        this.revisions.removeCreated(revision);
+    }
+
+
     create(input: { skillId: string; files: Readonly<Record<string, string>>; requestId?: string }): AuthorSkillRevision {
         const skillPackage = this.source.install({ directory: input.skillId, files: input.files });
         try {

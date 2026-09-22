@@ -17,5 +17,6 @@ export interface PreparedAssistantRequest extends ReplayedAssistantRequest {
     completedCapability?: string;
     capabilityActivities: { summary: string; status: "started" | "completed" }[];
     pendingActions: { capability: ActionCapability; input: Readonly<Record<string, string>> }[];
+    pendingSkillCreate?: { skillId: string; skillMarkdown: string };
     authorizedActions: readonly AssistantAuthorizedAction[];
 }

@@ -16,6 +16,7 @@ import type { EditorialEngineResolver } from "../../editorial/engine/editorial-e
 import type { ConversationHistory } from "../requests/conversation-history.js";
 import { AssistantSkillCatalog } from "../skills/assistant-skill-catalog.js";
 import type { AuthorSkillService } from "../skills/author-skill-service.js";
+import type { AuthorSkillRevision } from "../skills/author-skill-revision.js";
 
 
 function isTransientReadFailure(error: unknown): boolean {
@@ -145,7 +146,7 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private async createAuthorSkill(request: PreparedAssistantRequest, input: Readonly<Record<string, string>>, signal: AbortSignal): Promise<{ skillId: string; revisionId: string }> {
+    private async createAuthorSkill(request: PreparedAssistantRequest, input: Readonly<Record<string, string>>, signal: AbortSignal): Promise<{ skillId: string; status: "pending" }> {
         const skillId = input.skillId;
         const skillMarkdown = input.skillMarkdown;
         if (!skillId || !skillMarkdown)
@@ -155,8 +156,29 @@ export class AssistantCapabilityLoop {
         if (!verifier || !await verifier.verify(request.authorMessage, "create_author_skill", {}, signal))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        const revision = this.dependencies.authorSkills!.create({ skillId, files: { "SKILL.md": skillMarkdown }, requestId: request.requestId });
-        return { skillId, revisionId: revision.id };
+        signal.throwIfAborted();
+        if (request.pendingSkillCreate)
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+        this.dependencies.authorSkills!.validateCreate({ skillId, files: { "SKILL.md": skillMarkdown } });
+        request.pendingSkillCreate = { skillId, skillMarkdown };
+        return { skillId, status: "pending" };
+    }
+
+
+    commitPendingSkill(request: PreparedAssistantRequest): AuthorSkillRevision | undefined {
+        const pending = request.pendingSkillCreate;
+        if (!pending)
+            return;
+
+        const revision = this.dependencies.authorSkills!.create({ skillId: pending.skillId, files: { "SKILL.md": pending.skillMarkdown }, requestId: request.requestId });
+        request.pendingSkillCreate = undefined;
+        return revision;
+    }
+
+
+    rollbackCreatedSkill(revision: AuthorSkillRevision): void {
+        this.dependencies.authorSkills!.rollbackCreate(revision);
     }
 
 

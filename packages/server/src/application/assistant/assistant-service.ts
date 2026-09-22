@@ -130,16 +130,18 @@ export class AssistantService {
             initialized = true;
             yield* this.initialEvents(request);
 
-            let completed = false;
+            let completedEvent: EditorialEngineEvent | undefined;
             const msPerMinute = 60000;
             const timeout = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).assistantRequestTimeoutMinutes;
             const timeoutMs = timeout === "unlimited" ? undefined : timeout * msPerMinute;
             for await (const event of streamWithAssistantDeadline((requestSignal) => this.streamEditorialEvents(request, requestSignal), signal, timeoutMs)) {
-                completed ||= event.type === EDITORIAL_ENGINE_EVENT.COMPLETED;
-                yield* this.streamAssistantEvents(request, event);
+                if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED)
+                    completedEvent = event;
+                else
+                    yield* this.streamAssistantEvents(request, event, signal);
             }
 
-            if (!completed && !signal.aborted)
+            if (!completedEvent && !signal.aborted)
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM, EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM);
 
             if (signal.aborted) {
@@ -154,6 +156,9 @@ export class AssistantService {
 
                 return;
             }
+
+            if (completedEvent)
+                yield* this.streamAssistantEvents(request, completedEvent, signal);
 
             observed.capture({
                 kind: "ai_operation_finished",
@@ -222,7 +227,7 @@ export class AssistantService {
     }
 
 
-    private async *streamAssistantEvents(request: PreparedAssistantRequest, event: EditorialEngineEvent): AsyncIterable<AssistantEvent> {
+    private async *streamAssistantEvents(request: PreparedAssistantRequest, event: EditorialEngineEvent, signal: AbortSignal): AsyncIterable<AssistantEvent> {
         if (event.type === EDITORIAL_ENGINE_EVENT.TEXT_DELTA)
             yield { type: ASSISTANT_EVENT.TEXT_DELTA, requestId: request.requestId, delta: event.delta };
 
@@ -232,12 +237,25 @@ export class AssistantService {
         if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED)
             return;
 
+        signal.throwIfAborted();
+
         const kind = getResponseKind(request.completedCapability);
         for (const activity of request.capabilityActivities)
             yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity };
 
         yield { type: ASSISTANT_EVENT.STAGED_COMPLETION, requestId: request.requestId, completion: { responseKind: kind } };
-        const completion = this.completion.persist(request, event);
+        signal.throwIfAborted();
+        const createdSkill = this.capabilityLoop.commitPendingSkill(request);
+        let completion: ReturnType<AssistantCompletion["persist"]>;
+        try {
+            completion = this.completion.persist(request, event);
+        } catch (error) {
+            if (createdSkill)
+                this.capabilityLoop.rollbackCreatedSkill(createdSkill);
+
+            throw error;
+        }
+
         if (!request.usesCapabilityLoop && request.operation)
             yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: getActivityForEditorialOperation(request.operation), status: "completed" } };
 

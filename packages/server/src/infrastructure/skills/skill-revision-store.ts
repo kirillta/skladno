@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
@@ -123,6 +123,24 @@ export class SkillRevisionStore implements AuthorSkillRevisionStore {
         const files: Record<string, string> = {};
         this.readPackageFiles(root, files);
         return Object.keys(files).length > 0 ? files : undefined;
+    }
+
+
+    removeCreated(revision: AuthorSkillRevision): void {
+        if (!skillId.test(revision.skillId) || !revisionId.test(revision.id))
+            throw new Error("invalid_skill_revision");
+
+        const root = this.skillRoot(revision.skillId);
+        const stored = this.readRevision(join(root, revision.id, "revision.json"));
+        if (stored?.requestId !== revision.requestId || stored?.contentHash !== revision.contentHash)
+            throw new Error("skill_revision_conflict");
+
+        rmSync(join(root, revision.id), { recursive: true });
+        const previous = this.list(revision.skillId).at(-1);
+        if (previous)
+            this.writeState(previous);
+        else
+            rmSync(join(root, "state.json"), { force: true });
     }
 
 
