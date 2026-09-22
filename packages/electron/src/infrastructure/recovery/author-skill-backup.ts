@@ -1,5 +1,6 @@
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { captureAuthorSkillInventory, validateAuthorSkillBackupManifest, writeAuthorSkillBackupManifest } from "./author-skill-backup-manifest.js";
 
 
 const authorSkillDirectories = ["skills", "skill-history"] as const;
@@ -11,12 +12,13 @@ export function getAuthorSkillBackupPath(snapshotPath: string): string {
 }
 
 
-export function createAuthorSkillBackup({ dataDirectory, snapshotPath }: { dataDirectory: string; snapshotPath: string }): void {
+export function createAuthorSkillBackup({ dataDirectory, snapshotPath, expectedInventory }: { dataDirectory: string; snapshotPath: string; expectedInventory?: ReturnType<typeof captureAuthorSkillInventory> }): void {
     const destination = getAuthorSkillBackupPath(snapshotPath);
     const staged = `${destination}.tmp`;
     if (existsSync(destination) || existsSync(staged))
         throw new Error("author_skill_backup_conflict");
 
+    const before = expectedInventory ?? captureAuthorSkillInventory(dataDirectory);
     try {
         mkdirSync(staged);
         for (const directory of authorSkillDirectories) {
@@ -25,6 +27,7 @@ export function createAuthorSkillBackup({ dataDirectory, snapshotPath }: { dataD
                 cpSync(source, join(staged, directory), { recursive: true, errorOnExist: true });
         }
 
+        writeAuthorSkillBackupManifest(snapshotPath, staged, before, dataDirectory);
         renameSync(staged, destination);
     } catch (error) {
         rmSync(staged, { recursive: true, force: true });
@@ -38,8 +41,15 @@ export function hasAuthorSkillBackup(snapshotPath: string): boolean {
 }
 
 
+export function validateAuthorSkillBackup(snapshotPath: string): void {
+    if (hasAuthorSkillBackup(snapshotPath))
+        validateAuthorSkillBackupManifest(snapshotPath, getAuthorSkillBackupPath(snapshotPath));
+}
+
+
 export function applyAuthorSkillRestore({ dataDirectory, snapshotPath }: { dataDirectory: string; snapshotPath: string }): void {
     const source = getAuthorSkillBackupPath(snapshotPath);
+    validateAuthorSkillBackup(snapshotPath);
     for (const directory of authorSkillDirectories) {
         const active = join(dataDirectory, directory);
         const previous = `${active}.before-restore`;

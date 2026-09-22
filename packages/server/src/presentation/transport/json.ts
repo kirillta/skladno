@@ -9,11 +9,11 @@ export function writeJson(response: ServerResponse, status: number, body: unknow
 }
 
 
-export async function readJson(request: IncomingMessage): Promise<unknown> {
+export async function readJson(request: IncomingMessage, maxLength = 1_000_000): Promise<unknown> {
     let body = "";
     for await (const chunk of request) {
         body += String(chunk);
-        if (body.length > 1_000_000)
+        if (body.length > maxLength)
             throw new ApplicationServiceError(APPLICATION_ERROR.REQUEST_TOO_LARGE, HTTP_STATUS.BAD_REQUEST);
     }
 

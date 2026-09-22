@@ -25,7 +25,7 @@ Keep browser and native backup destinations outside SQLite. The browser retains 
 
 The same runtime configuration stores the selected live data directory and a discriminated pending restore or relocation record. `SKLADNO_DATA_DIR` has higher precedence and disables relocation. Runtime configuration contains no credentials or Article content and is written atomically.
 
-Restore and relocation use staged SQLite snapshots and apply only during restart. Before restore, Skladno creates and retains a recovery snapshot. Relocation retains the complete old data directory. Startup clears pending state only after the new database and application services open successfully. A failed switch attempts one automatic rollback and cannot enter a relaunch loop.
+Restore and relocation use staged SQLite snapshots and apply only during restart. Native backups include current Author Skills and Skill Revision history in a companion directory with an integrity manifest; a legacy database-only snapshot retains current Skills. Before restore, Skladno creates and retains a recovery snapshot with Skill files. Relocation retains the complete old data directory. Startup clears pending state only after the new database and application services open successfully. A failed switch attempts one automatic rollback and cannot enter a relaunch loop.
 
 Live data must remain on a local filesystem. Native backup snapshots may use a network destination. Backup and data directories cannot contain one another.
 

@@ -43,6 +43,10 @@ test("a native backup includes Author Skills and their history", async () => {
         const files = join(fixture.backupDirectory, `${snapshot}.skills`);
         assert.equal(readFileSync(join(files, "skills", "clarity", "SKILL.md"), "utf8"), "skill");
         assert.equal(readFileSync(join(files, "skill-history", "clarity", "revision", "revision.json"), "utf8"), "history");
+        const manifest = JSON.parse(readFileSync(join(files, "manifest.json"), "utf8"));
+        assert.equal(manifest.format, 1);
+        assert.ok(manifest.files["database.sqlite"]);
+        assert.ok(manifest.files["skills/clarity/SKILL.md"]);
         assert.equal(existsSync(files), true);
     } finally {
         fixture.cleanup();

@@ -7,7 +7,7 @@ import { beginTelemetryCapture, type TelemetryCaptureSource } from "@skladno/sha
 import { readRuntimeSettings, updateRuntimeSettings, writeRuntimeSettings } from "../runtime/runtime-settings.js";
 import type { PendingRestore } from "./pending-restore-contract.js";
 import { PendingRestoreError } from "./pending-restore-error.js";
-import { applyAuthorSkillRestore, completeAuthorSkillRestore, getAuthorSkillBackupPath, hasAuthorSkillBackup, rollbackAuthorSkillRestore } from "./author-skill-backup.js";
+import { applyAuthorSkillRestore, completeAuthorSkillRestore, getAuthorSkillBackupPath, hasAuthorSkillBackup, rollbackAuthorSkillRestore, validateAuthorSkillBackup } from "./author-skill-backup.js";
 
 
 function getDatabaseSidecars(databasePath: string): string[] {
@@ -33,6 +33,8 @@ function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath
     try {
         validateDatabaseSnapshot(pending.stagedSnapshotPath);
         validateDatabaseSnapshot(pending.recoverySnapshotPath);
+        validateAuthorSkillBackup(pending.stagedSnapshotPath);
+        validateAuthorSkillBackup(pending.recoverySnapshotPath);
 
         copyFileSync(pending.stagedSnapshotPath, temporary);
         validateDatabaseSnapshot(temporary);

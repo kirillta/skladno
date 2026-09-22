@@ -6,6 +6,14 @@ Status: partially implemented; remaining work replanned against the current tree
 The observations below come from source inspection, not a passing test run.
 Preserve existing implementation and concurrent uncommitted changes.
 
+Progress (2026-09-22): the Gap 4 backup path now saves and verifies current
+Author Skills and Skill Revision history with SQLite in browser directory
+bundles and native snapshot companions. Browser restore retains a complete
+recovery copy and rolls back interrupted switches at startup. Legacy SQLite
+backups retain current Skills. Remaining lifecycle journaling for app-managed
+Skill writes is separate work; the slice 1 steps below remain the original
+acceptance list, not a claim that every step is unfinished.
+
 Execution: solo. Chat results, file-backed Skill Revisions, and file updates share
 contracts and completion rules. Implement the business slices below in order.
 Each slice includes errors, localization, diagnostics, accessibility, product

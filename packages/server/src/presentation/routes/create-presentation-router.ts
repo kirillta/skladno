@@ -1,8 +1,9 @@
-import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, assistantSkillsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantCheckpointPreviewPath, createAssistantCheckpointRestorePath, createAssistantMessagesPath, createAssistantRequestsPath, createAssistantTranslationRejectionPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
+import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, assistantSkillsPath, backupExportsPath, backupImportsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantCheckpointPreviewPath, createAssistantCheckpointRestorePath, createAssistantMessagesPath, createAssistantRequestsPath, createAssistantTranslationRejectionPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
 import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-diagnostics.js";
+import type { BackupBundleTransfers } from "../../infrastructure/persistence/backup-bundle.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, reorderPinnedArticlesRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, setArticleArchivedRoute, setArticlePinnedRoute, updateArticleRoute } from "./articles-route.js";
 import { createAssistantRequestRoute, listAssistantMessagesRoute, listAssistantSkillsRoute, previewAssistantCheckpointRoute, rejectAssistantTranslationRoute, restoreAssistantCheckpointRoute } from "./assistant-route.js";
@@ -11,6 +12,7 @@ import { handleHealthRoute } from "./health-route.js";
 import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publish-settings-route.js";
 import { handleAiModelsRoute, handleAppModelRoute, handleBackupPolicyRoute, handleCreateAiConnectionRoute, handleCreateBackupRoute, handleDeleteAiConnectionRoute, handleGeneralSettingsRoute, handleKeyBindingsRoute, handleModelPreferencesRoute, handleRestoreBackupRoute, handleSetAiConnectionActiveRoute, handleSettingsSnapshotRoute, handleTestAiConnectionRoute, handleUpdateAiConnectionRoute } from "./settings-route.js";
 import { addArticleRevisionStyleCorpusItemRoute, createStyleCorpusItemRoute, deleteStyleCorpusItemRoute, getArticleStyleRulesRoute, handleStyleCorpusRoute, rebuildStyleCorpusRoute, setArticleStyleRulesRoute, updateStyleCorpusItemRoute, updateStyleCorpusRulesRoute } from "./style-corpus-route.js";
+import { beginBackupImportRoute, createBackupExportRoute, readBackupExportRoute, removeBackupTransferRoute, restoreBackupImportRoute, writeBackupImportRoute } from "./backup-bundle-route.js";
 import { summarizeProposalRoute } from "./proposal-summary-route.js";
 import { listFactChecksRoute, resolveFactCheckRoute } from "./fact-check-route.js";
 
@@ -45,9 +47,14 @@ const ARTICLE_STYLE_CORPUS_SNAPSHOT_PATH = createRoutePattern(createArticleStyle
 const AI_CONNECTION_PATH = createRoutePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}`);
 const ACTIVE_AI_CONNECTION_PATH = createRoutePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/active`);
 const TEST_AI_CONNECTION_PATH = createRoutePattern(`${aiConnectionsPath}/${ROUTE_PARAMETER}/test`);
+const BACKUP_EXPORT_PATH = createRoutePattern(`${backupExportsPath}/${ROUTE_PARAMETER}`);
+const BACKUP_EXPORT_FILE_PATH = createRoutePattern(`${backupExportsPath}/${ROUTE_PARAMETER}/${ROUTE_PARAMETER}`);
+const BACKUP_IMPORT_PATH = createRoutePattern(`${backupImportsPath}/${ROUTE_PARAMETER}`);
+const BACKUP_IMPORT_FILE_PATH = createRoutePattern(`${backupImportsPath}/${ROUTE_PARAMETER}/${ROUTE_PARAMETER}`);
+const BACKUP_IMPORT_RESTORE_PATH = createRoutePattern(`${backupImportsPath}/${ROUTE_PARAMETER}/restore`);
 
 
-export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics, restoreBackup?: (snapshot: Uint8Array) => Promise<void>): Router {
+export function createPresentationRouter(editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics, restoreBackup?: (snapshot: Uint8Array) => Promise<void>, backupTransfers?: BackupBundleTransfers): Router {
     const { articles, assistant, factChecks, proposalSummaries, publishing, settings, skills, styleCorpus } = services;
     const router = new Router();
 
@@ -76,6 +83,16 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.POST, backupsPath, (_request, response) => handleCreateBackupRoute(response, settings, diagnostics));
     if (restoreBackup)
         router.register(HTTP_METHOD.POST, restoreBackupPath, (request, response) => handleRestoreBackupRoute(request, response, restoreBackup));
+
+    if (backupTransfers) {
+        router.register(HTTP_METHOD.POST, backupExportsPath, (_request, response) => createBackupExportRoute(response, backupTransfers));
+        router.register(HTTP_METHOD.GET, BACKUP_EXPORT_FILE_PATH, (_request, response, parameters) => readBackupExportRoute(response, backupTransfers, parameters[0]!, parameters[1]!));
+        router.register(HTTP_METHOD.DELETE, BACKUP_EXPORT_PATH, (_request, response, parameters) => removeBackupTransferRoute(response, backupTransfers, parameters[0]!));
+        router.register(HTTP_METHOD.POST, backupImportsPath, (request, response) => beginBackupImportRoute(request, response, backupTransfers));
+        router.register(HTTP_METHOD.PUT, BACKUP_IMPORT_FILE_PATH, (request, response, parameters) => writeBackupImportRoute(request, response, backupTransfers, parameters[0]!, parameters[1]!));
+        router.register(HTTP_METHOD.POST, BACKUP_IMPORT_RESTORE_PATH, (_request, response, parameters) => restoreBackupImportRoute(response, backupTransfers, parameters[0]!));
+        router.register(HTTP_METHOD.DELETE, BACKUP_IMPORT_PATH, (_request, response, parameters) => removeBackupTransferRoute(response, backupTransfers, parameters[0]!));
+    }
 
     router.register(HTTP_METHOD.PUT, keyBindingsPath, (request, response) => handleKeyBindingsRoute(request, response, settings));
     router.register(HTTP_METHOD.PUT, aiModelPreferencesPath, (request, response) => handleModelPreferencesRoute(request, response, settings));

@@ -15,7 +15,7 @@ SQLite is the local system of record. The service enables foreign keys and WAL m
 
 The pre-Article prototype schema is no longer supported. Startup does not detect or delete prototype databases. Supported Article schemas migrate forward without deleting the database.
 
-Backups are SQLite snapshots. They include application data and exclude environment files and credentials. Automatic retention never deletes manual backups. Recovery occurs while Skladno is stopped by replacing the active database with a selected snapshot, followed by an application-level verification of Articles, Revisions, and Settings.
+Backups include a consistent SQLite snapshot. New browser backup folders also contain current Author Skills, immutable Skill Revision history, and a manifest of file sizes and SHA-256 hashes; native snapshots use a manifest-bearing companion folder for those files. Environment files and credentials remain excluded. Automatic retention never deletes manual backups. Legacy database-only snapshots remain restorable without changing Skill files. Bundle restore verifies the manifest before replacing the active database and Skill directories, followed by application-level verification of Articles, Revisions, and Settings. The browser service retains a complete recovery copy of prior database and Skill files and uses a startup marker to roll back an interrupted switch.
 
 On POSIX, Skladno restricts its data directory and database files to the current user. Windows and browser-selected folder access use platform permissions. Native Windows Settings operations follow the restricted desktop boundary in ADR-009.
 

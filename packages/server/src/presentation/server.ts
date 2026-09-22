@@ -7,6 +7,7 @@ import { ArticleRevisionConflictError } from "../application/articles/article-re
 import type { EditorialService } from "../application/editorial/editorial-service.js";
 import type { ServerConfig } from "../infrastructure/configuration/config.js";
 import type { LocalDiagnostics } from "../infrastructure/diagnostics/local-diagnostics.js";
+import type { BackupBundleTransfers } from "../infrastructure/persistence/backup-bundle.js";
 import { ApplicationServiceError } from "./errors/application-error.js";
 import { createPresentationRouter } from "./routes/create-presentation-router.js";
 import { writeJson } from "./transport/json.js";
@@ -17,7 +18,7 @@ function isPermittedOrigin(request: IncomingMessage, config: ServerConfig): bool
 }
 
 
-export function createLocalService(config: ServerConfig, editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics, current = () => ({ editorial, services }), restoreBackup?: (snapshot: Uint8Array) => Promise<void>) {
+export function createLocalService(config: ServerConfig, editorial: EditorialService, services: ApplicationServices, diagnostics?: LocalDiagnostics, current = () => ({ editorial, services }), restoreBackup?: (snapshot: Uint8Array) => Promise<void>, backupTransfers?: BackupBundleTransfers) {
 
     return createServer(async (request, response) => {
         if (!isPermittedOrigin(request, config)) {
@@ -42,7 +43,7 @@ export function createLocalService(config: ServerConfig, editorial: EditorialSer
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         try {
             const application = current();
-            const router = createPresentationRouter(application.editorial, application.services, diagnostics, restoreBackup);
+            const router = createPresentationRouter(application.editorial, application.services, diagnostics, restoreBackup, backupTransfers);
             if (await router.handle(request, response, pathname))
                 return;
         } catch (error) {

@@ -6,7 +6,8 @@ import type { ApplicationServices } from "@skladno/server/electron";
 import { validateDatabaseSnapshot } from "@skladno/server/electron";
 import { beginTimedTelemetryCapture, type DesktopSettingsLocations, type ElectronMessages, type TelemetryCaptureSource } from "@skladno/shared";
 import { readRuntimeSettings, updateRuntimeSettings } from "../../infrastructure/runtime/runtime-settings.js";
-import { createAuthorSkillBackup, getAuthorSkillBackupPath, hasAuthorSkillBackup } from "../../infrastructure/recovery/author-skill-backup.js";
+import { createAuthorSkillBackup, getAuthorSkillBackupPath, hasAuthorSkillBackup, validateAuthorSkillBackup } from "../../infrastructure/recovery/author-skill-backup.js";
+import { captureAuthorSkillInventory } from "../../infrastructure/recovery/author-skill-backup-manifest.js";
 import { desktopSettingsChannel } from "./desktop-settings-client.js";
 
 
@@ -18,23 +19,36 @@ function areSettingsKeysOverlapping(first: string, second: string): boolean {
 
 function createNativeBackup(database: { exec(sql: string): void }, dataDirectory: string, backupDirectory: string, telemetry?: TelemetryCaptureSource): { path: string; createdAt: string } {
     const observed = beginTimedTelemetryCapture(telemetry);
+    let path: string | undefined;
+    let temporary: string | undefined;
+    let snapshotCreated = false;
     try {
         mkdirSync(backupDirectory, { recursive: true });
         const created = new Date();
-        const filename = `skladno-backup-${created.toISOString().replaceAll(/[:.]/g, "-")}.sqlite`;
-        const temporary = join(backupDirectory, `.${filename}.tmp`);
-        const path = join(backupDirectory, filename);
+        const filename = `skladno-backup-${created.toISOString().replaceAll(/[:.]/g, "-")}-${randomUUID()}.sqlite`;
+        temporary = join(backupDirectory, `.${filename}.${randomUUID()}.tmp`);
+        path = join(backupDirectory, filename);
+        const expectedInventory = captureAuthorSkillInventory(dataDirectory);
         database.exec(`VACUUM INTO '${temporary.replaceAll("'", "''")}'`);
         renameSync(temporary, path);
+        snapshotCreated = true;
 
         if (statSync(path).size === 0)
             throw new Error("Backup is empty.");
 
-        createAuthorSkillBackup({ dataDirectory, snapshotPath: path });
+        createAuthorSkillBackup({ dataDirectory, snapshotPath: path, expectedInventory });
 
         observed.capture({ kind: "backup_finished", outcome: "completed", elapsedMs: observed.elapsedMs() });
         return { path, createdAt: created.toISOString() };
     } catch (error) {
+        if (temporary)
+            rmSync(temporary, { force: true });
+
+        if (path && snapshotCreated) {
+            rmSync(path, { force: true });
+            rmSync(getAuthorSkillBackupPath(path), { recursive: true, force: true });
+        }
+
         observed.capture({ kind: "backup_finished", outcome: "failed", elapsedMs: observed.elapsedMs(), failure: "unknown" });
         throw error;
     }
@@ -122,6 +136,7 @@ function createNativeBackupRestoration({ runtimePath, dataDirectory, backupDirec
                 return { kind: "invalid" };
 
             validateDatabaseSnapshot(selected);
+            validateAuthorSkillBackup(selected);
             return { kind: "selected", path: selected };
         },
         async execute(selected) {
@@ -136,6 +151,8 @@ function createNativeBackupRestoration({ runtimePath, dataDirectory, backupDirec
             validateDatabaseSnapshot(stagedSnapshotPath);
             if (hasAuthorSkillBackup(selected))
                 cpSync(getAuthorSkillBackupPath(selected), getAuthorSkillBackupPath(stagedSnapshotPath), { recursive: true, errorOnExist: true });
+
+            validateAuthorSkillBackup(stagedSnapshotPath);
 
             const recoverySnapshotPath = createNativeBackup(database, dataDirectory, stagingDirectory, telemetry).path;
             updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } }));

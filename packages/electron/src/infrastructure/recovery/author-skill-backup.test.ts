@@ -4,13 +4,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { applyAuthorSkillRestore, completeAuthorSkillRestore, createAuthorSkillBackup, getAuthorSkillBackupPath, rollbackAuthorSkillRestore } from "./author-skill-backup.js";
+import { applyAuthorSkillRestore, completeAuthorSkillRestore, createAuthorSkillBackup, getAuthorSkillBackupPath, rollbackAuthorSkillRestore, validateAuthorSkillBackup } from "./author-skill-backup.js";
+import { captureAuthorSkillInventory } from "./author-skill-backup-manifest.js";
 
 
 test("backs up and restores Author Skills with their immutable history", () => {
     const root = mkdtempSync(join(tmpdir(), "skladno-author-skill-backup-"));
     const snapshotPath = join(root, "backup.sqlite");
     try {
+        writeFileSync(snapshotPath, "database");
         mkdirSync(join(root, "skills", "clarity"), { recursive: true });
         mkdirSync(join(root, "skill-history", "clarity", "revision"), { recursive: true });
         writeFileSync(join(root, "skills", "clarity", "SKILL.md"), "before");
@@ -34,6 +36,7 @@ test("rolls Author Skills back when restored startup fails", () => {
     const root = mkdtempSync(join(tmpdir(), "skladno-author-skill-rollback-"));
     const snapshotPath = join(root, "backup.sqlite");
     try {
+        writeFileSync(snapshotPath, "database");
         mkdirSync(join(root, "skills", "clarity"), { recursive: true });
         writeFileSync(join(root, "skills", "clarity", "SKILL.md"), "active");
         createAuthorSkillBackup({ dataDirectory: root, snapshotPath });
@@ -54,6 +57,7 @@ test("restores revised Skill content and history after deletion", () => {
     const skillPath = join(root, "skills", "clarity", "SKILL.md");
     const historyPath = join(root, "skill-history", "clarity");
     try {
+        writeFileSync(snapshotPath, "database");
         mkdirSync(join(historyPath, "revision-1"), { recursive: true });
         mkdirSync(join(historyPath, "revision-2"), { recursive: true });
         mkdirSync(join(root, "skills", "clarity"), { recursive: true });
@@ -79,6 +83,7 @@ test("keeps deleted Skill history in a backup", () => {
     const snapshotPath = join(root, "backup.sqlite");
     const historyPath = join(root, "skill-history", "clarity", "revision-1", "SKILL.md");
     try {
+        writeFileSync(snapshotPath, "database");
         mkdirSync(join(root, "skill-history", "clarity", "revision-1"), { recursive: true });
         writeFileSync(historyPath, "original revision");
         createAuthorSkillBackup({ dataDirectory: root, snapshotPath });
@@ -88,6 +93,47 @@ test("keeps deleted Skill history in a backup", () => {
         assert.equal(existsSync(join(root, "skills", "clarity")), false);
         assert.equal(readFileSync(historyPath, "utf8"), "original revision");
         completeAuthorSkillRestore(root);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("rejects a backup with changed Skill content before restore", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-skill-backup-integrity-"));
+    const snapshotPath = join(root, "backup.sqlite");
+    try {
+        writeFileSync(snapshotPath, "database");
+        mkdirSync(join(root, "skills", "clarity"), { recursive: true });
+        writeFileSync(join(root, "skills", "clarity", "SKILL.md"), "original");
+        createAuthorSkillBackup({ dataDirectory: root, snapshotPath });
+        writeFileSync(join(getAuthorSkillBackupPath(snapshotPath), "skills", "clarity", "SKILL.md"), "tampered");
+
+        assert.throws(() => validateAuthorSkillBackup(snapshotPath), /author_skill_backup_invalid_manifest/);
+        assert.throws(() => applyAuthorSkillRestore({ dataDirectory: root, snapshotPath }), /author_skill_backup_invalid_manifest/);
+        assert.equal(readFileSync(join(root, "skills", "clarity", "SKILL.md"), "utf8"), "original");
+
+        rmSync(join(getAuthorSkillBackupPath(snapshotPath), "manifest.json"));
+        assert.throws(() => validateAuthorSkillBackup(snapshotPath), /author_skill_backup_invalid_manifest/);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("fails backup creation when Skill files change during capture", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-skill-backup-conflict-"));
+    const snapshotPath = join(root, "backup.sqlite");
+    try {
+        writeFileSync(snapshotPath, "database");
+        mkdirSync(join(root, "skills", "clarity"), { recursive: true });
+        const skillPath = join(root, "skills", "clarity", "SKILL.md");
+        writeFileSync(skillPath, "before");
+        const expectedInventory = captureAuthorSkillInventory(root);
+        writeFileSync(skillPath, "after");
+
+        assert.throws(() => createAuthorSkillBackup({ dataDirectory: root, snapshotPath, expectedInventory }), /author_skill_backup_changed/);
+        assert.equal(existsSync(getAuthorSkillBackupPath(snapshotPath)), false);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }
