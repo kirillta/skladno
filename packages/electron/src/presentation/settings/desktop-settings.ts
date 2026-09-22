@@ -203,6 +203,16 @@ async function revealDataDirectory({ dataDirectory, shell }: Pick<DesktopSetting
 }
 
 
+async function revealCreatedSkillDirectory({ services, shell }: Pick<DesktopSettingsContext, "services" | "shell">, requestId: string): Promise<unknown> {
+    const directory = services.authorSkills?.createdSkillDirectory(requestId);
+    if (!directory)
+        return { ok: false, error: "editorial_request_failed" };
+
+    await shell.openPath(directory);
+    return { ok: true, value: undefined };
+}
+
+
 function createBackup({ runtime, dataDirectory, database, telemetry }: Pick<DesktopSettingsContext, "runtime" | "dataDirectory" | "database" | "telemetry">): unknown {
     if (!runtime.backupDirectory)
         return { ok: false, error: "editorial_request_failed" };
@@ -302,6 +312,8 @@ export function registerDesktopSettingsAdapter({ ipcMain, userDataPath, ...optio
                     return await revealBackupDirectory(context);
                 case "revealDataDirectory":
                     return await revealDataDirectory(context);
+                case "revealCreatedSkillDirectory":
+                    return await revealCreatedSkillDirectory(context, String(args[0]));
                 case "createNativeBackup":
                     return createBackup(context);
                 case "restoreNativeBackup":

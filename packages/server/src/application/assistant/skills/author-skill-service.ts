@@ -63,6 +63,16 @@ export class AuthorSkillService {
     }
 
 
+    createdSkillDirectory(requestId: string): string | undefined {
+        for (const skill of this.source.summaries()) {
+            if (this.revisions.list(skill.reference.id).some((revision) => revision.requestId === requestId))
+                return this.source.directoryPath(skill.reference.id);
+        }
+
+        return undefined;
+    }
+
+
     private record(input: { skillPackage: AssistantSkillPackage; files: Readonly<Record<string, string>>; requestId?: string; restoredFromId?: string }): AuthorSkillRevision {
         if (!input.skillPackage.contentHash)
             throw new Error("invalid_skill_package");

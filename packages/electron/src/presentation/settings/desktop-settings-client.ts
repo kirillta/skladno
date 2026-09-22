@@ -20,6 +20,7 @@ export function createDesktopSettingsClient(ipcRenderer: Pick<IpcRenderer, "invo
         chooseBackupDirectory: () => invoke("chooseBackupDirectory"),
         revealBackupDirectory: () => invoke("revealBackupDirectory"),
         revealDataDirectory: () => invoke("revealDataDirectory"),
+        revealCreatedSkillDirectory: (requestId) => invoke("revealCreatedSkillDirectory", requestId),
         createNativeBackup: () => invoke("createNativeBackup"),
         restoreNativeBackup: () => invoke("restoreNativeBackup"),
         deleteLocalData: () => invoke("deleteLocalData"),

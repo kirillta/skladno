@@ -42,6 +42,11 @@ export class FileAssistantSkillSource {
     }
 
 
+    directoryPath(id: string): string | undefined {
+        return this.loadByDirectory(id) ? this.packageRoot(id) : undefined;
+    }
+
+
     readFiles(directory: string): Readonly<Record<string, string>> | undefined {
         if (!this.loadByDirectory(directory))
             return undefined;

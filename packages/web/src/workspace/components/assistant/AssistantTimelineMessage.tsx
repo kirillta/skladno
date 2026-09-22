@@ -104,7 +104,7 @@ function getViewLabel(view: AssistantView, intl: ReturnType<typeof useIntl>) {
 }
 
 
-export function AssistantTimelineMessage({ message, factCheckClaims, openView, onRetry, onCheckpoint, generalSettings, skillByRequest }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, string> }) {
+export function AssistantTimelineMessage({ message, factCheckClaims, openView, openSkillFolder, onRetry, onCheckpoint, generalSettings, skillByRequest }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void; openSkillFolder?: (requestId: string) => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, string> }) {
     const intl = useIntl();
     const authorMessage = message.role === "author";
     const skillId = message.skillId ?? (message.requestId ? skillByRequest.get(message.requestId) : undefined);
@@ -136,6 +136,9 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
         {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
         {view && message.status !== "rejected" && <Button className="mt-3" variant="secondary" onClick={() => openView?.(view)}>
             {getViewLabel(view, intl)}
+        </Button>}
+        {!authorMessage && skillId === BUILT_IN_SKILL.SKILL_CREATOR && message.status === "completed" && message.requestId && openSkillFolder && <Button className="mt-3" variant="secondary" onClick={() => openSkillFolder(message.requestId!)}>
+            {intl.formatMessage({ id: "assistant.openSkillFolder" })}
         </Button>}
         {(message.status === "failed" || message.status === "cancelled") && retryRequestId && <Button className="mt-3" variant="secondary" onClick={() => onRetry?.(retryRequestId)}>{intl.formatMessage({ id: "assistant.retry" })}</Button>}
         {!authorMessage && <p className="mt-2 flex items-center gap-1 text-xs text-muted">

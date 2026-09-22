@@ -235,6 +235,7 @@ export interface DesktopSettingsClient {
     chooseBackupDirectory(): Promise<string | undefined>;
     revealBackupDirectory(): Promise<void>;
     revealDataDirectory(): Promise<void>;
+    revealCreatedSkillDirectory?(requestId: string): Promise<void>;
     createNativeBackup(): Promise<{ path: string; createdAt: string }>;
     restoreNativeBackup(): Promise<void>;
     deleteLocalData(): Promise<void>;

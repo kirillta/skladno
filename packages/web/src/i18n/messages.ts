@@ -219,6 +219,7 @@ export const messages = {
     "assistant.response.proposalAndFindings": "Proposal and findings prepared",
     "assistant.response.translation": "Translation proposal prepared",
     "assistant.reviewProposal": "Review Proposal",
+    "assistant.openSkillFolder": "Open Skill folder",
     "assistant.viewFindings": "View Findings",
     "assistant.reviewTranslation": "Review Translation",
     "assistant.guidance": "Editorial guidance",

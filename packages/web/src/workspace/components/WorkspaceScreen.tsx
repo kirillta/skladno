@@ -17,6 +17,7 @@ import { EditorialAssistantPanel } from "./EditorialAssistantPanel.js";
 import { WorkspaceShell } from "./WorkspaceShell.js";
 import { Banner, Button } from "../../ui/primitives.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
+import { getDesktopSettingsClient } from "../../application/desktop-client.js";
 
 
 interface WorkspaceScreenContent {
@@ -69,6 +70,7 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
     const { dispatcher, shortcutOverrides, hasUsableAiConnection, loadAuthorSkills, overlays } = environment;
     const { assistantSelection, onSelectionChange, clearAssistantSelection } = selection;
     const { notifyError } = useNotifications();
+    const desktop = getDesktopSettingsClient();
     return <WorkspaceShell
         layout={{
             focusMode: layout.focusMode,
@@ -104,7 +106,7 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
                     restoredComposer: assistant.restoredComposer,
                     authorSkills,
                 }}
-                actions={{ onRequest: assistant.request, onCancel: assistant.cancel, onRetry: assistant.retry, loadAuthorSkills, dispatcher, shortcutOverrides, openView: layout.setView, openSettings, clearSelection: clearAssistantSelection, previewCheckpoint: assistant.previewCheckpoint, restoreCheckpoint: assistant.restoreCheckpoint, closeCheckpoint: assistant.closeCheckpoint }}
+                actions={{ onRequest: assistant.request, onCancel: assistant.cancel, onRetry: assistant.retry, loadAuthorSkills, dispatcher, shortcutOverrides, openView: layout.setView, openSkillFolder: desktop?.revealCreatedSkillDirectory ? (requestId) => void desktop.revealCreatedSkillDirectory?.(requestId) : undefined, openSettings, clearSelection: clearAssistantSelection, previewCheckpoint: assistant.previewCheckpoint, restoreCheckpoint: assistant.restoreCheckpoint, closeCheckpoint: assistant.closeCheckpoint }}
                 layout={{ collapsed: layout.assistantCollapsed, setCollapsed: layout.setAssistantCollapsed }} />,
             children: <>
                 {hasUsableAiConnection === false && <AiConnectionWarning openModelSettings={openModelSettings} />}
