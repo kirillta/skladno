@@ -118,7 +118,7 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
     const handoffOwnsContent = !authorMessage && Boolean(view);
     const messageStatusLabel = getStatusLabel(message.status, intl);
     const messageDateTime = formatDateTime(message.createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
-    const skillUsedLabel = message.skillSource ? intl.formatMessage({ id: "assistant.skillUsed" }) : undefined;
+    const skillUsedLabel = skillId ? intl.formatMessage({ id: "assistant.skillUsed" }) : undefined;
     const skillTitle = skillId ? getSkillLabel(skillId, intl) : undefined;
 
     return <article className={authorMessage ? "ml-6 rounded-panel border border-brand/45 bg-brand-soft p-3" : "p-0"} aria-label={authorMessage ? label : undefined}>

@@ -60,6 +60,13 @@ describe("AssistantTimelineMessage", () => {
     });
 
 
+    it("identifies a persisted Skill Creator response without its request source", () => {
+        const view = renderMessage({ id: "skill", articleId: "article", requestId: "request", role: "assistant", kind: "response", status: "completed", skillId: "skill_creator", content: "Created a Skill.", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" });
+
+        expect(within(view.container).getByText(/Used skill/).getAttribute("title")).toBe("Skill Creator");
+    });
+
+
     it("retries failed and cancelled attempts by their original request ID", async () => {
         const onRetry = vi.fn();
         const view = renderMessage({ id: "failed", articleId: "article", requestId: "original-request", role: "assistant", kind: "response", status: "failed", content: "", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }, { onRetry });
