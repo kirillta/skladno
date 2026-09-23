@@ -28,6 +28,8 @@ let telemetry: ReturnType<typeof createTelemetryOwner> | undefined;
 
 
 async function loadRenderer(window: BrowserWindow): Promise<void> {
+    await window.webContents.session.clearCache();
+
     if (app.isPackaged) {
         await window.loadFile(join(process.resourcesPath, "dist", "index.html"));
 
