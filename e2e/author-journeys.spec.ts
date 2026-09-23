@@ -119,6 +119,8 @@ test("a cancelled assistant stream does not change the Article", async ({ page }
     await createArticle(page);
 
     await page.getByRole("combobox", { name: "Editorial guidance" }).fill("wait");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Flow and clarity" }).click();
     await page.getByRole("button", { name: "Send editorial request" }).click();
     await page.getByRole("button", { name: "Stop request" }).click();
     await expect(page.getByText("Original fixture Article.").first()).toBeVisible();
