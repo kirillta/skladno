@@ -22,6 +22,20 @@ function removeDatabase(databasePath: string): void {
 }
 
 
+function rollbackReadyRestore(state: { runtimePath: string; databasePath: string; originalPath: string; dataDirectory: string; originalMoved: boolean; restored: boolean; authorSkillsRestored: boolean }): void {
+    if (state.restored)
+        removeDatabase(state.databasePath);
+
+    if (state.originalMoved && existsSync(state.originalPath))
+        renameSync(state.originalPath, state.databasePath);
+
+    if (state.authorSkillsRestored)
+        rollbackAuthorSkillRestore(state.dataDirectory);
+
+    updateRuntimeSettings(state.runtimePath, (current) => ({ ...current, pendingRestore: undefined }));
+}
+
+
 function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath: string; databasePath: string; pending: NonNullable<ReturnType<typeof readRuntimeSettings>["pendingRestore"]> }): void {
     const originalPath = `${databasePath}.before-restore`;
     const temporary = `${databasePath}.restore`;
@@ -56,17 +70,7 @@ function applyReadyRestore({ runtimePath, databasePath, pending }: { runtimePath
 
         updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: { ...pending, phase: "applied" } }));
     } catch (error) {
-        if (restored)
-            removeDatabase(databasePath);
-
-        const canRestoreOriginal = originalMoved && existsSync(originalPath);
-        if (canRestoreOriginal)
-            renameSync(originalPath, databasePath);
-
-        if (authorSkillsRestored)
-            rollbackAuthorSkillRestore(dataDirectory);
-
-        updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: undefined }));
+        rollbackReadyRestore({ runtimePath, databasePath, originalPath, dataDirectory, originalMoved, restored, authorSkillsRestored });
         throw new PendingRestoreError(error);
     }
 }

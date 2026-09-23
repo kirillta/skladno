@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_ESCAPE_COMMAND, KEY_TAB_COMMAND, PASTE_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical";
+import { $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_ESCAPE_COMMAND, KEY_TAB_COMMAND, PASTE_COMMAND, SKIP_DOM_SELECTION_TAG, type LexicalNode } from "lexical";
 import { $createAssistantSkillTagNode, $isAssistantSkillTagNode, type AssistantComposerSkill, type AssistantSkillTagNode } from "./AssistantSkillTagNode.js";
 
 
@@ -58,21 +58,33 @@ function composerCaretOffset(fallback: number): number {
     for (let index = 0; index < blocks.length; index += 1) {
         const block = blocks[index];
         const children = $isElementNode(block) ? block.getChildren() : [block];
-        if (anchor.key === block.getKey() && anchor.type === "element")
-            return offset + children.slice(0, anchor.offset).reduce((length, child) => length + child.getTextContent().length, 0);
+        const result = findCaretOffsetInBlock(block.getKey(), children, offset, anchor);
+        if (result.caretOffset !== undefined)
+            return result.caretOffset;
 
-        for (const child of children) {
-            if (child.getKey() === anchor.key)
-                return offset + (anchor.type === "text" ? anchor.offset : 0);
-
-            offset += child.getTextContent().length;
-        }
+        offset = result.nextOffset;
 
         if (index < blocks.length - 1)
             offset += 1;
     }
 
     return fallback;
+}
+
+
+function findCaretOffsetInBlock(blockKey: string, children: LexicalNode[], startOffset: number, anchor: { key: string; type: "element" | "text"; offset: number }) {
+    if (anchor.key === blockKey && anchor.type === "element")
+        return { caretOffset: startOffset + children.slice(0, anchor.offset).reduce((length, child) => length + child.getTextContent().length, 0), nextOffset: startOffset };
+
+    let nextOffset = startOffset;
+    for (const child of children) {
+        if (child.getKey() === anchor.key)
+            return { caretOffset: nextOffset + (anchor.type === "text" ? anchor.offset : 0), nextOffset };
+
+        nextOffset += child.getTextContent().length;
+    }
+
+    return { nextOffset };
 }
 
 

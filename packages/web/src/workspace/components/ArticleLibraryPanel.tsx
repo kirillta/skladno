@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { KEY_BINDING_COMMAND, type Article, type KeyBindingOverrides } from "@skladno/shared";
 import { Button, Dialog, Field, IconButton } from "../../ui/primitives.js";
 import { ArticleIcon, ChevronRightIcon, SearchIcon, SettingsIcon, UserIcon } from "../../ui/icons.js";
@@ -56,6 +56,82 @@ interface ArticleLibraryMutations {
     setPinned?: (articleId: string, pinned: boolean) => Promise<void>;
     reorderPinned?: (articleIds: string[]) => Promise<void>;
     notifyError?: Notifications["notifyError"];
+}
+
+
+function handlePinnedArticleDrop(event: React.DragEvent<HTMLDivElement>, article: Article, draggedArticleId: string | undefined, pinnedRoots: Article[], reorderPinned: ArticleLibraryMutations["reorderPinned"], run: (action: () => Promise<void>) => void) {
+    event.preventDefault();
+    if (!draggedArticleId || draggedArticleId === article.id || !reorderPinned)
+        return;
+
+    const dragged = pinnedRoots.find((item) => item.id === draggedArticleId);
+    if (!dragged)
+        return;
+
+    const next = pinnedRoots.filter((item) => item.id !== draggedArticleId);
+    next.splice(next.findIndex((item) => item.id === article.id), 0, dragged);
+    run(() => reorderPinned(next.map((item) => item.id)));
+}
+
+
+interface ArticleLibraryMenuActions {
+    handleMenuKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+    movePinned: (article: Article, direction: -1 | 1) => void;
+    run: (action: () => Promise<void>) => void;
+    setDeleteTarget: (article: Article) => void;
+}
+
+
+function ArticleLibraryRowMenu({ article, canReorder, pinnedRoots, menuRef, handleMenuKeyDown, movePinned, run, setDeleteTarget, closeMenu, setPinned, setArchived }: {
+    article: Article;
+    canReorder: boolean;
+    pinnedRoots: Article[];
+    menuRef: Ref<HTMLDivElement>;
+    handleMenuKeyDown: ArticleLibraryMenuActions["handleMenuKeyDown"];
+    movePinned: ArticleLibraryMenuActions["movePinned"];
+    run: ArticleLibraryMenuActions["run"];
+    setDeleteTarget: ArticleLibraryMenuActions["setDeleteTarget"];
+    closeMenu: () => void;
+    setPinned: ArticleLibraryMutations["setPinned"];
+    setArchived: ArticleLibraryMutations["setArchived"];
+}) {
+    const intl = useIntl();
+    return <div ref={menuRef} className="relative z-20" role="menu" aria-label={article.title} onKeyDown={handleMenuKeyDown}>
+        <div className="absolute left-2 top-0 w-36 rounded-control border border-border bg-surface-raised p-1 shadow-raised">
+            {!article.sourceArticleId && !article.archived && <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs hover:bg-brand-soft focus:outline-none" type="button" role="menuitem" onClick={() => run(() => setPinned?.(article.id, article.pinOrder === undefined) ?? Promise.resolve())}>{intl.formatMessage({ id: article.pinOrder === undefined ? "navigation.pin" : "navigation.unpin" })}</button>}
+            {!article.sourceArticleId && <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs hover:bg-brand-soft focus:outline-none" type="button" role="menuitem" onClick={() => run(() => setArchived?.(article.id, !article.archived) ?? Promise.resolve())}>{intl.formatMessage({ id: article.archived ? "navigation.unarchive" : "navigation.archive" })}</button>}
+            {canReorder && <>
+                <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs hover:bg-brand-soft focus:outline-none disabled:opacity-50" type="button" role="menuitem" disabled={pinnedRoots[0]?.id === article.id} onClick={() => movePinned(article, -1)}>{intl.formatMessage({ id: "navigation.movePinnedUp" })}</button>
+                <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs hover:bg-brand-soft focus:outline-none disabled:opacity-50" type="button" role="menuitem" disabled={pinnedRoots.at(-1)?.id === article.id} onClick={() => movePinned(article, 1)}>{intl.formatMessage({ id: "navigation.movePinnedDown" })}</button>
+            </>}
+            <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-danger hover:bg-danger-soft focus:outline-none" type="button" role="menuitem" onClick={() => {
+                setDeleteTarget(article);
+                closeMenu();
+            }}>{intl.formatMessage({ id: "navigation.delete" })}</button>
+        </div>
+    </div>;
+}
+
+
+function ArticleLibraryNavigation({ pinnedRoots, recentRoots, archivedRoots, archivedOpen, setArchivedOpen, query, archivedContent, archivedContentEmpty, articles, renderRoots }: {
+    pinnedRoots: Article[];
+    recentRoots: Article[];
+    archivedRoots: Article[];
+    archivedOpen: boolean;
+    setArchivedOpen: (update: (current: boolean) => boolean) => void;
+    query: string;
+    archivedContent: ReactNode;
+    archivedContentEmpty: boolean;
+    articles: Article[];
+    renderRoots: (items: Article[]) => ReactNode;
+}) {
+    const intl = useIntl();
+    return <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "navigation.articleLibraryNav" })}>
+        {pinnedRoots.length > 0 && <><p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "navigation.pinned" })}</p><div className="mt-2 space-y-1">{renderRoots(pinnedRoots)}</div></>}
+        {recentRoots.length > 0 && <><p className="mt-4 px-2 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "navigation.recent" })}</p><div className="mt-2 space-y-1">{renderRoots(recentRoots)}</div></>}
+        {archivedRoots.length > 0 && <section className="mt-4"><button className="flex w-full items-center gap-2 px-2 text-micro font-semibold uppercase tracking-overline text-muted focus:outline-none" type="button" aria-expanded={archivedOpen || Boolean(query)} onClick={() => setArchivedOpen((open) => !open)}><ChevronRightIcon className={`size-3 transition-transform ${archivedOpen || query ? "rotate-90" : ""}`} />{intl.formatMessage({ id: "navigation.archived" }, { count: archivedRoots.length })}</button>{(archivedOpen || Boolean(query)) && <div className="mt-2 space-y-1">{archivedContent}</div>}</section>}
+        {articles.length > 0 && pinnedRoots.length + recentRoots.length === 0 && archivedContentEmpty && <p className="px-2 py-5 text-sm text-muted">{intl.formatMessage({ id: "navigation.noArticlesMatch" })}</p>}
+    </nav>;
 }
 
 
@@ -147,19 +223,7 @@ export function ArticleLibraryPanel({ data, navigation, mutations }: { data: Art
         const selectedRow = article.id === selectedArticleId;
         const tone = selectedRow ? "bg-brand-soft text-ink" : child ? "text-muted hover:bg-surface-raised" : "text-ink/85 hover:bg-surface-raised";
         const canReorder = !child && article.pinOrder !== undefined && !article.archived;
-        return <div key={article.id} draggable={canReorder} onDragStart={() => setDraggedArticleId(article.id)} onDragOver={(event) => canReorder && event.preventDefault()} onDrop={(event) => {
-            event.preventDefault();
-            if (!draggedArticleId || draggedArticleId === article.id || !reorderPinned)
-                return;
-
-            const dragged = pinnedRoots.find((item) => item.id === draggedArticleId);
-            if (!dragged)
-                return;
-
-            const next = pinnedRoots.filter((item) => item.id !== draggedArticleId);
-            next.splice(next.findIndex((item) => item.id === article.id), 0, dragged);
-            run(() => reorderPinned(next.map((item) => item.id)));
-        }}>
+        return <div key={article.id} draggable={canReorder} onDragStart={() => setDraggedArticleId(article.id)} onDragOver={(event) => canReorder && event.preventDefault()} onDrop={(event) => handlePinnedArticleDrop(event, article, draggedArticleId, pinnedRoots, reorderPinned, run)}>
             <button data-focus-area-entry={selectedRow || undefined} ref={(element) => {
                 if (element)
                     triggerRefs.current.set(article.id, element);
@@ -174,15 +238,7 @@ export function ArticleLibraryPanel({ data, navigation, mutations }: { data: Art
             }} className={`${child ? "ml-4 w-[calc(100%-1rem)] border-l border-border py-1.5" : "w-full py-2.5"} rounded-panel px-2 text-left transition-colors ${tone}`} aria-current={selectedRow ? "page" : undefined} aria-expanded={childCount > 0 ? expanded : undefined} tabIndex={hidden ? -1 : undefined}>
                 <span className="flex gap-2">{childCount > 0 ? <ChevronRightIcon className={`mt-1 size-3 shrink-0 text-muted transition-transform duration-150 motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`} /> : <ArticleIcon className="mt-0.5 size-4 shrink-0 text-muted" />}<span className="min-w-0 flex-1"><span className={`block truncate font-medium ${child ? "text-xs leading-4" : "text-sm leading-5"}`} title={article.title}>{article.title}</span><span className="mt-0.5 block text-xs leading-4 text-muted">{[article.language, formatUpdatedAt(article.updatedAt, intl.formatMessage)].filter(Boolean).join(" · ")}</span></span></span>
             </button>
-            {menuArticleId === article.id && <div ref={menuRef} className="relative z-20" role="menu" aria-label={article.title} onKeyDown={handleMenuKeyDown}><div className="absolute left-2 top-0 w-36 rounded-control border border-border bg-surface-raised p-1 shadow-raised">
-                {!article.sourceArticleId && !article.archived && <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs hover:bg-brand-soft focus:outline-none" type="button" role="menuitem" onClick={() => run(() => setPinned?.(article.id, article.pinOrder === undefined) ?? Promise.resolve())}>{intl.formatMessage({ id: article.pinOrder === undefined ? "navigation.pin" : "navigation.unpin" })}</button>}
-                {!article.sourceArticleId && <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs hover:bg-brand-soft focus:outline-none" type="button" role="menuitem" onClick={() => run(() => setArchived?.(article.id, !article.archived) ?? Promise.resolve())}>{intl.formatMessage({ id: article.archived ? "navigation.unarchive" : "navigation.archive" })}</button>}
-                {canReorder && <><button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs hover:bg-brand-soft focus:outline-none disabled:opacity-50" type="button" role="menuitem" disabled={pinnedRoots[0]?.id === article.id} onClick={() => movePinned(article, -1)}>{intl.formatMessage({ id: "navigation.movePinnedUp" })}</button><button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs hover:bg-brand-soft focus:outline-none disabled:opacity-50" type="button" role="menuitem" disabled={pinnedRoots.at(-1)?.id === article.id} onClick={() => movePinned(article, 1)}>{intl.formatMessage({ id: "navigation.movePinnedDown" })}</button></>}
-                <button className="flex min-h-9 w-full items-center rounded-control px-2 text-left text-xs text-danger hover:bg-danger-soft focus:outline-none" type="button" role="menuitem" onClick={() => {
-                    setDeleteTarget(article);
-                    closeMenu();
-                }}>{intl.formatMessage({ id: "navigation.delete" })}</button>
-            </div></div>}
+            {menuArticleId === article.id && <ArticleLibraryRowMenu article={article} canReorder={canReorder} pinnedRoots={pinnedRoots} menuRef={menuRef} handleMenuKeyDown={handleMenuKeyDown} movePinned={movePinned} run={run} setDeleteTarget={setDeleteTarget} closeMenu={closeMenu} setPinned={setPinned} setArchived={setArchived} />}
         </div>;
     };
 
@@ -214,12 +270,7 @@ export function ArticleLibraryPanel({ data, navigation, mutations }: { data: Art
         {collapsed ? <><header className="flex min-h-18 items-center justify-center"><IconButton className="text-base font-semibold text-brand" label={intl.formatMessage({ id: "navigation.expandArticleLibrary" })} onClick={() => setCollapsed(false)}>S</IconButton></header><footer className="mt-auto flex flex-col items-center gap-1 border-t border-border px-0.5 py-2"><IconButton label={intl.formatMessage({ id: "navigation.styleProfile" })} onClick={openStyleProfile}><UserIcon className="size-4" /></IconButton><IconButton label={intl.formatMessage({ id: "navigation.settings" })} title={getShortcutHint(intl.formatMessage({ id: "navigation.settings" }), KEY_BINDING_COMMAND.OPEN_SETTINGS, shortcutOverrides)} onClick={openSettings}><SettingsIcon className="size-4" /></IconButton><UpdateController /></footer></> : <>
             <header className="flex min-h-18 items-center justify-between border-b border-border px-4"><span className="flex items-center gap-2 text-base font-semibold text-brand"><span aria-hidden="true" className="text-lg leading-none">✢</span>Skladno</span><div className="flex items-center gap-1"><IconButton label={intl.formatMessage({ id: "navigation.newArticle" })} title={getShortcutHint(intl.formatMessage({ id: "navigation.newArticle" }), KEY_BINDING_COMMAND.NEW_ARTICLE, shortcutOverrides)} onClick={() => void createBlank()}>+</IconButton><IconButton label={intl.formatMessage({ id: "navigation.collapseArticleLibrary" })} title={getShortcutHint(intl.formatMessage({ id: "navigation.collapseArticleLibrary" }), KEY_BINDING_COMMAND.TOGGLE_ARTICLE_LIBRARY, shortcutOverrides)} onClick={() => setCollapsed(true)}>‹</IconButton></div></header>
             <div className="border-b border-border px-3 py-3"><div className="relative"><SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" /><Field ref={searchRef} className="min-h-9 py-1.5 pl-8 pr-2" aria-label={intl.formatMessage({ id: "navigation.searchArticles" })} title={getShortcutHint(intl.formatMessage({ id: "navigation.searchArticles" }), KEY_BINDING_COMMAND.SEARCH_ARTICLES, shortcutOverrides)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={intl.formatMessage({ id: "navigation.searchArticles" })} /></div></div>
-            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "navigation.articleLibraryNav" })}>
-                {pinnedRoots.length > 0 && <><p className="px-2 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "navigation.pinned" })}</p><div className="mt-2 space-y-1">{renderRoots(pinnedRoots)}</div></>}
-                {recentRoots.length > 0 && <><p className="mt-4 px-2 text-micro font-semibold uppercase tracking-overline text-muted">{intl.formatMessage({ id: "navigation.recent" })}</p><div className="mt-2 space-y-1">{renderRoots(recentRoots)}</div></>}
-                {archivedRoots.length > 0 && <section className="mt-4"><button className="flex w-full items-center gap-2 px-2 text-micro font-semibold uppercase tracking-overline text-muted focus:outline-none" type="button" aria-expanded={archivedOpen || Boolean(query)} onClick={() => setArchivedOpen((open) => !open)}><ChevronRightIcon className={`size-3 transition-transform ${archivedOpen || query ? "rotate-90" : ""}`} />{intl.formatMessage({ id: "navigation.archived" }, { count: archivedRoots.length })}</button>{(archivedOpen || Boolean(query)) && <div className="mt-2 space-y-1">{archivedContent}</div>}</section>}
-                {articles.length > 0 && pinnedRoots.length + recentRoots.length === 0 && archivedContent.length === 0 && <p className="px-2 py-5 text-sm text-muted">{intl.formatMessage({ id: "navigation.noArticlesMatch" })}</p>}
-            </nav>
+            <ArticleLibraryNavigation pinnedRoots={pinnedRoots} recentRoots={recentRoots} archivedRoots={archivedRoots} archivedOpen={archivedOpen} setArchivedOpen={setArchivedOpen} query={query} archivedContent={archivedContent} archivedContentEmpty={archivedContent.length === 0} articles={articles} renderRoots={renderRoots} />
             <footer className="border-t border-border px-2 py-2">
                 <Button className="flex w-full items-center justify-start text-left" variant="quiet" onClick={openStyleProfile}>
                     <UserIcon className="size-4 shrink-0" />

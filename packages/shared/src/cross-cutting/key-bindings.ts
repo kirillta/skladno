@@ -148,23 +148,31 @@ export function formatKeyBinding(binding: KeyBinding | null, platform = ""): str
     if (!binding)
         return "Unassigned";
 
-    const mac = /mac|iphone|ipad/i.test(platform);
-    let primary = "";
-    if (binding.primary)
-        primary = mac ? "Command" : "Ctrl";
+    return [formatPrimary(binding, platform), formatAlt(binding, platform), formatShift(binding), formatKey(binding.key)].filter(Boolean).join("+");
+}
 
-    let alt = "";
-    if (binding.alt)
-        alt = mac ? "Option" : "Alt";
 
-    let key = binding.key.toUpperCase();
-    if (binding.key === "enter")
-        key = "Enter";
-    else if (binding.key === "escape")
-        key = "Esc";
+function formatPrimary(binding: KeyBinding, platform: string): string {
+    return binding.primary ? (/mac|iphone|ipad/i.test(platform) ? "Command" : "Ctrl") : "";
+}
 
-    const implicitPlusShift = binding.primary && binding.key === "+";
-    const parts = [primary, alt, binding.shift && !implicitPlusShift ? "Shift" : "", key].filter(Boolean);
 
-    return parts.join("+");
+function formatAlt(binding: KeyBinding, platform: string): string {
+    return binding.alt ? (/mac|iphone|ipad/i.test(platform) ? "Option" : "Alt") : "";
+}
+
+
+function formatShift(binding: KeyBinding): string {
+    return binding.shift && !(binding.primary && binding.key === "+") ? "Shift" : "";
+}
+
+
+function formatKey(key: string): string {
+    if (key === "enter")
+        return "Enter";
+
+    if (key === "escape")
+        return "Esc";
+
+    return key.toUpperCase();
 }

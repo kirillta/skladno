@@ -78,6 +78,36 @@ function calculateClassificationRank(query: string, entry: EditorialOperationCla
 }
 
 
+function getStreamToolInput(input: StreamContext): Readonly<Record<string, string>> {
+    if (input.capability === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL)
+        return { operation: input.operation ?? "" };
+
+    if (input.capability === EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS)
+        return { findingIds: input.findingIds ?? "" };
+
+    if (input.capability === EDITORIAL_CAPABILITY.TRANSLATE)
+        return { targetLanguage: input.targetLanguage ?? "" };
+
+    return {};
+}
+
+
+function createEditorialRequest(input: StreamContext, operation: EditorialOperation, corrections: string) {
+    return {
+        articleId: input.context.articleId,
+        requestId: input.requestId,
+        operation,
+        authorContext: corrections || input.authorContext,
+        ...(input.skillId ? { skillId: input.skillId } : {}),
+        ...(input.targetArticleCharacterLimit ? { targetArticleCharacterLimit: input.targetArticleCharacterLimit } : {}),
+        ...(input.targetLanguage?.trim() ? { targetLanguage: input.targetLanguage.trim() } : {}),
+        ...(input.articleContent !== undefined ? { articleContent: input.articleContent } : {}),
+        ...(input.articleSelection ? { articleSelection: true } : {}),
+        ...(input.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: input.surroundingArticleCharacterCount } : {})
+    };
+}
+
+
 export class EditorialCapabilityCatalog {
     constructor(
         private readonly articles: ArticleService,
@@ -189,14 +219,7 @@ export class EditorialCapabilityCatalog {
 
 
     stream(input: StreamContext, signal: AbortSignal, staged = false): AsyncIterable<EditorialEngineEvent> {
-        let toolInput: Readonly<Record<string, string>> = {};
-        if (input.capability === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL)
-            toolInput = { operation: input.operation ?? "" };
-        else if (input.capability === EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS)
-            toolInput = { findingIds: input.findingIds ?? "" };
-        else if (input.capability === EDITORIAL_CAPABILITY.TRANSLATE)
-            toolInput = { targetLanguage: input.targetLanguage ?? "" };
-
+        const toolInput = getStreamToolInput(input);
         if (!isValidatedEditorialCapabilityCall(input.capability, toolInput))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -206,18 +229,7 @@ export class EditorialCapabilityCatalog {
             ? this.createCorrectionContext(input.context.articleId, input.findingIds!)
             : "";
 
-        const request = {
-            articleId: input.context.articleId,
-            requestId: input.requestId,
-            operation,
-            authorContext: corrections || input.authorContext,
-            ...(input.skillId ? { skillId: input.skillId } : {}),
-            ...(input.targetArticleCharacterLimit ? { targetArticleCharacterLimit: input.targetArticleCharacterLimit } : {}),
-            ...(input.targetLanguage?.trim() ? { targetLanguage: input.targetLanguage.trim() } : {}),
-            ...(input.articleContent !== undefined ? { articleContent: input.articleContent } : {}),
-            ...(input.articleSelection ? { articleSelection: true } : {}),
-            ...(input.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: input.surroundingArticleCharacterCount } : {})
-        };
+        const request = createEditorialRequest(input, operation, corrections);
 
         return staged
             ? this.editorial.streamStaged(request, signal)

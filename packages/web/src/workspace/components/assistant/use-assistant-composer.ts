@@ -44,6 +44,69 @@ function getSlashQueryAt(guidance: string, caretOffset: number): { start: number
 }
 
 
+function handleComposerKeyDown(event: Parameters<KeyboardEventHandler<HTMLDivElement>>[0], context: {
+    quickActionsOpen: boolean;
+    selectedPickerSkill: AssistantComposerSkill | undefined;
+    selectSkill: (skill: AssistantComposerSkill) => void;
+    assistantSendMode: GeneralSettings["assistantSendMode"];
+    shortcutOverrides: KeyBindingOverrides;
+    send: () => void;
+    activeSkillIndex: number;
+    focusQuickAction: (index: number) => void;
+    setQuickActionsOpen: (open: boolean) => void;
+}) {
+    if (handlePickerKeyDown(event, context))
+        return;
+
+    if (handleSendKeyDown(event, context))
+        return;
+
+    if (!context.quickActionsOpen)
+        return;
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        context.focusQuickAction(context.activeSkillIndex + (event.key === "ArrowDown" ? 1 : -1));
+    } else if (event.key === "Escape") {
+        event.preventDefault();
+        context.setQuickActionsOpen(false);
+    }
+}
+
+
+function handlePickerKeyDown(event: Parameters<KeyboardEventHandler<HTMLDivElement>>[0], context: Parameters<typeof handleComposerKeyDown>[1]): boolean {
+    if (!context.quickActionsOpen || (event.key !== "Enter" && event.key !== "Tab") || !context.selectedPickerSkill)
+        return false;
+
+    event.preventDefault();
+    context.selectSkill(context.selectedPickerSkill);
+    return true;
+}
+
+
+function handleSendKeyDown(event: Parameters<KeyboardEventHandler<HTMLDivElement>>[0], context: Parameters<typeof handleComposerKeyDown>[1]): boolean {
+    if (event.key !== "Enter" || event.shiftKey || event.altKey)
+        return false;
+
+    const primary = event.ctrlKey || event.metaKey;
+    const sendOnEnter = context.assistantSendMode === "enter" ? !primary : primary;
+    const configuredBinding = Object.prototype.hasOwnProperty.call(context.shortcutOverrides, KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST)
+        ? resolveKeyBindings(context.shortcutOverrides)[KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST]
+        : undefined;
+    const currentBinding = getEventKeyBinding(event);
+    if (configuredBinding !== undefined && configuredBinding !== null && currentBinding !== undefined && areKeyBindingsEqual(configuredBinding, currentBinding))
+        return true;
+
+    event.stopPropagation();
+    if (sendOnEnter) {
+        event.preventDefault();
+        context.send();
+    }
+
+    return true;
+}
+
+
 interface AssistantComposerOptions {
     intl: IntlShape;
     state: AssistantState;
@@ -170,52 +233,17 @@ export function useAssistantComposer({ intl, state, onRequest, onCancel, transla
         }
     }, [slashRange]);
 
-    const onKeyDown: KeyboardEventHandler<HTMLDivElement> = (event) => {
-        if (quickActionsOpen && (event.key === "Enter" || event.key === "Tab") && pickerSkills[activeSkillIndex]) {
-            event.preventDefault();
-            selectSkill(pickerSkills[activeSkillIndex]);
-
-            return;
-        }
-
-        if (event.key === "Enter" && !event.shiftKey && !event.altKey) {
-            const primary = event.ctrlKey || event.metaKey;
-            const shouldSend = assistantSendMode === "enter" ? !primary : primary;
-            const configuredSendBinding = Object.prototype.hasOwnProperty.call(shortcutOverrides, KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST)
-                ? resolveKeyBindings(shortcutOverrides)[KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST]
-                : undefined;
-            const currentBinding = getEventKeyBinding(event);
-            const isConfiguredShortcut = configuredSendBinding !== undefined && configuredSendBinding !== null && currentBinding !== undefined && areKeyBindingsEqual(configuredSendBinding, currentBinding);
-            if (isConfiguredShortcut)
-                return;
-
-            event.stopPropagation();
-            if (shouldSend) {
-                event.preventDefault();
-                send();
-            }
-
-            return;
-        }
-
-        if (!quickActionsOpen)
-            return;
-
-        if (event.key === "ArrowDown") {
-            event.preventDefault();
-            focusQuickAction(activeSkillIndex + 1);
-        }
-
-        if (event.key === "ArrowUp") {
-            event.preventDefault();
-            focusQuickAction(activeSkillIndex - 1);
-        }
-
-        if (event.key === "Escape") {
-            event.preventDefault();
-            setQuickActionsOpen(false);
-        }
-    };
+    const onKeyDown: KeyboardEventHandler<HTMLDivElement> = (event) => handleComposerKeyDown(event, {
+        quickActionsOpen,
+        selectedPickerSkill: pickerSkills[activeSkillIndex],
+        selectSkill,
+        assistantSendMode,
+        shortcutOverrides,
+        send,
+        activeSkillIndex,
+        focusQuickAction,
+        setQuickActionsOpen,
+    });
 
     return {
         canSend,

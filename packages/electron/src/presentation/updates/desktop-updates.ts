@@ -8,6 +8,50 @@ export const desktopUpdatesChannel = "skladno:desktop-updates";
 export const desktopUpdatesEvent = "skladno:desktop-updates:state";
 
 
+function readEnabled(request: unknown): boolean | undefined {
+    if (!request || typeof request !== "object")
+        return undefined;
+
+    const enabled = (request as Record<string, unknown>).enabled;
+    return typeof enabled === "boolean" ? enabled : undefined;
+}
+
+
+function setUpdateOption(request: unknown, update: (enabled: boolean) => unknown): unknown {
+    const enabled = readEnabled(request);
+    return enabled === undefined ? { ok: false, error: "invalid_request" } : { ok: true, value: update(enabled) };
+}
+
+
+function handleDesktopUpdateRequest(method: unknown, request: unknown, coordinator: ReturnType<typeof createDesktopUpdateCoordinator>): unknown {
+    switch (method) {
+        case "getState":
+            return { ok: true, value: coordinator.getState() };
+        case "setNetworkAccess":
+            return setUpdateOption(request, (enabled) => coordinator.setNetworkAccess(enabled));
+        case "setAutomaticChecks":
+            return setUpdateOption(request, (enabled) => coordinator.setAutomaticChecks(enabled));
+        case "setIncludePrereleases":
+            return setUpdateOption(request, (enabled) => coordinator.setIncludePrereleases(enabled));
+        case "checkNow":
+            return coordinator.checkNow().then((value) => ({ ok: true, value }));
+        case "download":
+            return { ok: true, value: coordinator.download() };
+        case "restartAndUpdate":
+            return coordinator.restartAndUpdate().then(() => ({ ok: true, value: undefined }));
+        case "openReleaseNotes":
+            return coordinator.openReleaseNotes().then(() => ({ ok: true, value: undefined }));
+        case "openRecoveryGuide":
+            return coordinator.openRecoveryGuide().then(() => ({ ok: true, value: undefined }));
+        case "rendererReady":
+            coordinator.markStartupSuccessful();
+            return { ok: true, value: undefined };
+        default:
+            return { ok: false, error: "invalid_request" };
+    }
+}
+
+
 export function supportsNativeUpdates(platform = process.platform): boolean {
     return platform === "win32";
 }
@@ -22,40 +66,7 @@ export function registerDesktopUpdatesAdapter({ ipcMain, coordinator }: { ipcMai
     ipcMain.handle(desktopUpdatesChannel, async (_event, request: unknown) => {
         const method = request && typeof request === "object" ? (request as Record<string, unknown>).method : undefined;
         try {
-            switch (method) {
-                case "getState":
-                    return { ok: true, value: coordinator.getState() };
-                case "setNetworkAccess":
-                    return typeof (request as Record<string, unknown>).enabled === "boolean"
-                        ? { ok: true, value: coordinator.setNetworkAccess((request as Record<string, boolean>).enabled) }
-                        : { ok: false, error: "invalid_request" };
-                case "setAutomaticChecks":
-                    return typeof (request as Record<string, unknown>).enabled === "boolean"
-                        ? { ok: true, value: coordinator.setAutomaticChecks((request as Record<string, boolean>).enabled) }
-                        : { ok: false, error: "invalid_request" };
-                case "setIncludePrereleases":
-                    return typeof (request as Record<string, unknown>).enabled === "boolean"
-                        ? { ok: true, value: coordinator.setIncludePrereleases((request as Record<string, boolean>).enabled) }
-                        : { ok: false, error: "invalid_request" };
-                case "checkNow":
-                    return { ok: true, value: await coordinator.checkNow() };
-                case "download":
-                    return { ok: true, value: coordinator.download() };
-                case "restartAndUpdate":
-                    await coordinator.restartAndUpdate();
-                    return { ok: true, value: undefined };
-                case "openReleaseNotes":
-                    await coordinator.openReleaseNotes();
-                    return { ok: true, value: undefined };
-                case "openRecoveryGuide":
-                    await coordinator.openRecoveryGuide();
-                    return { ok: true, value: undefined };
-                case "rendererReady":
-                    coordinator.markStartupSuccessful();
-                    return { ok: true, value: undefined };
-                default:
-                    return { ok: false, error: "invalid_request" };
-            }
+            return await handleDesktopUpdateRequest(method, request, coordinator);
         } catch {
             return { ok: false, error: "editorial_request_failed" };
         }

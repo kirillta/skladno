@@ -17,10 +17,66 @@ export interface StreamBuffer {
 }
 
 
+interface MarkdownBlockState {
+    blocks: string[];
+    current: string;
+    fenced: boolean;
+}
+
+
+function flushMarkdownBlock(state: MarkdownBlockState): void {
+    if (!state.current.trim())
+        return;
+
+    state.blocks.push(state.current);
+    state.current = "";
+}
+
+
+function appendFenceLine(state: MarkdownBlockState, line: string): boolean {
+    if (!/^```/.test(line.trim()))
+        return false;
+
+    state.current += line;
+    state.fenced = !state.fenced;
+    if (!state.fenced)
+        flushMarkdownBlock(state);
+
+    return true;
+}
+
+
+function appendOrdinaryLine(state: MarkdownBlockState, line: string, trimmed: string): void {
+    if (!trimmed) {
+        flushMarkdownBlock(state);
+        return;
+    }
+
+    if (/^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s?)/.test(trimmed)) {
+        flushMarkdownBlock(state);
+        state.blocks.push(line);
+        return;
+    }
+
+    state.current += line;
+}
+
+
+function appendMarkdownLine(state: MarkdownBlockState, line: string): void {
+    if (appendFenceLine(state, line))
+        return;
+
+    if (state.fenced) {
+        state.current += line;
+        return;
+    }
+
+    appendOrdinaryLine(state, line, line.trim());
+}
+
+
 function completedMarkdownBlocks(text: string): { blocks: string[]; tail: string } {
-    const blocks: string[] = [];
-    let current = "";
-    let fenced = false;
+    const state: MarkdownBlockState = { blocks: [], current: "", fenced: false };
     let position = 0;
 
     while (position < text.length) {
@@ -29,49 +85,11 @@ function completedMarkdownBlocks(text: string): { blocks: string[]; tail: string
             break;
 
         const line = text.slice(position, lineEnd + 1);
-        const trimmed = line.trim();
         position = lineEnd + 1;
-
-        if (/^```/.test(trimmed)) {
-            current += line;
-            fenced = !fenced;
-            if (!fenced) {
-                blocks.push(current);
-                current = "";
-            }
-
-            continue;
-        }
-
-        if (fenced) {
-            current += line;
-
-            continue;
-        }
-
-        if (!trimmed) {
-            if (current.trim())
-                blocks.push(current);
-
-            current = "";
-
-            continue;
-        }
-
-        if (/^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s?)/.test(trimmed)) {
-            if (current.trim())
-                blocks.push(current);
-
-            blocks.push(line);
-            current = "";
-
-            continue;
-        }
-
-        current += line;
+        appendMarkdownLine(state, line);
     }
 
-    return { blocks, tail: `${current}${text.slice(position)}` };
+    return { blocks: state.blocks, tail: `${state.current}${text.slice(position)}` };
 }
 
 
@@ -83,32 +101,28 @@ function isReviewResponse(responseKind: AssistantResponseKind): boolean {
 }
 
 
-export function updateStreamedMessage({ event, articleId, streamedId, buffers, update }: {
-    event: AssistantEvent;
-    articleId: string;
-    streamedId: string;
-    buffers: Record<string, StreamBuffer>;
-    update: (message: StreamedAssistantMessage) => void;
-}): boolean {
-    if (event.type === ASSISTANT_EVENT.TEXT_DELTA) {
-        const buffer = buffers[articleId] ?? { blocks: [], tail: "" };
-        const next = completedMarkdownBlocks(`${buffer.tail}${event.delta}`);
-        const blocks = [...buffer.blocks, ...next.blocks];
-        buffers[articleId] = { blocks, tail: next.tail };
-        if (!next.blocks.length)
-            return true;
-
-        update({ id: streamedId, articleId, blocks, createdAt: new Date().toISOString(), status: "pending" });
-
+function updateTextDelta(articleId: string, streamedId: string, buffers: Record<string, StreamBuffer>, update: (message: StreamedAssistantMessage) => void, event: Extract<AssistantEvent, { type: "text_delta" }>): boolean {
+    const buffer = buffers[articleId] ?? { blocks: [], tail: "" };
+    const next = completedMarkdownBlocks(`${buffer.tail}${event.delta}`);
+    const blocks = [...buffer.blocks, ...next.blocks];
+    buffers[articleId] = { blocks, tail: next.tail };
+    if (!next.blocks.length)
         return true;
-    }
 
-    const responseKind = event.type === ASSISTANT_EVENT.STAGED_COMPLETION
-        ? event.completion.responseKind
-        : event.type === ASSISTANT_EVENT.COMPLETED ? event.responseKind : undefined;
-    if (!responseKind)
-        return false;
+    update({ id: streamedId, articleId, blocks, createdAt: new Date().toISOString(), status: "pending" });
+    return true;
+}
 
+
+function getCompletedResponseKind(event: AssistantEvent): AssistantResponseKind | undefined {
+    if (event.type === ASSISTANT_EVENT.STAGED_COMPLETION)
+        return event.completion.responseKind;
+
+    return event.type === ASSISTANT_EVENT.COMPLETED ? event.responseKind : undefined;
+}
+
+
+function updateCompletedMessage(articleId: string, streamedId: string, buffers: Record<string, StreamBuffer>, update: (message: StreamedAssistantMessage) => void, event: AssistantEvent, responseKind: AssistantResponseKind): void {
     const buffer = buffers[articleId] ?? { blocks: [], tail: "" };
     const blocks = isReviewResponse(responseKind)
         ? buffer.blocks
@@ -123,6 +137,23 @@ export function updateStreamedMessage({ event, articleId, streamedId, buffers, u
         responseKind,
         status: event.type === ASSISTANT_EVENT.COMPLETED ? "completed" : "pending"
     });
+}
 
+
+export function updateStreamedMessage({ event, articleId, streamedId, buffers, update }: {
+    event: AssistantEvent;
+    articleId: string;
+    streamedId: string;
+    buffers: Record<string, StreamBuffer>;
+    update: (message: StreamedAssistantMessage) => void;
+}): boolean {
+    if (event.type === ASSISTANT_EVENT.TEXT_DELTA)
+        return updateTextDelta(articleId, streamedId, buffers, update, event);
+
+    const responseKind = getCompletedResponseKind(event);
+    if (!responseKind)
+        return false;
+
+    updateCompletedMessage(articleId, streamedId, buffers, update, event, responseKind);
     return true;
 }

@@ -33,6 +33,55 @@ function getAssistantRequestScope(value: unknown): AssistantRequestScope {
 }
 
 
+function resolveExplicitSkillId(explicitSkillValue: string | undefined): string | undefined {
+    return explicitSkillValue && (resolveBuiltInSkillId(explicitSkillValue) ?? explicitSkillValue);
+}
+
+
+function readSkillOffset(body: Record<string, unknown>, explicitSkillValue: string | undefined): number | undefined {
+    const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
+    if (skillOffset !== undefined && (!explicitSkillValue || !Number.isInteger(skillOffset) || skillOffset < 0 || skillOffset > String(body.authorMessage ?? "").length))
+        throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
+
+    return skillOffset;
+}
+
+
+function readAssistantSkillOptions(body: Record<string, unknown>): { explicitSkillId?: string; skillOffset?: number } {
+    const explicitSkillValue = body.explicitSkillId === undefined ? undefined : parseString(body.explicitSkillId, "explicitSkillId");
+    const explicitSkillId = resolveExplicitSkillId(explicitSkillValue);
+    const skillOffset = readSkillOffset(body, explicitSkillValue);
+
+    return { ...(explicitSkillId ? { explicitSkillId } : {}), ...(skillOffset === undefined ? {} : { skillOffset }) };
+}
+
+
+function readAssistantLocaleOptions(body: Record<string, unknown>): { targetLanguage?: string; interfaceLocale?: string } {
+    const targetLanguage = body.targetLanguage === undefined ? undefined : parseString(body.targetLanguage, "targetLanguage");
+    const interfaceLocale = body.interfaceLocale === undefined ? undefined : parseString(body.interfaceLocale, "interfaceLocale");
+
+    return { ...(targetLanguage ? { targetLanguage } : {}), ...(interfaceLocale ? { interfaceLocale } : {}) };
+}
+
+
+function readNewAssistantRequest(body: Record<string, unknown>, requestId: string): StartAssistantRequest {
+    if (body.kind !== "new" && body.kind !== undefined)
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    const skillOptions = readAssistantSkillOptions(body);
+    const localeOptions = readAssistantLocaleOptions(body);
+
+    return {
+        kind: "new",
+        requestId,
+        authorMessage: parseString(body.authorMessage, "authorMessage"),
+        scope: getAssistantRequestScope(body.scope),
+        ...skillOptions,
+        ...localeOptions,
+    };
+}
+
+
 function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequest {
     const requestId = parseString(body.requestId, "requestId");
     if (body.kind === "retry")
@@ -43,28 +92,7 @@ function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequ
             ...(body.interfaceLocale === undefined ? {} : { interfaceLocale: parseString(body.interfaceLocale, "interfaceLocale") }),
         };
 
-    if (body.kind !== "new" && body.kind !== undefined)
-        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
-
-    const explicitSkillValue = body.explicitSkillId === undefined ? undefined : parseString(body.explicitSkillId, "explicitSkillId");
-    const explicitSkillId = explicitSkillValue && (resolveBuiltInSkillId(explicitSkillValue) ?? explicitSkillValue);
-
-    const targetLanguage = body.targetLanguage === undefined ? undefined : parseString(body.targetLanguage, "targetLanguage");
-    const interfaceLocale = body.interfaceLocale === undefined ? undefined : parseString(body.interfaceLocale, "interfaceLocale");
-    const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
-    if (skillOffset !== undefined && (!explicitSkillValue || !Number.isInteger(skillOffset) || skillOffset < 0 || skillOffset > String(body.authorMessage ?? "").length))
-        throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
-
-    return {
-        kind: "new",
-        requestId,
-        authorMessage: parseString(body.authorMessage, "authorMessage"),
-        scope: getAssistantRequestScope(body.scope),
-        ...(explicitSkillId ? { explicitSkillId } : {}),
-        ...(skillOffset === undefined ? {} : { skillOffset }),
-        ...(targetLanguage ? { targetLanguage } : {}),
-        ...(interfaceLocale ? { interfaceLocale } : {}),
-    };
+    return readNewAssistantRequest(body, requestId);
 }
 
 

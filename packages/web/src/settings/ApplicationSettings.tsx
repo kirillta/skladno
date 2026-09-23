@@ -153,40 +153,47 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
 
 
     let sectionContent = <DataBackupsSettingsSection client={client} backupPolicy={backupPolicy} save={saveBackupPolicy} />;
-    if (settings && section === "general")
-        sectionContent = <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} telemetry={telemetry} />;
-    else if (settings && section === "keyBindings")
-        sectionContent = <KeyBindingSettings general={general} saveGeneral={saveGeneral} overrides={keyBindingOverrides} save={saveKeyBindingOverrides} />;
-    else if (settings && section === "ai")
-        sectionContent = <AiSettingsSection
-            settings={settings}
-            preferences={preferences}
-            appModel={appModel}
-            models={ai.models}
-            connectionProvider={ai.connectionProvider}
-            connectionName={ai.connectionName}
-            environmentName={ai.environmentName}
-            managedConnectionName={ai.managedConnectionName}
-            apiKey={ai.apiKey}
-            connectionError={ai.connectionError}
-            setConnectionProvider={ai.setConnectionProvider}
-            setConnectionName={ai.setConnectionName}
-            setEnvironmentName={ai.setEnvironmentName}
-            setManagedConnectionName={ai.setManagedConnectionName}
-            setApiKey={ai.setApiKey}
-            onAddConnection={() => void ai.addConnection()}
-            onAddManagedConnection={desktopSettings ? () => void ai.addManagedConnection() : undefined}
-            onSetConnectionActive={(connectionId, active) => void ai.setConnectionActive(connectionId, active)}
-            onRequestConnectionRename={ai.requestManagedConnectionRename}
-            canRenameManagedConnection={Boolean(desktopSettings)}
-            onRequestConnectionRemoval={ai.setConnectionPendingRemoval}
-            onRefreshModels={() => void ai.refreshModels()}
-            savePreferences={savePreferences}
-            saveAppModel={saveAppModel} />;
-    else if (settings && section === "publishing")
-        sectionContent = <PublishingSettingsSection publishing={publishingSettings} save={savePublishingSettings} general={general} saveGeneral={saveGeneral} />;
-    else if (settings && section === "about")
-        sectionContent = <AboutSettingsSection openQuickStart={openQuickStart} />;
+    switch (settings ? section : undefined) {
+        case "general":
+            sectionContent = <GeneralSettingsSection general={general} save={saveGeneral} applyTheme={onThemeApplied} telemetry={telemetry} />;
+            break;
+        case "keyBindings":
+            sectionContent = <KeyBindingSettings general={general} saveGeneral={saveGeneral} overrides={keyBindingOverrides} save={saveKeyBindingOverrides} />;
+            break;
+        case "ai":
+            sectionContent = <AiSettingsSection
+                settings={settings!}
+                preferences={preferences}
+                appModel={appModel}
+                models={ai.models}
+                connectionProvider={ai.connectionProvider}
+                connectionName={ai.connectionName}
+                environmentName={ai.environmentName}
+                managedConnectionName={ai.managedConnectionName}
+                apiKey={ai.apiKey}
+                connectionError={ai.connectionError}
+                setConnectionProvider={ai.setConnectionProvider}
+                setConnectionName={ai.setConnectionName}
+                setEnvironmentName={ai.setEnvironmentName}
+                setManagedConnectionName={ai.setManagedConnectionName}
+                setApiKey={ai.setApiKey}
+                onAddConnection={() => void ai.addConnection()}
+                onAddManagedConnection={desktopSettings ? () => void ai.addManagedConnection() : undefined}
+                onSetConnectionActive={(connectionId, active) => void ai.setConnectionActive(connectionId, active)}
+                onRequestConnectionRename={ai.requestManagedConnectionRename}
+                canRenameManagedConnection={Boolean(desktopSettings)}
+                onRequestConnectionRemoval={ai.setConnectionPendingRemoval}
+                onRefreshModels={() => void ai.refreshModels()}
+                savePreferences={savePreferences}
+                saveAppModel={saveAppModel} />;
+            break;
+        case "publishing":
+            sectionContent = <PublishingSettingsSection publishing={publishingSettings} save={savePublishingSettings} general={general} saveGeneral={saveGeneral} />;
+            break;
+        case "about":
+            sectionContent = <AboutSettingsSection openQuickStart={openQuickStart} />;
+            break;
+    }
 
 
     return <main ref={focusAreas.ref} onFocusCapture={focusAreas.onFocusCapture} onKeyDownCapture={focusAreas.onKeyDownCapture} className="flex h-screen flex-col overflow-hidden bg-surface text-ink md:flex-row">

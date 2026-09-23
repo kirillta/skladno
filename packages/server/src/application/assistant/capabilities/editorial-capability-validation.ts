@@ -42,6 +42,13 @@ export function isValidatedEditorialCapabilityCall(capability: string, input: Re
 export function validateEditorialCapabilityCoverage(): void {
     const operations = new Set<string>();
     const capabilities = new Set<EditorialCapabilityId>();
+    validateOperationClassifications(operations, capabilities);
+    validateCapabilityClassifications(capabilities);
+    validateTransportEvaluations(operations);
+}
+
+
+function validateOperationClassifications(operations: Set<string>, capabilities: Set<EditorialCapabilityId>) {
     for (const entry of editorialOperationClassifications) {
         if (operations.has(entry.id))
             throw new Error(`Duplicate Editorial operation classification: ${entry.id}`);
@@ -54,11 +61,17 @@ export function validateEditorialCapabilityCoverage(): void {
             capabilities.add(entry.capability);
         }
     }
+}
 
+
+function validateCapabilityClassifications(capabilities: Set<EditorialCapabilityId>) {
     for (const definition of definitions)
         if (!capabilities.has(definition.id))
             throw new Error(`Capability has no Editorial operation classification: ${definition.id}`);
+}
 
+
+function validateTransportEvaluations(operations: Set<string>) {
     for (const evaluation of transportEvaluations) {
         if (!evaluation.operation && !evaluation.outsideAssistantAuthority)
             throw new Error("Transport evaluation needs an operation or outside-authority reason.");

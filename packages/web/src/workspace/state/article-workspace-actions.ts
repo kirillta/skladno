@@ -47,27 +47,40 @@ export function createArticleWorkspaceActions(options: ArticleWorkspaceActionsOp
             return;
 
         try {
-            if (mode === "keep") {
-                draftLifecycle.send({ articleId: comparisonArticleId, event: { type: "keep-local", baseRevisionId: conflict.article.currentRevisionId, ...(conflict.draft ? { draftVersion: conflict.draft.version } : {}) } });
-                await checkpoint(comparisonArticleId, conflict.localContent);
-            } else if (mode === "draft" && conflict.draft) {
-                draftLifecycle.send({ articleId: comparisonArticleId, event: { type: "use-retained-draft", content: conflict.draft.content, baseRevisionId: conflict.article.currentRevisionId, draftVersion: conflict.draft.version } });
-                replaceArticles((items) => items.map((article) => article.id === comparisonArticleId ? conflict.article : article));
-            } else if (mode === "revision") {
-                if (conflict.draft)
-                    await client.discardArticleDraft(comparisonArticleId, conflict.draft.version);
-
-                draftLifecycle.send({ articleId: comparisonArticleId, event: { type: "use-current-revision", content: conflict.article.currentRevision.content, revisionId: conflict.article.currentRevisionId } });
-                replaceArticles((items) => items.map((article) => article.id === comparisonArticleId ? withoutDraft(conflict.article) : article));
-            }
-
+            await applyConflictResolution(mode, comparisonArticleId, conflict);
             setComparisonArticleId(undefined);
         } catch (error) {
-            if (error instanceof ArticleDraftConflictError || error instanceof ArticleRevisionConflictError)
-                recordConflict(comparisonArticleId, error, conflict.localContent);
-            else
-                notifyError(error, { fallbackMessage: saveFailedMessage });
+            reportConflictResolutionError(error, comparisonArticleId, conflict.localContent);
         }
+    }
+
+
+    async function applyConflictResolution(mode: "keep" | "draft" | "revision", articleId: string, conflict: NonNullable<DraftLifecycle["sessionsRef"]["current"][string]["conflict"]>) {
+        if (mode === "keep") {
+            draftLifecycle.send({ articleId, event: { type: "keep-local", baseRevisionId: conflict.article.currentRevisionId, ...(conflict.draft ? { draftVersion: conflict.draft.version } : {}) } });
+            await checkpoint(articleId, conflict.localContent);
+        } else if (mode === "draft" && conflict.draft) {
+            draftLifecycle.send({ articleId, event: { type: "use-retained-draft", content: conflict.draft.content, baseRevisionId: conflict.article.currentRevisionId, draftVersion: conflict.draft.version } });
+            replaceArticles((items) => items.map((article) => article.id === articleId ? conflict.article : article));
+        } else if (mode === "revision") {
+            await discardConflictDraft(articleId, conflict.draft?.version);
+            draftLifecycle.send({ articleId, event: { type: "use-current-revision", content: conflict.article.currentRevision.content, revisionId: conflict.article.currentRevisionId } });
+            replaceArticles((items) => items.map((article) => article.id === articleId ? withoutDraft(conflict.article) : article));
+        }
+    }
+
+
+    async function discardConflictDraft(articleId: string, draftVersion: number | undefined) {
+        if (draftVersion !== undefined)
+            await client.discardArticleDraft(articleId, draftVersion);
+    }
+
+
+    function reportConflictResolutionError(error: unknown, articleId: string, localContent: string) {
+        if (error instanceof ArticleDraftConflictError || error instanceof ArticleRevisionConflictError)
+            recordConflict(articleId, error, localContent);
+        else
+            notifyError(error, { fallbackMessage: saveFailedMessage });
     }
 
 
