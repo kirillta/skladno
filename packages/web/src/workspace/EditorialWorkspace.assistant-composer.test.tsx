@@ -49,6 +49,8 @@ describe("Editorial Assistant composer", () => {
         await user.click(panelScope.getByRole("button", { name: getMessage("assistant.quickActions") }));
         await user.click(panelScope.getByRole("option", { name: getMessage("assistant.skill.narrativeDraft.label") }));
         await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")?.textContent).toContain("Narrative draft"));
+        const composer = panelScope.getByRole("combobox", { name: getMessage("assistant.guidance") });
+        expect(composer.textContent).toBe("Narrative draft ");
         await user.click(panelScope.getByRole("button", { name: getMessage("assistant.send") }));
         expect(onRequest).toHaveBeenCalledWith("", "narrative_draft", undefined, 0);
     });

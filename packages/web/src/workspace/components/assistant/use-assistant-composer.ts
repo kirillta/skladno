@@ -178,14 +178,18 @@ export function useAssistantComposer({ intl, state, onRequest, onCancel, transla
 
     const selectSkill = useCallback((skill: AssistantComposerSkill) => {
         const insertionOffset = selectedSkill ? skillOffset : slashRange?.start ?? caretOffset;
-        const nextGuidance = slashRange
+        const guidanceWithoutSlash = slashRange
             ? `${guidance.slice(0, slashRange.start)}${guidance.slice(slashRange.end)}`
             : guidance;
+        const needsTrailingSpace = insertionOffset === guidanceWithoutSlash.length || !/\s/.test(guidanceWithoutSlash[insertionOffset] ?? "");
+        const nextGuidance = needsTrailingSpace
+            ? `${guidanceWithoutSlash.slice(0, insertionOffset)} ${guidanceWithoutSlash.slice(insertionOffset)}`
+            : guidanceWithoutSlash;
         setQuickActionsOpen(false);
         setSelectedSkill(skill);
         setRestoredTargetLanguage(undefined);
         setSkillOffset(insertionOffset);
-        setCaretOffset(insertionOffset);
+        setCaretOffset(insertionOffset + (needsTrailingSpace ? 1 : 0));
         setSlashRange(undefined);
         setSlashQuery("");
         setGuidance(nextGuidance);
