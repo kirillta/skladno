@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skladno Refactoring"
+  short_description: "Apply Skladno's code structure and export rules."
+  default_prompt: "Use $refactoring to review or implement a behavior-preserving Skladno refactor."

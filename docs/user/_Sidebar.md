@@ -1,4 +1,5 @@
 - [Home](Home.md)
 - [Glossary](Glossary.md)
 - [Editorial Assistant](Assistant.md)
+- [Skills](Skills.md)
 - [Backups and recovery](Backups-and-recovery.md)

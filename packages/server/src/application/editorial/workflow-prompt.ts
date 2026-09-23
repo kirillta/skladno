@@ -1,7 +1,8 @@
 import type { ModelMessage } from "ai";
-import { APPLICATION_ERROR, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, type BuiltInSkillId, type EditorialOperation, type StyleProfile } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, resolveBuiltInSkillId, type BuiltInSkillId, type EditorialOperation, type StyleProfile } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
+import { getBuiltInSkillInstructions } from "../assistant/skills/get-built-in-skill-instructions.js";
 
 
 interface EditorialPromptInput {
@@ -22,7 +23,13 @@ interface EditorialPromptInput {
 export const authorControlInstruction = "Do not claim that you saved or changed the Article.";
 
 
-const commonGuardrails = `Preserve the author's claims, numbers, URLs, code, technical terms, requested tone, intent, and existing Markdown formatting. Do not invent facts, examples, or sources. Return only a valid Markdown proposed full-text article. This is a proposal for author review. ${authorControlInstruction}`;
+function getSkillInstructions(input: EditorialPromptInput): string {
+    const skillId = input.skillId ?? resolveBuiltInSkillId(input.operation);
+    if (!skillId)
+        throw new Error("invalid_builtin_skill_package");
+
+    return getBuiltInSkillInstructions(skillId);
+}
 
 
 function createAuthorGuidance(authorContext: string): string {
@@ -64,11 +71,11 @@ function createTalkingPointsPrompt(input: EditorialPromptInput): ModelMessage[] 
     return [
         {
             role: "system",
-            content: `You are an editorial assistant helping an author discover an article's central theses. Preserve the author's intent, claims, numbers, URLs, code, and technical terms. Do not invent facts. ${authorControlInstruction}`
+            content: getSkillInstructions(input)
         },
         {
             role: "user",
-            content: `Workflow: talking points. Suggest concise, distinct theses from the source below. When an Article selection is present, treat only the selection and any material explicitly supplied in the Author's message as source material. Without a selection, prefer the Author's message whenever it is present; use Article content only when the message is empty. Unless the Author requests another count, suggest between 3 and 5 theses. Return a Markdown list. Base counts and derived details on the Article selection plus any supplementary material the Author explicitly provides in the message. If the source is missing or its direction is genuinely ambiguous, ask the Author only the focused questions needed to choose a direction instead of guessing.\n\n${sourceLabel}:\n${source || "No source content was provided."}${guidance}`
+            content: `${sourceLabel}:\n${source || "No source content was provided."}${guidance}`
         },
     ];
 }
@@ -81,18 +88,18 @@ function createNarrativeDraftPrompt(input: EditorialPromptInput): ModelMessage[]
     const lengthHint = input.targetArticleCharacterLimit
         ? `\n\nAdvisory target for the resulting complete Article: about ${input.targetArticleCharacterLimit} characters. This is a composition hint, not a hard limit on your response.${input.articleSelection ? ` The unchanged surrounding Article currently contains ${input.surroundingArticleCharacterCount ?? 0} characters; size this replacement with the complete Article in mind.` : ""}`
         : "";
-    const proposalForm = input.articleSelection
-        ? "Return only valid Markdown replacement text for the selected passage; do not return a complete Article because the replacement will remain inside the surrounding Article."
-        : "Return only a valid Markdown proposed full-text Article.";
+    const outputFormat = input.articleSelection
+        ? "Selected-passage Markdown replacement."
+        : "Full Article Markdown proposal.";
 
     return [
         {
             role: "system",
-            content: `You are an editorial assistant, not the Article's author. Help the Author develop their own material into a simple, coherent narrative. Prefer straightforward structure and ideas unless the Author explicitly asks for greater depth or complexity. Preserve the Author's claims, numbers, URLs, code, technical terms, requested tone, intent, and existing Markdown formatting. Do not invent facts, examples, sources, or arguments. ${proposalForm} This is a proposal for Author review. ${authorControlInstruction}`
+            content: getSkillInstructions(input)
         },
         {
             role: "user",
-            content: `Workflow: narrative draft. Extend the source into a coherent technical-article narrative. Follow the Author's message as the highest-priority direction when present. When an Article selection is present, treat only the selection and any material explicitly supplied in the Author's message as source material. Without a selection, use the current Article content and let the Author's message guide or extend it. Keep the Author in control: develop supplied ideas conservatively and do not introduce unsupported arguments.\n\n${sourceLabel}:\n${input.article.trim() || "No Article content was provided."}${authorDirection}${lengthHint}`
+            content: `Output format:\n${outputFormat}\n\n${sourceLabel}:\n${input.article.trim() || "No Article content was provided."}${authorDirection}${lengthHint}`
         },
     ];
 }
@@ -102,11 +109,11 @@ function createThesisToNarrativePrompt(input: EditorialPromptInput): ModelMessag
     return [
         {
             role: "system",
-            content: `You are an editorial assistant. ${commonGuardrails}`
+            content: getSkillInstructions(input)
         },
         {
             role: "user",
-            content: `Workflow: thesis to narrative. Turn the current article text into a coherent technical-article narrative. Keep the author's meaning and make the structure clear without adding unsupported material.\n\nCurrent article:\n${input.article}\n\nAuthor guidance or theses:\n${createAuthorGuidance(input.authorContext)}`
+            content: `Current article:\n${input.article}\n\nAuthor guidance or theses:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
@@ -119,11 +126,11 @@ function createStyleReviewPrompt(input: EditorialPromptInput): ModelMessage[] {
     return [
         {
             role: "system",
-            content: `You are an editorial assistant. ${commonGuardrails}`
+            content: getSkillInstructions(input)
         },
         {
             role: "user",
-            content: `Workflow: style review. Compare the current draft against this compact, locally derived author-style profile. The raw corpus is not available to you. Identify only concrete, material divergences. Produce one conservative full-text proposal; all findings must cite supplied trait or rule IDs.\n\nCurrent article:\n${input.article}\n\nCorpus confidence: ${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters). Treat low confidence as tentative.\n\nSupplied corpus traits:\n${formatStyleTraits(input.styleProfile)}\n\nGlobal rules:\n${formatNumberedRules(input.styleProfile.rules, "global-rule")}\n\nThis Article rules:\n${formatNumberedRules(input.articleStyleRules ?? "", "article-rule")}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
+            content: `Current article:\n${input.article}\n\nCorpus confidence: ${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters).\n\nSupplied corpus traits:\n${formatStyleTraits(input.styleProfile)}\n\nGlobal rules:\n${formatNumberedRules(input.styleProfile.rules, "global-rule")}\n\nThis Article rules:\n${formatNumberedRules(input.articleStyleRules ?? "", "article-rule")}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
@@ -136,11 +143,11 @@ function createTranslationPrompt(input: EditorialPromptInput): ModelMessage[] {
     return [
         {
             role: "system",
-            content: `You are a technical translator. Translate faithfully without changing claims, numbers, intended voice, or Markdown formatting. Return valid Markdown. Tokens in the form [[SKLADNO_PROTECTED_N]] are protected code, URLs, or technical names: copy every token exactly once in the field where it appears and do not translate it. This is a proposal for author review. ${authorControlInstruction}`
+            content: getSkillInstructions(input)
         },
         {
             role: "user",
-            content: `Workflow: translation. Translate the complete article into ${input.targetLanguage.trim()}. Translate the Article title and body in the same response. Return the translation and metadata through the requested structured response.\n\nCurrent Article title:\n${input.articleTitle ?? ""}\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
+            content: `Target language:\n${input.targetLanguage.trim()}\n\nCurrent Article title:\n${input.articleTitle ?? ""}\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
@@ -150,11 +157,11 @@ function createFlowRevisionPrompt(input: EditorialPromptInput): ModelMessage[] {
     return [
         {
             role: "system",
-            content: `You are an editorial assistant. ${commonGuardrails}`
+            content: getSkillInstructions(input)
         },
         {
             role: "user",
-            content: `Workflow: flow revision. Revise the current article as a complete article to improve structure, transitions, and readability. Keep its meaning intact; do not summarize it or turn it into feedback.\n\nCurrent article:\n${input.article}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
+            content: `Current article:\n${input.article}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }

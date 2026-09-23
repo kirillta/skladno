@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { IntlShape } from "react-intl";
-import { APPLICATION_ERROR, ApplicationClientError, type AssistantCapabilityActivity, type AssistantEvent, type AssistantMessage, type BuiltInSkillId, type FactCheckClaimPreview } from "@skladno/shared";
+import { APPLICATION_ERROR, ApplicationClientError, BUILT_IN_SKILL, type AssistantCapabilityActivity, type AssistantEvent, type AssistantMessage, type FactCheckClaimPreview } from "@skladno/shared";
 import type { EditorialWorkspaceClient } from "../../application/client.js";
 import { getErrorMessageId } from "../../i18n/errors.js";
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
@@ -150,20 +150,21 @@ async function performNewAssistantRequest({ options, article, authorMessage, exp
     options: AssistantRequestActionsOptions;
     article: SelectedArticle;
     authorMessage: string;
-    explicitSkillId: BuiltInSkillId | undefined;
+    explicitSkillId: string | undefined;
     targetLanguage: string | undefined;
     skillOffset: number | undefined;
 }) {
-    const saved = await options.workspace.save(article.id);
+    const creatorRequest = explicitSkillId === BUILT_IN_SKILL.SKILL_CREATOR;
+    const saved = creatorRequest ? undefined : await options.workspace.save(article.id);
     const revision = saved ?? article.currentRevision;
     clearNewRequestFeedback(options.store, article.id);
     options.store.setStateByArticle((states) => ({ ...states, [article.id]: "streaming" }));
     options.store.setFactCheckClaimsByArticle((claims) => ({ ...claims, [article.id]: [] }));
     options.store.controller.current = new AbortController();
-    const selectionMatchesRevision = options.selection && options.selection.articleId === article.id
+    const selectionMatchesRevision = !creatorRequest && options.selection && options.selection.articleId === article.id
         && options.selection.fingerprint === await fingerprintArticleContent(revision.content);
 
-    if (options.selection && !selectionMatchesRevision)
+    if (!creatorRequest && options.selection && !selectionMatchesRevision)
         throw new ApplicationClientError("assistant_selection_invalid", undefined, 400);
 
     const matchingSelection = selectionMatchesRevision ? options.selection : undefined;
@@ -174,6 +175,7 @@ async function performNewAssistantRequest({ options, article, authorMessage, exp
 
     await options.client.streamAssistantRequest(article.id, {
         kind: "new", requestId, authorMessage,
+        interfaceLocale: options.intl.locale,
         scope: matchingSelection
             ? { kind: "selection", baseRevisionId: revision.id, startOffset: matchingSelection.startOffset, endOffset: matchingSelection.endOffset }
             : { kind: "article", baseRevisionId: revision.id },
@@ -191,7 +193,7 @@ async function performRetryAssistantRequest(options: AssistantRequestActionsOpti
     options.store.controller.current = new AbortController();
     const streamedId = `streaming-${crypto.randomUUID()}`;
     await options.client.streamAssistantRequest(article.id, {
-        kind: "retry", requestId: crypto.randomUUID(), retryOfRequestId: options.retryOfRequestId,
+        kind: "retry", requestId: crypto.randomUUID(), retryOfRequestId: options.retryOfRequestId, interfaceLocale: options.intl.locale,
     }, (event) => options.handleAssistantEvent(event, article.id, article.currentRevisionId, streamedId), options.store.controller.current.signal);
 }
 
@@ -201,7 +203,7 @@ function appendPendingMessage({ store, articleId, requestId, authorMessage, expl
     articleId: string;
     requestId: string;
     authorMessage: string;
-    explicitSkillId: BuiltInSkillId | undefined;
+    explicitSkillId: string | undefined;
     skillOffset: number | undefined;
     selection: AssistantSelectionScope | undefined;
 }) {
@@ -219,7 +221,7 @@ function appendPendingMessage({ store, articleId, requestId, authorMessage, expl
 }
 
 
-async function requestAssistant(options: AssistantRequestActionsOptions & { authorMessage: string; explicitSkillId?: BuiltInSkillId; targetLanguage?: string | readonly string[]; skillOffset?: number }): Promise<void> {
+async function requestAssistant(options: AssistantRequestActionsOptions & { authorMessage: string; explicitSkillId?: string; targetLanguage?: string | readonly string[]; skillOffset?: number }): Promise<void> {
     const { workspace, targetLanguage, authorMessage, explicitSkillId, skillOffset } = options;
     const article = workspace.selectedArticle;
     if (!article)
@@ -256,7 +258,7 @@ async function retryAssistant(options: AssistantRequestActionsOptions & { retryO
 
 
 export function useAssistantRequestActions(options: AssistantRequestActionsOptions) {
-    const request = useCallback((authorMessage: string, explicitSkillId?: BuiltInSkillId, targetLanguage?: string | readonly string[], skillOffset?: number) => requestAssistant({ ...options, authorMessage, explicitSkillId, targetLanguage, skillOffset }), [options]);
+    const request = useCallback((authorMessage: string, explicitSkillId?: string, targetLanguage?: string | readonly string[], skillOffset?: number) => requestAssistant({ ...options, authorMessage, explicitSkillId, targetLanguage, skillOffset }), [options]);
     const retry = useCallback((retryOfRequestId: string) => retryAssistant({ ...options, retryOfRequestId }), [options]);
     return { request, retry };
 }

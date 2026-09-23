@@ -67,6 +67,7 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
         case ELECTRON_APPLICATION_METHOD.acceptProposal: return services.articles.acceptProposalWithDescription(String(args[0]), args[1] as import("@skladno/shared").AcceptProposalInput, new AbortController().signal);
         case ELECTRON_APPLICATION_METHOD.summarizeProposal: return services.proposalSummaries.summarize(String(args[0]), args[1], new AbortController().signal);
         case ELECTRON_APPLICATION_METHOD.restoreRevision: return services.articles.restoreRevision(String(args[0]), String(args[1]));
+        case ELECTRON_APPLICATION_METHOD.listAssistantSkills: return services.skills.discover();
         case ELECTRON_APPLICATION_METHOD.listAssistantMessages: return services.assistant.listMessages(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.rejectTranslation: return services.assistant.rejectTranslation(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.previewAssistantCheckpoint: return services.assistant.previewCheckpoint(String(args[0]), String(args[1]));

@@ -19,7 +19,7 @@ test("thesis-to-narrative prompt preserves author control and supplied theses", 
         authorContext: "Explain Kubernetes retries for senior engineers.",
     });
 
-    assert.match(prompt, /Workflow: thesis to narrative/);
+    assert.match(prompt, /For thesis-to-narrative work/);
     assert.match(prompt, /Explain Kubernetes retries/);
     assert.match(prompt, /Current draft/);
     assert.match(prompt, /Preserve the author's claims, numbers, URLs, code, technical terms/);
@@ -90,8 +90,7 @@ test("narrative-draft prompt follows Author direction, selection priority, and t
     assert.match(prompt, /resulting complete Article: about 1300 characters/);
     assert.match(prompt, /not a hard limit on your response/);
     assert.match(prompt, /unchanged surrounding Article currently contains 800 characters/);
-    assert.match(prompt, /replacement text for the selected passage/);
-    assert.doesNotMatch(prompt, /proposed full-text Article/);
+    assert.match(prompt, /Output format:\nSelected-passage Markdown replacement/);
     assert.match(prompt, /not the Article's author/);
     assert.match(prompt, /Prefer straightforward structure and ideas/);
 });
@@ -104,8 +103,8 @@ test("flow-revision prompt asks for a full-text proposal rather than feedback", 
         authorContext: "Keep the opening sentence.",
     });
 
-    assert.match(prompt, /Workflow: flow revision/);
-    assert.match(prompt, /complete article/);
+    assert.match(prompt, /Revise the current Article as a complete Article/);
+    assert.match(prompt, /complete Article/);
     assert.match(prompt, /do not summarize it or turn it into feedback/);
     assert.match(prompt, /Keep the opening sentence/);
 });
@@ -144,8 +143,8 @@ test("translation prompt names the target language and preserves protected token
         targetLanguage: "Spanish",
     });
 
-    assert.match(prompt, /Translate the complete article into Spanish/);
-    assert.match(prompt, /Translate the Article title and body in the same response/);
+    assert.match(prompt, /Target language:\nSpanish/);
+    assert.match(prompt, /Translate its title and body in the same response/);
     assert.match(prompt, /Deploy Node\.js safely/);
     assert.match(prompt, /copy every token exactly once/);
     assert.match(prompt, /\[\[SKLADNO_PROTECTED_0\]\]/);

@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-30
-- Updated: 2026-09-13
+- Updated: 2026-09-22
 - Scope: Assistant skills, application capabilities, tool execution, Workspace handoffs, and generated artifact completion
 - Depends on: [ADR-002](adr-002-shared-contract-organization.md), [ADR-003](adr-003-web-feature-oriented-react-architecture.md), [ADR-005](adr-005-article-state-and-consistency.md), [ADR-007](adr-007-completion-gated-editorial-engine.md), [ADR-008](adr-008-loopback-service-trust-boundary.md)
 
@@ -56,7 +56,11 @@ Assistant first receives compact Skill descriptions and loads the full instructi
 
 Quick Actions remain compact, discoverable Skill starters. They have the same capability access as ordinary conversation and do not invoke a separate hard-coded workflow. Dedicated Workspace Views remain usable without an Assistant conversation and may seed Assistant with a Skill and context when conversation helps.
 
-Built-in Skills are versioned application assets. Author-created Skills, their storage scope, editing, import, sharing, executable resources, and custom tools are deferred. The catalog accepts more than one Skill source so built-ins do not become a permanent closed set.
+Built-in Skills are versioned application assets. Author-created Skills use the same local Markdown package format and a separate immutable Skill Revision history. The configured Assistant model selects relevant catalog Skills for an untagged request rather than routing it to a default editorial workflow. It may create, revise, restore, or delete a local Skill through bounded server tools only when the Author explicitly asks for that action and target. Revision and deletion use the current package hash to reject concurrent edits; restoring an older snapshot appends a new Skill Revision. Restoring an Assistant chat checkpoint never changes a Skill. The initial orchestration turn receives no Article body, and a later classified capability receives only the Article context it needs. Skills cannot grant custom tools, filesystem access, or permissions. Import, sharing, and custom tools remain deferred. The catalog accepts more than one Skill source so built-ins do not become a permanent closed set.
+
+Skill creation stays in Assistant chat. The model asks when the goal, trigger, procedure, or supplied reference text is unclear. An explicit Author request to create, revise, restore, or delete is the action that authorizes that change. Successful creation makes the local Skill available immediately. There is no separate preview, validation checklist, Install action, or Draft trial. Authors can refine the Markdown through later requests or direct local file edits; the next catalog refresh reads those edits. Package parsing still enforces metadata, file, reference, and size limits, and a rejected write returns a specific safe correction in chat.
+
+Author Skill packages and their immutable Skill Revisions live under the active application data directory. A pending Skill write has a local recovery record until the Assistant request completes in SQLite. At startup, a completed request keeps its Skill write; an incomplete request restores the prior package and removes the new Skill Revision. Backup bundles include live packages and Skill history, and legacy database-only restores leave the current Skill files intact. Article Revisions and Skill Revisions remain separate.
 
 ### One bounded foreground run
 
@@ -86,7 +90,7 @@ Skills remain optional procedural guidance. Capability coverage does not require
 
 The capability catalog becomes an allowlist and trust boundary. Every visible capability therefore needs deterministic contract tests for validation, context authority, completion, cancellation, failure, and stale Revision handling. HTTP and Electron transports continue to expose the same renderer-safe application client and typed events.
 
-Skill Creator, Author Skill persistence and management, MCP transport, third-party tools, background runs, direct publishing, and arbitrary or provider-supplied capability discovery remain outside this decision. Bounded discovery searches only the classified server-owned allowlist described above.
+MCP transport, third-party tools, background runs, direct publishing, arbitrary or provider-supplied capability discovery, and Author Skill import or sharing remain outside this decision. Bounded discovery searches only the classified server-owned allowlist described above.
 
 ## Verification
 

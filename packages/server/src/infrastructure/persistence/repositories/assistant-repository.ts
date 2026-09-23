@@ -1,4 +1,4 @@
-import { REVISION_PROVENANCE_KIND, resolveBuiltInSkillId, type AssistantCapabilityExecution, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantMessage, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type BuiltInSkillId, type RestoreAssistantCheckpointResult } from "@skladno/shared";
+import { REVISION_PROVENANCE_KIND, resolveBuiltInSkillId, type AssistantCapabilityExecution, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantMessage, type AssistantRequest, type AssistantRequestScope, type AssistantRequestStatus, type AssistantResponseKind, type AssistantSkillSource, type RestoreAssistantCheckpointResult } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { createId, getCurrentTimestamp, type Row } from "./repository-utils.js";
@@ -58,7 +58,7 @@ export class AssistantRepository {
     }
 
 
-    createRequest(input: { id: string; articleId: string; authorMessage?: string; scope: AssistantRequestScope; explicitSkillId?: BuiltInSkillId; skillOffset?: number; targetLanguage?: string; retryOfRequestId?: string }): AssistantRequest {
+    createRequest(input: { id: string; articleId: string; authorMessage?: string; scope: AssistantRequestScope; explicitSkillId?: string; skillOffset?: number; targetLanguage?: string; retryOfRequestId?: string }): AssistantRequest {
         if (this.database.prepare("SELECT 1 FROM assistant_requests WHERE id = ?").get(input.id))
             throw new Error("Assistant request already exists.");
 
@@ -84,7 +84,7 @@ export class AssistantRepository {
     }
 
 
-    resolveRequest(requestId: string, skillId: BuiltInSkillId | undefined, source: AssistantSkillSource | undefined): void {
+    resolveRequest(requestId: string, skillId: string | undefined, source: AssistantSkillSource | undefined): void {
         this.database.prepare("UPDATE assistant_requests SET resolved_skill_id = ?, skill_source = ?, updated_at = ? WHERE id = ?")
             .run(skillId ?? null, source ?? null, getCurrentTimestamp(), requestId);
         this.database.prepare("UPDATE assistant_messages SET skill_id = ?, updated_at = ? WHERE request_id = ? AND role = 'author'")
@@ -125,7 +125,7 @@ export class AssistantRepository {
     }
 
 
-    completeRequest(input: { requestId: string; articleId: string; skillId?: BuiltInSkillId; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
+    completeRequest(input: { requestId: string; articleId: string; skillId?: string; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
         const timestamp = getCurrentTimestamp();
         const messageId = createId();
         return this.completeRun(() => {
@@ -249,8 +249,8 @@ export class AssistantRepository {
         const explicitSkillValue = row.explicit_skill_id === null ? undefined : String(row.explicit_skill_id);
         const resolvedSkillValue = row.resolved_skill_id === null ? undefined : String(row.resolved_skill_id);
         const skillSource = row.skill_source === null ? undefined : String(row.skill_source) as AssistantSkillSource;
-        const explicitSkillId = explicitSkillValue && resolveBuiltInSkillId(explicitSkillValue);
-        const resolvedSkillId = resolvedSkillValue && resolveBuiltInSkillId(resolvedSkillValue);
+        const explicitSkillId = explicitSkillValue && (resolveBuiltInSkillId(explicitSkillValue) ?? explicitSkillValue);
+        const resolvedSkillId = resolvedSkillValue && (resolveBuiltInSkillId(resolvedSkillValue) ?? resolvedSkillValue);
         if ((explicitSkillValue && !explicitSkillId) || (resolvedSkillValue && !resolvedSkillId) || (skillSource && !skillSources.includes(skillSource)))
             throw new Error("Invalid persisted assistant request.");
 
@@ -281,6 +281,4 @@ export class AssistantRepository {
             createdAt: String(row.created_at), updatedAt: String(row.updated_at)
         };
     }
-
-
 }

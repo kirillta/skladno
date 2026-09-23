@@ -16,7 +16,7 @@ export function mapAssistantMessageFromRow(row: Row): AssistantMessage {
         throw new Error("Invalid persisted assistant message.");
 
     const skillValue = row.skill_id === null ? undefined : String(row.skill_id);
-    const skillId = skillValue === undefined ? undefined : resolveBuiltInSkillId(skillValue);
+    const skillId = skillValue === undefined ? undefined : resolveBuiltInSkillId(skillValue) ?? skillValue;
     if (skillValue !== undefined && !skillId)
         throw new Error("Invalid persisted assistant skill.");
 

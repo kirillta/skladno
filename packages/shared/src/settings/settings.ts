@@ -9,6 +9,15 @@ export const aiAppModelPath = `${applicationSettingsPath}/ai/app-model`;
 export const keyBindingsPath = `${applicationSettingsPath}/key-bindings`;
 export const backupsPath = `${applicationSettingsPath}/backups`;
 export const restoreBackupPath = `${backupsPath}/restore`;
+export const backupExportsPath = `${backupsPath}/exports`;
+export const backupImportsPath = `${backupsPath}/imports`;
+
+
+export interface BackupBundleManifest {
+    format: 1;
+    files: { path: string; size: number; sha256: string }[];
+}
+
 
 export type ApplicationScreen = "editorial-workspace" | "application-settings";
 export const INTERFACE_LOCALE = {
@@ -235,6 +244,7 @@ export interface DesktopSettingsClient {
     chooseBackupDirectory(): Promise<string | undefined>;
     revealBackupDirectory(): Promise<void>;
     revealDataDirectory(): Promise<void>;
+    revealCreatedSkillDirectory?(requestId: string): Promise<void>;
     createNativeBackup(): Promise<{ path: string; createdAt: string }>;
     restoreNativeBackup(): Promise<void>;
     deleteLocalData(): Promise<void>;

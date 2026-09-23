@@ -1,4 +1,5 @@
 import type { AssistantEvent, StartAssistantRequest } from "../../assistant/assistant.js";
+import type { AssistantSkillSummary } from "../../assistant/assistant.js";
 import type { Article, CreateArticleInput, UpdateArticleInput } from "../../articles/article/article.js";
 import type { ArticleDraft, SaveArticleDraftInput } from "../../articles/draft/draft.js";
 import type { AcceptProposalInput, ProposalChangeSummary, SummarizeProposalInput } from "../../articles/revision/revisions.js";
@@ -49,6 +50,7 @@ export interface ElectronApplicationOperationMap {
     acceptProposal: { args: [string, AcceptProposalInput]; result: ArticleRevision };
     summarizeProposal: { args: [string, SummarizeProposalInput]; result: ProposalChangeSummary[] };
     restoreRevision: { args: [string, string]; result: ArticleRevision };
+    listAssistantSkills: { args: []; result: AssistantSkillSummary[] };
     listAssistantMessages: { args: [string]; result: import("../../assistant/assistant.js").AssistantMessage[] };
     rejectTranslation: { args: [string, string]; result: void };
     previewAssistantCheckpoint: { args: [string, string]; result: import("../../assistant/assistant.js").AssistantCheckpointPreview };
@@ -99,6 +101,7 @@ export const ELECTRON_APPLICATION_METHOD = {
     acceptProposal: "acceptProposal",
     summarizeProposal: "summarizeProposal",
     restoreRevision: "restoreRevision",
+    listAssistantSkills: "listAssistantSkills",
     listAssistantMessages: "listAssistantMessages",
     rejectTranslation: "rejectTranslation",
     previewAssistantCheckpoint: "previewAssistantCheckpoint",

@@ -8,6 +8,7 @@ import { EDITORIAL_ENGINE_EVENT } from "../../../application/editorial/engine/ed
 import { AiSdkEditorialEngine, createAssistantConversationPrompt, getAssistantStepOptions } from "./ai-sdk-editorial-engine.js";
 import { getSupportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";
 import { getOpenAiResponsesProviderOptions } from "../adapters/openai-responses.js";
+import type { FactCheckProvider } from "../models/fact-check-provider.js";
 
 
 test("keeps previous Assistant output separate from the next Author request", () => {
@@ -49,6 +50,14 @@ test("a resolved skill must call its artifact tool before it can answer", () => 
     assert.deepEqual(getAssistantStepOptions(1, ["translate", "inspect_translations"]), {
         activeTools: ["translate", "inspect_translations", "find_capabilities", "load_skill"],
     });
+    assert.deepEqual(getAssistantStepOptions(0, ["inspect_article", "generate_proposal"]), {
+        activeTools: ["inspect_article", "generate_proposal", "find_capabilities", "load_skill"],
+        toolChoice: { type: "tool", toolName: "inspect_article" },
+    });
+    assert.deepEqual(getAssistantStepOptions(1, ["inspect_article", "generate_proposal"]), {
+        activeTools: ["inspect_article", "generate_proposal", "find_capabilities", "load_skill"],
+        toolChoice: { type: "tool", toolName: "generate_proposal" },
+    });
 });
 
 
@@ -84,6 +93,58 @@ test("editorial prompts route system messages through AI SDK 7 instructions", as
         events.push(event.type);
 
     assert.deepEqual(events, [EDITORIAL_ENGINE_EVENT.TEXT_DELTA, EDITORIAL_ENGINE_EVENT.COMPLETED]);
+});
+
+
+test("Skill Creator may clarify before it writes", () => {
+    assert.deepEqual(getAssistantStepOptions(0, ["create_author_skill"]), {
+        activeTools: ["create_author_skill", "find_capabilities", "load_skill"],
+    });
+});
+
+
+test("does not send Article context when the Assistant does not need it", () => {
+    assert.deepEqual(createAssistantConversationPrompt({
+        article: "",
+        history: [],
+        message: "Create a reusable Skill.",
+        scope: "article",
+    }), [
+        { role: "user", content: "Author request:\nCreate a reusable Skill.\n\nNo Article context was provided for this request." },
+    ]);
+});
+
+
+test("fact-check workflow passes the packaged instructions to its provider", async () => {
+    let instructions = "";
+    const factCheckProvider: FactCheckProvider = {
+        researchStage: "web_research",
+        async extractClaims(_article, value) {
+            instructions = value;
+            return { responseId: "claim-extraction", claims: [] };
+        },
+        async researchClaims() {
+            return [];
+        },
+        async evaluateClaims() {
+            return { responseId: "evaluation", findings: [] };
+        },
+    };
+    const engine = new AiSdkEditorialEngine({
+        provider: AI_PROVIDER.OPENAI,
+        languageModel: new MockLanguageModelV3({}),
+        factCheckProvider,
+        storeResponses: false,
+    });
+
+    let completed = false;
+    for await (const event of engine.stream({ operation: EDITORIAL_OPERATION.FACT_CHECK, article: "HTTP was standardized in 1999.", authorContext: "" }, new AbortController().signal))
+        completed ||= event.type === EDITORIAL_ENGINE_EVENT.COMPLETED;
+
+    assert.ok(completed);
+    assert.match(instructions, /For claim extraction, extract up to 12 externally verifiable factual claims/);
+    assert.match(instructions, /For web research, research the factual claim using web search/);
+    assert.match(instructions, /For evidence evaluation, evaluate each Article claim/);
 });
 
 

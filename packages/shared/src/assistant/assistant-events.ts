@@ -1,5 +1,4 @@
 import type { ApplicationErrorCode } from "../cross-cutting/errors.js";
-import { isBuiltInSkillId } from "./assistant-skills.js";
 import type { AssistantEditorialResult, AssistantResponseKind, AssistantSkillSource, AssistantStagedCompletion } from "./assistant.js";
 
 
@@ -22,7 +21,7 @@ export const ASSISTANT_EVENT = {
 
 export type AssistantEvent =
     | { type: typeof ASSISTANT_EVENT.ACCEPTED; requestId: string }
-    | { type: typeof ASSISTANT_EVENT.SKILL_RESOLVED; requestId: string; skillId?: import("./assistant-skills.js").BuiltInSkillId; source?: AssistantSkillSource }
+    | { type: typeof ASSISTANT_EVENT.SKILL_RESOLVED; requestId: string; skillId?: string; source?: AssistantSkillSource }
     | { type: typeof ASSISTANT_EVENT.TEXT_DELTA; requestId: string; delta: string }
     | { type: typeof ASSISTANT_EVENT.TOOL_STATUS; requestId: string; tool: string; status: "started" | "completed"; claims?: FactCheckClaimPreview[] }
     | { type: typeof ASSISTANT_EVENT.CAPABILITY_ACTIVITY; requestId: string; activity: import("./assistant.js").AssistantCapabilityActivity }
@@ -60,7 +59,7 @@ export function isAssistantEvent(value: unknown): value is AssistantEvent {
         return true;
 
     if (value.type === ASSISTANT_EVENT.SKILL_RESOLVED)
-        return (value.skillId === undefined || isBuiltInSkillId(value.skillId))
+        return (value.skillId === undefined || typeof value.skillId === "string")
             && (value.source === undefined || value.source === "explicit" || value.source === "inferred");
 
     if (value.type === ASSISTANT_EVENT.TEXT_DELTA)

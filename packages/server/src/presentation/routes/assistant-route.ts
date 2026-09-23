@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { APPLICATION_ERROR, HTTP_STATUS, resolveBuiltInSkillId, type AssistantCheckpointDraftMode, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
 
 import { AssistantService, type PreparedAssistantRequest } from "../../application/assistant/assistant-service.js";
+import type { AssistantSkillCatalog } from "../../application/assistant/skills/assistant-skill-catalog.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../application/editorial/engine/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../application/editorial/engine/editorial-engine-error.js";
 import { ApplicationServiceError } from "../errors/application-error.js";
@@ -35,17 +36,21 @@ function getAssistantRequestScope(value: unknown): AssistantRequestScope {
 function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequest {
     const requestId = parseString(body.requestId, "requestId");
     if (body.kind === "retry")
-        return { kind: "retry", requestId, retryOfRequestId: parseString(body.retryOfRequestId, "retryOfRequestId") };
+        return {
+            kind: "retry",
+            requestId,
+            retryOfRequestId: parseString(body.retryOfRequestId, "retryOfRequestId"),
+            ...(body.interfaceLocale === undefined ? {} : { interfaceLocale: parseString(body.interfaceLocale, "interfaceLocale") }),
+        };
 
     if (body.kind !== "new" && body.kind !== undefined)
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
     const explicitSkillValue = body.explicitSkillId === undefined ? undefined : parseString(body.explicitSkillId, "explicitSkillId");
-    const explicitSkillId = explicitSkillValue && resolveBuiltInSkillId(explicitSkillValue);
-    if (explicitSkillValue && !explicitSkillId)
-        throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
+    const explicitSkillId = explicitSkillValue && (resolveBuiltInSkillId(explicitSkillValue) ?? explicitSkillValue);
 
     const targetLanguage = body.targetLanguage === undefined ? undefined : parseString(body.targetLanguage, "targetLanguage");
+    const interfaceLocale = body.interfaceLocale === undefined ? undefined : parseString(body.interfaceLocale, "interfaceLocale");
     const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
     if (skillOffset !== undefined && (!explicitSkillValue || !Number.isInteger(skillOffset) || skillOffset < 0 || skillOffset > String(body.authorMessage ?? "").length))
         throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
@@ -58,6 +63,7 @@ function readAssistantRequest(body: Record<string, unknown>): StartAssistantRequ
         ...(explicitSkillId ? { explicitSkillId } : {}),
         ...(skillOffset === undefined ? {} : { skillOffset }),
         ...(targetLanguage ? { targetLanguage } : {}),
+        ...(interfaceLocale ? { interfaceLocale } : {}),
     };
 }
 
@@ -104,6 +110,11 @@ async function streamAssistantRequest(request: PreparedAssistantRequest, incomin
 
 export function listAssistantMessagesRoute(response: ServerResponse, articleId: string, assistant: AssistantService): void {
     writeJson(response, HTTP_STATUS.OK, assistant.listMessages(articleId));
+}
+
+
+export function listAssistantSkillsRoute(response: ServerResponse, skills: AssistantSkillCatalog): void {
+    writeJson(response, HTTP_STATUS.OK, skills.discover());
 }
 
 

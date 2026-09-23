@@ -1,36 +1,32 @@
-import { BUILT_IN_SKILL, type AssistantSkillReference, type AssistantSkillSummary, type BuiltInSkillId } from "@skladno/shared";
+import { readdirSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { builtInSkills } from "@skladno/shared";
+
+import type { AssistantSkillPackage } from "./assistant-skill-package.js";
+import { parseSkillPackage } from "./skill-package-parser.js";
 
 
-export interface AssistantSkillPackage {
-    reference: AssistantSkillReference;
-    name: string;
-    description: string;
-    instructions: string;
-    references?: readonly string[];
+function isBuiltInSkillPackageId(id: string): boolean {
+    return builtInSkills.some((candidate) => candidate === id);
 }
 
 
-function createBuiltInSkillPackage(id: BuiltInSkillId, name: string, description: string, instructions: string, references?: readonly string[]): AssistantSkillPackage {
-    return {
-        reference: { source: "built-in", id, version: "1" },
-        name,
-        description,
-        instructions,
-        ...(references?.length ? { references } : {}),
-    };
-}
+export function loadBuiltInSkillPackages(root = process.env.SKLADNO_BUILT_IN_SKILLS_DIR ?? resolve(import.meta.dirname, "built-in")): readonly AssistantSkillPackage[] {
+    const packages: AssistantSkillPackage[] = [];
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+        if (!entry.isDirectory())
+            throw new Error("invalid_builtin_skill_package");
 
+        const parsed = parseSkillPackage({ root: resolve(root, entry.name), source: "built-in" });
+        if (!parsed.ok)
+            throw new Error(`invalid_builtin_skill_package:${parsed.issues[0]!.code}`);
 
-export const builtInSkillPackages: readonly AssistantSkillPackage[] = [
-    createBuiltInSkillPackage(BUILT_IN_SKILL.TALKING_POINTS, "Talking Points", "Develop 3–5 grounded theses from author-provided material.", "# Talking Points\n\nPrioritize selected text, then the Author's request, then the current Article. Preserve claims and ask a focused question when direction is unclear."),
-    createBuiltInSkillPackage(BUILT_IN_SKILL.NARRATIVE_DRAFT, "Narrative Draft", "Develop the Author's material into a reviewable narrative Proposal.", "# Narrative Draft\n\nDevelop only supplied ideas. Preserve claims, numbers, URLs, code, technical terms, and author voice. Produce a Proposal for Author review, never a direct Article change."),
-    createBuiltInSkillPackage(BUILT_IN_SKILL.FLOW_AND_CLARITY, "Flow and Clarity", "Prepare a full-text Proposal that improves coherence and readability.", "# Flow and Clarity\n\nKeep the Article's meaning and voice. Improve transitions and structure conservatively. Return a complete Proposal rather than commentary.", ["Generated text remains separate until the Author explicitly approves it."]),
-    createBuiltInSkillPackage(BUILT_IN_SKILL.FACT_CHECKING, "Fact Checking", "Review factual claims and prepare sourced, advisory Findings.", "# Fact Checking\n\nCheck factual claims with sources. Keep uncertainty visible and never alter the Article.", ["Findings are advisory and tied to the reviewed Revision."]),
-    createBuiltInSkillPackage(BUILT_IN_SKILL.STYLE_REVIEW, "Style Review", "Review the Article against its prepared Style Profile.", "# Style Review\n\nUse the prepared Style Profile and Article-specific rules. Keep raw style samples private and return reviewable Findings with any related Proposal.", ["A Style Profile must be ready before review."]),
-    createBuiltInSkillPackage(BUILT_IN_SKILL.TRANSLATION, "Translation", "Prepare a complete translation Proposal in a selected language.", "# Translation\n\nTranslate the complete Article into the selected language. Preserve claims, numbers, URLs, code, technical terms, and author voice.", ["A target language is required."]),
-];
+        packages.push(parsed.skillPackage);
+    }
 
+    if (packages.length !== builtInSkills.length || packages.some((skillPackage) => !isBuiltInSkillPackageId(skillPackage.reference.id)))
+        throw new Error("invalid_builtin_skill_package");
 
-export function getBuiltInSkillSummary(skillPackage: AssistantSkillPackage): AssistantSkillSummary {
-    return { reference: skillPackage.reference, name: skillPackage.name, description: skillPackage.description };
+    return packages.sort((left, right) => builtInSkills.findIndex((id) => id === left.reference.id) - builtInSkills.findIndex((id) => id === right.reference.id));
 }

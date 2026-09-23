@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HTTP_METHOD } from "@skladno/shared";
+import type { AssistantActionIntentVerifier } from "../application/editorial/assistant-action-intent-verifier.js";
 import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
 import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
-import type { AssistantActionIntentVerifier } from "../application/editorial/assistant-action-intent-verifier.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
 import { EditorialEngineError } from "../application/editorial/engine/editorial-engine-error.js";
 import { CapabilityFixtureEngine, FixtureEngine, createEmptyConversationStream, withService } from "./editorial-integration.test-utils.js";
 
-// Product scenarios: editorial-workflows.assistant-request-proposal, editorial-workflows.proposal-operations-remain-separate
+// Product scenarios: editorial-workflows.assistant-request-proposal, editorial-workflows.proposal-operations-remain-separate, editorial-workflows.author-skill-creation
 test("assistant requests persist a revision-bound proposal and splice only the selected Markdown", async () => {
     const engine = new FixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "improved" },
@@ -48,7 +48,6 @@ test("assistant requests persist a revision-bound proposal and splice only the s
         assert.equal(proposalMessage?.baseRevisionContent, "before selected after");
     });
 });
-
 
 test("the live Assistant tool loop stages one catalog Proposal before completion", async () => {
     const engine = new CapabilityFixtureEngine([

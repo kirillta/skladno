@@ -21,12 +21,19 @@ import { AssistantCapabilityLoop } from "./assistant/capabilities/assistant-capa
 import { AssistantCompletion } from "./assistant/completion/assistant-completion.js";
 import { AssistantRequestPreparation } from "./assistant/requests/assistant-request-preparation.js";
 import { getConversationHistory } from "./assistant/requests/conversation-history.js";
-import { AssistantSkillCatalog, builtInSkillSource } from "./assistant/skills/assistant-skill-catalog.js";
+import { AssistantSkillCatalog } from "./assistant/skills/assistant-skill-catalog.js";
+import { createBuiltInSkillSource } from "./assistant/skills/create-built-in-skill-source.js";
+import { FileAssistantSkillSource } from "./assistant/skills/file-assistant-skill-source.js";
+import { AuthorSkillService } from "./assistant/skills/author-skill-service.js";
+import { SkillChangeJournal } from "../infrastructure/skills/skill-change-journal.js";
+import { dirname } from "node:path";
+import { loadBuiltInSkillPackages } from "./assistant/skills/built-in-skill-packages.js";
 import type { EditorialService } from "./editorial/editorial-service.js";
 import type { TelemetryObserver } from "./telemetry/telemetry-observer.js";
+import { CreateApplicationServicesOptions } from "./create-application-services-options.js";
 
 
-interface ApplicationServiceStores {
+export interface ApplicationServiceStores {
     articles: ArticleStore;
     styleCorpus: StyleCorpusStore;
     assistant: AssistantStore;
@@ -36,7 +43,7 @@ interface ApplicationServiceStores {
 }
 
 
-interface ApplicationSettingsDependencies {
+export interface ApplicationSettingsDependencies {
     settings: SettingsStore;
     dateTimeFormat: SystemDateTimeFormatProvider;
     models: AvailableModelsProvider;
@@ -46,20 +53,13 @@ interface ApplicationSettingsDependencies {
 }
 
 
-interface ApplicationServiceIntegration {
+export interface ApplicationServiceIntegration {
     editorial?: EditorialService;
     telemetry?: TelemetryObserver;
 }
 
 
-export interface CreateApplicationServicesOptions {
-    stores: ApplicationServiceStores;
-    settings: ApplicationSettingsDependencies;
-    integration?: ApplicationServiceIntegration;
-}
-
-
-export function createApplicationServices({ stores, settings, integration = {} }: CreateApplicationServicesOptions): ApplicationServices {
+export function createApplicationServices({ stores, settings, integration = {}, skillPackages = {} }: CreateApplicationServicesOptions): ApplicationServices {
     const factChecks = stores.factChecks ?? { listFactChecks: () => [], resolveFactCheckFinding: () => undefined, saveFactCheckRun: () => undefined };
     const articleService = new ArticleService(stores.articles, stores.assistant, integration.telemetry, () => stores.engines.resolveRevisionDescriptionGenerator?.());
     const publishing = new PublishingService(settings.settings);
@@ -68,9 +68,21 @@ export function createApplicationServices({ stores, settings, integration = {} }
     const capabilities = integration.editorial
         ? new EditorialCapabilityCatalog(articleService, stores.artifacts, publishing, integration.editorial, styleCorpusService, factChecks, stores.assistant)
         : undefined;
-    const skills = new AssistantSkillCatalog([builtInSkillSource]);
-    const preparation = new AssistantRequestPreparation({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, engines: stores.engines, capabilities });
-    const capabilityLoop = new AssistantCapabilityLoop({ assistant: stores.assistant, engines: stores.engines, capabilities, skills, conversationHistory: (articleId, limit) => getConversationHistory(stores.assistant, articleId, limit) });
+    const builtIns = createBuiltInSkillSource(skillPackages.builtInRoot);
+    const authorRoot = skillPackages.authorRoot;
+    const authorSkills = authorRoot
+        ? new FileAssistantSkillSource("author", authorRoot, () => {
+            const packages = loadBuiltInSkillPackages(skillPackages.builtInRoot);
+            return { ids: packages.map((skillPackage) => skillPackage.reference.id), names: packages.map((skillPackage) => skillPackage.name) };
+        })
+        : undefined;
+    const authorSkillService = authorSkills && authorRoot && skillPackages.revisions
+        ? new AuthorSkillService(authorSkills, skillPackages.revisions, new SkillChangeJournal(dirname(authorRoot)))
+        : undefined;
+    authorSkillService?.recoverIncompleteChanges((requestId) => stores.assistant.getRequest(requestId)?.status === "completed");
+    const skills = new AssistantSkillCatalog(authorSkills ? [builtIns, authorSkills] : [builtIns]);
+    const preparation = new AssistantRequestPreparation({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, engines: stores.engines, capabilities, skills });
+    const capabilityLoop = new AssistantCapabilityLoop({ assistant: stores.assistant, engines: stores.engines, capabilities, authorSkills: authorSkillService, skills, conversationHistory: (articleId, limit) => getConversationHistory(stores.assistant, articleId, limit) });
     const completion = new AssistantCompletion({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, artifacts: stores.artifacts, factChecks, capabilities });
 
     return {
@@ -82,6 +94,7 @@ export function createApplicationServices({ stores, settings, integration = {} }
         proposalSummaries: new ProposalSummaryService(stores.engines, stores.artifacts),
         factChecks: factCheckService,
         skills,
+        ...(authorSkillService ? { authorSkills: authorSkillService } : {}),
         ...(capabilities ? { capabilities } : {}),
     };
 }

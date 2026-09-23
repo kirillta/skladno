@@ -39,6 +39,14 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     assistant_checkpoint_invalid: "errors.assistantCheckpointInvalid",
     assistant_retry_invalid: "errors.assistantRetryInvalid",
     assistant_coordinator_failed: "errors.assistantCoordinatorFailed",
+    skill_invalid_frontmatter: "skills.validation.invalid_frontmatter",
+    skill_invalid_metadata: "skills.validation.invalid_metadata",
+    skill_invalid_instructions: "skills.validation.invalid_instructions",
+    skill_invalid_reference: "skills.validation.invalid_reference",
+    skill_unsafe_package: "skills.validation.unsafe_package",
+    skill_package_too_large: "skills.validation.package_too_large",
+    skill_package_conflict: "errors.skillPackageConflict",
+    skill_revision_not_found: "errors.skillRevisionNotFound",
 };
 
 

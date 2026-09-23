@@ -2,6 +2,9 @@ import {
     ApplicationClientError,
     applicationSettingsPath,
     backupsPath,
+    backupExportsPath,
+    backupImportsPath,
+    type BackupBundleManifest,
     type BackupPolicy,
     type GeneralSettings,
     HTTP_METHOD,
@@ -60,5 +63,46 @@ export abstract class HttpSettingsClient implements SettingsTransportClient {
         });
         if (!response.ok)
             throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
+    }
+
+
+    async createBackupExport(): Promise<{ id: string; manifest: BackupBundleManifest }> {
+        return this.request(backupExportsPath, { method: HTTP_METHOD.POST });
+    }
+
+
+    async readBackupExport(id: string, index: number): Promise<Blob> {
+        const response = await fetch(`${this.serviceUrl}${backupExportsPath}/${id}/${index}`);
+        if (!response.ok)
+            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
+
+        return response.blob();
+    }
+
+
+    async removeBackupExport(id: string): Promise<void> {
+        await this.request(`${backupExportsPath}/${id}`, { method: HTTP_METHOD.DELETE });
+    }
+
+
+    async beginBackupImport(manifest: BackupBundleManifest): Promise<{ id: string }> {
+        return this.request(backupImportsPath, { method: HTTP_METHOD.POST, body: JSON.stringify(manifest) });
+    }
+
+
+    async writeBackupImport(id: string, index: number, file: Blob): Promise<void> {
+        const response = await fetch(`${this.serviceUrl}${backupImportsPath}/${id}/${index}`, { method: HTTP_METHOD.PUT, body: file });
+        if (!response.ok)
+            throw new ApplicationClientError("editorial_request_failed", { status: response.status }, response.status);
+    }
+
+
+    async restoreBackupImport(id: string): Promise<void> {
+        await this.request(`${backupImportsPath}/${id}/restore`, { method: HTTP_METHOD.POST });
+    }
+
+
+    async removeBackupImport(id: string): Promise<void> {
+        await this.request(`${backupImportsPath}/${id}`, { method: HTTP_METHOD.DELETE });
     }
 }

@@ -4,7 +4,7 @@ import { FactCheckFindingDraft } from "./fact-check-finding-draft.js";
 
 export interface FactCheckProvider {
     researchStage: string;
-    extractClaims(article: string, signal: AbortSignal): Promise<{ responseId: string; claims: { claim: string; }[]; }>;
-    researchClaims(claims: { claim: string; }[], signal: AbortSignal): Promise<FactCheckResearch[]>;
-    evaluateClaims(research: FactCheckResearch[], signal: AbortSignal): Promise<{ responseId: string; findings: FactCheckFindingDraft[]; }>;
+    extractClaims(article: string, instructions: string, signal: AbortSignal): Promise<{ responseId: string; claims: { claim: string; }[]; }>;
+    researchClaims(claims: { claim: string; }[], instructions: string, signal: AbortSignal): Promise<FactCheckResearch[]>;
+    evaluateClaims(research: FactCheckResearch[], instructions: string, signal: AbortSignal): Promise<{ responseId: string; findings: FactCheckFindingDraft[]; }>;
 }

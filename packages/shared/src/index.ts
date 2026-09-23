@@ -54,7 +54,10 @@ export {
     aiAppModelPath,
     AI_PROVIDER,
     backupsPath,
+    backupExportsPath,
+    backupImportsPath,
     restoreBackupPath,
+    type BackupBundleManifest,
     keyBindingsPath,
     defaultGeneralSettings,
     defaultInterfaceLocale,
@@ -193,6 +196,7 @@ export { articlesPath, createArticleArchivePath, createArticlePinPath, pinnedArt
 export {
     ASSISTANT_EVENT,
     BUILT_IN_SKILL,
+    assistantSkillsPath,
     createAssistantMessagesPath,
     createAssistantRequestsPath,
     createAssistantTranslationRejectionPath,

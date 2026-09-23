@@ -52,7 +52,7 @@ function createAdapter(engine?: EditorialEngine): { ipcMain: FakeIpcMain; close:
     const directory = mkdtempSync(join(tmpdir(), "skladno-electron-ipc-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
-    const engines = { resolve: () => engine };
+    const engines = { resolve: () => engine, resolveAssistant: () => engine };
     const services = createApplicationServices({
         stores: { articles: persistence.articles, styleCorpus: persistence.styleCorpus, assistant: persistence.assistant, artifacts: persistence.editorialArtifacts, engines, factChecks: persistence.factChecks },
         settings: { settings: persistence.settings, dateTimeFormat: { read: async () => ({ locale: "en" }) }, models: { list: async () => [] }, createConnectionId: () => "connection" },

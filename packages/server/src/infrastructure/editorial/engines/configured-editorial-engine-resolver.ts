@@ -64,6 +64,20 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
     }
 
 
+    resolveAssistant(): EditorialEngine | undefined {
+        const configuration = this.resolveAppModelConnection();
+        if (!configuration)
+            return undefined;
+
+        const capabilities = this.modelCapabilities.getCapabilities(configuration.provider, configuration.model);
+        return createEditorialEngine({
+            ...configuration,
+            storeResponses: this.config.aiSessionContinuationEnabled,
+            sourcedResearch: capabilities.sourcedResearch,
+        });
+    }
+
+
     resolveProposalSummaryGenerator() {
         const configuration = this.resolveAppModelConnection();
         if (!configuration)

@@ -9,6 +9,7 @@ import type { AssistantActionIntentVerifier } from "../assistant-action-intent-v
 
 export interface EditorialEngineResolver {
     resolve(operation: EditorialOperation, assistantSkillId?: BuiltInSkillId): EditorialEngine | undefined;
+    resolveAssistant?(): EditorialEngine | undefined;
     resolveProposalSummaryGenerator?(): ProposalSummaryGenerator | undefined;
     resolveArticleTitleGenerator?(): ArticleTitleGenerator | undefined;
     resolveRevisionDescriptionGenerator?(): RevisionDescriptionGenerator | undefined;

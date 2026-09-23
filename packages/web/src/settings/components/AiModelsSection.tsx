@@ -1,5 +1,5 @@
 /* eslint-disable @stylistic/max-statements-per-line */
-import { AI_PROVIDER, builtInSkills, type AiProvider, type AppModelPreference, type AvailableAiModel, type ModelPreferences } from "@skladno/shared";
+import { AI_PROVIDER, BUILT_IN_SKILL, builtInSkills, type AiProvider, type AppModelPreference, type AvailableAiModel, type ModelPreferences } from "@skladno/shared";
 import { useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { ChevronDownIcon } from "../../ui/icons.js";
@@ -34,6 +34,7 @@ export function AiModelsSection({ data, actions }: { data: AiModelsData; actions
         }
     };
     const favorites = preferences.favoriteModels ?? [];
+    const editorialSkills = builtInSkills.filter((skill) => skill !== BUILT_IN_SKILL.SKILL_CREATOR);
     const saveFavorites = (favoriteModels: string[]) => void savePreferences({ ...preferences, favoriteModels });
     const modelProps = (value: string, label: string, onChange: (model: string) => void, allowEmpty = false) => ({ value, models, favorites, allowEmpty, disabled: models.length === 0, label, placeholder: models.length === 0 ? intl.formatMessage({ id: "settings.noModels" }) : allowEmpty ? intl.formatMessage({ id: "settings.useDefaultModel" }) : intl.formatMessage({ id: "settings.chooseModel" }), onChange, onFavoritesChange: saveFavorites });
 
@@ -52,7 +53,7 @@ export function AiModelsSection({ data, actions }: { data: AiModelsData; actions
             </button>
             <p className="mt-1 text-sm leading-5 text-muted">{intl.formatMessage({ id: "settings.specificModelsHint" })}</p>
             <div ref={specificModelsContent} id="specific-model-overrides" aria-hidden={!specificModelsOpen} className={`grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${specificModelsOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-                <div className={`min-h-0 ${specificModelsOpen ? "overflow-visible" : "overflow-hidden"} pt-2`}>{builtInSkills.map((skill) => <SettingRow key={skill} headingLevel={3} label={intl.formatMessage({ id: skillMessages[skill].label })} hint={intl.formatMessage({ id: skillMessages[skill].hint })}>
+                <div className={`min-h-0 ${specificModelsOpen ? "overflow-visible" : "overflow-hidden"} pt-2`}>{editorialSkills.map((skill) => <SettingRow key={skill} headingLevel={3} label={intl.formatMessage({ id: skillMessages[skill].label })} hint={intl.formatMessage({ id: skillMessages[skill].hint })}>
                     <ModelAndReasoning model={modelProps(preferences.skillOverrides[skill] ?? "", intl.formatMessage({ id: skillMessages[skill].label }), (model) => void savePreferences({ ...preferences, skillOverrides: { ...preferences.skillOverrides, [skill]: model } }), true)} effort={preferences.skillReasoningEfforts?.[skill]} onEffortChange={selectedProvider(preferences.skillOverrides[skill] ?? "") === AI_PROVIDER.OPENAI ? (reasoningEffort) => void savePreferences({ ...preferences, skillReasoningEfforts: { ...preferences.skillReasoningEfforts, [skill]: reasoningEffort } }) : undefined} />
                 </SettingRow>)}
                 </div>

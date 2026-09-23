@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, getPublishLimitProfile, HTTP_STATUS, isPublishLimitProfileId, type AssistantMessage, type BuiltInSkillId, type EditorialOperation } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, builtInSkillScopeCompatibility, getPublishLimitProfile, HTTP_STATUS, isBuiltInSkillId, isPublishLimitProfileId, type AssistantMessage, type EditorialOperation } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
 import type { ArticleStore } from "../../articles/article-store.js";
@@ -10,10 +10,11 @@ import { getCapabilityForEditorialOperation, type EditorialCapabilityCatalog } f
 import type { PreparedAssistantRequest } from "./prepared-assistant-request.js";
 import type { ReplayedAssistantRequest } from "./replayed-assistant-request.js";
 import type { AssistantServiceRequest } from "./assistant-service-request.js";
+import type { AssistantSkillCatalog } from "../skills/assistant-skill-catalog.js";
 
 
-function getEditorialOperationFor(skill: BuiltInSkillId): EditorialOperation {
-    const operations: Record<BuiltInSkillId, EditorialOperation> = {
+function getEditorialOperationFor(skill: string): EditorialOperation | undefined {
+    const operations: Partial<Record<string, EditorialOperation>> = {
         talking_points: "thesis_to_narrative",
         narrative_draft: "thesis_to_narrative",
         flow_and_clarity: "flow_revision",
@@ -33,6 +34,7 @@ export class AssistantRequestPreparation {
         styleCorpus: StyleCorpusStore;
         engines: EditorialEngineResolver;
         capabilities?: EditorialCapabilityCatalog;
+        skills: AssistantSkillCatalog;
     }) { }
 
 
@@ -64,7 +66,7 @@ export class AssistantRequestPreparation {
             capabilityActivities: [],
             pendingActions: [],
             authorizedActions: [],
-            ...(!routing.usesCapabilityLoop && routing.resolvedSkillId ? { completedCapability: getCapabilityForEditorialOperation(routing.operation) } : {})
+            ...(!routing.usesCapabilityLoop && routing.operation ? { completedCapability: getCapabilityForEditorialOperation(routing.operation) } : {})
         };
     }
 
@@ -82,6 +84,7 @@ export class AssistantRequestPreparation {
             requestId: request.requestId,
             authorMessage: original.authorMessage,
             scope: original.scope,
+            ...(request.interfaceLocale ? { interfaceLocale: request.interfaceLocale } : {}),
             ...(original.explicitSkillId ? { explicitSkillId: original.explicitSkillId } : {}),
             ...(original.skillOffset === undefined ? {} : { skillOffset: original.skillOffset }),
             ...(original.targetLanguage ? { targetLanguage: original.targetLanguage } : {}),
@@ -95,7 +98,10 @@ export class AssistantRequestPreparation {
         if (currentRevisionId !== request.scope.baseRevisionId)
             throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
 
-        if (request.explicitSkillId && !builtInSkillScopeCompatibility[request.explicitSkillId].includes(request.scope.kind))
+        if (request.explicitSkillId && !this.dependencies.skills.discover().some((skill) => skill.reference.id === request.explicitSkillId))
+            throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_UNSUPPORTED, HTTP_STATUS.BAD_REQUEST);
+
+        if (request.explicitSkillId && isBuiltInSkillId(request.explicitSkillId) && !builtInSkillScopeCompatibility[request.explicitSkillId].includes(request.scope.kind))
             throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_SKILL_SCOPE_INCOMPATIBLE, HTTP_STATUS.BAD_REQUEST);
 
         if (request.scope.kind === "selection" && (request.scope.endOffset > articleContent.length || request.scope.startOffset >= request.scope.endOffset))
@@ -103,17 +109,27 @@ export class AssistantRequestPreparation {
     }
 
 
-    private resolveRequestRouting(request: ReplayedAssistantRequest): { resolvedSkillId?: BuiltInSkillId; operation: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
+    private resolveRequestRouting(request: ReplayedAssistantRequest): { resolvedSkillId?: string; operation?: EditorialOperation; engine: EditorialEngine; usesCapabilityLoop: boolean } {
         const resolvedSkillId = request.explicitSkillId;
-        const operation = getEditorialOperationFor(resolvedSkillId ?? BUILT_IN_SKILL.FLOW_AND_CLARITY);
-        const engine = this.resolveEngine(operation, resolvedSkillId);
+        if (!resolvedSkillId) {
+            const engine = this.resolveAssistantEngine();
+            return { engine, usesCapabilityLoop: Boolean(engine.streamAssistant && this.dependencies.capabilities) };
+        }
+
+        const operation = getEditorialOperationFor(resolvedSkillId);
+        if (!operation) {
+            const engine = this.resolveAssistantEngine();
+            return { resolvedSkillId, engine, usesCapabilityLoop: Boolean(engine.streamAssistant && this.dependencies.capabilities) };
+        }
+
+        const engine = this.resolveEngine(operation, isBuiltInSkillId(resolvedSkillId) ? resolvedSkillId : undefined);
         const usesCapabilityLoop = Boolean(engine.streamAssistant && this.dependencies.capabilities);
 
         return { resolvedSkillId, operation, engine, usesCapabilityLoop };
     }
 
 
-    private resolveEngine(operation: EditorialOperation, skillId?: BuiltInSkillId): EditorialEngine {
+    private resolveEngine(operation: EditorialOperation, skillId?: import("@skladno/shared").BuiltInSkillId): EditorialEngine {
         const engine = this.dependencies.engines.resolve(operation, skillId);
         if (!engine)
             throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
@@ -122,7 +138,16 @@ export class AssistantRequestPreparation {
     }
 
 
-    private validateResolvedRequest(request: ReplayedAssistantRequest, resolvedSkillId: BuiltInSkillId | undefined, usesCapabilityLoop: boolean): void {
+    private resolveAssistantEngine(): EditorialEngine {
+        const engine = this.dependencies.engines.resolveAssistant?.();
+        if (!engine)
+            throw new ApplicationServiceError(APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING, HTTP_STATUS.BAD_REQUEST);
+
+        return engine;
+    }
+
+
+    private validateResolvedRequest(request: ReplayedAssistantRequest, resolvedSkillId: string | undefined, usesCapabilityLoop: boolean): void {
         if (!usesCapabilityLoop && resolvedSkillId === BUILT_IN_SKILL.TRANSLATION && !request.targetLanguage?.trim())
             throw new ApplicationServiceError(APPLICATION_ERROR.TARGET_LANGUAGE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
 

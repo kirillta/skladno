@@ -1,142 +1,16 @@
-import { copyFileSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
-import { randomUUID } from "node:crypto";
-import { basename, join, parse, relative, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import type { Dialog, IpcMain, Shell } from "electron";
 import type { ApplicationServices } from "@skladno/server/electron";
-import { validateDatabaseSnapshot } from "@skladno/server/electron";
-import { beginTimedTelemetryCapture, type DesktopSettingsLocations, type ElectronMessages, type TelemetryCaptureSource } from "@skladno/shared";
+import { type DesktopSettingsLocations, type ElectronMessages, type TelemetryCaptureSource } from "@skladno/shared";
 import { readRuntimeSettings, updateRuntimeSettings } from "../../infrastructure/runtime/runtime-settings.js";
 import { desktopSettingsChannel } from "./desktop-settings-client.js";
+import { createNativeBackup } from "./desktop-native-backup.js";
+import { createLocalDataDeletion, createNativeBackupRestoration } from "./desktop-settings-recovery.js";
 
 
 function areSettingsKeysOverlapping(first: string, second: string): boolean {
     const path = relative(resolve(first), resolve(second));
     return path === "" || (!path.startsWith("..") && !path.includes(":"));
-}
-
-
-function createNativeBackup(database: { exec(sql: string): void }, backupDirectory: string, telemetry?: TelemetryCaptureSource): { path: string; createdAt: string } {
-    const observed = beginTimedTelemetryCapture(telemetry);
-    try {
-        mkdirSync(backupDirectory, { recursive: true });
-        const created = new Date();
-        const filename = `skladno-backup-${created.toISOString().replaceAll(/[:.]/g, "-")}.sqlite`;
-        const temporary = join(backupDirectory, `.${filename}.tmp`);
-        const path = join(backupDirectory, filename);
-        database.exec(`VACUUM INTO '${temporary.replaceAll("'", "''")}'`);
-        renameSync(temporary, path);
-
-        if (statSync(path).size === 0)
-            throw new Error("Backup is empty.");
-
-        observed.capture({ kind: "backup_finished", outcome: "completed", elapsedMs: observed.elapsedMs() });
-        return { path, createdAt: created.toISOString() };
-    } catch (error) {
-        observed.capture({ kind: "backup_finished", outcome: "failed", elapsedMs: observed.elapsedMs(), failure: "unknown" });
-        throw error;
-    }
-}
-
-
-function isSafeDataDirectory(path: string): boolean {
-    const resolved = resolve(path);
-    return resolved !== parse(resolved).root;
-}
-
-
-interface LocalDataDeletion {
-    readonly backupAvailable: boolean;
-    execute(withBackup: boolean): "invalid_request" | "editorial_request_failed" | undefined;
-}
-
-
-function createLocalDataDeletion({ dataDirectory, backupDirectory, database, closeApplication, restart, telemetry }: {
-    dataDirectory: string;
-    backupDirectory?: string;
-    database: { exec(sql: string): void };
-    closeApplication(): void;
-    restart(): void;
-    telemetry?: TelemetryCaptureSource;
-}): LocalDataDeletion {
-    const backupAvailable = Boolean(backupDirectory && !areSettingsKeysOverlapping(backupDirectory, dataDirectory) && !areSettingsKeysOverlapping(dataDirectory, backupDirectory));
-
-    return {
-        backupAvailable,
-        execute(withBackup) {
-            if (!isSafeDataDirectory(dataDirectory))
-                return "invalid_request";
-
-            if (withBackup) {
-                if (!backupAvailable || !backupDirectory)
-                    return "editorial_request_failed";
-
-                createNativeBackup(database, backupDirectory, telemetry);
-            }
-
-            closeApplication();
-            rmSync(resolve(dataDirectory), { recursive: true, maxRetries: 3, retryDelay: 100 });
-            restart();
-        },
-    };
-}
-
-
-type BackupSelection =
-    | { kind: "cancelled" }
-    | { kind: "invalid" }
-    | { kind: "selected"; path: string };
-
-
-interface NativeBackupRestoration {
-    readonly available: boolean;
-    select(): Promise<BackupSelection>;
-    execute(selected: string): Promise<"editorial_request_failed" | undefined>;
-}
-
-
-function createNativeBackupRestoration({ runtimePath, backupDirectory, database, chooseBackupSnapshot, requestCheckpoint, closeApplication, restart, telemetry }: {
-    runtimePath: string;
-    backupDirectory?: string;
-    database: { exec(sql: string): void };
-    chooseBackupSnapshot(directory: string): Promise<string | undefined>;
-    requestCheckpoint(): Promise<boolean>;
-    closeApplication(): void;
-    restart(): void;
-    telemetry?: TelemetryCaptureSource;
-}): NativeBackupRestoration {
-    return {
-        available: Boolean(backupDirectory),
-        async select() {
-            if (!backupDirectory)
-                return { kind: "invalid" };
-
-            const selected = await chooseBackupSnapshot(backupDirectory);
-            if (!selected)
-                return { kind: "cancelled" };
-
-            if (!areSettingsKeysOverlapping(backupDirectory, selected))
-                return { kind: "invalid" };
-
-            validateDatabaseSnapshot(selected);
-            return { kind: "selected", path: selected };
-        },
-        async execute(selected) {
-            if (!await requestCheckpoint())
-                return "editorial_request_failed";
-
-            const stagingDirectory = join(parse(runtimePath).dir, "restore-staging");
-            mkdirSync(stagingDirectory, { recursive: true });
-
-            const stagedSnapshotPath = join(stagingDirectory, `${randomUUID()}.sqlite`);
-            copyFileSync(selected, stagedSnapshotPath);
-            validateDatabaseSnapshot(stagedSnapshotPath);
-
-            const recoverySnapshotPath = createNativeBackup(database, stagingDirectory, telemetry).path;
-            updateRuntimeSettings(runtimePath, (current) => ({ ...current, pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } }));
-            closeApplication();
-            restart();
-        },
-    };
 }
 
 
@@ -197,15 +71,25 @@ async function revealDataDirectory({ dataDirectory, shell }: Pick<DesktopSetting
 }
 
 
-function createBackup({ runtime, database, telemetry }: Pick<DesktopSettingsContext, "runtime" | "database" | "telemetry">): unknown {
-    if (!runtime.backupDirectory)
+async function revealCreatedSkillDirectory({ services, shell }: Pick<DesktopSettingsContext, "services" | "shell">, requestId: string): Promise<unknown> {
+    const directory = services.authorSkills?.createdSkillDirectory(requestId);
+    if (!directory)
         return { ok: false, error: "editorial_request_failed" };
 
-    return { ok: true, value: createNativeBackup(database, runtime.backupDirectory, telemetry) };
+    await shell.openPath(directory);
+    return { ok: true, value: undefined };
 }
 
 
-async function deleteLocalData({ dialog, messages, deletion }: Pick<DesktopSettingsContext, "dialog" | "messages"> & { deletion: LocalDataDeletion }): Promise<unknown> {
+function createBackup({ runtime, dataDirectory, database, telemetry }: Pick<DesktopSettingsContext, "runtime" | "dataDirectory" | "database" | "telemetry">): unknown {
+    if (!runtime.backupDirectory)
+        return { ok: false, error: "editorial_request_failed" };
+
+    return { ok: true, value: createNativeBackup(database, dataDirectory, runtime.backupDirectory, telemetry) };
+}
+
+
+async function deleteLocalData({ dialog, messages, deletion }: Pick<DesktopSettingsContext, "dialog" | "messages"> & { deletion: ReturnType<typeof createLocalDataDeletion> }): Promise<unknown> {
     const confirmation = await dialog.showMessageBox({
         type: "warning",
         title: messages["electron.deleteData.title"],
@@ -229,7 +113,7 @@ async function deleteLocalData({ dialog, messages, deletion }: Pick<DesktopSetti
 }
 
 
-async function restoreNativeBackup({ dialog, messages, restoration }: Pick<DesktopSettingsContext, "dialog" | "messages"> & { restoration: NativeBackupRestoration }): Promise<unknown> {
+async function restoreNativeBackup({ dialog, messages, restoration }: Pick<DesktopSettingsContext, "dialog" | "messages"> & { restoration: ReturnType<typeof createNativeBackupRestoration> }): Promise<unknown> {
     if (!restoration.available)
         return { ok: false, error: "editorial_request_failed" };
 
@@ -296,6 +180,8 @@ export function registerDesktopSettingsAdapter({ ipcMain, userDataPath, ...optio
                     return await revealBackupDirectory(context);
                 case "revealDataDirectory":
                     return await revealDataDirectory(context);
+                case "revealCreatedSkillDirectory":
+                    return await revealCreatedSkillDirectory(context, String(args[0]));
                 case "createNativeBackup":
                     return createBackup(context);
                 case "restoreNativeBackup":
@@ -304,6 +190,7 @@ export function registerDesktopSettingsAdapter({ ipcMain, userDataPath, ...optio
                         messages: context.messages,
                         restoration: createNativeBackupRestoration({
                             runtimePath: context.runtimePath,
+                            dataDirectory: context.dataDirectory,
                             backupDirectory: context.runtime.backupDirectory,
                             database: context.database,
                             chooseBackupSnapshot: context.chooseBackupSnapshot,

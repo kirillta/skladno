@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skladno Plans and Delegation"
+  short_description: "Create executable plans and coordinate implementation."
+  default_prompt: "Use $plans-and-delegation to create or implement an executable Skladno plan."

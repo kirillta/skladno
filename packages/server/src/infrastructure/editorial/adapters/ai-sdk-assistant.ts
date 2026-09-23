@@ -1,6 +1,7 @@
 import { tool, type ModelMessage, type ToolSet } from "ai";
 import { z } from "zod";
 
+import { EDITORIAL_CAPABILITY } from "../../../application/assistant/capabilities/editorial-capability-id.js";
 import type { EditorialAssistantRequest } from "../../../application/editorial/engine/editorial-assistant-request.js";
 import { getBoundedArticleContext } from "../models/editorial-context.js";
 
@@ -64,6 +65,42 @@ function createAssistantTool(candidate: AssistantTool, execute: AssistantToolExe
                 inputSchema: z.object({ query: z.string().min(1) }),
                 execute: ({ query }) => execute(candidate.capability, { query })
             });
+        case "author-skill":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), skillMarkdown: z.string().min(1).max(96 * 1024) }),
+                execute: ({ skillId, skillMarkdown }) => execute(candidate.capability, { skillId, skillMarkdown })
+            });
+        case "author-skill-id":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64) }),
+                execute: ({ skillId }) => execute(candidate.capability, { skillId })
+            });
+        case "author-skill-write":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), expectedHash: z.string().length(64), skillMarkdown: z.string().min(1).max(96 * 1024) }),
+                execute: ({ skillId, expectedHash, skillMarkdown }) => execute(candidate.capability, { skillId, expectedHash, skillMarkdown })
+            });
+        case "author-skill-restore":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), revisionId: z.uuid(), expectedHash: z.union([z.string().length(64), z.literal("")]) }),
+                execute: ({ skillId, revisionId, expectedHash }) => execute(candidate.capability, { skillId, revisionId, expectedHash })
+            });
+        case "author-skill-delete":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), expectedHash: z.string().length(64) }),
+                execute: ({ skillId, expectedHash }) => execute(candidate.capability, { skillId, expectedHash })
+            });
+        case "author-skill-revision":
+            return tool({
+                description: candidate.description,
+                inputSchema: z.object({ skillId: z.string().min(3).max(64), revisionId: z.uuid() }),
+                execute: ({ skillId, revisionId }) => execute(candidate.capability, { skillId, revisionId })
+            });
         case "none":
             return tool({
                 description: candidate.description,
@@ -78,13 +115,20 @@ function createAssistantTool(candidate: AssistantTool, execute: AssistantToolExe
 }
 
 
-export function createAssistantTools(request: EditorialAssistantRequest, execute: AssistantToolExecutor): ToolSet {
+export function createAssistantTools(request: EditorialAssistantRequest, execute: AssistantToolExecutor, onSkillLoaded?: (capabilities: readonly string[]) => void): ToolSet {
     return {
         ...Object.fromEntries(request.tools.map((candidate) => [candidate.capability, createAssistantTool(candidate, execute)])),
         load_skill: tool({
             description: "Load the full instructions for one relevant Skladno Skill.",
             inputSchema: z.object({ id: z.string().min(1) }),
-            execute: ({ id }) => request.skills.find((skill) => skill.id === id)?.instructions ?? "Unknown Skill.",
+            execute: ({ id }) => {
+                const skill = request.skills.find((candidate) => candidate.id === id);
+                if (!skill)
+                    return "Unknown Skill.";
+
+                onSkillLoaded?.(skill.capabilities ?? []);
+                return skill.instructions;
+            },
         }),
     };
 }
@@ -92,20 +136,30 @@ export function createAssistantTools(request: EditorialAssistantRequest, execute
 
 export function getAssistantStepOptions(stepNumber: number, activeCapabilities?: readonly string[]): { activeTools: string[]; toolChoice?: { type: "tool"; toolName: string } } {
     const activeTools = activeCapabilities ? [...activeCapabilities, "find_capabilities", "load_skill"] : ["find_capabilities", "load_skill"];
-    const requiredCapability = activeCapabilities?.[0];
+    if (activeCapabilities?.includes("create_author_skill"))
+        return { activeTools };
 
-    return stepNumber === 0 && requiredCapability
+    const authorSkillProposal = activeCapabilities?.[0] === EDITORIAL_CAPABILITY.INSPECT_ARTICLE && activeCapabilities[1] === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL;
+    const requiredCapability = stepNumber === 1 && authorSkillProposal
+        ? EDITORIAL_CAPABILITY.GENERATE_PROPOSAL
+        : activeCapabilities?.find((capability) => capability !== "create_author_skill");
+
+    return (stepNumber === 0 || (stepNumber === 1 && authorSkillProposal)) && requiredCapability
         ? { activeTools, toolChoice: { type: "tool", toolName: requiredCapability } }
         : { activeTools };
 }
 
 
 export function createAssistantConversationPrompt(request: Pick<EditorialAssistantRequest, "article" | "history" | "message" | "scope">): ModelMessage[] {
+    const context = request.article
+        ? `${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${getBoundedArticleContext(request.article)}`
+        : "No Article context was provided for this request.";
+
     return [
         ...request.history.map((turn): ModelMessage => ({ role: turn.role === "author" ? "user" : "assistant", content: turn.content })),
         {
             role: "user",
-            content: `Author request:\n${request.message}\n\n${request.scope === "selection" ? "Selected Article context" : "Current Article context"}:\n${getBoundedArticleContext(request.article)}`,
+            content: `Author request:\n${request.message}\n\n${context}`,
         },
     ];
 }

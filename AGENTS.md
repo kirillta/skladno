@@ -23,24 +23,11 @@ When proposing a change, identify its benefit to Authors and any tradeoff agains
 2. When changing existing product behavior or its owner paths, run `npm run product:impact -- <affected paths>` and preserve every matched implemented capability unless the task changes it. Update `product-model/areas` only when capability, status, contract, persistence, or visible behavior changes.
 3. Read the matching references below before editing. Follow their dependencies when the change crosses those boundaries.
 4. For broad exploration, TypeScript or TSX work, or a second verification loop, follow the [context-efficient agent-work guide](docs/development/guides/context-efficient-agent-work.md).
+5. Read and apply the [refactoring skill](.codex/skills/refactoring/SKILL.md) when writing, modifying, reviewing, or planning code. It owns code structure, complexity, naming, and export rules; the ADRs below own project architecture.
 
 ## Plans and delegation
 
-When creating a plan, assess complexity, dependencies, and opportunities for independent work. Record `solo` or `delegated` execution with a brief reason. Delegate only when parallel work is likely to save time or improve quality; complexity alone does not require subagents.
-
-For delegated work, use a short Markdown table recording each task's scope, owner, owned files or areas, dependencies, deliverable and verification, model, and reasoning level. Keep tightly coupled work with one owner and sequence edits to shared files.
-
-When asked to implement a plan, check these assignments against the current codebase, add missing metadata, and refresh stale assignments. Then launch eligible subagents according to the metadata without asking for confirmation again, respecting dependencies and available concurrency. If subagents are unavailable, proceed sequentially and report the limitation. Planning alone does not authorize implementation.
-
-Use these model defaults unless the user specifies otherwise:
-
-| Role or task | Model | Reasoning |
-| --- | --- | --- |
-| Main agent and general coding | `gpt-5.6-terra` | Medium |
-| Small, well-defined one-shots and repetitive work | `gpt-5.6-luna` | Medium |
-| Complex investigation, debugging, and difficult implementation | `gpt-5.6-sol` | Low |
-
-Terra Medium is the preferred main-session configuration; these instructions do not switch an already-running session's model. Apply the defaults when selecting subagents. The main agent coordinates assignments, integrates results, and owns final verification.
+Read and apply the [plans and delegation skill](.codex/skills/plans-and-delegation/SKILL.md) when creating or revising a plan, implementing a plan or incremental work, or delegating tasks.
 
 ## Read for the affected area
 

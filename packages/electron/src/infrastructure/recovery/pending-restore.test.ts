@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -9,6 +9,7 @@ import type { TelemetryEvent } from "@skladno/shared";
 import { readRuntimeSettings, writeRuntimeSettings } from "../runtime/runtime-settings.js";
 import { applyPendingRestore } from "./pending-restore.js";
 import { PendingRestoreError } from "./pending-restore-error.js";
+import { createAuthorSkillBackup } from "./author-skill-backup.js";
 
 
 function writeSetting(path: string, value: string): void {
@@ -75,6 +76,33 @@ test("successful restoration removes only the staged backup", () => {
         restore.complete();
         assert.equal(readSetting(databasePath), "restored");
         assert.deepEqual(telemetry, [{ kind: "recovery_finished", recovery: "restore", outcome: "completed" }]);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("staged restoration restores Author Skills alongside the database", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-restore-skills-"));
+    const databasePath = join(root, "skladno.sqlite");
+    const stagedSnapshotPath = join(root, "selected.sqlite");
+    const recoverySnapshotPath = join(root, "recovery.sqlite");
+    const runtimePath = join(root, "runtime-settings.json");
+    writeSetting(databasePath, "active");
+    copyFileSync(databasePath, recoverySnapshotPath);
+    writeSetting(stagedSnapshotPath, "restored");
+    mkdirSync(join(root, "skills", "clarity"), { recursive: true });
+    writeFileSync(join(root, "skills", "clarity", "SKILL.md"), "restored skill");
+    createAuthorSkillBackup({ dataDirectory: root, snapshotPath: stagedSnapshotPath });
+    writeFileSync(join(root, "skills", "clarity", "SKILL.md"), "active skill");
+    writeRuntimeSettings(runtimePath, { pendingRestore: { stagedSnapshotPath, recoverySnapshotPath, phase: "ready" } });
+
+    try {
+        const restore = applyPendingRestore({ runtimePath, databasePath });
+        assert.ok(restore);
+        assert.equal(readSetting(databasePath), "restored");
+        assert.equal(readFileSync(join(root, "skills", "clarity", "SKILL.md"), "utf8"), "restored skill");
+        restore.complete();
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

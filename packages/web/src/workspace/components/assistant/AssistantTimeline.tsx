@@ -26,6 +26,7 @@ interface AssistantTimelineData {
 
 interface AssistantTimelineActions {
     openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
+    openSkillFolder?: (requestId: string) => void;
     onRetry?: (requestId: string) => void;
     openSettings?: () => void;
     onCheckpoint?: (messageId: string) => void;
@@ -34,7 +35,7 @@ interface AssistantTimelineActions {
 
 export function AssistantTimeline({ data, actions }: { data: AssistantTimelineData; actions: AssistantTimelineActions }) {
     const { state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection } = data;
-    const { openView, onRetry, openSettings, onCheckpoint } = actions;
+    const { openView, openSkillFolder, onRetry, openSettings, onCheckpoint } = actions;
     const intl = useIntl();
     const timeline = useRef<HTMLDivElement>(null);
     const followStream = useRef(true);
@@ -44,6 +45,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
     const messagesLoaded = useRef(assistantMessages !== undefined);
     const initialized = useRef(false);
     const greeting = assistantMessages?.find((item) => item.template === "greeting" || item.kind === "greeting");
+    const lastMessage = assistantMessages?.at(-1);
     const skillByRequest = new Map(assistantMessages?.flatMap((item) => item.requestId && item.skillId ? [[item.requestId, item.skillId] as const] : []));
     const completedFactCheck = state === "idle" ? [...(assistantMessages ?? [])].reverse().find((item) => item.responseKind === "findings_prepared") : undefined;
 
@@ -120,7 +122,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
     return <div data-focus-area="assistant-chat" onKeyDown={handleChatKeyDown} className="relative min-h-0 flex-1">
         <div ref={timeline} data-focus-area-entry tabIndex={0} onScroll={trackScroll} className="h-full select-text cursor-default space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "assistant.response.conversation" })} aria-live="polite">
             {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} />}
-            {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} onRetry={onRetry} onCheckpoint={onCheckpoint} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
+            {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={onCheckpoint} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
             {streamedMessage?.responseKind
                 ? <AssistantTimelineMessage message={{ id: streamedMessage.id, articleId: streamedMessage.articleId, role: "assistant", kind: "response", status: streamedMessage.status, responseKind: streamedMessage.responseKind, createdAt: streamedMessage.createdAt, updatedAt: streamedMessage.createdAt }} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />
                 : streamedMessage?.blocks.length ? <article className="p-0">
