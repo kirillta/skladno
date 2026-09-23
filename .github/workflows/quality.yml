@@ -35,6 +35,9 @@ jobs:
             - name: Check product model
               run: npm run product:check
 
+            - name: Check cognitive complexity
+              run: npm run complexity:check
+
             - name: Lint
               run: npm run lint
 

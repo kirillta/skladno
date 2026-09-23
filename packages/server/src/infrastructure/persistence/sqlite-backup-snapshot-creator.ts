@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { BackupManager } from "../../application/settings/backup-manager.js";
+import type { BackupSnapshotCreator } from "../../application/settings/backup-snapshot-creator.js";
 import type { SqliteDatabase } from "./database.js";
 
 
@@ -17,7 +17,7 @@ function escapeSqlPathForSqlite(path: string): string {
 }
 
 
-export class SqliteBackupManager implements BackupManager {
+export class SqliteBackupSnapshotCreator implements BackupSnapshotCreator {
     constructor(
         private readonly database: SqliteDatabase,
         private readonly now = () => new Date(),

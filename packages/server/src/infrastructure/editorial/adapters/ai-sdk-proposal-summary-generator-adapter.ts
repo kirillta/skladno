@@ -16,7 +16,6 @@ const summariesSchema = z.object({
 });
 
 
-/** Provider-neutral AI SDK implementation of the proposal-summary port. */
 export class AiSdkProposalSummaryGeneratorAdapter implements ProposalSummaryGenerator {
     constructor(private readonly model: LanguageModel, private readonly providerOptions: SupportingTextProviderOptions = undefined) { }
 

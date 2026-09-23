@@ -59,7 +59,9 @@ export interface DesktopTelemetryClient {
 
 
 function parseTelemetryRecord(value: unknown): Record<string, unknown> | undefined {
-    return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+    return value !== null
+        && typeof value === "object"
+        && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 }
 
 
@@ -69,17 +71,74 @@ function hasOnly(record: Record<string, unknown>, keys: readonly string[]): bool
 
 
 function isCount(value: unknown): value is number {
-    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000;
+    return typeof value === "number"
+        && Number.isSafeInteger(value)
+        && value >= 0
+        && value <= 1_000_000;
 }
 
 
 function isDuration(value: unknown): value is number {
-    return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 86_400_000;
+    return typeof value === "number"
+        && Number.isFinite(value)
+        && value >= 0
+        && value <= 86_400_000;
 }
 
 
 export function isTelemetryFailureCategory(value: unknown): value is TelemetryFailureCategory {
-    return value === "configuration" || value === "network" || value === "persistence" || value === "cancelled" || value === "unknown";
+    return value === "configuration"
+        || value === "network"
+        || value === "persistence"
+        || value === "cancelled"
+        || value === "unknown";
+}
+
+
+function isProcessFailure(candidate: Record<string, unknown>): boolean {
+    return (candidate.source === "renderer" || candidate.source === "child_process")
+        && hasOnly(candidate, ["kind", "source", "failure", "termination"])
+        && (candidate.termination === "crashed" || candidate.termination === "killed" || candidate.termination === "oom"
+            || candidate.termination === "launch_failed" || candidate.termination === "integrity_failure" || candidate.termination === "abnormal_exit");
+}
+
+
+function isAppFailure(candidate: Record<string, unknown>): boolean {
+    return isTelemetryFailureCategory(candidate.failure)
+        && (candidate.source === "startup" && hasOnly(candidate, ["kind", "source", "failure"]) || isProcessFailure(candidate));
+}
+
+
+function isAiOperationFinished(candidate: Record<string, unknown>): boolean {
+    const operation = ["assistant", "thesis_to_narrative", "flow_revision", "fact_check", "style_review", "translation"];
+    return hasOnly(candidate, ["kind", "operation", "outcome", "elapsedMs", "failure"])
+        && operation.includes(String(candidate.operation))
+        && (candidate.outcome === "completed" || candidate.outcome === "failed" || candidate.outcome === "cancelled")
+        && isDuration(candidate.elapsedMs)
+        && (candidate.failure === undefined || isTelemetryFailureCategory(candidate.failure));
+}
+
+
+function isDraftCheckpointFinished(candidate: Record<string, unknown>): boolean {
+    return hasOnly(candidate, ["kind", "attempts", "successes", "failures", "elapsedMs", "failure"])
+        && isCount(candidate.attempts) && isCount(candidate.successes) && isCount(candidate.failures)
+        && candidate.successes + candidate.failures <= candidate.attempts
+        && isDuration(candidate.elapsedMs) && (candidate.failure === undefined || isTelemetryFailureCategory(candidate.failure));
+}
+
+
+function isBackupFinished(candidate: Record<string, unknown>): boolean {
+    return hasOnly(candidate, ["kind", "outcome", "elapsedMs", "failure"])
+        && (candidate.outcome === "completed" || candidate.outcome === "failed") && isDuration(candidate.elapsedMs)
+        && (candidate.failure === undefined || isTelemetryFailureCategory(candidate.failure));
+}
+
+
+function isRecoveryFinished(candidate: Record<string, unknown>): boolean {
+    return hasOnly(candidate, ["kind", "recovery", "outcome", "failure"])
+        && (candidate.recovery === "restore" || candidate.recovery === "revision")
+        && (candidate.outcome === "completed" || candidate.outcome === "failed")
+        && (candidate.failure === undefined || isTelemetryFailureCategory(candidate.failure));
 }
 
 
@@ -94,29 +153,15 @@ export function isTelemetryEvent(value: unknown): value is TelemetryEvent {
         case "proposal_reviewed":
             return hasOnly(candidate, ["kind", "decision"]) && (candidate.decision === "accepted" || candidate.decision === "rejected");
         case "app_failure":
-            return isTelemetryFailureCategory(candidate.failure)
-                && (candidate.source === "startup" && hasOnly(candidate, ["kind", "source", "failure"])
-                    || (candidate.source === "renderer" || candidate.source === "child_process")
-                    && hasOnly(candidate, ["kind", "source", "failure", "termination"])
-                    && (candidate.termination === "crashed" || candidate.termination === "killed" || candidate.termination === "oom" || candidate.termination === "launch_failed" || candidate.termination === "integrity_failure" || candidate.termination === "abnormal_exit"));
+            return isAppFailure(candidate);
         case "ai_operation_finished":
-            return hasOnly(candidate, ["kind", "operation", "outcome", "elapsedMs", "failure"])
-                && (candidate.operation === "assistant" || candidate.operation === "thesis_to_narrative" || candidate.operation === "flow_revision" || candidate.operation === "fact_check" || candidate.operation === "style_review" || candidate.operation === "translation")
-                && (candidate.outcome === "completed" || candidate.outcome === "failed" || candidate.outcome === "cancelled")
-                && isDuration(candidate.elapsedMs)
-                && (candidate.failure === undefined || isTelemetryFailureCategory(candidate.failure));
+            return isAiOperationFinished(candidate);
         case "draft_checkpoint_finished":
-            return hasOnly(candidate, ["kind", "attempts", "successes", "failures", "elapsedMs", "failure"])
-                && isCount(candidate.attempts) && isCount(candidate.successes) && isCount(candidate.failures) && candidate.successes + candidate.failures <= candidate.attempts
-                && isDuration(candidate.elapsedMs) && (candidate.failure === undefined || isTelemetryFailureCategory(candidate.failure));
+            return isDraftCheckpointFinished(candidate);
         case "backup_finished":
-            return hasOnly(candidate, ["kind", "outcome", "elapsedMs", "failure"])
-                && (candidate.outcome === "completed" || candidate.outcome === "failed") && isDuration(candidate.elapsedMs)
-                && (candidate.failure === undefined || isTelemetryFailureCategory(candidate.failure));
+            return isBackupFinished(candidate);
         case "recovery_finished":
-            return hasOnly(candidate, ["kind", "recovery", "outcome", "failure"])
-                && (candidate.recovery === "restore" || candidate.recovery === "revision") && (candidate.outcome === "completed" || candidate.outcome === "failed")
-                && (candidate.failure === undefined || isTelemetryFailureCategory(candidate.failure));
+            return isRecoveryFinished(candidate);
         default:
             return false;
     }

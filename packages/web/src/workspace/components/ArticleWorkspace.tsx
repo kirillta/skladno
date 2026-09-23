@@ -17,6 +17,7 @@ import { getShortcutHint } from "../../key-bindings/shortcut-hint.js";
 import { publishingProfileMessageId } from "../../i18n/publishing.js";
 import type { WorkspaceView } from "../workspace-views.js";
 import type { AssistantSelectionSnapshot } from "../editor/ArticleEditorPlugins.js";
+import type { IntlShape } from "react-intl";
 
 
 interface ArticleWorkspaceViewState {
@@ -41,6 +42,57 @@ interface ArticleWorkspaceActions {
 }
 
 
+function createWorkspaceBadges(editorial: EditorialProposalState, intl: IntlShape): Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>> {
+    const badges: Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>> = {};
+    const staleLabel = intl.formatMessage({ id: "workspace.badges.stale" });
+    const reviewLabel = intl.formatMessage({ id: "workspace.badges.review" });
+
+    addProposalBadge(badges, editorial, staleLabel, reviewLabel);
+    addFactCheckBadge(badges, editorial, intl, staleLabel);
+    addStyleBadge(badges, editorial, intl, staleLabel);
+    addTranslationBadge(badges, editorial, intl, staleLabel);
+
+    return badges;
+}
+
+
+function addProposalBadge(badges: Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>>, editorial: EditorialProposalState, staleLabel: string, reviewLabel: string) {
+    if (editorial.review && !editorial.accepted)
+        badges.proposal = editorial.proposalStale ? { label: staleLabel, accessibleLabel: staleLabel, tone: "warning" } : { label: reviewLabel, accessibleLabel: reviewLabel, tone: "default" };
+}
+
+
+function addFactCheckBadge(badges: Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>>, editorial: EditorialProposalState, intl: IntlShape, staleLabel: string) {
+    if (!editorial.factCheck)
+        return;
+
+    const stale = editorial.factCheckStale;
+    const label = stale ? staleLabel : intl.formatNumber(editorial.factCheck.findings.length);
+    const accessibleLabel = stale ? staleLabel : intl.formatMessage({ id: "workspace.badges.findings" }, { count: editorial.factCheck.findings.length });
+    badges["fact-check"] = { label, accessibleLabel, tone: stale ? "warning" : "default" };
+}
+
+
+function addStyleBadge(badges: Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>>, editorial: EditorialProposalState, intl: IntlShape, staleLabel: string) {
+    if (!editorial.styleReview)
+        return;
+
+    const stale = editorial.styleReviewStale;
+    const countLabel = intl.formatMessage({ id: "workspace.badges.findings" }, { count: editorial.styleReview.findings.length });
+    const accessibleLabel = stale ? staleLabel : countLabel;
+    badges["style-profile"] = { label: stale ? staleLabel : countLabel, accessibleLabel, tone: stale ? "warning" : "default" };
+}
+
+
+function addTranslationBadge(badges: Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>>, editorial: EditorialProposalState, intl: IntlShape, staleLabel: string) {
+    if (!editorial.translation)
+        return;
+
+    const label = editorial.translationStale ? staleLabel : intl.formatMessage({ id: "workspace.badges.ready" });
+    badges.translations = { label, accessibleLabel: label, tone: editorial.translationStale ? "warning" : "default" };
+}
+
+
 export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceViewState; actions: ArticleWorkspaceActions }) {
     const { workspace, layout, editorial, revisions, corpus, publishing, generalSettings } = state;
     const { createBlank, runFactCheck, runTranslation, rejectTranslation, shortcutOverrides, onSelectionChange, assistantSelection } = actions;
@@ -59,27 +111,7 @@ export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceVi
         ?? (publishing.profile.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS
             ? intl.formatMessage({ id: "publishing.noRestrictions" })
             : intl.formatMessage({ id: publishingProfileMessageId(publishing.profile.id) }));
-    const badges: Partial<Record<WorkspaceView, WorkspaceTabBadgeDescriptor>> = {};
-
-    if (editorial.review && !editorial.accepted)
-        badges.proposal = editorial.proposalStale
-            ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
-            : { label: intl.formatMessage({ id: "workspace.badges.review" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.review" }), tone: "default" };
-
-    if (editorial.factCheck)
-        badges["fact-check"] = editorial.factCheckStale
-            ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
-            : { label: intl.formatNumber(editorial.factCheck.findings.length), accessibleLabel: intl.formatMessage({ id: "workspace.badges.findings" }, { count: editorial.factCheck.findings.length }), tone: "default" };
-
-    if (editorial.styleReview)
-        badges["style-profile"] = editorial.styleReviewStale
-            ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
-            : { label: intl.formatMessage({ id: "workspace.badges.findings" }, { count: editorial.styleReview.findings.length }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.findings" }, { count: editorial.styleReview.findings.length }), tone: "default" };
-
-    if (editorial.translation)
-        badges.translations = editorial.translationStale
-            ? { label: intl.formatMessage({ id: "workspace.badges.stale" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.stale" }), tone: "warning" }
-            : { label: intl.formatMessage({ id: "workspace.badges.ready" }), accessibleLabel: intl.formatMessage({ id: "workspace.badges.ready" }), tone: "default" };
+    const badges = createWorkspaceBadges(editorial, intl);
 
     return <div className="flex h-full min-h-0 flex-col overflow-hidden" data-article-workspace tabIndex={-1}>
         <ArticleHeader article={article}
@@ -105,10 +137,12 @@ export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceVi
         <WorkspaceViewRouter
             content={{ view: layout.view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile: publishing.profile, publishProfileLabel }}
             actions={{ runFactCheck, runTranslation, rejectTranslation, onSelectionChange, assistantSelection }}
-            navigation={{ proposalWarningsDismissed: layout.proposalWarningsDismissed, dismissProposalWarnings: () => layout.setProposalWarningsDismissed(true), openWrite: () => layout.setView("write"), openAssistant: () => {
-                layout.setAssistantCollapsed(false);
-                layout.setView("write");
-            }, selectedTranslationLanguages: layout.selectedTranslationLanguages, setSelectedTranslationLanguage: layout.setSelectedTranslationLanguage }} />
+            navigation={{
+                proposalWarningsDismissed: layout.proposalWarningsDismissed, dismissProposalWarnings: () => layout.setProposalWarningsDismissed(true), openWrite: () => layout.setView("write"), openAssistant: () => {
+                    layout.setAssistantCollapsed(false);
+                    layout.setView("write");
+                }, selectedTranslationLanguages: layout.selectedTranslationLanguages, setSelectedTranslationLanguage: layout.setSelectedTranslationLanguage
+            }} />
         <ArticleStatusBar revisionNumber={revisionNumber} revisionSelector={{ revisions: revisions.revisions.length ? revisions.revisions : [article.currentRevision], currentRevisionId: article.currentRevisionId, selectForRestore: revisions.setCandidate }} language={article.language ?? "en"} setLanguage={async (language) => {
             try {
                 await workspace.updateArticle(article.id, { language });

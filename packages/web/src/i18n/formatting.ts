@@ -98,15 +98,7 @@ export function formatDate(value: string | Date, dateFormat: DateFormatPreferenc
 }
 
 
-function formatSystemTime(value: string | Date, timeZone: TimeZonePreference): string {
-    const pattern = configuredSystemDateTimeFormat?.timePattern;
-    const resolvedTimeZone = resolveTimeZone(timeZone);
-    if (!pattern)
-        return new Intl.DateTimeFormat(getSystemLocale(), {
-            ...getTimeFormatOptions("system"),
-            ...(resolvedTimeZone ? { timeZone: resolvedTimeZone } : {}),
-        }).format(new Date(value));
-
+function getCustomTimeParts(value: string | Date, resolvedTimeZone: string | undefined): Record<string, string> {
     const parts = new Intl.DateTimeFormat("en", {
         hour: "2-digit",
         minute: "2-digit",
@@ -114,7 +106,11 @@ function formatSystemTime(value: string | Date, timeZone: TimeZonePreference): s
         hourCycle: "h23",
         ...(resolvedTimeZone ? { timeZone: resolvedTimeZone } : {}),
     }).formatToParts(new Date(value));
-    const valueByType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+
+function applySystemTimePattern(pattern: string, valueByType: Record<string, string>): string {
     const hour = Number(valueByType.hour);
     const twelveHour = hour % 12 || 12;
     const dayPeriod = hour < 12 ? "AM" : "PM";
@@ -130,6 +126,19 @@ function formatSystemTime(value: string | Date, timeZone: TimeZonePreference): s
         .replace(/s/g, String(Number(valueByType.second ?? "0")))
         .replace(/tt/g, dayPeriod)
         .replace(/t/g, dayPeriod.slice(0, 1));
+}
+
+
+function formatSystemTime(value: string | Date, timeZone: TimeZonePreference): string {
+    const pattern = configuredSystemDateTimeFormat?.timePattern;
+    const resolvedTimeZone = resolveTimeZone(timeZone);
+    if (!pattern)
+        return new Intl.DateTimeFormat(getSystemLocale(), {
+            ...getTimeFormatOptions("system"),
+            ...(resolvedTimeZone ? { timeZone: resolvedTimeZone } : {}),
+        }).format(new Date(value));
+
+    return applySystemTimePattern(pattern, getCustomTimeParts(value, resolvedTimeZone));
 }
 
 

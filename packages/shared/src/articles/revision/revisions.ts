@@ -50,6 +50,22 @@ function splitLines(content: string): string[] {
 }
 
 
+function findParagraphEnd(lines: string[], index: number): number {
+    while (index < lines.length && lines[index]!.trim() !== "")
+        index += 1;
+
+    return index;
+}
+
+
+function findSeparatorEnd(lines: string[], index: number): number {
+    while (index < lines.length && lines[index]!.trim() === "")
+        index += 1;
+
+    return index;
+}
+
+
 function getParagraphRanges(contentLines: string[]): { paragraphs: { start: number; end: number }[]; separators: string[][] } {
     const paragraphs: { start: number; end: number }[] = [];
     const separators: string[][] = [];
@@ -57,15 +73,13 @@ function getParagraphRanges(contentLines: string[]): { paragraphs: { start: numb
 
     while (index < contentLines.length) {
         const start = index;
-        while (index < contentLines.length && contentLines[index]!.trim() !== "")
-            index += 1;
+        index = findParagraphEnd(contentLines, index);
 
         if (start < index)
             paragraphs.push({ start, end: index });
 
         const separatorStart = index;
-        while (index < contentLines.length && contentLines[index]!.trim() === "")
-            index += 1;
+        index = findSeparatorEnd(contentLines, index);
 
         if (index < contentLines.length)
             separators.push(contentLines.slice(separatorStart, index));
@@ -88,6 +102,89 @@ function replacementLines(change: ProposalChange, preserveBlankLines: boolean): 
 }
 
 
+function createProposalLcsTable(baseLines: string[], proposalLines: string[]): number[][] {
+    const table = Array.from({ length: baseLines.length + 1 }, () => Array<number>(proposalLines.length + 1).fill(0));
+    for (let baseIndex = baseLines.length - 1; baseIndex >= 0; baseIndex -= 1) {
+        for (let proposalIndex = proposalLines.length - 1; proposalIndex >= 0; proposalIndex -= 1) {
+            const linesMatch = baseLines[baseIndex].trim() !== "" && baseLines[baseIndex] === proposalLines[proposalIndex];
+            table[baseIndex][proposalIndex] = linesMatch
+                ? table[baseIndex + 1][proposalIndex + 1] + 1
+                : Math.max(table[baseIndex + 1][proposalIndex], table[baseIndex][proposalIndex + 1]);
+        }
+    }
+
+    return table;
+}
+
+
+function getCommonProposalEdges(removed: string[], added: string[]): { start: number; removedEnd: number; addedEnd: number } {
+    let start = 0;
+    while (start < removed.length && start < added.length && removed[start] === added[start])
+        start += 1;
+
+    let removedEnd = removed.length;
+    let addedEnd = added.length;
+    while (removedEnd > start && addedEnd > start && removed[removedEnd - 1] === added[addedEnd - 1]) {
+        removedEnd -= 1;
+        addedEnd -= 1;
+    }
+
+    return { start, removedEnd, addedEnd };
+}
+
+
+function proposalChangeRanges(removed: string[], added: string[]): { base: { start: number; end: number }; proposal: { start: number; end: number } }[] {
+    const baseParagraphs = getParagraphRanges(removed);
+    const proposalParagraphs = getParagraphRanges(added);
+    const sameParagraphStructure = baseParagraphs.paragraphs.length > 1
+        && baseParagraphs.paragraphs.length === proposalParagraphs.paragraphs.length
+        && JSON.stringify(baseParagraphs.separators) === JSON.stringify(proposalParagraphs.separators);
+
+    if (sameParagraphStructure)
+        return baseParagraphs.paragraphs.map((base, index) => ({ base, proposal: proposalParagraphs.paragraphs[index]! }));
+
+    return [{ base: { start: 0, end: removed.length }, proposal: { start: 0, end: added.length } }];
+}
+
+
+function appendProposalChanges(changes: ProposalChange[], changeBaseStart: number, removed: string[], added: string[]): number {
+    const edges = getCommonProposalEdges(removed, added);
+    const trimmedRemoved = removed.slice(edges.start, edges.removedEnd);
+    const trimmedAdded = added.slice(edges.start, edges.addedEnd);
+    if (trimmedRemoved.length === 0 && trimmedAdded.length === 0)
+        return changeBaseStart + edges.start;
+
+    for (const range of proposalChangeRanges(trimmedRemoved, trimmedAdded)) {
+        changes.push({
+            id: `change-${changes.length + 1}`,
+            baseStart: changeBaseStart + edges.start + range.base.start,
+            baseEnd: changeBaseStart + edges.start + range.base.end,
+            baseLines: trimmedRemoved.slice(range.base.start, range.base.end),
+            proposalLines: trimmedAdded.slice(range.proposal.start, range.proposal.end),
+        });
+    }
+
+    return changeBaseStart + edges.start;
+}
+
+
+function isUnchangedLine(baseLines: string[], proposalLines: string[], baseIndex: number, proposalIndex: number): boolean {
+    return baseIndex < baseLines.length && proposalIndex < proposalLines.length
+        && baseLines[baseIndex].trim() !== "" && baseLines[baseIndex] === proposalLines[proposalIndex];
+}
+
+
+function shouldAddProposalLine(baseLines: string[], proposalLines: string[], table: number[][], baseIndex: number, proposalIndex: number): boolean {
+    return proposalIndex < proposalLines.length
+        && (baseIndex === baseLines.length || table[baseIndex][proposalIndex + 1] >= table[baseIndex + 1][proposalIndex]);
+}
+
+
+function getProposalChangeStart(current: number, baseIndex: number, removed: string[], added: string[]): number {
+    return removed.length === 0 && added.length === 0 ? baseIndex : current;
+}
+
+
 /**
  * Creates line-based hunks. They are deliberately used only while the original
  * revision remains current; callers must otherwise fall back to whole-proposal review.
@@ -95,16 +192,7 @@ function replacementLines(change: ProposalChange, preserveBlankLines: boolean): 
 export function createTextProposal(baseContent: string, proposedContent: string): TextProposal {
     const baseLines = splitLines(baseContent);
     const proposalLines = splitLines(proposedContent);
-    const table = Array.from({ length: baseLines.length + 1 }, () => Array<number>(proposalLines.length + 1).fill(0));
-
-    for (let baseIndex = baseLines.length - 1; baseIndex >= 0; baseIndex -= 1) {
-        for (let proposalIndex = proposalLines.length - 1; proposalIndex >= 0; proposalIndex -= 1) {
-            table[baseIndex][proposalIndex] = baseLines[baseIndex].trim() !== "" && baseLines[baseIndex] === proposalLines[proposalIndex]
-                ? table[baseIndex + 1][proposalIndex + 1] + 1
-                : Math.max(table[baseIndex + 1][proposalIndex], table[baseIndex][proposalIndex + 1]);
-        }
-    }
-
+    const table = createProposalLcsTable(baseLines, proposalLines);
     const changes: ProposalChange[] = [];
     let baseIndex = 0;
     let proposalIndex = 0;
@@ -112,70 +200,25 @@ export function createTextProposal(baseContent: string, proposedContent: string)
     let removed: string[] = [];
     let added: string[] = [];
 
-    const flush = () => {
-        // Blank separators cannot anchor alignment, but shared edges need no decision.
-        let start = 0;
-        while (start < removed.length && start < added.length && removed[start] === added[start])
-            start += 1;
-
-        let removedEnd = removed.length;
-        let addedEnd = added.length;
-        while (removedEnd > start && addedEnd > start && removed[removedEnd - 1] === added[addedEnd - 1]) {
-            removedEnd -= 1;
-            addedEnd -= 1;
-        }
-
-        changeBaseStart += start;
-        removed = removed.slice(start, removedEnd);
-        added = added.slice(start, addedEnd);
-
-        if (removed.length === 0 && added.length === 0)
-            return;
-
-        const baseParagraphs = getParagraphRanges(removed);
-        const proposalParagraphs = getParagraphRanges(added);
-        const sameParagraphStructure = baseParagraphs.paragraphs.length > 1
-            && baseParagraphs.paragraphs.length === proposalParagraphs.paragraphs.length
-            && JSON.stringify(baseParagraphs.separators) === JSON.stringify(proposalParagraphs.separators);
-        const ranges = sameParagraphStructure
-            ? baseParagraphs.paragraphs.map((base, index) => ({ base, proposal: proposalParagraphs.paragraphs[index]! }))
-            : [{ base: { start: 0, end: removed.length }, proposal: { start: 0, end: added.length } }];
-
-        for (const range of ranges) {
-            changes.push({
-                id: `change-${changes.length + 1}`,
-                baseStart: changeBaseStart + range.base.start,
-                baseEnd: changeBaseStart + range.base.end,
-                baseLines: removed.slice(range.base.start, range.base.end),
-                proposalLines: added.slice(range.proposal.start, range.proposal.end),
-            });
-        }
-
-        removed = [];
-        added = [];
-    };
-
     while (baseIndex < baseLines.length || proposalIndex < proposalLines.length) {
-        if (baseIndex < baseLines.length && proposalIndex < proposalLines.length && baseLines[baseIndex].trim() !== "" && baseLines[baseIndex] === proposalLines[proposalIndex]) {
-            flush();
+        if (isUnchangedLine(baseLines, proposalLines, baseIndex, proposalIndex)) {
+            changeBaseStart = appendProposalChanges(changes, changeBaseStart, removed, added);
+            removed = [];
+            added = [];
             baseIndex += 1;
             proposalIndex += 1;
-        } else if (proposalIndex < proposalLines.length && (baseIndex === baseLines.length || table[baseIndex][proposalIndex + 1] >= table[baseIndex + 1][proposalIndex])) {
-            if (removed.length === 0 && added.length === 0)
-                changeBaseStart = baseIndex;
-
+        } else if (shouldAddProposalLine(baseLines, proposalLines, table, baseIndex, proposalIndex)) {
+            changeBaseStart = getProposalChangeStart(changeBaseStart, baseIndex, removed, added);
             added.push(proposalLines[proposalIndex]);
             proposalIndex += 1;
         } else {
-            if (removed.length === 0 && added.length === 0)
-                changeBaseStart = baseIndex;
-
+            changeBaseStart = getProposalChangeStart(changeBaseStart, baseIndex, removed, added);
             removed.push(baseLines[baseIndex]);
             baseIndex += 1;
         }
     }
 
-    flush();
+    appendProposalChanges(changes, changeBaseStart, removed, added);
     return { baseContent, proposedContent, changes };
 }
 

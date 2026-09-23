@@ -12,6 +12,154 @@ const requestStatuses: readonly AssistantRequestStatus[] = ["pending", "running"
 const skillSources: readonly AssistantSkillSource[] = ["explicit", "inferred"];
 
 
+function prepareCheckpointRestore(database: SqliteDatabase, articleId: string, messageId: string, tailToken: string, draftMode?: AssistantCheckpointDraftMode) {
+    const anchor = getCheckpointAnchor(database, articleId, messageId);
+    if (!anchor)
+        throw new AssistantCheckpointError("invalid");
+
+    const tail = getCheckpointTail(database, articleId, anchor);
+    const preview = createCheckpointPreview(database, messageId, anchor, tail);
+    if (preview.tailToken !== tailToken)
+        throw new AssistantCheckpointError("conflict");
+
+    const articleRow = database.prepare(`${articleSelect} WHERE a.id = ?`).get(articleId) as Row | undefined;
+    if (!articleRow)
+        throw new AssistantCheckpointError("invalid");
+
+    const article = mapArticleFromRow(articleRow);
+    const revisionId = anchor.base_revision_id === null ? undefined : String(anchor.base_revision_id);
+    const restoreTimestamp = prepareCheckpointDraftRestore(database, articleId, article.draft, revisionId, draftMode);
+
+    return { anchor, tail, preview, revisionId, restoreTimestamp };
+}
+
+
+function prepareCheckpointDraftRestore(database: SqliteDatabase, articleId: string, draft: ReturnType<typeof mapArticleFromRow>["draft"], revisionId: string | undefined, draftMode?: AssistantCheckpointDraftMode): string {
+    if (revisionId && !database.prepare("SELECT 1 FROM article_revisions WHERE id = ? AND article_id = ?").get(revisionId, articleId))
+        throw new AssistantCheckpointError("invalid");
+
+    let timestamp = getCurrentTimestamp();
+    if (!revisionId || !draft)
+        return timestamp;
+
+    if (draftMode !== "preserve" && draftMode !== "discard")
+        throw new AssistantCheckpointError("conflict");
+
+    if (draftMode === "preserve") {
+        const preservedTimestamp = getCurrentTimestamp();
+        insertArticleRevision(database, { revisionId: createId(), articleId, content: draft.content, provenance: { kind: REVISION_PROVENANCE_KIND.AUTHOR_DRAFT, baseRevisionId: draft.baseRevisionId }, timestamp: preservedTimestamp });
+        timestamp = new Date(Date.parse(preservedTimestamp) + 1).toISOString();
+    }
+
+    database.prepare("DELETE FROM article_drafts WHERE article_id = ?").run(articleId);
+    return timestamp;
+}
+
+
+function removeCheckpointTail(database: SqliteDatabase, articleId: string, messageId: string, anchor: Row, tail: ReturnType<typeof getCheckpointTail>) {
+    if (tail.artifactIds.length > 0) {
+        const timestamp = getCurrentTimestamp();
+        database.prepare(`UPDATE editorial_artifacts SET rejected_at = ? WHERE id IN (${tail.artifactIds.map(() => "?").join(",")})`).run(timestamp, ...tail.artifactIds);
+    }
+
+    database.prepare("DELETE FROM assistant_requests WHERE article_id = ? AND (created_at > ? OR (created_at = ? AND id >= ?))")
+        .run(articleId, String(anchor.request_created_at), String(anchor.request_created_at), String(anchor.request_id));
+    database.prepare("DELETE FROM assistant_messages WHERE article_id = ? AND request_id IS NULL AND kind <> 'greeting' AND (created_at > ? OR (created_at = ? AND id >= ?))")
+        .run(articleId, String(anchor.created_at), String(anchor.created_at), messageId);
+}
+
+
+function appendRestoredRevision(database: SqliteDatabase, articleId: string, revisionId: string | undefined, timestamp: string) {
+    if (!revisionId)
+        return;
+
+    const historical = database.prepare("SELECT content FROM article_revisions WHERE id = ? AND article_id = ?").get(revisionId, articleId) as Row;
+    insertArticleRevision(database, { revisionId: createId(), articleId, content: String(historical.content), provenance: { kind: REVISION_PROVENANCE_KIND.RESTORE, restoredFromRevisionId: revisionId }, restoredFromRevisionId: revisionId, timestamp });
+}
+
+
+function readAssistantRequestMetadata(row: Row): { scope: AssistantRequestScope; status: AssistantRequestStatus } {
+    const scope = JSON.parse(String(row.scope_json)) as AssistantRequestScope;
+    const status = String(row.status) as AssistantRequestStatus;
+    if (!requestStatuses.includes(status) || !scope || (scope.kind !== "article" && scope.kind !== "selection"))
+        throw new Error("Invalid persisted assistant request.");
+
+    return { scope, status };
+}
+
+
+function readAssistantSkillId(row: Row, field: "explicit_skill_id" | "resolved_skill_id"): string | undefined {
+    const value = row[field] === null ? undefined : String(row[field]);
+    return value && (resolveBuiltInSkillId(value) ?? value);
+}
+
+
+function readAssistantRequestSkills(row: Row): { explicitSkillId?: string; resolvedSkillId?: string; skillSource?: AssistantSkillSource } {
+    const explicitSkillId = readAssistantSkillId(row, "explicit_skill_id");
+    const resolvedSkillId = readAssistantSkillId(row, "resolved_skill_id");
+    const skillSource = row.skill_source === null ? undefined : String(row.skill_source) as AssistantSkillSource;
+    if (skillSource && !skillSources.includes(skillSource))
+        throw new Error("Invalid persisted assistant request.");
+
+    return { ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}) };
+}
+
+
+function readAssistantAuthorMessage(database: SqliteDatabase, requestId: string): Row {
+    const authorMessage = database.prepare("SELECT content, skill_offset FROM assistant_messages WHERE request_id = ? AND role = 'author' ORDER BY created_at, id LIMIT 1").get(requestId) as Row | undefined;
+    if (!authorMessage || typeof authorMessage.content !== "string")
+        throw new Error("Missing persisted assistant author message.");
+
+    return authorMessage;
+}
+
+
+function readAssistantCapabilityExecutions(database: SqliteDatabase, requestId: string): AssistantCapabilityExecution[] {
+    return (database.prepare("SELECT capability_name, status, base_revision_id, started_at, completed_at FROM assistant_capability_executions WHERE request_id = ? ORDER BY id").all(requestId) as Row[])
+        .map((execution): AssistantCapabilityExecution => ({
+            capability: String(execution.capability_name),
+            status: String(execution.status) as AssistantCapabilityExecution["status"],
+            requestId,
+            baseRevisionId: String(execution.base_revision_id),
+            startedAt: String(execution.started_at),
+            ...(execution.completed_at === null ? {} : { completedAt: String(execution.completed_at) }),
+        }));
+}
+
+
+function getCapabilityExecutionField(row: Row, status: AssistantRequestStatus): Partial<Pick<AssistantRequest, "execution">> {
+    if (row.capability_name === null || row.capability_name === undefined)
+        return {};
+
+    const capability = String(row.capability_name);
+    return { execution: { capability, status, requestId: String(row.id), baseRevisionId: String(row.base_revision_id) } };
+}
+
+
+function getAssistantRequestDetails(row: Row, authorMessage: Row, executions: AssistantCapabilityExecution[], status: AssistantRequestStatus): Partial<AssistantRequest> {
+    return {
+        ...(row.retry_of_request_id === null ? {} : { retryOfRequestId: String(row.retry_of_request_id) }),
+        ...(row.error_code === null ? {} : { errorCode: String(row.error_code) }),
+        ...(authorMessage.skill_offset === null || authorMessage.skill_offset === undefined ? {} : { skillOffset: Number(authorMessage.skill_offset) }),
+        ...(row.target_language === null || row.target_language === undefined ? {} : { targetLanguage: String(row.target_language) }),
+        ...getCapabilityExecutionField(row, status),
+        ...(executions.length ? { executions } : {}),
+    };
+}
+
+
+function mapAssistantRequest(row: Row, requestId: string, scope: AssistantRequestScope, status: AssistantRequestStatus, skills: ReturnType<typeof readAssistantRequestSkills>, authorMessage: Row, executions: AssistantCapabilityExecution[]): AssistantRequest {
+    return {
+        id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
+        ...skills,
+        status,
+        authorMessage: String(authorMessage.content),
+        ...getAssistantRequestDetails(row, authorMessage, executions, status),
+        createdAt: String(row.created_at), updatedAt: String(row.updated_at)
+    };
+}
+
+
 export class AssistantRepository {
     private completionDepth = 0;
 
@@ -156,57 +304,15 @@ export class AssistantRepository {
     restoreCheckpoint(articleId: string, messageId: string, tailToken: string, draftMode?: AssistantCheckpointDraftMode): RestoreAssistantCheckpointResult {
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            const anchor = getCheckpointAnchor(this.database, articleId, messageId);
-            if (!anchor)
-                throw new AssistantCheckpointError("invalid");
-
-            const tail = getCheckpointTail(this.database, articleId, anchor);
-            const preview = createCheckpointPreview(this.database, messageId, anchor, tail);
-            if (preview.tailToken !== tailToken)
-                throw new AssistantCheckpointError("conflict");
-
-            const articleRow = this.database.prepare(`${articleSelect} WHERE a.id = ?`).get(articleId) as Row | undefined;
-            if (!articleRow)
-                throw new AssistantCheckpointError("invalid");
-
-            const article = mapArticleFromRow(articleRow);
-            const revisionId = anchor.base_revision_id === null ? undefined : String(anchor.base_revision_id);
-            let restoreTimestamp = getCurrentTimestamp();
-            if (revisionId && !this.database.prepare("SELECT 1 FROM article_revisions WHERE id = ? AND article_id = ?").get(revisionId, articleId))
-                throw new AssistantCheckpointError("invalid");
-
-            if (revisionId && article.draft) {
-                if (draftMode !== "preserve" && draftMode !== "discard")
-                    throw new AssistantCheckpointError("conflict");
-
-                if (draftMode === "preserve") {
-                    const preservedTimestamp = getCurrentTimestamp();
-                    insertArticleRevision(this.database, { revisionId: createId(), articleId, content: article.draft.content, provenance: { kind: REVISION_PROVENANCE_KIND.AUTHOR_DRAFT, baseRevisionId: article.draft.baseRevisionId }, timestamp: preservedTimestamp });
-                    restoreTimestamp = new Date(Date.parse(preservedTimestamp) + 1).toISOString();
-                }
-
-                this.database.prepare("DELETE FROM article_drafts WHERE article_id = ?").run(articleId);
-            }
-
-            const timestamp = getCurrentTimestamp();
-            if (tail.artifactIds.length > 0)
-                this.database.prepare(`UPDATE editorial_artifacts SET rejected_at = ? WHERE id IN (${tail.artifactIds.map(() => "?").join(",")})`).run(timestamp, ...tail.artifactIds);
-
-            this.database.prepare("DELETE FROM assistant_requests WHERE article_id = ? AND (created_at > ? OR (created_at = ? AND id >= ?))")
-                .run(articleId, String(anchor.request_created_at), String(anchor.request_created_at), String(anchor.request_id));
-            this.database.prepare("DELETE FROM assistant_messages WHERE article_id = ? AND request_id IS NULL AND kind <> 'greeting' AND (created_at > ? OR (created_at = ? AND id >= ?))")
-                .run(articleId, String(anchor.created_at), String(anchor.created_at), messageId);
-
-            if (revisionId) {
-                const historical = this.database.prepare("SELECT content FROM article_revisions WHERE id = ? AND article_id = ?").get(revisionId, articleId) as Row;
-                insertArticleRevision(this.database, { revisionId: createId(), articleId, content: String(historical.content), provenance: { kind: REVISION_PROVENANCE_KIND.RESTORE, restoredFromRevisionId: revisionId }, restoredFromRevisionId: revisionId, timestamp: restoreTimestamp });
-            }
+            const state = prepareCheckpointRestore(this.database, articleId, messageId, tailToken, draftMode);
+            removeCheckpointTail(this.database, articleId, messageId, state.anchor, state.tail);
+            appendRestoredRevision(this.database, articleId, state.revisionId, state.restoreTimestamp);
 
             const restoredArticle = mapArticleFromRow(this.database.prepare(`${articleSelect} WHERE a.id = ?`).get(articleId) as Row);
             const messages = this.listMessages(articleId);
             this.database.exec("COMMIT;");
 
-            return { messages, article: restoredArticle, composer: preview.composer };
+            return { messages, article: restoredArticle, composer: state.preview.composer };
         } catch (error) {
             this.database.exec("ROLLBACK;");
             throw error;
@@ -241,44 +347,10 @@ export class AssistantRepository {
         if (!row)
             return undefined;
 
-        const scope = JSON.parse(String(row.scope_json)) as AssistantRequestScope;
-        const status = String(row.status) as AssistantRequestStatus;
-        if (!requestStatuses.includes(status) || !scope || (scope.kind !== "article" && scope.kind !== "selection"))
-            throw new Error("Invalid persisted assistant request.");
-
-        const explicitSkillValue = row.explicit_skill_id === null ? undefined : String(row.explicit_skill_id);
-        const resolvedSkillValue = row.resolved_skill_id === null ? undefined : String(row.resolved_skill_id);
-        const skillSource = row.skill_source === null ? undefined : String(row.skill_source) as AssistantSkillSource;
-        const explicitSkillId = explicitSkillValue && (resolveBuiltInSkillId(explicitSkillValue) ?? explicitSkillValue);
-        const resolvedSkillId = resolvedSkillValue && (resolveBuiltInSkillId(resolvedSkillValue) ?? resolvedSkillValue);
-        if ((explicitSkillValue && !explicitSkillId) || (resolvedSkillValue && !resolvedSkillId) || (skillSource && !skillSources.includes(skillSource)))
-            throw new Error("Invalid persisted assistant request.");
-
-        const authorMessage = this.database.prepare("SELECT content, skill_offset FROM assistant_messages WHERE request_id = ? AND role = 'author' ORDER BY created_at, id LIMIT 1").get(requestId) as Row | undefined;
-        if (!authorMessage || typeof authorMessage.content !== "string")
-            throw new Error("Missing persisted assistant author message.");
-
-        const capability = row.capability_name === null || row.capability_name === undefined ? undefined : String(row.capability_name);
-        const executions = (this.database.prepare("SELECT capability_name, status, base_revision_id, started_at, completed_at FROM assistant_capability_executions WHERE request_id = ? ORDER BY id").all(requestId) as Row[])
-            .map((execution): AssistantCapabilityExecution => ({
-                capability: String(execution.capability_name),
-                status: String(execution.status) as AssistantCapabilityExecution["status"],
-                requestId,
-                baseRevisionId: String(execution.base_revision_id),
-                startedAt: String(execution.started_at),
-                ...(execution.completed_at === null ? {} : { completedAt: String(execution.completed_at) }),
-            }));
-
-        return {
-            id: String(row.id), articleId: String(row.article_id), baseRevisionId: String(row.base_revision_id), scope,
-            ...(explicitSkillId ? { explicitSkillId } : {}), ...(resolvedSkillId ? { resolvedSkillId } : {}), ...(skillSource ? { skillSource } : {}), status,
-            ...(row.retry_of_request_id === null ? {} : { retryOfRequestId: String(row.retry_of_request_id) }), ...(row.error_code === null ? {} : { errorCode: String(row.error_code) }),
-            authorMessage: String(authorMessage.content),
-            ...(authorMessage.skill_offset === null || authorMessage.skill_offset === undefined ? {} : { skillOffset: Number(authorMessage.skill_offset) }),
-            ...(row.target_language === null || row.target_language === undefined ? {} : { targetLanguage: String(row.target_language) }),
-            ...(capability ? { execution: { capability, status, requestId: String(row.id), baseRevisionId: String(row.base_revision_id) } } : {}),
-            ...(executions.length ? { executions } : {}),
-            createdAt: String(row.created_at), updatedAt: String(row.updated_at)
-        };
+        const { scope, status } = readAssistantRequestMetadata(row);
+        const skills = readAssistantRequestSkills(row);
+        const authorMessage = readAssistantAuthorMessage(this.database, requestId);
+        const executions = readAssistantCapabilityExecutions(this.database, requestId);
+        return mapAssistantRequest(row, requestId, scope, status, skills, authorMessage, executions);
     }
 }

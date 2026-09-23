@@ -8,7 +8,7 @@ export interface EditorialModelCapabilities {
 }
 
 
-export class EditorialModelCapabilityService {
+export class EditorialModelCapabilityPolicy {
     getCapabilities(provider: AiProvider, model: string): EditorialModelCapabilities {
         const structuredOutput = this.isKnownStructuredModel(provider, model);
 

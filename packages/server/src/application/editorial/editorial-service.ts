@@ -84,10 +84,7 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
 
     const factCheck = request.operation === EDITORIAL_OPERATION.FACT_CHECK;
     const translation = request.operation === EDITORIAL_OPERATION.TRANSLATION;
-    const corpus = request.operation === EDITORIAL_OPERATION.STYLE_REVIEW ? styleCorpus.getStyleCorpus() : undefined;
-    const styleProfile = corpus?.profile;
-    if (request.operation === EDITORIAL_OPERATION.STYLE_REVIEW && (corpus?.status !== "ready" || !styleProfile))
-        throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
+    const styleProfile = getReadyStyleProfile(request.operation, styleCorpus);
 
     const engine = engines.resolve(request.operation, request.skillId);
     if (!engine)
@@ -95,13 +92,7 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
 
     const continuationScope = engine.continuationScope;
     const session = !factCheck && !translation && sessionContinuationEnabled ? sessions.getEditorialSession(request.articleId) : undefined;
-    const previousResponseId = session?.continuationToken
-        && continuationScope
-        && session.connectionId === continuationScope.connectionId
-        && session.provider === continuationScope.provider
-        && session.model === continuationScope.model
-        ? session.continuationToken
-        : undefined;
+    const previousResponseId = getMatchingContinuationToken(session, continuationScope);
 
     if (!sessionContinuationEnabled || (session && !previousResponseId))
         sessions.removeEditorialSession(request.articleId);
@@ -116,6 +107,29 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
         ...(continuationScope ? { continuationScope } : {}),
         ...(previousResponseId ? { previousResponseId } : {}),
     };
+}
+
+
+function getReadyStyleProfile(operation: EditorialOperation, styleCorpus: EditorialStyleCorpusStore): StyleProfile | undefined {
+    if (operation !== EDITORIAL_OPERATION.STYLE_REVIEW)
+        return undefined;
+
+    const corpus = styleCorpus.getStyleCorpus();
+    if (corpus.status !== "ready" || !corpus.profile)
+        throw new ApplicationServiceError(APPLICATION_ERROR.STYLE_CORPUS_REQUIRED, HTTP_STATUS.BAD_REQUEST);
+
+    return corpus.profile;
+}
+
+
+function getMatchingContinuationToken(session: import("@skladno/shared").EditorialSession | undefined, scope: EditorialStreamContext["continuationScope"]): string | undefined {
+    if (!session?.continuationToken || !scope)
+        return undefined;
+
+    if (session.connectionId !== scope.connectionId || session.provider !== scope.provider || session.model !== scope.model)
+        return undefined;
+
+    return session.continuationToken;
 }
 
 

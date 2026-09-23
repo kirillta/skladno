@@ -4,8 +4,8 @@ import { MockLanguageModelV3 } from "ai/test";
 import type { LanguageModelV3GenerateResult } from "@ai-sdk/provider";
 
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
-import { AiSdkProposalSummaryGeneratorAdapter } from "./ai-sdk-proposal-summary-generator-adaptor.js";
-import { AiSdkArticleTitleGeneratorAdapter } from "./article-title-generator.js";
+import { AiSdkProposalSummaryGeneratorAdapter } from "./ai-sdk-proposal-summary-generator-adapter.js";
+import { AiSdkArticleTitleGeneratorAdapter } from "./ai-sdk-article-title-generator-adapter.js";
 import { AiSdkRevisionDescriptionGeneratorAdapter } from "./ai-sdk-revision-description-generator-adapter.js";
 
 

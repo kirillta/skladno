@@ -6,7 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import { DatabaseSnapshotError, openDatabase, validateDatabaseSnapshot } from "./database.js";
-import { SqliteBackupManager } from "./sqlite-backup-manager.js";
+import { SqliteBackupSnapshotCreator } from "./sqlite-backup-snapshot-creator.js";
 
 
 // product: settings.backup-policy-human-reviewed
@@ -16,7 +16,7 @@ test("creates a restorable temporary snapshot", () => {
     database.prepare("INSERT INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?)").run("test", JSON.stringify({ article: "private" }), "2026-08-18T00:00:00.000Z");
 
     try {
-        const backup = new SqliteBackupManager(database, () => new Date("2026-08-18T00:00:00.000Z")).createTemporary();
+        const backup = new SqliteBackupSnapshotCreator(database, () => new Date("2026-08-18T00:00:00.000Z")).createTemporary();
         if (process.platform !== "win32") {
             const databasePath = join(directory, "skladno.sqlite");
             assert.equal(statSync(databasePath).mode & 0o777, 0o600);
@@ -47,7 +47,7 @@ test("a snapshot restores the active local database", () => {
 
     try {
         database.prepare("INSERT INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?)").run("release-fixture", JSON.stringify({ revision: 1 }), "2026-08-18T00:00:00.000Z");
-        const backup = new SqliteBackupManager(database).createTemporary();
+        const backup = new SqliteBackupSnapshotCreator(database).createTemporary();
         database.prepare("UPDATE app_settings SET value_json = ? WHERE key = 'release-fixture'").run(JSON.stringify({ revision: 2 }));
         database.close();
         copyFileSync(backup.path, databasePath);

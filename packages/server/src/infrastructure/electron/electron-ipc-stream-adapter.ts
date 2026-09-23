@@ -16,6 +16,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 
+function isValidAssistantScope(value: unknown): boolean {
+    if (!isRecord(value) || typeof value.baseRevisionId !== "string")
+        return false;
+
+    if (value.kind === "selection" && (typeof value.startOffset !== "number" || typeof value.endOffset !== "number"))
+        return false;
+
+    return value.kind === "article" || value.kind === "selection";
+}
+
+
+function hasValidOptionalAssistantFields(value: Record<string, unknown>): boolean {
+    return (value.explicitSkillId === undefined || typeof value.explicitSkillId === "string" && Boolean(value.explicitSkillId))
+        && (value.skillOffset === undefined || typeof value.skillOffset === "number")
+        && (value.targetLanguage === undefined || typeof value.targetLanguage === "string")
+        && (value.retryOfRequestId === undefined || typeof value.retryOfRequestId === "string");
+}
+
+
 function isValidAssistantRequest(value: unknown): value is Extract<ElectronStreamRequest, { kind: "assistant" }>["input"] {
     if (!isRecord(value) || typeof value.requestId !== "string" || !value.requestId)
         return false;
@@ -23,22 +42,10 @@ function isValidAssistantRequest(value: unknown): value is Extract<ElectronStrea
     if (value.kind === "retry")
         return typeof value.retryOfRequestId === "string" && Boolean(value.retryOfRequestId);
 
-    if ((value.kind !== undefined && value.kind !== "new") || typeof value.authorMessage !== "string" || !isRecord(value.scope))
+    if ((value.kind !== undefined && value.kind !== "new") || typeof value.authorMessage !== "string" || !isValidAssistantScope(value.scope))
         return false;
 
-    if (typeof value.scope.baseRevisionId !== "string")
-        return false;
-
-    if (value.scope.kind === "selection" && (typeof value.scope.startOffset !== "number" || typeof value.scope.endOffset !== "number"))
-        return false;
-
-    if (value.scope.kind !== "article" && value.scope.kind !== "selection")
-        return false;
-
-    return (value.explicitSkillId === undefined || typeof value.explicitSkillId === "string" && Boolean(value.explicitSkillId))
-        && (value.skillOffset === undefined || typeof value.skillOffset === "number")
-        && (value.targetLanguage === undefined || typeof value.targetLanguage === "string")
-        && (value.retryOfRequestId === undefined || typeof value.retryOfRequestId === "string");
+    return hasValidOptionalAssistantFields(value);
 }
 
 

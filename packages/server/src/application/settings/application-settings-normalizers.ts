@@ -8,21 +8,26 @@ function isAssistantRequestTimeout(value: unknown): value is GeneralSettings["as
 }
 
 
-export function normalizeGeneralSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
-    const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
-    if (rejectInvalidPreferences
-        && ((candidate.theme !== undefined && !isThemePreference(candidate.theme))
-            || (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
-            || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
-            || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
-            || (candidate.assistantSendMode !== undefined && !isAssistantSendMode(candidate.assistantSendMode))
-            || (candidate.assistantRequestTimeoutMinutes !== undefined && !isAssistantRequestTimeout(candidate.assistantRequestTimeoutMinutes))
-        ))
-        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+function hasInvalidGeneralPreferences(candidate: Partial<GeneralSettings>): boolean {
+    return (candidate.theme !== undefined && !isThemePreference(candidate.theme))
+        || (candidate.dateFormat !== undefined && !isDateFormatPreference(candidate.dateFormat))
+        || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
+        || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
+        || (candidate.assistantSendMode !== undefined && !isAssistantSendMode(candidate.assistantSendMode))
+        || (candidate.assistantRequestTimeoutMinutes !== undefined && !isAssistantRequestTimeout(candidate.assistantRequestTimeoutMinutes));
+}
 
+
+function normalizeTranslationLanguages(candidate: Partial<GeneralSettings>): string[] {
+    if (!Array.isArray(candidate.defaultTranslationLanguages))
+        return [];
+
+    return [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))];
+}
+
+
+function normalizeGeneralPreferences(candidate: Partial<GeneralSettings>): Pick<GeneralSettings, "theme" | "interfaceLocale" | "dateFormat" | "timeFormat" | "timeZone" | "assistantSendMode" | "assistantRequestTimeoutMinutes"> {
     return {
-        ...defaultGeneralSettings,
-        ...candidate,
         theme: isThemePreference(candidate.theme) ? candidate.theme : defaultGeneralSettings.theme,
         interfaceLocale: candidate.interfaceLocale === INTERFACE_LOCALE.EN ? candidate.interfaceLocale : defaultInterfaceLocale,
         dateFormat: isDateFormatPreference(candidate.dateFormat) ? candidate.dateFormat : defaultGeneralSettings.dateFormat,
@@ -30,9 +35,20 @@ export function normalizeGeneralSettings(value: unknown, rejectInvalidPreference
         timeZone: isTimeZonePreference(candidate.timeZone) ? candidate.timeZone : defaultGeneralSettings.timeZone,
         assistantSendMode: isAssistantSendMode(candidate.assistantSendMode) ? candidate.assistantSendMode : defaultGeneralSettings.assistantSendMode,
         assistantRequestTimeoutMinutes: isAssistantRequestTimeout(candidate.assistantRequestTimeoutMinutes) ? candidate.assistantRequestTimeoutMinutes : defaultGeneralSettings.assistantRequestTimeoutMinutes,
-        defaultTranslationLanguages: Array.isArray(candidate.defaultTranslationLanguages)
-            ? [...new Set(candidate.defaultTranslationLanguages.filter((language): language is string => typeof language === "string" && language !== candidate.defaultArticleLanguage))]
-            : [],
+    };
+}
+
+
+export function normalizeGeneralSettings(value: unknown, rejectInvalidPreferences = false): GeneralSettings {
+    const candidate = value && typeof value === "object" ? value as Partial<GeneralSettings> : {};
+    if (rejectInvalidPreferences && hasInvalidGeneralPreferences(candidate))
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    return {
+        ...defaultGeneralSettings,
+        ...candidate,
+        ...normalizeGeneralPreferences(candidate),
+        defaultTranslationLanguages: normalizeTranslationLanguages(candidate),
     };
 }
 
@@ -45,6 +61,23 @@ export function normalizeBackupPolicy(value: unknown): BackupPolicy {
             ? { mode: "unlimited" }
             : { mode: "count", count: Math.min(365, Math.max(1, candidate.retention?.mode === "count" ? candidate.retention.count : 7)) },
     };
+}
+
+
+function normalizeCredentialSource(source: unknown, legacyEnvironmentVariableName: unknown): AiConnection["credentialSource"] | undefined {
+    if (source && typeof source === "object" && !Array.isArray(source)) {
+        const sourceCandidate = source as Record<string, unknown>;
+        if (sourceCandidate.kind === "managed")
+            return { kind: "managed" };
+
+        if (sourceCandidate.kind === "environment-variable" && typeof sourceCandidate.environmentVariableName === "string")
+            return { kind: "environment-variable", environmentVariableName: sourceCandidate.environmentVariableName };
+    }
+
+    if (typeof legacyEnvironmentVariableName === "string")
+        return { kind: "environment-variable", environmentVariableName: legacyEnvironmentVariableName };
+
+    return undefined;
 }
 
 
@@ -63,19 +96,7 @@ function normalizeAiConnection(value: unknown): AiConnection | undefined {
         active: candidate.active !== false,
         status: candidate.status === "connected" || candidate.status === "unavailable" ? candidate.status : "unchecked"
     };
-    const source = candidate.credentialSource;
-    let credentialSource: AiConnection["credentialSource"] | undefined;
-    if (source && typeof source === "object" && !Array.isArray(source)) {
-        const sourceCandidate = source as Record<string, unknown>;
-        if (sourceCandidate.kind === "managed")
-            credentialSource = { kind: "managed" };
-
-        if (sourceCandidate.kind === "environment-variable" && typeof sourceCandidate.environmentVariableName === "string")
-            credentialSource = { kind: "environment-variable", environmentVariableName: sourceCandidate.environmentVariableName };
-    }
-
-    if (!credentialSource && typeof candidate.environmentVariableName === "string")
-        credentialSource = { kind: "environment-variable", environmentVariableName: candidate.environmentVariableName };
+    const credentialSource = normalizeCredentialSource(candidate.credentialSource, candidate.environmentVariableName);
 
     return credentialSource ? { ...connection, credentialSource } : undefined;
 }
@@ -113,6 +134,14 @@ function normalizeModelPreference(value: unknown, legacyConnectionId?: string): 
 }
 
 
+function normalizeReasoningEffort(value: unknown): AppModelPreference["reasoningEffort"] | undefined {
+    if (value === "low" || value === "medium" || value === "high")
+        return value;
+
+    return undefined;
+}
+
+
 export function normalizeAppModel(value: unknown, legacyConnectionId?: string): AppModelPreference | undefined {
     const candidate = value && typeof value === "object" && !Array.isArray(value)
         ? value as { model?: unknown; reasoningEffort?: unknown; appModel?: unknown; textGenerationModel?: unknown; textGenerationReasoningEffort?: unknown }
@@ -121,33 +150,46 @@ export function normalizeAppModel(value: unknown, legacyConnectionId?: string): 
         ? candidate.appModel as { model?: unknown; reasoningEffort?: unknown }
         : undefined;
     const model = normalizeModelPreference(nested?.model ?? candidate.model ?? candidate.textGenerationModel, legacyConnectionId);
-    const reasoningEffort = nested?.reasoningEffort ?? candidate.reasoningEffort ?? candidate.textGenerationReasoningEffort;
+    const reasoningEffort = normalizeReasoningEffort(nested?.reasoningEffort ?? candidate.reasoningEffort ?? candidate.textGenerationReasoningEffort);
+    if (!model)
+        return undefined;
 
-    return model
-        ? { model, ...(reasoningEffort === "low" || reasoningEffort === "medium" || reasoningEffort === "high" ? { reasoningEffort } : {}) }
-        : undefined;
+    return { model, ...(reasoningEffort ? { reasoningEffort } : {}) };
+}
+
+
+function normalizeSkillOverrides(values: unknown, legacyConnectionId?: string): ModelPreferences["skillOverrides"] {
+    return Object.fromEntries(Object.entries(values ?? {}).flatMap(([skill, model]) => {
+        const normalized = resolveBuiltInSkillId(skill);
+        const preference = normalizeModelPreference(model, legacyConnectionId);
+        return normalized && preference ? [[normalized, preference]] : [];
+    })) as ModelPreferences["skillOverrides"];
+}
+
+
+function normalizeSkillReasoningEfforts(values: ModelPreferences["skillReasoningEfforts"]): NonNullable<ModelPreferences["skillReasoningEfforts"]> {
+    return Object.fromEntries(Object.entries(values ?? {}).flatMap(([skill, effort]) => {
+        const normalized = resolveBuiltInSkillId(skill);
+        return normalized && (effort === "low" || effort === "medium" || effort === "high") ? [[normalized, effort]] : [];
+    })) as NonNullable<ModelPreferences["skillReasoningEfforts"]>;
+}
+
+
+function normalizeFavoriteModels(values: unknown, legacyConnectionId?: string): string[] {
+    if (!Array.isArray(values))
+        return [];
+
+    return [...new Set(values.map((model) => normalizeModelPreference(model, legacyConnectionId)).filter(Boolean))];
 }
 
 
 export function normalizeModelPreferences(value: unknown, legacyConnectionId?: string): ModelPreferences {
     const candidate = value && typeof value === "object" ? value as Partial<ModelPreferences> & { operationOverrides?: unknown } : {};
     const values = candidate.skillOverrides && typeof candidate.skillOverrides === "object" ? candidate.skillOverrides : candidate.operationOverrides;
-    const skillOverrides = Object.fromEntries(Object.entries(values ?? {}).flatMap(([skill, model]) => {
-        const normalized = resolveBuiltInSkillId(skill);
-        const preference = normalizeModelPreference(model, legacyConnectionId);
-        return normalized && preference ? [[normalized, preference]] : [];
-    })) as ModelPreferences["skillOverrides"];
-
-    const reasoningEffort = candidate.reasoningEffort === "low" || candidate.reasoningEffort === "medium" || candidate.reasoningEffort === "high"
-        ? candidate.reasoningEffort
-        : undefined;
-    const skillReasoningEfforts = Object.fromEntries(Object.entries(candidate.skillReasoningEfforts ?? {}).flatMap(([skill, effort]) => {
-        const normalized = resolveBuiltInSkillId(skill);
-        return normalized && (effort === "low" || effort === "medium" || effort === "high") ? [[normalized, effort]] : [];
-    })) as NonNullable<ModelPreferences["skillReasoningEfforts"]>;
-    const favoriteModels = Array.isArray(candidate.favoriteModels)
-        ? [...new Set(candidate.favoriteModels.map((model) => normalizeModelPreference(model, legacyConnectionId)).filter(Boolean))]
-        : [];
+    const skillOverrides = normalizeSkillOverrides(values, legacyConnectionId);
+    const reasoningEffort = normalizeReasoningEffort(candidate.reasoningEffort);
+    const skillReasoningEfforts = normalizeSkillReasoningEfforts(candidate.skillReasoningEfforts);
+    const favoriteModels = normalizeFavoriteModels(candidate.favoriteModels, legacyConnectionId);
 
     return {
         defaultModel: normalizeModelPreference(candidate.defaultModel, legacyConnectionId),
@@ -159,47 +201,57 @@ export function normalizeModelPreferences(value: unknown, legacyConnectionId?: s
 }
 
 
+function invalidKeyBinding(rejectInvalid: boolean): KeyBindingOverrides {
+    if (rejectInvalid)
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
+
+    return {};
+}
+
+
+function normalizeBindingEntry(overrides: KeyBindingOverrides, commandId: string, binding: unknown, rejectInvalid: boolean): void {
+    if (commandId === KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST)
+        return;
+
+    if (!isKeyBindingCommandId(commandId)) {
+        invalidKeyBinding(rejectInvalid);
+        return;
+    }
+
+    if (binding === null) {
+        overrides[commandId] = null;
+        return;
+    }
+
+    const normalized = normalizeKeyBinding(binding);
+    if (!normalized) {
+        invalidKeyBinding(rejectInvalid);
+        return;
+    }
+
+    overrides[commandId] = normalized;
+}
+
+
+function validateKeyBindingConflicts(overrides: KeyBindingOverrides, rejectInvalid: boolean): void {
+    if (!rejectInvalid)
+        return;
+
+    const conflict = findKeyBindingConflict(resolveKeyBindings(overrides));
+    if (conflict)
+        throw new ApplicationServiceError(APPLICATION_ERROR.KEY_BINDING_CONFLICT, HTTP_STATUS.BAD_REQUEST, { firstCommandId: conflict[0], secondCommandId: conflict[1] });
+}
+
+
 function normalizeKeyBindingOverrides(value: unknown, rejectInvalid: boolean): KeyBindingOverrides {
     if (!value || typeof value !== "object" || Array.isArray(value))
-        if (rejectInvalid)
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-        else
-            return {};
+        return invalidKeyBinding(rejectInvalid);
 
     const overrides: KeyBindingOverrides = {};
-    for (const [commandId, binding] of Object.entries(value)) {
-        if (commandId === KEY_BINDING_COMMAND.SEND_EDITORIAL_REQUEST)
-            continue;
+    for (const [commandId, binding] of Object.entries(value))
+        normalizeBindingEntry(overrides, commandId, binding, rejectInvalid);
 
-        if (!isKeyBindingCommandId(commandId)) {
-            if (rejectInvalid)
-                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-            continue;
-        }
-
-        if (binding === null) {
-            overrides[commandId] = null;
-            continue;
-        }
-
-        const normalized = normalizeKeyBinding(binding);
-        if (!normalized) {
-            if (rejectInvalid)
-                throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_KEY_BINDING, HTTP_STATUS.BAD_REQUEST);
-
-            continue;
-        }
-
-        overrides[commandId] = normalized;
-    }
-
-    if (rejectInvalid) {
-        const conflict = findKeyBindingConflict(resolveKeyBindings(overrides));
-        if (conflict)
-            throw new ApplicationServiceError(APPLICATION_ERROR.KEY_BINDING_CONFLICT, HTTP_STATUS.BAD_REQUEST, { firstCommandId: conflict[0], secondCommandId: conflict[1] });
-    }
-
+    validateKeyBindingConflicts(overrides, rejectInvalid);
     return overrides;
 }
 

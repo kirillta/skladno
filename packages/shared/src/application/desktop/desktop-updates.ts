@@ -35,28 +35,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 
-export function isDesktopUpdateState(value: unknown): value is DesktopUpdateState {
-    if (!isRecord(value) || typeof value.kind !== "string")
-        return false;
+function hasCommonState(value: Record<string, unknown>): boolean {
+    return typeof value.currentVersion === "string"
+        && typeof value.automaticChecks === "boolean"
+        && typeof value.includePrereleases === "boolean"
+        && typeof value.networkAccess === "boolean"
+        && (value.recoveryAvailable === undefined || typeof value.recoveryAvailable === "boolean")
+        && (value.lastCheckedAt === undefined || typeof value.lastCheckedAt === "string");
+}
 
-    if (typeof value.currentVersion !== "string" || typeof value.automaticChecks !== "boolean" || typeof value.includePrereleases !== "boolean" || typeof value.networkAccess !== "boolean")
-        return false;
 
-    if (value.recoveryAvailable !== undefined && typeof value.recoveryAvailable !== "boolean")
-        return false;
-
-    if (value.kind === "unsupported")
-        return true;
-
-    if (value.lastCheckedAt !== undefined && typeof value.lastCheckedAt !== "string")
-        return false;
-
-    if (value.kind === "current" || value.kind === "checking")
-        return true;
-
-    if (value.kind === "failed")
-        return value.error === "discovery_failed" || value.error === "download_failed" || value.error === "apply_failed";
-
+function isReleaseState(value: Record<string, unknown>): boolean {
     return (value.kind === "available" || value.kind === "downloading" || value.kind === "ready")
         && typeof value.version === "string"
         && typeof value.title === "string"
@@ -64,4 +53,24 @@ export function isDesktopUpdateState(value: unknown): value is DesktopUpdateStat
         && typeof value.releaseNotesUrl === "string"
         && typeof value.security === "boolean"
         && (value.kind !== "available" || typeof value.downloadable === "boolean");
+}
+
+
+export function isDesktopUpdateState(value: unknown): value is DesktopUpdateState {
+    if (!isRecord(value) || typeof value.kind !== "string")
+        return false;
+
+    if (!hasCommonState(value))
+        return false;
+
+    if (value.kind === "unsupported")
+        return true;
+
+    if (value.kind === "current" || value.kind === "checking")
+        return true;
+
+    if (value.kind === "failed")
+        return value.error === "discovery_failed" || value.error === "download_failed" || value.error === "apply_failed";
+
+    return isReleaseState(value);
 }

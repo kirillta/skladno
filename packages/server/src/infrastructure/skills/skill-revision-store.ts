@@ -27,25 +27,29 @@ function parseRevision(value: unknown): AuthorSkillRevision | undefined {
         return undefined;
 
     const candidate = value as Record<string, unknown>;
-    if (!revisionId.test(String(candidate.id)) || !skillId.test(String(candidate.skillId)) || typeof candidate.contentHash !== "string" || typeof candidate.createdAt !== "string")
-        return undefined;
-
-    const optionalIds = [candidate.parentId, candidate.restoredFromId];
-    if (optionalIds.some((id) => id !== undefined && (typeof id !== "string" || !revisionId.test(id))))
-        return undefined;
-
-    if (candidate.requestId !== undefined && typeof candidate.requestId !== "string")
+    if (!hasRequiredRevisionFields(candidate) || !hasValidOptionalRevisionFields(candidate))
         return undefined;
 
     return {
         id: candidate.id as string,
         skillId: candidate.skillId as string,
-        contentHash: candidate.contentHash,
-        createdAt: candidate.createdAt,
+        contentHash: candidate.contentHash as string,
+        createdAt: candidate.createdAt as string,
         ...(typeof candidate.parentId === "string" ? { parentId: candidate.parentId } : {}),
         ...(typeof candidate.restoredFromId === "string" ? { restoredFromId: candidate.restoredFromId } : {}),
         ...(typeof candidate.requestId === "string" ? { requestId: candidate.requestId } : {}),
     };
+}
+
+
+function hasRequiredRevisionFields(candidate: Record<string, unknown>): boolean {
+    return revisionId.test(String(candidate.id)) && skillId.test(String(candidate.skillId)) && typeof candidate.contentHash === "string" && typeof candidate.createdAt === "string";
+}
+
+
+function hasValidOptionalRevisionFields(candidate: Record<string, unknown>): boolean {
+    const optionalIds = [candidate.parentId, candidate.restoredFromId];
+    return !optionalIds.some((id) => id !== undefined && (typeof id !== "string" || !revisionId.test(id))) && (candidate.requestId === undefined || typeof candidate.requestId === "string");
 }
 
 

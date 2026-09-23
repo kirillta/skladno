@@ -26,24 +26,38 @@ export class ArticlesRepository {
         const articleId = input.id ?? createId();
         const revisionId = createId();
         const sourceArticleId = input.sourceArticleId;
-        if (input.sourceRevisionId && (!sourceArticleId || !this.database.prepare("SELECT 1 FROM article_revisions WHERE id = ? AND article_id = ?").get(input.sourceRevisionId, sourceArticleId)))
-            throwInvalidArticleRequest();
+        this.validateSourceRevision(input.sourceRevisionId, sourceArticleId);
+        this.insertInitialArticle(input, { articleId, revisionId, sourceArticleId, language, timestamp });
 
+        return this.getArticle(articleId)!;
+    }
+
+
+    private validateSourceRevision(sourceRevisionId: string | undefined, sourceArticleId: string | undefined): void {
+        if (sourceRevisionId && (!sourceArticleId || !this.database.prepare("SELECT 1 FROM article_revisions WHERE id = ? AND article_id = ?").get(sourceRevisionId, sourceArticleId)))
+            throwInvalidArticleRequest();
+    }
+
+
+    private insertInitialArticle(input: CreateArticleInput, values: { articleId: string; revisionId: string; sourceArticleId: string | undefined; language: CreateArticleInput["language"]; timestamp: string }): void {
         this.database.exec("BEGIN IMMEDIATE;");
         try {
-            const archived = sourceArticleId ? Number(this.database.prepare("SELECT archived FROM articles WHERE id = ?").get(sourceArticleId)?.archived ?? 0) : 0;
-            this.database.prepare("INSERT INTO articles (id, title, language, audience, publishing_profile_id, source_article_id, source_revision_id, archived, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .run(articleId, requireArticleTitle(input.title), language ?? null, input.audience ?? null, input.publishingProfileId ?? null, sourceArticleId ?? null, input.sourceRevisionId ?? null, archived, timestamp, timestamp);
-            this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
-                .run(revisionId, articleId, input.content, JSON.stringify(input.provenance ?? { kind: REVISION_PROVENANCE_KIND.INITIAL }), timestamp);
-            this.database.prepare("UPDATE articles SET current_revision_id = ? WHERE id = ?").run(revisionId, articleId);
+            this.insertArticleRows(input, values);
             this.database.exec("COMMIT;");
         } catch (error) {
             this.database.exec("ROLLBACK;");
             throw error;
         }
+    }
 
-        return this.getArticle(articleId)!;
+
+    private insertArticleRows(input: CreateArticleInput, { articleId, revisionId, sourceArticleId, language, timestamp }: { articleId: string; revisionId: string; sourceArticleId: string | undefined; language: CreateArticleInput["language"]; timestamp: string }): void {
+        const archived = sourceArticleId ? Number(this.database.prepare("SELECT archived FROM articles WHERE id = ?").get(sourceArticleId)?.archived ?? 0) : 0;
+        this.database.prepare("INSERT INTO articles (id, title, language, audience, publishing_profile_id, source_article_id, source_revision_id, archived, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .run(articleId, requireArticleTitle(input.title), language ?? null, input.audience ?? null, input.publishingProfileId ?? null, sourceArticleId ?? null, input.sourceRevisionId ?? null, archived, timestamp, timestamp);
+        this.database.prepare("INSERT INTO article_revisions (id, article_id, content, provenance_json, created_at) VALUES (?, ?, ?, ?, ?)")
+            .run(revisionId, articleId, input.content, JSON.stringify(input.provenance ?? { kind: REVISION_PROVENANCE_KIND.INITIAL }), timestamp);
+        this.database.prepare("UPDATE articles SET current_revision_id = ? WHERE id = ?").run(revisionId, articleId);
     }
 
 

@@ -99,31 +99,31 @@ interface WorkspaceShellLayout {
 }
 
 
+function calculatePanelLayout(layout: WorkspaceShellLayout, viewportWidth: number, responsiveAssistantExpanded: boolean) {
+    const requestedLibraryWidth = layout.libraryCollapsed ? libraryLimits.collapsed : layout.libraryWidth;
+    const requestedAssistantWidth = Math.max(layout.assistantWidth, assistantLimits.minimum);
+    const requiredWidth = requestedLibraryWidth + (layout.assistantCollapsed ? assistantLimits.collapsed : requestedAssistantWidth) + articleWorkspaceMinimum;
+    const assistantCollapsed = !layout.focusMode && (layout.assistantCollapsed || (requiredWidth > viewportWidth && !responsiveAssistantExpanded));
+    const assistantOverlay = responsiveAssistantExpanded && viewportWidth < libraryLimits.collapsed + assistantLimits.minimum + articleWorkspaceMinimum;
+    const widthWithoutAssistant = requestedLibraryWidth + assistantLimits.collapsed + articleWorkspaceMinimum;
+    const expandedAssistantNeedsCollapsedLibrary = responsiveAssistantExpanded && !assistantOverlay && requestedLibraryWidth + assistantLimits.minimum + articleWorkspaceMinimum > viewportWidth;
+    const libraryCollapsed = !layout.focusMode && (layout.libraryCollapsed || widthWithoutAssistant > viewportWidth || expandedAssistantNeedsCollapsedLibrary);
+    const libraryWidth = libraryCollapsed ? libraryLimits.collapsed : layout.libraryWidth;
+    const assistantMaximum = Math.min(Math.floor(viewportWidth / 2), viewportWidth - libraryWidth - articleWorkspaceMinimum);
+    const assistantWidth = assistantCollapsed ? assistantLimits.collapsed : clamp(requestedAssistantWidth, assistantLimits.minimum, assistantMaximum);
+
+    return { libraryWidth, libraryCollapsed, assistantWidth: assistantOverlay ? Math.min(requestedAssistantWidth, viewportWidth) : assistantWidth, assistantMaximum, assistantCollapsed, assistantOverlay };
+}
+
+
 export function WorkspaceShell({ content, layout }: { content: WorkspaceShellContent; layout: WorkspaceShellLayout }) {
     const { children, library, assistant } = content;
-    const { focusMode, libraryCollapsed, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, assistantOpenRequest, libraryWidth, setLibraryWidth, assistantWidth, setAssistantWidth } = layout;
+    const { focusMode, setLibraryCollapsed, assistantCollapsed, setAssistantCollapsed, assistantOpenRequest, libraryWidth, setLibraryWidth, setAssistantWidth } = layout;
     const intl = useIntl();
     const focusAreas = useFocusAreaNavigation(workspaceFocusAreas);
     const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
     const [responsiveAssistantExpanded, setResponsiveAssistantExpanded] = useState(false);
-    const requestedLibraryWidth = libraryCollapsed ? libraryLimits.collapsed : libraryWidth;
-    // Keep the author's requested width separate from the width that can be rendered
-    // in the current viewport. Otherwise clamping it first masks the condition that
-    // should temporarily collapse the Assistant Panel.
-    const requestedAssistantWidth = Math.max(assistantWidth, assistantLimits.minimum);
-    const requiredWidth = requestedLibraryWidth + (assistantCollapsed ? assistantLimits.collapsed : requestedAssistantWidth) + articleWorkspaceMinimum;
-    const effectiveAssistantCollapsed = !focusMode && (assistantCollapsed || (requiredWidth > viewportWidth && !responsiveAssistantExpanded));
-    const assistantOverlay = responsiveAssistantExpanded && viewportWidth < libraryLimits.collapsed + assistantLimits.minimum + articleWorkspaceMinimum;
-    const widthWithoutAssistant = (libraryCollapsed ? libraryLimits.collapsed : libraryWidth) + assistantLimits.collapsed + articleWorkspaceMinimum;
-    const expandedAssistantNeedsCollapsedLibrary = responsiveAssistantExpanded && !assistantOverlay && requestedLibraryWidth + assistantLimits.minimum + articleWorkspaceMinimum > viewportWidth;
-    const effectiveLibraryCollapsed = !focusMode && (libraryCollapsed || widthWithoutAssistant > viewportWidth || expandedAssistantNeedsCollapsedLibrary);
-    const effectiveLibraryWidth = effectiveLibraryCollapsed ? libraryLimits.collapsed : libraryWidth;
-    const assistantMaximum = Math.min(Math.floor(viewportWidth / 2), viewportWidth - effectiveLibraryWidth - articleWorkspaceMinimum);
-    let effectiveAssistantWidth = effectiveAssistantCollapsed
-        ? assistantLimits.collapsed
-        : clamp(requestedAssistantWidth, assistantLimits.minimum, assistantMaximum);
-    if (assistantOverlay)
-        effectiveAssistantWidth = Math.min(requestedAssistantWidth, viewportWidth);
+    const panelLayout = calculatePanelLayout(layout, viewportWidth, responsiveAssistantExpanded);
 
     useEffect(() => {
         function updateViewportWidth() {
@@ -145,16 +145,16 @@ export function WorkspaceShell({ content, layout }: { content: WorkspaceShellCon
 
     return <main ref={focusAreas.ref} onFocusCapture={focusAreas.onFocusCapture} onKeyDownCapture={focusAreas.onKeyDownCapture} className="relative grid h-dvh overflow-hidden bg-surface text-ink" style={{
         gridTemplateAreas: focusMode ? '"workspace"' : '"library workspace assistant"',
-        gridTemplateColumns: focusMode ? "minmax(0, 1fr)" : `${effectiveLibraryWidth}px minmax(0, 1fr) ${assistantOverlay ? 0 : effectiveAssistantWidth}px`,
+        gridTemplateColumns: focusMode ? "minmax(0, 1fr)" : `${panelLayout.libraryWidth}px minmax(0, 1fr) ${panelLayout.assistantOverlay ? 0 : panelLayout.assistantWidth}px`,
     }}>
         <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" style={{ gridArea: "workspace" }}>{children}</section>
         {!focusMode && <div className="relative min-h-0" style={{ gridArea: "library" }}>
-            {isValidElement(library) ? cloneElement(library, { collapsed: effectiveLibraryCollapsed, setCollapsed: setLibraryCollapsed }) : library}
-            {!effectiveLibraryCollapsed && <ResizeHandle label={intl.formatMessage({ id: "navigation.resizeArticleLibrary" })} value={libraryWidth} minimum={libraryLimits.minimum} maximum={libraryLimits.maximum} onChange={setLibraryWidth} />}
+            {isValidElement(library) ? cloneElement(library, { collapsed: panelLayout.libraryCollapsed, setCollapsed: setLibraryCollapsed }) : library}
+            {!panelLayout.libraryCollapsed && <ResizeHandle label={intl.formatMessage({ id: "navigation.resizeArticleLibrary" })} value={libraryWidth} minimum={libraryLimits.minimum} maximum={libraryLimits.maximum} onChange={setLibraryWidth} />}
         </div>}
-        {!focusMode && <div data-responsive-overlay={assistantOverlay || undefined} className={assistantOverlay ? "absolute inset-y-0 right-0 z-20 min-h-0 min-w-0 border-l border-border-strong shadow-raised" : "relative min-h-0 min-w-0"} style={{ gridArea: "assistant", ...(assistantOverlay ? { width: effectiveAssistantWidth } : {}) }}>
-            {isValidElement(assistant) ? cloneElement(assistant, { collapsed: effectiveAssistantCollapsed, setCollapsed: setAssistantCollapsed }) : assistant}
-            {!effectiveAssistantCollapsed && !assistantOverlay && <ResizeHandle label={intl.formatMessage({ id: "assistant.resize" })} value={effectiveAssistantWidth} minimum={assistantLimits.minimum} maximum={assistantMaximum} direction={-1} edge="start" onChange={setAssistantWidth} />}
+        {!focusMode && <div data-responsive-overlay={panelLayout.assistantOverlay || undefined} className={panelLayout.assistantOverlay ? "absolute inset-y-0 right-0 z-20 min-h-0 min-w-0 border-l border-border-strong shadow-raised" : "relative min-h-0 min-w-0"} style={{ gridArea: "assistant", ...(panelLayout.assistantOverlay ? { width: panelLayout.assistantWidth } : {}) }}>
+            {isValidElement(assistant) ? cloneElement(assistant, { collapsed: panelLayout.assistantCollapsed, setCollapsed: setAssistantCollapsed }) : assistant}
+            {!panelLayout.assistantCollapsed && !panelLayout.assistantOverlay && <ResizeHandle label={intl.formatMessage({ id: "assistant.resize" })} value={panelLayout.assistantWidth} minimum={assistantLimits.minimum} maximum={panelLayout.assistantMaximum} direction={-1} edge="start" onChange={setAssistantWidth} />}
         </div>}
     </main>;
 }

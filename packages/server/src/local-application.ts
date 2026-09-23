@@ -8,7 +8,7 @@ import { loadServerConfig, type ServerConfig } from "./infrastructure/configurat
 import { readSystemDateTimeFormat } from "./infrastructure/configuration/system-date-time-format.js";
 import { AiConnectionModelDiscoveryService } from "./infrastructure/editorial/services/ai-connection-model-discovery-service.js";
 import { ConfiguredEditorialEngineResolver } from "./infrastructure/editorial/engines/configured-editorial-engine-resolver.js";
-import { SqliteBackupManager } from "./infrastructure/persistence/sqlite-backup-manager.js";
+import { SqliteBackupSnapshotCreator } from "./infrastructure/persistence/sqlite-backup-snapshot-creator.js";
 import { WindowsCredentialStore } from "./infrastructure/configuration/windows-credential-store.js";
 import { LinuxCredentialStore } from "./infrastructure/configuration/linux-credential-store.js";
 import { SkillRevisionStore } from "./infrastructure/skills/skill-revision-store.js";
@@ -74,7 +74,7 @@ export function createLocalApplication(config: ServerConfig = loadServerConfig()
                         : credentialStore?.get(connection.id)))
                 },
                 createConnectionId: randomUUID,
-                backups: new SqliteBackupManager(database),
+                backups: new SqliteBackupSnapshotCreator(database),
                 credentialStore,
             },
             integration: { editorial, telemetry },

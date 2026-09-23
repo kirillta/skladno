@@ -83,33 +83,58 @@ export function handleEditorialEvent({ event, articleId, content, revisionId, op
     retainTranslation: (result: { articleId: string; baseRevisionId: string; value: { metadata: TranslationMetadata; content: string; editorialArtifactId?: string } }) => void;
     intl: IntlShape;
 }) {
-    if (event.type === "text_delta" && isProposalOperation(operation))
+    if (event.type === "text_delta")
+        appendProposal(event, operation, setProposal);
+    else if (event.type === "completed")
+        handleEditorialCompletion(event, { articleId, content, revisionId, operation, correctedFindingIds, setProposal, setBase, setState, setFactCheck, loadFactChecks, setStyleReview, retainTranslation });
+    else if (event.type === "error")
+        handleEditorialError(event, setState, setMessage, intl);
+}
+
+
+function appendProposal(event: Extract<EditorialEvent, { type: "text_delta" }>, operation: EditorialOperation, setProposal: Dispatch<SetStateAction<string>>) {
+    if (isProposalOperation(operation))
         setProposal((value) => value + event.delta);
+}
 
-    if (event.type === "completed") {
-        if (isProposalOperation(operation))
-            setProposal(event.text);
 
-        if (isProposalOperation(operation))
-            if (event.editorialArtifactId)
-                setBase({ articleId, content, revisionId, editorialArtifactId: event.editorialArtifactId, ...(correctedFindingIds?.length ? { correctedFindingIds } : {}) });
+function handleEditorialCompletion(event: Extract<EditorialEvent, { type: "completed" }>, context: {
+    articleId: string;
+    content: string;
+    revisionId: string;
+    operation: EditorialOperation;
+    correctedFindingIds: string[] | undefined;
+    setProposal: Dispatch<SetStateAction<string>>;
+    setBase: Dispatch<SetStateAction<ProposalBase | undefined>>;
+    setState: Dispatch<SetStateAction<ProposalState>>;
+    setFactCheck: (articleId: string, baseRevisionId: string, value: FactCheck) => void;
+    loadFactChecks: () => Promise<void>;
+    setStyleReview: (articleId: string, baseRevisionId: string, value: StyleReview) => void;
+    retainTranslation: (result: { articleId: string; baseRevisionId: string; value: { metadata: TranslationMetadata; content: string; editorialArtifactId?: string } }) => void;
+}) {
+    if (isProposalOperation(context.operation)) {
+        context.setProposal(event.text);
 
-        if (event.factCheck) {
-            setFactCheck(articleId, revisionId, event.factCheck);
-            void loadFactChecks();
-        }
-
-        if (event.styleReview)
-            setStyleReview(articleId, revisionId, event.styleReview);
-
-        if (event.translation)
-            retainTranslation({ articleId, baseRevisionId: revisionId, value: { metadata: event.translation, content: event.text, editorialArtifactId: event.editorialArtifactId } });
-
-        setState("idle");
+        if (event.editorialArtifactId)
+            context.setBase({ articleId: context.articleId, content: context.content, revisionId: context.revisionId, editorialArtifactId: event.editorialArtifactId, ...(context.correctedFindingIds?.length ? { correctedFindingIds: context.correctedFindingIds } : {}) });
     }
 
-    if (event.type === "error") {
-        setState("error");
-        setMessage(intl.formatMessage({ id: getErrorMessageId(event.errorCode) }, event.parameters));
+    if (event.factCheck) {
+        context.setFactCheck(context.articleId, context.revisionId, event.factCheck);
+        void context.loadFactChecks();
     }
+
+    if (event.styleReview)
+        context.setStyleReview(context.articleId, context.revisionId, event.styleReview);
+
+    if (event.translation)
+        context.retainTranslation({ articleId: context.articleId, baseRevisionId: context.revisionId, value: { metadata: event.translation, content: event.text, editorialArtifactId: event.editorialArtifactId } });
+
+    context.setState("idle");
+}
+
+
+function handleEditorialError(event: Extract<EditorialEvent, { type: "error" }>, setState: Dispatch<SetStateAction<ProposalState>>, setMessage: Dispatch<SetStateAction<string>>, intl: IntlShape) {
+    setState("error");
+    setMessage(intl.formatMessage({ id: getErrorMessageId(event.errorCode) }, event.parameters));
 }

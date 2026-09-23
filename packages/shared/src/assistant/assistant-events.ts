@@ -51,32 +51,42 @@ function isAssistantResponseKind(value: unknown): value is AssistantResponseKind
 }
 
 
+function isSkillResolution(value: Record<string, unknown>): boolean {
+    return (value.skillId === undefined || typeof value.skillId === "string")
+        && (value.source === undefined || value.source === "explicit" || value.source === "inferred");
+}
+
+
+function isCapabilityActivity(value: unknown): boolean {
+    if (!isRecord(value))
+        return false;
+
+    return typeof value.summary === "string" && (value.status === "started" || value.status === "completed");
+}
+
+
 export function isAssistantEvent(value: unknown): value is AssistantEvent {
     if (!isRecord(value) || typeof value.type !== "string" || typeof value.requestId !== "string")
         return false;
 
-    if (value.type === ASSISTANT_EVENT.ACCEPTED)
-        return true;
-
-    if (value.type === ASSISTANT_EVENT.SKILL_RESOLVED)
-        return (value.skillId === undefined || typeof value.skillId === "string")
-            && (value.source === undefined || value.source === "explicit" || value.source === "inferred");
-
-    if (value.type === ASSISTANT_EVENT.TEXT_DELTA)
-        return typeof value.delta === "string";
-
-    if (value.type === ASSISTANT_EVENT.TOOL_STATUS)
-        return typeof value.tool === "string" && (value.status === "started" || value.status === "completed");
-
-    if (value.type === ASSISTANT_EVENT.CAPABILITY_ACTIVITY)
-        return isRecord(value.activity) && typeof value.activity.summary === "string"
-            && (value.activity.status === "started" || value.activity.status === "completed");
-
-    if (value.type === ASSISTANT_EVENT.STAGED_COMPLETION)
-        return isRecord(value.completion) && isAssistantResponseKind(value.completion.responseKind);
-
-    if (value.type === ASSISTANT_EVENT.COMPLETED)
-        return typeof value.messageId === "string" && isAssistantResponseKind(value.responseKind);
-
-    return value.type === ASSISTANT_EVENT.ERROR && typeof value.errorCode === "string" && typeof value.retryable === "boolean";
+    switch (value.type) {
+        case ASSISTANT_EVENT.ACCEPTED:
+            return true;
+        case ASSISTANT_EVENT.SKILL_RESOLVED:
+            return isSkillResolution(value);
+        case ASSISTANT_EVENT.TEXT_DELTA:
+            return typeof value.delta === "string";
+        case ASSISTANT_EVENT.TOOL_STATUS:
+            return typeof value.tool === "string" && (value.status === "started" || value.status === "completed");
+        case ASSISTANT_EVENT.CAPABILITY_ACTIVITY:
+            return isCapabilityActivity(value.activity);
+        case ASSISTANT_EVENT.STAGED_COMPLETION:
+            return isRecord(value.completion) && isAssistantResponseKind(value.completion.responseKind);
+        case ASSISTANT_EVENT.COMPLETED:
+            return typeof value.messageId === "string" && isAssistantResponseKind(value.responseKind);
+        case ASSISTANT_EVENT.ERROR:
+            return typeof value.errorCode === "string" && typeof value.retryable === "boolean";
+        default:
+            return false;
+    }
 }

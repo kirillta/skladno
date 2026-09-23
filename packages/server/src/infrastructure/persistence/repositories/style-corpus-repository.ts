@@ -47,11 +47,7 @@ function createStyleProfile(items: { id: string; content: string }[], rules: str
     }];
     const characterCount = content.length;
 
-    let confidence: "high" | "medium" | "low" = "low";
-    if (items.length >= 5 && characterCount >= 12_000)
-        confidence = "high";
-    else if (items.length >= 2 && characterCount >= 3_000)
-        confidence = "medium";
+    const confidence = getProfileConfidence(items.length, characterCount);
 
     return {
         version,
@@ -64,6 +60,17 @@ function createStyleProfile(items: { id: string; content: string }[], rules: str
         rules,
         updatedAt: getCurrentTimestamp()
     };
+}
+
+
+function getProfileConfidence(itemCount: number, characterCount: number): StyleProfile["confidence"] {
+    if (itemCount >= 5 && characterCount >= 12_000)
+        return "high";
+
+    if (itemCount >= 2 && characterCount >= 3_000)
+        return "medium";
+
+    return "low";
 }
 
 
