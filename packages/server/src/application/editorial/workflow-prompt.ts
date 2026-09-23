@@ -1,5 +1,5 @@
 import type { ModelMessage } from "ai";
-import { APPLICATION_ERROR, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, resolveBuiltInSkillId, type BuiltInSkillId, type EditorialOperation, type StyleProfile } from "@skladno/shared";
+import { APPLICATION_ERROR, BUILT_IN_SKILL, EDITORIAL_OPERATION, editorialOperationSkillMap, HTTP_STATUS, type BuiltInSkillId, type EditorialOperation, type StyleProfile } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import { getBuiltInSkillInstructions } from "../assistant/skills/get-built-in-skill-instructions.js";
@@ -24,11 +24,7 @@ export const authorControlInstruction = "Do not claim that you saved or changed 
 
 
 function getSkillInstructions(input: EditorialPromptInput): string {
-    const skillId = input.skillId ?? resolveBuiltInSkillId(input.operation);
-    if (!skillId)
-        throw new Error("invalid_builtin_skill_package");
-
-    return getBuiltInSkillInstructions(skillId);
+    return getBuiltInSkillInstructions(input.skillId ?? editorialOperationSkillMap[input.operation]);
 }
 
 
@@ -81,6 +77,14 @@ function createTalkingPointsPrompt(input: EditorialPromptInput): ModelMessage[] 
 }
 
 
+function createArticleTitleContext(input: EditorialPromptInput): string {
+    if (input.articleSelection)
+        return "";
+
+    return `Current Article title:\n${input.articleTitle ?? ""}\n\n`;
+}
+
+
 function createNarrativeDraftPrompt(input: EditorialPromptInput): ModelMessage[] {
     const authorMessage = input.authorContext.trim();
     const sourceLabel = input.articleSelection ? "Article selection" : "Article content";
@@ -91,6 +95,7 @@ function createNarrativeDraftPrompt(input: EditorialPromptInput): ModelMessage[]
     const outputFormat = input.articleSelection
         ? "Selected-passage Markdown replacement."
         : "Full Article Markdown proposal.";
+    const titleContext = createArticleTitleContext(input);
 
     return [
         {
@@ -99,21 +104,7 @@ function createNarrativeDraftPrompt(input: EditorialPromptInput): ModelMessage[]
         },
         {
             role: "user",
-            content: `Output format:\n${outputFormat}\n\n${sourceLabel}:\n${input.article.trim() || "No Article content was provided."}${authorDirection}${lengthHint}`
-        },
-    ];
-}
-
-
-function createThesisToNarrativePrompt(input: EditorialPromptInput): ModelMessage[] {
-    return [
-        {
-            role: "system",
-            content: getSkillInstructions(input)
-        },
-        {
-            role: "user",
-            content: `Current article:\n${input.article}\n\nAuthor guidance or theses:\n${createAuthorGuidance(input.authorContext)}`
+            content: `Output format:\n${outputFormat}\n\n${titleContext}${sourceLabel}:\n${input.article.trim() || "No Article content was provided."}${authorDirection}${lengthHint}`
         },
     ];
 }
@@ -130,7 +121,7 @@ function createStyleReviewPrompt(input: EditorialPromptInput): ModelMessage[] {
         },
         {
             role: "user",
-            content: `Current article:\n${input.article}\n\nCorpus confidence: ${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters).\n\nSupplied corpus traits:\n${formatStyleTraits(input.styleProfile)}\n\nGlobal rules:\n${formatNumberedRules(input.styleProfile.rules, "global-rule")}\n\nThis Article rules:\n${formatNumberedRules(input.articleStyleRules ?? "", "article-rule")}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
+            content: `${createArticleTitleContext(input)}Current article:\n${input.article}\n\nCorpus confidence: ${input.styleProfile.confidence} (${input.styleProfile.corpusItemCount} item(s), ${input.styleProfile.characterCount} characters).\n\nSupplied corpus traits:\n${formatStyleTraits(input.styleProfile)}\n\nGlobal rules:\n${formatNumberedRules(input.styleProfile.rules, "global-rule")}\n\nThis Article rules:\n${formatNumberedRules(input.articleStyleRules ?? "", "article-rule")}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
@@ -161,7 +152,7 @@ function createFlowRevisionPrompt(input: EditorialPromptInput): ModelMessage[] {
         },
         {
             role: "user",
-            content: `Current article:\n${input.article}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
+            content: `${createArticleTitleContext(input)}Current article:\n${input.article}\n\nAuthor guidance:\n${createAuthorGuidance(input.authorContext)}`
         },
     ];
 }
@@ -175,7 +166,7 @@ export function createEditorialMessages(input: EditorialPromptInput): ModelMessa
         return createNarrativeDraftPrompt(input);
 
     if (input.operation === EDITORIAL_OPERATION.THESIS_TO_NARRATIVE)
-        return createThesisToNarrativePrompt(input);
+        return createNarrativeDraftPrompt(input);
 
     if (input.operation === EDITORIAL_OPERATION.STYLE_REVIEW)
         return createStyleReviewPrompt(input);

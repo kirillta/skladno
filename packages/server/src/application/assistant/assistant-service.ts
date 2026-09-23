@@ -312,7 +312,7 @@ export class AssistantService {
         return {
             operation: request.operation,
             article: excerpt,
-            ...(request.operation === EDITORIAL_OPERATION.TRANSLATION ? { articleTitle: request.articleTitle } : {}),
+            articleTitle: request.articleTitle,
             ...(request.scope.kind === "selection" ? { articleSelection: true } : {}),
             authorContext: request.authorMessage,
             skillId: isBuiltInSkillId(request.resolvedSkillId) ? request.resolvedSkillId : undefined,

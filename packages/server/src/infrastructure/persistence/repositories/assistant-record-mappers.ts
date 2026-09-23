@@ -1,4 +1,4 @@
-import { REVISION_PROVENANCE_KIND, resolveBuiltInSkillId, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequestScope, type ProposalAcceptance, type ProposalChangeSummary } from "@skladno/shared";
+import { REVISION_PROVENANCE_KIND, type AssistantMessage, type AssistantMessageKind, type AssistantMessageRole, type AssistantMessageStatus, type AssistantRequestScope, type ProposalAcceptance, type ProposalChangeSummary } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { parseObject, type Row } from "./repository-utils.js";
@@ -80,7 +80,7 @@ function readAssistantMessageRowContext(row: Row) {
         throw new Error("Invalid persisted assistant message.");
 
     const skillValue = row.skill_id === null ? undefined : String(row.skill_id);
-    const skillId = skillValue === undefined ? undefined : resolveBuiltInSkillId(skillValue) ?? skillValue;
+    const skillId = skillValue;
     if (skillValue !== undefined && !skillId)
         throw new Error("Invalid persisted assistant skill.");
 

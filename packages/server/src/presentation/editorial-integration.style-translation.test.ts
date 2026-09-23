@@ -37,6 +37,7 @@ test("style review uses a compact local profile and saves cited findings as a pr
         assert.match(body, /"text":"A concise proposal."/);
         assert.match(body, /"traitIds":\["structure"\]/);
         assert.equal(engine.requests[0]!.styleProfile?.traits.some((trait) => trait.id === "structure"), true);
+        assert.equal(engine.requests[0]?.articleTitle, "Draft");
         assert.deepEqual(JSON.parse(artifact.content).findings, [{
             divergence: "The draft uses long paragraphs.",
             suggestion: "Split the opening paragraph.",

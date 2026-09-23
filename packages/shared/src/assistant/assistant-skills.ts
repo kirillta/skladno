@@ -36,24 +36,10 @@ export function isBuiltInSkillId(value: unknown): value is BuiltInSkillId {
 }
 
 
-/**
- * Compatibility only: maps pre-conversation editorial operation IDs to skills.
- * Do not persist or expose these IDs in new Assistant contracts.
- */
-export const legacyEditorialOperationSkillMap = {
+export const editorialOperationSkillMap = {
     thesis_to_narrative: BUILT_IN_SKILL.NARRATIVE_DRAFT,
     flow_revision: BUILT_IN_SKILL.FLOW_AND_CLARITY,
     fact_check: BUILT_IN_SKILL.FACT_CHECKING,
     style_review: BUILT_IN_SKILL.STYLE_REVIEW,
     translation: BUILT_IN_SKILL.TRANSLATION,
 } as const;
-
-
-export function resolveBuiltInSkillId(value: unknown): BuiltInSkillId | undefined {
-    if (isBuiltInSkillId(value))
-        return value;
-
-    return typeof value === "string"
-        ? legacyEditorialOperationSkillMap[value as keyof typeof legacyEditorialOperationSkillMap]
-        : undefined;
-}

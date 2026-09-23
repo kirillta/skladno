@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { resolveBuiltInSkillId, type AssistantCheckpointPreview } from "@skladno/shared";
+import { isBuiltInSkillId, type AssistantCheckpointPreview } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { parseObject, type Row } from "./repository-utils.js";
@@ -33,7 +33,8 @@ export function createCheckpointPreview(database: SqliteDatabase, messageId: str
     const responseKinds = tail.messages.map((row) => String(row.response_kind ?? ""));
     const revisionId = anchor.base_revision_id === null ? undefined : String(anchor.base_revision_id);
     const revision = revisionId ? database.prepare("SELECT id, description, provenance_json, restored_from_revision_id, (SELECT COUNT(*) FROM article_revisions earlier WHERE earlier.article_id = r.article_id AND (earlier.created_at < r.created_at OR (earlier.created_at = r.created_at AND earlier.id <= r.id))) number FROM article_revisions r WHERE id = ? AND article_id = ?").get(revisionId, String(anchor.article_id)) as Row | undefined : undefined;
-    const skillId = resolveBuiltInSkillId(String(anchor.explicit_skill_id ?? anchor.resolved_skill_id ?? ""));
+    const storedSkillId = String(anchor.explicit_skill_id ?? anchor.resolved_skill_id ?? "");
+    const skillId = isBuiltInSkillId(storedSkillId) ? storedSkillId : undefined;
 
     return {
         messageId,

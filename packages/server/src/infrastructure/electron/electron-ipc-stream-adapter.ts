@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, ELECTRON_IPC_CHANNEL, resolveBuiltInSkillId, type ApplicationErrorCode, type ElectronStreamEvent, type ElectronStreamRequest, type EditorialEvent } from "@skladno/shared";
+import { APPLICATION_ERROR, EDITORIAL_ERROR_CATEGORY, EDITORIAL_OPERATION, ELECTRON_IPC_CHANNEL, type ApplicationErrorCode, type ElectronStreamEvent, type ElectronStreamRequest, type EditorialEvent } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import { ApplicationServiceError } from "../../application/errors/application-service-error.js";
@@ -114,8 +114,7 @@ function createEditorialFailure(error: unknown): { category: Extract<EditorialEv
 async function streamAssistant(event: ElectronIpcMainEvent, request: Extract<ElectronStreamRequest, { kind: "assistant" }>, services: ApplicationServices, controller: AbortController): Promise<void> {
     const input = request.input;
     try {
-        const explicitSkillId = input.kind === "new" && input.explicitSkillId ? resolveBuiltInSkillId(input.explicitSkillId) ?? input.explicitSkillId : undefined;
-        const prepared = services.assistant.prepare({ ...input, articleId: request.articleId, ...(explicitSkillId ? { explicitSkillId } : {}) });
+        const prepared = services.assistant.prepare({ ...input, articleId: request.articleId });
         for await (const item of services.assistant.stream(prepared, controller.signal))
             send(event, { streamId: request.streamId, kind: "assistant", event: item });
     } catch (error) {

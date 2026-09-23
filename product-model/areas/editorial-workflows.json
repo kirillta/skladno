@@ -35,7 +35,7 @@
             "title": "Thesis-to-narrative composition",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "The server creates a composition Proposal from author-supplied theses; it remains reviewable until acceptance.",
+            "contract": "The server creates a body-only composition Proposal from author-supplied theses, keeping the existing Article title separate; it remains reviewable until acceptance.",
             "persistence": "Completed proposal artifacts are local and revision-bound."
         },
         {
@@ -44,7 +44,7 @@
             "title": "Flow revision",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "Flow revision generates a full-text Proposal rather than silently editing the Article.",
+            "contract": "Flow revision generates a full-body Proposal with the existing Article title kept separate rather than silently editing the Article.",
             "persistence": "Completed proposal artifacts are local and revision-bound."
         },
         {
@@ -62,7 +62,7 @@
             "title": "Style review",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
-            "contract": "Style review uses only the current compact, explicitly rebuilt profile plus Article-specific manual rules; raw style samples remain local and review findings retain freshness state with the grounded trait or rule that supports each finding.",
+            "contract": "Style review uses only the current compact, explicitly rebuilt profile plus Article-specific manual rules; its full-body Proposal keeps the existing Article title separate, raw style samples remain local, and review findings retain freshness state with the grounded trait or rule that supports each finding.",
             "persistence": "Raw style corpus and derived review artifacts stay local."
         },
         {
@@ -71,7 +71,7 @@
             "title": "Translation request",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial/translation/translation.ts", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "Translation requests prepare a translated Article title and linked Article content together; the source Article is never overwritten.",
+            "contract": "Translation requests prepare a translated Article title and body in separate structured fields, then create linked Article content; the source Article is never overwritten.",
             "persistence": "Translation review metadata is local and source linkage remains recoverable."
         },
         {
@@ -131,9 +131,19 @@
             "capabilityIds": ["editorial-workflows.assistant-foundation"],
             "preconditions": ["The author explicitly selects Narrative Draft."],
             "event": "The author requests a narrative from an Article or selection, optionally with a composer message and publishing-profile limit." ,
-            "expected": ["Author direction has priority, an active selection replaces whole Article content as the Article source, and the selected character limit is advisory guidance for the resulting complete Article.", "The proposal develops supplied ideas simply unless the Author requests otherwise."],
+            "expected": ["Author direction has priority, an active selection replaces whole Article content as the Article source, and the selected character limit is advisory guidance for the resulting complete Article.", "The proposal develops supplied ideas simply unless the Author requests otherwise; the existing Article title remains separate from proposed body text."],
             "forbidden": ["Inventing unsupported arguments, using unselected Article content, or treating the character hint as an output-token limit."],
             "evidence": { "kind": "automated", "path": "packages/server/src/application/editorial/workflow-prompt.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.skill-id-boundary",
+            "title": "Assistant accepts current Skill IDs only",
+            "capabilityIds": ["editorial-workflows.assistant-foundation"],
+            "preconditions": ["An Assistant request names an Editorial operation as its Skill ID."],
+            "event": "The Assistant validates the request.",
+            "expected": ["The operation name is rejected as an unsupported Skill ID."],
+            "forbidden": ["Translating an Editorial operation name into a Skill ID or persisting a new request."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
         },
         {
             "id": "editorial-workflows.talking-points-source",

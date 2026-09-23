@@ -4,6 +4,7 @@ import test from "node:test";
 import { getAiModelPreferenceId, type AiConnection } from "@skladno/shared";
 
 import { ApplicationSettingsService } from "./application-settings-service.js";
+import { normalizeModelPreferences } from "./application-settings-normalizers.js";
 
 
 function createSettingsService(records: Map<string, unknown>, list: (connection: AiConnection) => Promise<string[]> = async () => []) {
@@ -50,6 +51,16 @@ test("migrates legacy model preferences to a connection-bound selection", async 
     assert.equal((await settings.getSnapshot()).modelPreferences.defaultModel, getAiModelPreferenceId("openai", "gpt-5.6"));
     assert.deepEqual(records.get("application-model-preferences"), { defaultModel: getAiModelPreferenceId("openai", "gpt-5.6"), skillOverrides: { talking_points: getAiModelPreferenceId("openai", "gpt-5.6-mini") } });
     assert.deepEqual(records.get("application-app-model"), { model: getAiModelPreferenceId("openai", "gpt-5.6-mini"), reasoningEffort: "low" });
+});
+
+test("model preferences ignore old Editorial operation overrides", () => {
+    const currentModel = getAiModelPreferenceId("openai", "current-model");
+    const preferences = normalizeModelPreferences({
+        skillOverrides: { flow_revision: "old-model", narrative_draft: currentModel },
+        operationOverrides: { translation: "old-translation-model" },
+    });
+
+    assert.deepEqual(preferences.skillOverrides, { narrative_draft: currentModel });
 });
 
 
