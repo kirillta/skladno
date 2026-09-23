@@ -186,7 +186,7 @@
                 "packages/web/src/workspace/components/ArticleStatusBar.tsx",
                 "packages/web/src/workspace/editor/RevisionArticlePreview.tsx"
             ],
-            "contract": "Selecting a Revision from history or the compact Status Bar selector is local-only and opens a read-only preview; restoring creates a new Revision through the existing confirmation and Draft-conflict flow.",
+            "contract": "Selecting a Revision from history or the compact Status Bar selector is local-only and opens a read-only preview; restoring creates a new Revision through the existing confirmation and Draft-conflict flow. When the first immutable Revision is empty, history labels it Empty Revision and presents the second saved Revision as Initial Revision while keeping both available.",
             "persistence": "Immutable Article Revisions and recoverable Draft checkpoints."
         },
         {

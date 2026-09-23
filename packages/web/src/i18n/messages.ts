@@ -109,6 +109,7 @@ export const messages = {
     "revisions.emptyContent": "This Revision has no saved Article text.",
     "revisions.characterCount": "{count} characters",
     "revisions.initial": "Initial Revision",
+    "revisions.empty": "Empty Revision",
     "revisions.author": "Author Revision",
     "revisions.acceptedProposal": "Accepted Proposal",
     "revisions.restored": "Restored Revision",

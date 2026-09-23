@@ -16,7 +16,7 @@ export function RevisionHistoryDetails({ revisions, selected, currentRevisionId,
     const intl = useIntl();
     const newestFirst = [...revisions].reverse();
     const selectedIsCurrent = selected.id === currentRevisionId;
-    const selectedProvenance = intl.formatMessage({ id: getProvenanceMessageId(selected) });
+    const selectedProvenance = intl.formatMessage({ id: getProvenanceMessageId(selected, revisions) });
     const selectedTarget = getRestoredRevisionTarget(revisions, selected);
     const selectedTitle = selectedTarget ? intl.formatMessage({ id: selectedTarget.description ? "revisions.restoredTargetDescribed" : "revisions.restoredTarget" }, selectedTarget) : getRevisionTitle(selected, selectedProvenance);
     const formatRevisionDate = (createdAt: string) => formatDateTime(createdAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone);
@@ -28,7 +28,7 @@ export function RevisionHistoryDetails({ revisions, selected, currentRevisionId,
                 <Select className="mt-1" value={selected.id} onChange={(event) => select(revisions.find((revision) => revision.id === event.target.value)!)}>
                     {newestFirst.map((revision) => {
                         const target = getRestoredRevisionTarget(revisions, revision);
-                        const title = target ? intl.formatMessage({ id: target.description ? "revisions.restoredTargetDescribed" : "revisions.restoredTarget" }, target) : getRevisionTitle(revision, intl.formatMessage({ id: getProvenanceMessageId(revision) }));
+                        const title = target ? intl.formatMessage({ id: target.description ? "revisions.restoredTargetDescribed" : "revisions.restoredTarget" }, target) : getRevisionTitle(revision, intl.formatMessage({ id: getProvenanceMessageId(revision, revisions) }));
                         return <option key={revision.id} value={revision.id}>{title} — {formatRevisionDate(revision.createdAt)}</option>;
                     })}
                 </Select>

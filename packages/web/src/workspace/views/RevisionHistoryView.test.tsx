@@ -103,6 +103,20 @@ describe("RevisionHistoryView", () => {
     });
 
 
+    it("labels the first saved text as initial while keeping the empty Revision available", () => {
+        const empty = createArticleRevision("empty", "", "initial", "2026-01-01T10:00:00.000Z");
+        const firstText = createArticleRevision("first-text", "First text", "author-draft", "2026-01-02T10:00:00.000Z");
+        const view = renderHistory([empty, firstText]);
+        const buttons = view.container.querySelectorAll("nav button");
+
+        expect(buttons[0]?.textContent).toContain("Initial Revision");
+        expect(buttons[1]?.textContent).toContain("Empty Revision");
+        expect(view.container.querySelectorAll('[data-revision-timeline-icon="initial"]')).toHaveLength(1);
+        expect(view.container.querySelectorAll('[data-revision-timeline-icon="manual"]')).toHaveLength(1);
+        expect(screen.getByRole("option", { name: /Empty Revision/ })).toBeTruthy();
+    });
+
+
     it("uses the saved time format and time zone preference for Revision timestamps", () => {
         const initial = createArticleRevision("initial", "Initial", "initial", "2026-01-01T15:45:00.000Z");
         renderHistory([initial], initial.id, { ...defaultGeneralSettings, timeFormat: "24-hour", timeZone: "America/New_York" });

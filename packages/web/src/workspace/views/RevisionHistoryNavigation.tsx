@@ -22,11 +22,11 @@ export function RevisionHistoryNavigation({ revisions, selectedRevisionId, onSel
         <ol className="min-h-0 flex-1 overflow-y-auto p-2 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             {newestFirst.map((revision) => {
                 const selected = revision.id === selectedRevisionId;
-                const provenance = intl.formatMessage({ id: getProvenanceMessageId(revision) });
+                const provenance = intl.formatMessage({ id: getProvenanceMessageId(revision, revisions) });
                 const target = getRestoredRevisionTarget(revisions, revision);
                 const title = getRevisionTitle(revision, provenance);
                 const displayTitle = target ? intl.formatMessage({ id: target.description ? "revisions.restoredTargetDescribed" : "revisions.restoredTarget" }, target) : title;
-                const kind = getTimelineKind(revision);
+                const kind = getTimelineKind(revision, revisions);
                 const TimelineIcon = timelineIcons[kind];
 
                 return <li key={revision.id} className="relative pl-10 after:absolute after:-bottom-7 after:left-4 after:top-7 after:w-px after:bg-border last:after:hidden">
