@@ -2,7 +2,7 @@ import { APPLICATION_ERROR, getAiModelPreferenceId, AI_PROVIDER, HTTP_STATUS, is
 
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import type { AvailableModelsProvider } from "./available-models-provider.js";
-import type { BackupManager } from "./backup-manager.js";
+import type { BackupSnapshotCreator } from "./backup-snapshot-creator.js";
 import type { SettingsStore } from "./settings-store.js";
 import type { SystemDateTimeFormatProvider } from "./system-date-time-format-provider.js";
 import type { CredentialStore } from "./credential-store.js";
@@ -15,7 +15,7 @@ export class ApplicationSettingsService {
         private readonly dateTimeFormat: SystemDateTimeFormatProvider,
         private readonly models: AvailableModelsProvider,
         private readonly createConnectionId: () => string,
-        private readonly backups?: BackupManager,
+        private readonly backups?: BackupSnapshotCreator,
         private readonly credentialStore?: CredentialStore,
     ) { }
 

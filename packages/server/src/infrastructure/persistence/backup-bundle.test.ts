@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { BackupBundleTransfers } from "./backup-bundle.js";
 import { openDatabase } from "./database.js";
-import { SqliteBackupManager } from "./sqlite-backup-manager.js";
+import { SqliteBackupSnapshotCreator } from "./sqlite-backup-snapshot-creator.js";
 
 
 test("exports and imports a database with current and deleted Skill history", async () => {
@@ -20,8 +20,8 @@ test("exports and imports a database with current and deleted Skill history", as
         mkdirSync(installed, { recursive: true });
         writeFileSync(join(revision, "SKILL.md"), "deleted history");
         writeFileSync(join(installed, "SKILL.md"), "current skill");
-        const manager = new SqliteBackupManager(database);
-        const transfers = new BackupBundleTransfers(root, () => manager.createTemporary(), async (directory) => {
+        const snapshotCreator = new SqliteBackupSnapshotCreator(database);
+        const transfers = new BackupBundleTransfers(root, () => snapshotCreator.createTemporary(), async (directory) => {
             assert.equal(readFileSync(join(directory, "skills", "current", "SKILL.md"), "utf8"), "current skill");
             assert.equal(readFileSync(join(directory, "skill-history", "deleted", "revision-1", "SKILL.md"), "utf8"), "deleted history");
             restored = true;
@@ -50,8 +50,8 @@ test("rejects a modified bundle before restoring", async () => {
     const database = openDatabase(join(root, "skladno.sqlite"));
     let restored = false;
     try {
-        const manager = new SqliteBackupManager(database);
-        const transfers = new BackupBundleTransfers(root, () => manager.createTemporary(), async () => {
+        const snapshotCreator = new SqliteBackupSnapshotCreator(database);
+        const transfers = new BackupBundleTransfers(root, () => snapshotCreator.createTemporary(), async () => {
             restored = true;
         });
         const { id, manifest } = transfers.createExport();

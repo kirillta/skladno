@@ -5,13 +5,13 @@ import type { EditorialEngine } from "../../../application/editorial/engine/edit
 import type { SettingsStore } from "../../../application/settings/settings-store.js";
 import type { ServerConfig } from "../../configuration/config.js";
 import { createEditorialEngine } from "./create-editorial-engine.js";
-import { AiSdkProposalSummaryGeneratorAdapter } from "../adapters/ai-sdk-proposal-summary-generator-adaptor.js";
-import { AiSdkArticleTitleGeneratorAdapter } from "../adapters/article-title-generator.js";
+import { AiSdkProposalSummaryGeneratorAdapter } from "../adapters/ai-sdk-proposal-summary-generator-adapter.js";
+import { AiSdkArticleTitleGeneratorAdapter } from "../adapters/ai-sdk-article-title-generator-adapter.js";
 import { AiSdkRevisionDescriptionGeneratorAdapter } from "../adapters/ai-sdk-revision-description-generator-adapter.js";
 import { AiSdkAssistantActionIntentVerifier } from "../adapters/ai-sdk-assistant-action-intent-verifier.js";
 import type { CredentialStore } from "../../../application/settings/credential-store.js";
 import { createProviderModel } from "../adapters/provider-model.js";
-import { EditorialModelCapabilityService } from "../services/editorial-model-capability-service.js";
+import { EditorialModelCapabilityPolicy } from "../policies/editorial-model-capability-policy.js";
 import { getSupportingTextProviderOptions } from "../adapters/ai-sdk-provider.js";
 
 
@@ -32,7 +32,7 @@ export function resolveAppModelConfiguration(appModel: AppModelPreference | unde
 
 
 export class ConfiguredEditorialEngineResolver implements EditorialEngineResolver {
-    private readonly modelCapabilities = new EditorialModelCapabilityService();
+    private readonly modelCapabilities = new EditorialModelCapabilityPolicy();
 
 
     constructor(

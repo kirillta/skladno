@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { prepareBrowserRestoreRecovery, recoverPendingBrowserRestore } from "./browser-restore-recovery.js";
 import { openDatabase } from "./database.js";
-import { SqliteBackupManager } from "./sqlite-backup-manager.js";
+import { SqliteBackupSnapshotCreator } from "./sqlite-backup-snapshot-creator.js";
 
 
 test("startup rolls back an interrupted database and Skill restore", () => {
@@ -19,7 +19,7 @@ test("startup rolls back an interrupted database and Skill restore", () => {
         mkdirSync(recovery);
         mkdirSync(join(root, "skills", "clarity"), { recursive: true });
         writeFileSync(skillPath, "original skill");
-        const snapshot = new SqliteBackupManager(database).createTemporary();
+        const snapshot = new SqliteBackupSnapshotCreator(database).createTemporary();
         copyFileSync(snapshot.path, join(recovery, "database.sqlite"));
         snapshot.cleanup();
         mkdirSync(join(recovery, "skills", "clarity"), { recursive: true });

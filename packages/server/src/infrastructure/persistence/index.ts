@@ -4,6 +4,6 @@ export { EditorialSessionsRepository } from "./repositories/editorial-sessions-r
 export { MaterialsRepository } from "./repositories/materials-repository.js";
 export { SettingsRepository } from "./repositories/settings-repository.js";
 export { StyleCorpusRepository } from "./repositories/style-corpus-repository.js";
-export { EditorialArtifactsRepository } from "./repositories/workflow-artifacts-repository.js";
+export { EditorialArtifactsRepository } from "./repositories/editorial-artifacts-repository.js";
 export { AssistantRepository } from "./repositories/assistant-repository.js";
 export { FactChecksRepository } from "./repositories/fact-checks-repository.js";

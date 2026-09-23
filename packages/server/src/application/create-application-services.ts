@@ -2,7 +2,7 @@ import type { ApplicationServices } from "./application-services.js";
 import { ArticleService } from "./articles/article-service.js";
 import { AssistantService } from "./assistant/assistant-service.js";
 import type { AvailableModelsProvider } from "./settings/available-models-provider.js";
-import type { BackupManager } from "./settings/backup-manager.js";
+import type { BackupSnapshotCreator } from "./settings/backup-snapshot-creator.js";
 import type { AssistantArtifactStore } from "./assistant/assistant-artifact-store.js";
 import type { AssistantStore } from "./assistant/assistant-store.js";
 import type { EditorialEngineResolver } from "./editorial/engine/editorial-engine-resolver.js";
@@ -48,7 +48,7 @@ export interface ApplicationSettingsDependencies {
     dateTimeFormat: SystemDateTimeFormatProvider;
     models: AvailableModelsProvider;
     createConnectionId: () => string;
-    backups?: BackupManager;
+    backups?: BackupSnapshotCreator;
     credentialStore?: CredentialStore;
 }
 
