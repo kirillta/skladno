@@ -66,9 +66,8 @@ function findSeparatorEnd(lines: string[], index: number): number {
 }
 
 
-function getParagraphRanges(contentLines: string[]): { paragraphs: { start: number; end: number }[]; separators: string[][] } {
+function getParagraphRanges(contentLines: string[]): { start: number; end: number }[] {
     const paragraphs: { start: number; end: number }[] = [];
-    const separators: string[][] = [];
     let index = 0;
 
     while (index < contentLines.length) {
@@ -78,14 +77,10 @@ function getParagraphRanges(contentLines: string[]): { paragraphs: { start: numb
         if (start < index)
             paragraphs.push({ start, end: index });
 
-        const separatorStart = index;
         index = findSeparatorEnd(contentLines, index);
-
-        if (index < contentLines.length)
-            separators.push(contentLines.slice(separatorStart, index));
     }
 
-    return { paragraphs, separators };
+    return paragraphs;
 }
 
 
@@ -136,12 +131,14 @@ function getCommonProposalEdges(removed: string[], added: string[]): { start: nu
 function proposalChangeRanges(removed: string[], added: string[]): { base: { start: number; end: number }; proposal: { start: number; end: number } }[] {
     const baseParagraphs = getParagraphRanges(removed);
     const proposalParagraphs = getParagraphRanges(added);
-    const sameParagraphStructure = baseParagraphs.paragraphs.length > 1
-        && baseParagraphs.paragraphs.length === proposalParagraphs.paragraphs.length
-        && JSON.stringify(baseParagraphs.separators) === JSON.stringify(proposalParagraphs.separators);
+    const sameParagraphStructure = baseParagraphs.length > 1
+        && baseParagraphs.length === proposalParagraphs.length;
 
     if (sameParagraphStructure)
-        return baseParagraphs.paragraphs.map((base, index) => ({ base, proposal: proposalParagraphs.paragraphs[index]! }));
+        return baseParagraphs.map((base, index) => ({
+            base: { start: base.start, end: baseParagraphs[index + 1]?.start ?? removed.length },
+            proposal: { start: proposalParagraphs[index]!.start, end: proposalParagraphs[index + 1]?.start ?? added.length },
+        }));
 
     return [{ base: { start: 0, end: removed.length }, proposal: { start: 0, end: added.length } }];
 }

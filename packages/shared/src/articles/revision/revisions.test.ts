@@ -78,3 +78,14 @@ test("matching paragraph replacements remain independently reviewable", () => {
     assert.equal(review.changes.length, 3);
     assert.equal(applyProposalChanges(review, new Set([review.changes[1]!.id])), "First original.\n\nSecond proposed.\n\nThird original.");
 });
+
+
+test("changed paragraphs stay separate when the proposal changes blank-line spacing", () => {
+    const base = "First original.\n\nSecond original.\n\nThird original.\n\nKeep this.";
+    const proposed = "First proposed.\n\n\nSecond proposed.\n \nThird proposed.\n\nKeep this.";
+    const review = createTextProposal(base, proposed);
+
+    assert.equal(review.changes.length, 3);
+    assert.equal(applyProposalChanges(review, new Set(review.changes.map((change) => change.id))), proposed);
+    assert.equal(applyProposalChanges(review, new Set([review.changes[1]!.id])), "First original.\n\nSecond proposed.\n \nThird original.\n\nKeep this.");
+});
