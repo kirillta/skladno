@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useIntl } from "react-intl";
 import { isBuiltInSkillId } from "@skladno/shared";
 import { Button } from "../../../ui/primitives.js";
@@ -19,7 +19,21 @@ export function AssistantQuickActions({ context, picker }: { context: { state: "
     const { state, composer } = context;
     const { quickActionsOpen, availableSkills, activeSkillIndex, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction } = picker;
     const intl = useIntl();
-    return <div className="relative">
+    const pickerRoot = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function closeOnOutsideMouseDown(event: MouseEvent) {
+            if (event.target instanceof Node && !pickerRoot.current?.contains(event.target))
+                setQuickActionsOpen(false);
+        }
+
+
+        document.addEventListener("mousedown", closeOnOutsideMouseDown);
+        return () => document.removeEventListener("mousedown", closeOnOutsideMouseDown);
+    }, [setQuickActionsOpen]);
+
+
+    return <div ref={pickerRoot} className="relative">
         {quickActionsOpen && <div className="absolute bottom-full right-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised">
             <div id="assistant-skill-picker" role="listbox" aria-label={intl.formatMessage({ id: "assistant.quickActions" })} aria-describedby="assistant-skill-picker-hint">
                 {availableSkills.length

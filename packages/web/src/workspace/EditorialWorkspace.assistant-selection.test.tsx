@@ -81,6 +81,8 @@ describe("Editorial Workspace assistant", () => {
         await waitFor(() => expect(panel.container.querySelector("[data-assistant-skill-chip]")).toBeTruthy());
         await user.click(within(panel.container).getByRole("button", { name: getMessage("assistant.quickActions") }));
         expect(within(panel.container).getByRole("option", { name: getMessage("assistant.skill.narrativeDraft.label") })).toBeTruthy();
+        await user.click(document.body);
+        expect(within(panel.container).queryByRole("option", { name: getMessage("assistant.skill.narrativeDraft.label") })).toBeNull();
         await user.click(within(panel.container).getByRole("button", { name: getMessage("assistant.send") }));
 
         expect(onRequest).toHaveBeenCalledWith("", "talking_points", undefined, 0);
