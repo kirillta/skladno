@@ -5,6 +5,7 @@ import { beginTimedTelemetryCapture, type TelemetryCaptureSource } from "@skladn
 import { createAuthorSkillBackup, getAuthorSkillBackupPath } from "../../infrastructure/recovery/author-skill-backup.js";
 import { captureAuthorSkillInventory } from "../../infrastructure/recovery/author-skill-backup-manifest.js";
 
+
 export function createNativeBackup(database: { exec(sql: string): void }, dataDirectory: string, backupDirectory: string, telemetry?: TelemetryCaptureSource): { path: string; createdAt: string } {
     const observed = beginTimedTelemetryCapture(telemetry);
     let path: string | undefined;

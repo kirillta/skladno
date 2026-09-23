@@ -105,6 +105,7 @@ export async function restoreBackupBundle(client: BackupBundleClient, folder: Ba
     try {
         for (const [index, entry] of manifest.files.entries())
             await client.writeBackupImport(id, index, await readBundleFile(directory, entry.path));
+
         await client.restoreBackupImport(id);
     } finally {
         await client.removeBackupImport(id);

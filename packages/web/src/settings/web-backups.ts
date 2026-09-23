@@ -1,4 +1,4 @@
-import type { BackupBundleManifest, BackupPolicy } from "@skladno/shared";
+import type { BackupPolicy } from "@skladno/shared";
 import { restoreBackupBundle, saveBackupBundle, WebBackupError } from "./web-backup-bundles.js";
 import { type BackupDirectoryHandle as BackupBundleDirectoryHandle } from "./backup-directory-handle.js";
 import { type BackupBundleClient } from "./backup-bundle-client.js";
