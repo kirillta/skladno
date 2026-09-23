@@ -171,7 +171,7 @@
                 "packages/web/src/workspace/views/proposal-review-presentation.ts",
                 "packages/web/src/workspace/state/editorial-proposal-state.ts"
             ],
-            "contract": "AI text stays outside the Article until explicit acceptance. Reliable changes may show non-authoritative Interface-locale summaries whose failure does not block review. Accept all and Reject all select decisions; a separate action applies accepted changes. Accepted Proposals remain visible with read-only decisions after restart. Stale or unreliable Proposals cannot be partially accepted. Stale and preservation warnings remain visible above patterned diffs in the scrolling review content; labelled change navigation remains reachable outside it and scrolls and focuses the selected change at review start; stale recovery permits dismissal without Article changes. Whole-Proposal fallback discloses its change count.",
+            "contract": "AI text stays outside the Article until explicit acceptance. Reliable changes may show non-authoritative Interface-locale summaries whose failure does not block review. Accept all and Reject all select decisions; a separate action applies accepted changes. Accepted Proposals remain visible with read-only decisions after restart. Stale or unreliable Proposals cannot be partially accepted. A stale warning and recovery actions replace decision actions in the review header; preservation warnings remain above patterned diffs in scrolling review content. Labelled change navigation remains reachable outside it and scrolls and focuses the selected change at review start; stale recovery permits dismissal without Article changes. Whole-Proposal fallback discloses its change count.",
             "persistence": "Completed Proposal content, localized summaries, and the base Revision are recovered from local Assistant and editorial artifact records; accepted Revision provenance links the Proposal artifact and records accepted changes or whole-proposal fallback, and dismissal is a local workspace preference.",
             "relatedCapabilityIds": ["editorial-workflows.proposal-lifecycle", "editorial-workflows.ai-safety"]
         },
@@ -631,7 +631,7 @@
             ],
             "event": "Author attempts to accept selected changes.",
             "expected": [
-                "The stale warning is visible above the diff in scrolling review content, review controls remain reachable, and acceptance is disabled"
+                "The stale warning and recovery actions are visible in the review header, review controls remain reachable, and acceptance actions are absent"
             ],
             "forbidden": [
                 "Applying AI-generated text to a newer Article Revision"
