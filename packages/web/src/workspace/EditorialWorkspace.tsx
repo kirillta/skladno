@@ -110,6 +110,9 @@ function useAuthorSkills(client: EditorialWorkspaceClient) {
         const skills = await client.listAssistantSkills();
         setAuthorSkills(skills.filter((skill) => skill.reference.source === "author"));
     }, [client]);
+    useEffect(() => {
+        void loadAuthorSkills();
+    }, [loadAuthorSkills]);
 
     return { authorSkills, loadAuthorSkills };
 }

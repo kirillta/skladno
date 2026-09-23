@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useIntl } from "react-intl";
-import type { AssistantCapabilityActivity, AssistantMessage, FactCheckClaimPreview, GeneralSettings } from "@skladno/shared";
+import type { AssistantCapabilityActivity, AssistantMessage, AssistantSkillSummary, FactCheckClaimPreview, GeneralSettings } from "@skladno/shared";
 import { Banner, Button, IconButton } from "../../../ui/primitives.js";
 import { ChevronDownIcon } from "../../../ui/icons.js";
 import { FactCheckClaims } from "./FactCheckClaims.js";
@@ -21,6 +21,7 @@ interface AssistantTimelineData {
     generalSettings: GeneralSettings;
     elapsedDuration: string;
     hasUnavailableAiConnection?: boolean;
+    authorSkills?: readonly AssistantSkillSummary[];
 }
 
 
@@ -34,7 +35,7 @@ interface AssistantTimelineActions {
 
 
 export function AssistantTimeline({ data, actions }: { data: AssistantTimelineData; actions: AssistantTimelineActions }) {
-    const { state, factCheckClaims, collapsed, assistantMessages, streamedMessage } = data;
+    const { state, factCheckClaims, collapsed, assistantMessages, streamedMessage, authorSkills = [] } = data;
     const intl = useIntl();
     const timeline = useRef<HTMLDivElement>(null);
     const followStream = useRef(true);
@@ -46,6 +47,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
     const greeting = assistantMessages?.find((item) => item.template === "greeting" || item.kind === "greeting");
     const lastMessage = assistantMessages?.at(-1);
     const skillByRequest = new Map(assistantMessages?.flatMap((item) => item.requestId && item.skillId ? [[item.requestId, item.skillId] as const] : []));
+    const skillNames = new Map(authorSkills.map((skill) => [skill.reference.id, skill.name] as const));
     const completedFactCheck = state === "idle" ? [...(assistantMessages ?? [])].reverse().find((item) => item.responseKind === "findings_prepared") : undefined;
 
     useLayoutEffect(() => {
@@ -120,7 +122,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
 
     return <div data-focus-area="assistant-chat" onKeyDown={handleChatKeyDown} className="relative min-h-0 flex-1">
         <div ref={timeline} data-focus-area-entry tabIndex={0} onScroll={trackScroll} className="h-full select-text cursor-default space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "assistant.response.conversation" })} aria-live="polite">
-            <AssistantTimelineMessages data={data} actions={actions} greeting={greeting} lastMessage={lastMessage} completedFactCheck={completedFactCheck} skillByRequest={skillByRequest} />
+            <AssistantTimelineMessages data={data} actions={actions} greeting={greeting} lastMessage={lastMessage} completedFactCheck={completedFactCheck} skillByRequest={skillByRequest} skillNames={skillNames} />
             <AssistantTimelineStatus data={data} actions={actions} />
         </div>
         {!atEnd && <IconButton className="absolute bottom-3 left-1/2 -translate-x-1/2 shadow-raised" variant="secondary" round label={intl.formatMessage({ id: "assistant.scrollToEnd" })} title={intl.formatMessage({ id: "assistant.scrollToEnd" })} onClick={scrollToEnd}>
@@ -130,20 +132,21 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
 }
 
 
-function AssistantTimelineMessages({ data, actions, greeting, lastMessage, completedFactCheck, skillByRequest }: {
+function AssistantTimelineMessages({ data, actions, greeting, lastMessage, completedFactCheck, skillByRequest, skillNames }: {
     data: AssistantTimelineData;
     actions: AssistantTimelineActions;
     greeting: AssistantMessage | undefined;
     lastMessage: AssistantMessage | undefined;
     completedFactCheck: AssistantMessage | undefined;
     skillByRequest: Map<string, string>;
+    skillNames: ReadonlyMap<string, string>;
 }) {
     const { assistantMessages, factCheckClaims, streamedMessage, generalSettings } = data;
     const { openView, openSkillFolder, onRetry, onCheckpoint } = actions;
     const intl = useIntl();
     return <>
-        {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} />}
-        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={onCheckpoint} generalSettings={generalSettings} skillByRequest={skillByRequest} />)}
+        {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />}
+        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={onCheckpoint} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />)}
         {streamedMessage?.responseKind
             ? <AssistantTimelineMessage message={{ id: streamedMessage.id, articleId: streamedMessage.articleId, role: "assistant", kind: "response", status: streamedMessage.status, responseKind: streamedMessage.responseKind, createdAt: streamedMessage.createdAt, updatedAt: streamedMessage.createdAt }} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />
             : streamedMessage?.blocks.length ? <article className="p-0"><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "assistant.heading" })}</p>{streamedMessage.blocks.map((block, index) => <AssistantMarkdown key={`${streamedMessage.id}-${index}`} content={block} />)}</article> : null}
