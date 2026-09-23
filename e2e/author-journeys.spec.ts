@@ -159,6 +159,8 @@ test("the Assistant Lexical composer supports skill tags and slash invocation", 
     await createArticle(page);
 
     const composer = page.getByRole("combobox", { name: "Editorial guidance" });
+    await page.locator("[data-assistant-composer-actions]").click({ position: { x: 8, y: 18 } });
+    await expect(composer).toBeFocused();
     await composer.fill("Keep this focused /nar");
     await expect(composer).toHaveAttribute("aria-expanded", "true");
     await expect(composer).toHaveAttribute("aria-activedescendant", "assistant-skill-option-narrative_draft");

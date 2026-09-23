@@ -88,6 +88,22 @@ describe("Editorial Assistant composer", () => {
         expect(authorSkill.querySelector("svg path")?.getAttribute("d")).not.toBe(builtIn.querySelector("svg path")?.getAttribute("d"));
     });
 
+    it("focuses the composer when clicking empty space beside its actions", async () => {
+        const user = userEvent.setup();
+        const panel = renderLocalized(<EditorialAssistantPanel state="idle" message="" onRequest={vi.fn().mockResolvedValue(undefined)} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} assistantMessages={[]} />);
+        const composer = within(panel.container).getByRole("combobox", { name: getMessage("assistant.guidance") });
+        const actionRow = panel.container.querySelector("[data-assistant-composer-actions]");
+
+        expect(actionRow).toBeTruthy();
+        await user.click(actionRow!);
+        expect(document.activeElement).toBe(composer);
+
+        const quickActions = within(panel.container).getByRole("button", { name: getMessage("assistant.quickActions") });
+        await user.click(quickActions);
+        expect(document.activeElement).toBe(quickActions);
+        expect(within(panel.container).getByRole("listbox", { name: getMessage("assistant.quickActions") })).toBeTruthy();
+    });
+
     it("undoes composer edits with Ctrl+Z", async () => {
         const user = userEvent.setup();
         const execute = vi.fn();

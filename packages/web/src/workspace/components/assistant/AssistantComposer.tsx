@@ -70,7 +70,10 @@ export function AssistantComposer({ state, picker, actions }: { state: Assistant
 
     return <footer data-focus-area="assistant-composer" className="shrink-0 border-t border-border px-5 py-4">
         {incompatibleSelectionSkill && <p className="mb-2 text-xs text-muted" role="status">{intl.formatMessage({ id: "assistant.selectionSkillUnavailable" })}</p>}
-        <div className="flex min-h-25 flex-col rounded-control border border-border bg-surface-raised px-3 py-2">
+        <div className="flex min-h-25 flex-col rounded-control border border-border bg-surface-raised px-3 py-2" onClick={(event) => {
+            if (event.target instanceof Element && !event.target.closest("button, [contenteditable]"))
+                composer.current?.focus();
+        }}>
             <div className="min-h-11 flex-1">
                 <SelectionChip selection={selection} clearSelection={clearSelection} />
                 <LexicalComposer initialConfig={{ namespace: "skladno-assistant-composer", nodes: [AssistantSkillTagNode], onError: () => undefined }}>
@@ -81,7 +84,7 @@ export function AssistantComposer({ state, picker, actions }: { state: Assistant
                     <PickerKeyboard quickActionsOpen={quickActionsOpen} availableSkills={availableSkills} activeSkillIndex={activeSkillIndex} setQuickActionsOpen={setQuickActionsOpen} selectSkill={selectSkill} focusQuickAction={focusQuickAction} />
                 </LexicalComposer>
             </div>
-            <div className="flex shrink-0 justify-end">
+            <div data-assistant-composer-actions className="flex shrink-0 justify-end">
                 {requestState === "streaming"
                     ? <IconButton variant="danger" title={getShortcutHint(intl.formatMessage({ id: "assistant.stop" }), KEY_BINDING_COMMAND.STOP_EDITORIAL_REQUEST, shortcutOverrides)} label={intl.formatMessage({ id: "assistant.stop" })} onClick={onCancel}><StopIcon className="size-4" /></IconButton>
                     : <div className="flex">
