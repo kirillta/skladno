@@ -217,6 +217,33 @@ export class FileAssistantSkillSource {
     }
 
 
+    recoverPending(directory: string, previousFiles?: Readonly<Record<string, string>>, nextFiles?: Readonly<Record<string, string>>): void {
+        const root = this.packageRoot(directory);
+        if (existsSync(root)) {
+            const current = this.readFiles(directory);
+            if (!current || (!this.sameFiles(current, previousFiles) && !this.sameFiles(current, nextFiles)))
+                throw new Error("skill_package_conflict");
+        }
+
+        rmSync(root, { recursive: true, force: true });
+        rmSync(`${root}.staged`, { recursive: true, force: true });
+        rmSync(`${root}.previous`, { recursive: true, force: true });
+        if (previousFiles)
+            this.install({ directory, files: previousFiles });
+        else
+            this.refresh();
+    }
+
+
+    private sameFiles(left: Readonly<Record<string, string>>, right?: Readonly<Record<string, string>>): boolean {
+        if (!right)
+            return false;
+
+        return Object.keys(left).length === Object.keys(right).length
+            && Object.entries(left).every(([path, content]) => right[path] === content);
+    }
+
+
     private loadByDirectory(directory: string): AssistantSkillPackage | undefined {
         const reserved = this.reserved();
         const parsed = parseSkillPackage({ root: this.packageRoot(directory), source: this.id, reservedIds: reserved.ids, reservedNames: reserved.names });

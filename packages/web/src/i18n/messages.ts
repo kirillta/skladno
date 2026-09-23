@@ -812,6 +812,8 @@ export const messages = {
     "skills.validation.invalid_reference": "This Skill names a reference Skladno can't use. Keep references as Markdown files inside its references folder and within the supported size.",
     "skills.validation.unsafe_package": "Skladno can't use this Skill package because it includes an unsupported file or file location. Keep only SKILL.md and declared Markdown references.",
     "skills.validation.package_too_large": "This Skill package is too large for Skladno to load. Shorten its instructions or reference files, then try again.",
+    "errors.skillPackageConflict": "This Skill changed or its ID or name is already in use. Reload the Skill list, choose an available name if needed, then try again.",
+    "errors.skillRevisionNotFound": "That Skill Revision is unavailable. List the Skill's Revisions again and choose one that exists.",
 } as const;
 
 export type MessageId = keyof typeof messages;

@@ -7,4 +7,5 @@ export interface AuthorSkillRevisionStore {
     list(skillId: string): readonly AuthorSkillRevision[];
     readFiles(input: { skillId: string; revisionId: string }): Readonly<Record<string, string>> | undefined;
     removeCreated(revision: AuthorSkillRevision): void;
+    removeForRequest(skillId: string, requestId: string): void;
 }

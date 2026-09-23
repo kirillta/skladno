@@ -25,6 +25,8 @@ import { AssistantSkillCatalog } from "./assistant/skills/assistant-skill-catalo
 import { createBuiltInSkillSource } from "./assistant/skills/create-built-in-skill-source.js";
 import { FileAssistantSkillSource } from "./assistant/skills/file-assistant-skill-source.js";
 import { AuthorSkillService } from "./assistant/skills/author-skill-service.js";
+import { SkillChangeJournal } from "../infrastructure/skills/skill-change-journal.js";
+import { dirname } from "node:path";
 import { loadBuiltInSkillPackages } from "./assistant/skills/built-in-skill-packages.js";
 import type { EditorialService } from "./editorial/editorial-service.js";
 import type { TelemetryObserver } from "./telemetry/telemetry-observer.js";
@@ -67,15 +69,17 @@ export function createApplicationServices({ stores, settings, integration = {}, 
         ? new EditorialCapabilityCatalog(articleService, stores.artifacts, publishing, integration.editorial, styleCorpusService, factChecks, stores.assistant)
         : undefined;
     const builtIns = createBuiltInSkillSource(skillPackages.builtInRoot);
-    const authorSkills = skillPackages.authorRoot
-        ? new FileAssistantSkillSource("author", skillPackages.authorRoot, () => {
+    const authorRoot = skillPackages.authorRoot;
+    const authorSkills = authorRoot
+        ? new FileAssistantSkillSource("author", authorRoot, () => {
             const packages = loadBuiltInSkillPackages(skillPackages.builtInRoot);
             return { ids: packages.map((skillPackage) => skillPackage.reference.id), names: packages.map((skillPackage) => skillPackage.name) };
         })
         : undefined;
-    const authorSkillService = authorSkills && skillPackages.revisions
-        ? new AuthorSkillService(authorSkills, skillPackages.revisions)
+    const authorSkillService = authorSkills && authorRoot && skillPackages.revisions
+        ? new AuthorSkillService(authorSkills, skillPackages.revisions, new SkillChangeJournal(dirname(authorRoot)))
         : undefined;
+    authorSkillService?.recoverIncompleteChanges((requestId) => stores.assistant.getRequest(requestId)?.status === "completed");
     const skills = new AssistantSkillCatalog(authorSkills ? [builtIns, authorSkills] : [builtIns]);
     const preparation = new AssistantRequestPreparation({ articles: stores.articles, assistant: stores.assistant, styleCorpus: stores.styleCorpus, engines: stores.engines, capabilities, skills });
     const capabilityLoop = new AssistantCapabilityLoop({ assistant: stores.assistant, engines: stores.engines, capabilities, authorSkills: authorSkillService, skills, conversationHistory: (articleId, limit) => getConversationHistory(stores.assistant, articleId, limit) });

@@ -72,6 +72,26 @@ test("a Skill tool call followed by an incomplete run installs nothing", async (
     }, true, verifier);
 });
 
+test("invalid Skill metadata returns a correction and installs nothing", async () => {
+    const engine = new CapabilityFixtureEngine([
+        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "invalid-skill", text: "Created the Skill." },
+    ], "create_author_skill", {
+        skillId: "invalid-skill",
+        skillMarkdown: "---\nid: Invalid Skill\nname: Invalid Skill\ndescription: Review writing.\nversion: 1\n---\n# Review\n",
+    });
+    const verifier: AssistantActionIntentVerifier = { verify: async () => true };
+    await withService(engine, async (baseUrl, repositories, services) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "invalid-skill", authorMessage: "Create a reusable Skill.", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+        assert.match(await response.text(), /"errorCode":"skill_invalid_metadata"/);
+        assert.equal(services.skills.discover().some((skill) => skill.reference.id === "invalid-skill"), false);
+    }, true, verifier);
+});
+
 
 test("a failed completion rolls back the created Skill and its history", async () => {
     let changeRevision: () => void = () => undefined;

@@ -253,8 +253,13 @@ export class AssistantService {
             if (createdSkill)
                 this.capabilityLoop.rollbackCreatedSkill(createdSkill);
 
+            this.capabilityLoop.finishPendingSkill(request.requestId);
+
             throw error;
         }
+
+        if (createdSkill)
+            this.capabilityLoop.finishPendingSkill(request.requestId);
 
         if (!request.usesCapabilityLoop && request.operation)
             yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity: { summary: getActivityForEditorialOperation(request.operation), status: "completed" } };

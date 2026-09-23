@@ -3,6 +3,7 @@ import type { AuthorSkillRevisionStore } from "./author-skill-revision-store.js"
 import type { AuthorSkillRevision } from "./author-skill-revision.js";
 import type { AuthorSkillChange } from "./author-skill-change.js";
 import type { CommittedAuthorSkillChange } from "./committed-author-skill-change.js";
+import type { AuthorSkillChangeJournal, PendingSkillChange } from "./author-skill-change-journal.js";
 import { FileAssistantSkillSource } from "./file-assistant-skill-source.js";
 
 
@@ -10,6 +11,7 @@ export class AuthorSkillService {
     constructor(
         private readonly source: FileAssistantSkillSource,
         private readonly revisions: AuthorSkillRevisionStore,
+        private readonly journal?: AuthorSkillChangeJournal,
     ) { }
 
 
@@ -65,6 +67,22 @@ export class AuthorSkillService {
 
     commitChange(change: AuthorSkillChange, requestId: string): CommittedAuthorSkillChange {
         this.validateChange(change);
+        const previousFiles = this.readCurrent(change.skillId)?.files;
+        const nextFiles = this.filesForChange(change, previousFiles);
+        const pending = { requestId, skillId: change.skillId, ...(previousFiles ? { previousFiles } : {}), ...(nextFiles ? { nextFiles } : {}) };
+        this.journal?.begin(pending);
+        try {
+            return this.commitValidatedChange(change, requestId);
+        } catch (error) {
+            if (this.journal)
+                this.recoverRequest(pending);
+
+            throw error;
+        }
+    }
+
+
+    private commitValidatedChange(change: AuthorSkillChange, requestId: string): CommittedAuthorSkillChange {
         if (change.kind === "create")
             return { kind: "create", revision: this.create({ skillId: change.skillId, files: { "SKILL.md": change.skillMarkdown }, requestId }) };
 
@@ -88,6 +106,48 @@ export class AuthorSkillService {
         }
 
         return { kind: change.kind, revision, ...(previousFiles ? { previousFiles } : {}) };
+    }
+
+
+    finishChange(requestId: string): void {
+        this.journal?.remove(requestId);
+    }
+
+
+    recoverIncompleteChanges(isCompleted: (requestId: string) => boolean): void {
+        for (const pending of this.journal?.list() ?? []) {
+            if (isCompleted(pending.requestId)) {
+                this.finishChange(pending.requestId);
+                continue;
+            }
+
+            this.recoverRequest(pending);
+        }
+    }
+
+
+    private recoverRequest(pending: PendingSkillChange): void {
+        this.source.recoverPending(pending.skillId, pending.previousFiles, pending.nextFiles);
+        this.revisions.removeForRequest(pending.skillId, pending.requestId);
+        this.finishChange(pending.requestId);
+    }
+
+
+    private filesForChange(change: AuthorSkillChange, previousFiles?: Readonly<Record<string, string>>): Readonly<Record<string, string>> | undefined {
+        if (change.kind === "create")
+            return { "SKILL.md": change.skillMarkdown };
+
+        if (change.kind === "delete")
+            return undefined;
+
+        if (change.kind === "update")
+            return this.withNextVersion(change.skillId, { ...previousFiles, "SKILL.md": change.skillMarkdown });
+
+        const files = this.readRevision(change.skillId, change.revisionId);
+        if (!files)
+            throw new Error("skill_revision_not_found");
+
+        return previousFiles ? this.withNextVersion(change.skillId, files) : this.withVersionAfterHistory(change.skillId, files);
     }
 
 

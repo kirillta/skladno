@@ -158,6 +158,15 @@ export class AssistantCapabilityLoop {
     }
 
 
+    finishPendingSkill(requestId: string): void {
+        try {
+            this.dependencies.authorSkills?.finishChange(requestId);
+        } catch {
+            // Startup recovery reads the SQLite request status and removes the pending record.
+        }
+    }
+
+
     private async executeCapability(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<unknown> {
         signal.throwIfAborted();
         if (!isValidatedEditorialCapabilityCall(definition.id, input))

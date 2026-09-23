@@ -35,6 +35,14 @@ export const APPLICATION_ERROR = {
     ASSISTANT_CHECKPOINT_INVALID: "assistant_checkpoint_invalid",
     ASSISTANT_RETRY_INVALID: "assistant_retry_invalid",
     ASSISTANT_COORDINATOR_FAILED: "assistant_coordinator_failed",
+    SKILL_INVALID_FRONTMATTER: "skill_invalid_frontmatter",
+    SKILL_INVALID_METADATA: "skill_invalid_metadata",
+    SKILL_INVALID_INSTRUCTIONS: "skill_invalid_instructions",
+    SKILL_INVALID_REFERENCE: "skill_invalid_reference",
+    SKILL_UNSAFE_PACKAGE: "skill_unsafe_package",
+    SKILL_PACKAGE_TOO_LARGE: "skill_package_too_large",
+    SKILL_PACKAGE_CONFLICT: "skill_package_conflict",
+    SKILL_REVISION_NOT_FOUND: "skill_revision_not_found",
 } as const;
 
 export type ApplicationErrorCode = typeof APPLICATION_ERROR[keyof typeof APPLICATION_ERROR];

@@ -144,6 +144,13 @@ export class SkillRevisionStore implements AuthorSkillRevisionStore {
     }
 
 
+    removeForRequest(skillIdValue: string, requestId: string): void {
+        const created = this.list(skillIdValue).find((revision) => revision.requestId === requestId);
+        if (created)
+            this.removeCreated(created);
+    }
+
+
     private skillRoot(skillIdValue: string): string {
         return join(resolve(this.dataRoot), "skill-history", skillIdValue);
     }

@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import { SkillRevisionStore } from "../../../infrastructure/skills/skill-revision-store.js";
+import { SkillChangeJournal } from "../../../infrastructure/skills/skill-change-journal.js";
 import { AuthorSkillService } from "./author-skill-service.js";
 import { FileAssistantSkillSource } from "./file-assistant-skill-source.js";
 import { builtInSkillSource } from "./built-in-skill-source.js";
@@ -98,6 +99,70 @@ test("chat revision preserves bundled references", () => {
 
         assert.equal(service.readCurrent("author-review")?.files["references/guide.md"], "Keep citations.");
         assert.equal(service.listRevisions("author-review").length, 2);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test("startup recovers a Skill write only when its chat request did not complete", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-skill-journal-"));
+    const source = new FileAssistantSkillSource("author", join(root, "skills"));
+    const revisions = new SkillRevisionStore(root);
+    const journal = new SkillChangeJournal(root);
+    const service = new AuthorSkillService(source, revisions, journal);
+    try {
+        service.commitChange({ kind: "create", skillId: "author-review", skillMarkdown: initial }, "incomplete-request");
+        assert.ok(service.readCurrent("author-review"));
+
+        new AuthorSkillService(source, revisions, journal).recoverIncompleteChanges(() => false);
+        assert.equal(service.readCurrent("author-review"), undefined);
+        assert.equal(service.listRevisions("author-review").length, 0);
+        assert.deepEqual(journal.list(), []);
+
+        service.commitChange({ kind: "create", skillId: "author-review", skillMarkdown: initial }, "completed-request");
+        new AuthorSkillService(source, revisions, journal).recoverIncompleteChanges((requestId) => requestId === "completed-request");
+        assert.ok(service.readCurrent("author-review"));
+        assert.equal(service.listRevisions("author-review").length, 1);
+        assert.deepEqual(journal.list(), []);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test("startup restores an earlier Skill after an interrupted replacement", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-skill-journal-"));
+    const source = new FileAssistantSkillSource("author", join(root, "skills"));
+    const revisions = new SkillRevisionStore(root);
+    const journal = new SkillChangeJournal(root);
+    const service = new AuthorSkillService(source, revisions, journal);
+    try {
+        service.create({ skillId: "author-review", files: { "SKILL.md": initial } });
+        const expectedHash = service.readCurrent("author-review")!.contentHash;
+        service.commitChange({ kind: "update", skillId: "author-review", skillMarkdown: revised, expectedHash }, "incomplete-request");
+        new AuthorSkillService(source, revisions, journal).recoverIncompleteChanges(() => false);
+
+        assert.equal(service.readCurrent("author-review")?.files["SKILL.md"], initial);
+        assert.equal(service.listRevisions("author-review").length, 1);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("recovery leaves an unrelated external Skill edit untouched", () => {
+    const root = mkdtempSync(join(tmpdir(), "skladno-skill-journal-"));
+    const source = new FileAssistantSkillSource("author", join(root, "skills"));
+    const revisions = new SkillRevisionStore(root);
+    const journal = new SkillChangeJournal(root);
+    const service = new AuthorSkillService(source, revisions, journal);
+    const external = initial.replace("# Review", "# External review");
+    try {
+        service.commitChange({ kind: "create", skillId: "author-review", skillMarkdown: initial }, "incomplete-request");
+        writeFileSync(join(root, "skills", "author-review", "SKILL.md"), external);
+
+        assert.throws(() => service.recoverIncompleteChanges(() => false), /skill_package_conflict/);
+        assert.equal(service.readCurrent("author-review")?.files["SKILL.md"], external);
+        assert.equal(journal.list().length, 1);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

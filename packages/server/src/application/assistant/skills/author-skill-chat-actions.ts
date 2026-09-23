@@ -9,6 +9,31 @@ import type { CommittedAuthorSkillChange } from "./committed-author-skill-change
 import type { AuthorSkillService } from "./author-skill-service.js";
 
 
+function skillWriteError(error: unknown): never {
+    if (!(error instanceof Error))
+        throw error;
+
+    const codes: Record<string, typeof APPLICATION_ERROR[keyof typeof APPLICATION_ERROR]> = {
+        invalid_frontmatter: APPLICATION_ERROR.SKILL_INVALID_FRONTMATTER,
+        invalid_metadata: APPLICATION_ERROR.SKILL_INVALID_METADATA,
+        invalid_instructions: APPLICATION_ERROR.SKILL_INVALID_INSTRUCTIONS,
+        invalid_reference: APPLICATION_ERROR.SKILL_INVALID_REFERENCE,
+        unsafe_package: APPLICATION_ERROR.SKILL_UNSAFE_PACKAGE,
+        package_too_large: APPLICATION_ERROR.SKILL_PACKAGE_TOO_LARGE,
+        skill_package_conflict: APPLICATION_ERROR.SKILL_PACKAGE_CONFLICT,
+        skill_revision_conflict: APPLICATION_ERROR.SKILL_PACKAGE_CONFLICT,
+        skill_revision_not_found: APPLICATION_ERROR.SKILL_REVISION_NOT_FOUND,
+    };
+
+    const code = codes[error.message];
+    if (!code)
+        throw error;
+
+    const status = code === APPLICATION_ERROR.SKILL_PACKAGE_CONFLICT ? HTTP_STATUS.CONFLICT : HTTP_STATUS.BAD_REQUEST;
+    throw new ApplicationServiceError(code, status);
+}
+
+
 export class AuthorSkillChatActions {
     constructor(
         private readonly skills: AuthorSkillService,
@@ -34,7 +59,13 @@ export class AuthorSkillChatActions {
         if (!change)
             return undefined;
 
-        const committed = this.skills.commitChange(change, request.requestId);
+        let committed: CommittedAuthorSkillChange;
+        try {
+            committed = this.skills.commitChange(change, request.requestId);
+        } catch (error) {
+            skillWriteError(error);
+        }
+
         request.pendingSkillChange = undefined;
         return committed;
     }
@@ -60,7 +91,12 @@ export class AuthorSkillChatActions {
         if (request.pendingSkillChange)
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-        this.skills.validateChange(change);
+        try {
+            this.skills.validateChange(change);
+        } catch (error) {
+            skillWriteError(error);
+        }
+
         request.pendingSkillChange = change;
         return { skillId: change.skillId, status: "pending" };
     }
