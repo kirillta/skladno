@@ -1,7 +1,8 @@
 import type { RefObject } from "react";
 import { useIntl } from "react-intl";
+import { isBuiltInSkillId } from "@skladno/shared";
 import { Button } from "../../../ui/primitives.js";
-import { ChevronDownIcon, CloseIcon } from "../../../ui/icons.js";
+import { AssistantIcon, ChevronDownIcon, CloseIcon, UserIcon } from "../../../ui/icons.js";
 import type { AssistantSelectionScope } from "../../state/assistant-messages-state.js";
 import { getSelectionPreview } from "./assistant-messages.js";
 import type { AssistantSkillPickerControls } from "./assistant-composer-plugins.js";
@@ -19,10 +20,13 @@ export function AssistantQuickActions({ context, picker }: { context: { state: "
     const { quickActionsOpen, availableSkills, activeSkillIndex, setQuickActionsOpen, setActiveSkillIndex, selectSkill, focusQuickAction } = picker;
     const intl = useIntl();
     return <div className="relative">
-        {quickActionsOpen && <div id="assistant-skill-picker" className="absolute bottom-full right-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised" role="listbox" aria-label={intl.formatMessage({ id: "assistant.quickActions" })}>
-            {availableSkills.length
-                ? availableSkills.map((skill, index) => <SkillOption key={skill.id} skill={skill} index={index} state={state} activeSkillIndex={activeSkillIndex} selectSkill={selectSkill} focusQuickAction={focusQuickAction} setQuickActionsOpen={setQuickActionsOpen} composer={composer} />)
-                : <p className="px-3 py-2 text-xs text-muted" role="status">{intl.formatMessage({ id: "assistant.skillNoMatches" })}</p>}
+        {quickActionsOpen && <div className="absolute bottom-full right-0 z-10 mb-2 w-56 rounded-panel border border-border bg-surface-raised p-1 shadow-raised">
+            <div id="assistant-skill-picker" role="listbox" aria-label={intl.formatMessage({ id: "assistant.quickActions" })} aria-describedby="assistant-skill-picker-hint">
+                {availableSkills.length
+                    ? availableSkills.map((skill, index) => <SkillOption key={skill.id} skill={skill} index={index} state={state} activeSkillIndex={activeSkillIndex} selectSkill={selectSkill} focusQuickAction={focusQuickAction} setQuickActionsOpen={setQuickActionsOpen} composer={composer} />)
+                    : <p className="px-3 py-2 text-xs text-muted" role="status">{intl.formatMessage({ id: "assistant.skillNoMatches" })}</p>}
+            </div>
+            <p id="assistant-skill-picker-hint" className="border-t border-border px-3 py-2 text-xs text-muted">{intl.formatMessage({ id: "assistant.customSkillsHint" })}</p>
         </div>}
         {quickActionsOpen && <span className="sr-only" aria-live="polite">{availableSkills.length ? intl.formatMessage({ id: "assistant.skillResultCount" }, { count: availableSkills.length }) : intl.formatMessage({ id: "assistant.skillNoMatches" })}</span>}
         <Button className="inline-grid size-8 place-items-center rounded-l-none border-l-0 !p-0" variant="quiet" aria-label={intl.formatMessage({ id: "assistant.quickActions" })} aria-expanded={quickActionsOpen} aria-controls={quickActionsOpen ? "assistant-skill-picker" : undefined} aria-haspopup="listbox" onClick={() => setQuickActionsOpen((open) => {
@@ -57,7 +61,10 @@ function SkillOption({ skill, index, state, activeSkillIndex, selectSkill, focus
             setQuickActionsOpen(false);
             composer.current?.focus();
         }
-    }}>{skill.name}</Button>;
+    }}>
+        {isBuiltInSkillId(skill.id) ? <AssistantIcon className="mr-2 size-4 shrink-0 text-muted" /> : <UserIcon className="mr-2 size-4 shrink-0 text-muted" />}
+        {skill.name}
+    </Button>;
 }
 
 

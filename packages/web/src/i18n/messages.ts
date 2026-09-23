@@ -204,6 +204,7 @@ export const messages = {
     "assistant.duration.seconds": "{seconds, plural, one {# second} other {# seconds}}",
     "assistant.duration.minutesAndSeconds": "{minutes, plural, one {# minute} other {# minutes}} {seconds, plural, one {# second} other {# seconds}}",
     "assistant.quickActions": "Quick actions",
+    "assistant.customSkillsHint": "Type / to find your custom Skills.",
     "assistant.quickActionSelected": "Quick actions: {operation} selected",
     "assistant.selectedSkill": "Selected skill: {skill}",
     "assistant.removeSkill": "Remove {skill}",

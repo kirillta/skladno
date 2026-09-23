@@ -1,3 +1,4 @@
+import { createRef } from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +7,7 @@ import { defaultGeneralSettings } from "@skladno/shared";
 import { App } from "../App.js";
 import { getMessage } from "../i18n/test-message.js";
 import { createArticleFixture, createFakeClient, renderLocalized, resetWorkspaceTestEnvironment, TestEditorialAssistantPanel as EditorialAssistantPanel } from "./EditorialWorkspace.test-utils.js";
+import { AssistantQuickActions } from "./components/assistant/AssistantComposerActions.js";
 
 
 // Product scenarios: workspace.assistant.quick-action
@@ -34,6 +36,8 @@ describe("Editorial Assistant composer", () => {
         expect(panelScope.getByRole("option", { name: "Fact checking" })).toBeTruthy();
         expect(panelScope.getByRole("option", { name: "Style review" })).toBeTruthy();
         expect(panelScope.getByRole("option", { name: "Translation" })).toBeTruthy();
+        expect(panelScope.getByRole("listbox", { name: getMessage("assistant.quickActions") }).getAttribute("aria-describedby")).toBe("assistant-skill-picker-hint");
+        expect(panelScope.getByText(getMessage("assistant.customSkillsHint"))).toBeTruthy();
 
         await user.click(panelScope.getByRole("option", { name: getMessage("assistant.skill.translation.label") }));
         expect(onRequest).not.toHaveBeenCalled();
@@ -61,8 +65,27 @@ describe("Editorial Assistant composer", () => {
         const panelScope = within(panel.container);
 
         await user.click(panelScope.getByRole("button", { name: getMessage("assistant.quickActions") }));
-        expect(panelScope.getByRole("option", { name: "Skill Creator" })).toBeTruthy();
+        const builtIn = panelScope.getByRole("option", { name: "Skill Creator" });
+        expect(builtIn.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
         expect(panelScope.queryByRole("option", { name: "House style" })).toBeNull();
+    });
+
+    it("distinguishes built-in and Author Skills in the picker", () => {
+        const picker = renderLocalized(<AssistantQuickActions context={{ state: "idle", composer: createRef<HTMLDivElement>() }} picker={{
+            quickActionsOpen: true,
+            availableSkills: [{ id: "skill_creator", name: "Skill Creator" }, { id: "house-style", name: "House style" }],
+            activeSkillIndex: 0,
+            setQuickActionsOpen: vi.fn(),
+            setActiveSkillIndex: vi.fn(),
+            selectSkill: vi.fn(),
+            focusQuickAction: vi.fn(),
+        }} />);
+        const options = within(picker.container);
+        const builtIn = options.getByRole("option", { name: "Skill Creator" });
+        const authorSkill = options.getByRole("option", { name: "House style" });
+
+        expect(authorSkill.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+        expect(authorSkill.querySelector("svg path")?.getAttribute("d")).not.toBe(builtIn.querySelector("svg path")?.getAttribute("d"));
     });
 
     it("undoes composer edits with Ctrl+Z", async () => {
