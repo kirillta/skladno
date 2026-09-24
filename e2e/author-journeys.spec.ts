@@ -224,21 +224,26 @@ test("Assistant skill tags delete as single Lexical tokens", async ({ page }) =>
     await page.getByRole("button", { name: "Quick actions" }).click();
     await page.getByRole("option", { name: "Flow and clarity" }).click();
     await expect(page.getByLabel("Remove Flow and clarity")).toBeVisible();
+    await expect(page.locator("[data-assistant-composer] [data-lexical-text]")).toHaveText(" ");
+    await page.keyboard.press("Backspace");
+    await expect(page.getByLabel("Remove Flow and clarity")).toBeVisible();
     await page.keyboard.press("Backspace");
     await expect(page.getByLabel("Remove Flow and clarity")).toHaveCount(0);
 });
 
 
-test("Assistant skill tags delete from their preceding boundary", async ({ page }) => {
+test("Assistant skill tags can be removed without clearing guidance", async ({ page }) => {
     await page.goto("/");
     await createArticle(page);
 
     await page.getByRole("button", { name: "Quick actions" }).click();
     await page.getByRole("option", { name: "Flow and clarity" }).click();
     await expect(page.getByLabel("Remove Flow and clarity")).toBeVisible();
-    await page.keyboard.press("ArrowLeft");
-    await page.keyboard.press("Delete");
+    await expect(page.locator("[data-assistant-composer] [data-lexical-text]")).toHaveText(" ");
+    await page.keyboard.type("keep writing");
+    await page.getByLabel("Remove Flow and clarity").click();
     await expect(page.getByLabel("Remove Flow and clarity")).toHaveCount(0);
+    await expect(page.locator("[data-assistant-composer]")).toContainText("keep writing");
 });
 
 
