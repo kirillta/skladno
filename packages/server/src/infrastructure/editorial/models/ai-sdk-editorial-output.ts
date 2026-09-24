@@ -26,7 +26,7 @@ export function mapStyleReview(value: z.infer<typeof styleReviewSchema>, profile
         ...profile.rules.split("\n").filter(Boolean).map((_rule, index) => `global-rule-${index + 1}`),
         ...articleRules.split("\n").filter(Boolean).map((_rule, index) => `article-rule-${index + 1}`)
     ]);
-    
+
     if (value.findings.some((finding) => finding.traitIds.some((traitId) => !availableTraits.has(traitId))))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
