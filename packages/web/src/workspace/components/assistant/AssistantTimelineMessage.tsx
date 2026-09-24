@@ -125,7 +125,7 @@ function AuthorMessageContent({ visible, content, selectionText, skillOffset, sk
     if (!visible || (!content && !selectionText && skillOffset === undefined))
         return null;
 
-    return <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">
+    return <p className="whitespace-pre-wrap text-sm leading-6 text-ink">
         {selectionText && <span className="mx-1 inline-flex h-5 max-w-[calc(100%-0.5rem)] items-center align-middle rounded-full border border-border bg-surface-raised px-1.5 text-xs font-semibold text-muted" aria-label={intl.formatMessage({ id: "assistant.articleSelection" })} title={selectionText}>
             <span className="relative -top-px max-w-48 truncate">{getSelectionPreview(selectionText)}</span>
         </span>}
@@ -165,7 +165,7 @@ function AssistantMessageActions({ message, skillId, view, openView, openSkillFo
 
 function AssistantMessageMetadata({ message, dateTime, skillId, skillNames, intl, onCheckpoint, actions }: { message: AssistantMessage; dateTime: string; skillId: string | undefined; skillNames: ReadonlyMap<string, string>; intl: Intl; onCheckpoint?: (messageId: string) => void; actions?: ReactNode }) {
     if (message.role === "author")
-        return <div className="mt-2 flex items-center justify-end gap-2">
+        return <div className="pointer-events-none mt-2 flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
             <time className="text-xs text-muted">{dateTime}</time>
             {message.requestId && <IconButton className="!size-6" variant="secondary" label={intl.formatMessage({ id: "assistant.checkpoint.accessible" }, { time: dateTime })} title={intl.formatMessage({ id: "assistant.checkpoint.action" })} onClick={() => onCheckpoint?.(message.id)}>
                 <UndoIcon className="size-3" />
@@ -213,11 +213,13 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
     const intl = useIntl();
     const { authorMessage, skillId, label, messageContent, skillOffset, selectionText, view, handoffOwnsContent, dateTime } = getMessagePresentation(message, generalSettings, skillByRequest, skillNames, intl);
 
-    return <article className={authorMessage ? "ml-6 rounded-panel border border-brand/45 bg-brand-soft p-3" : "p-0"} aria-label={authorMessage ? label : undefined}>
-        {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
-        <AuthorMessageContent visible={authorMessage} content={messageContent} selectionText={selectionText} skillOffset={skillOffset} skillId={skillId} skillNames={skillNames} intl={intl} />
-        <AssistantMessageContent message={message} visible={!authorMessage} content={messageContent} handoffOwnsContent={handoffOwnsContent} />
-        {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
+    return <article className={authorMessage ? "group ml-6 mt-2" : "p-0"} aria-label={authorMessage ? label : undefined}>
+        <div className={authorMessage ? "rounded-panel border border-brand/45 bg-brand-soft p-2" : undefined}>
+            {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
+            <AuthorMessageContent visible={authorMessage} content={messageContent} selectionText={selectionText} skillOffset={skillOffset} skillId={skillId} skillNames={skillNames} intl={intl} />
+            <AssistantMessageContent message={message} visible={!authorMessage} content={messageContent} handoffOwnsContent={handoffOwnsContent} />
+            {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
+        </div>
         <AssistantMessageMetadata message={message} dateTime={dateTime} skillId={skillId} skillNames={skillNames} intl={intl} onCheckpoint={onCheckpoint} actions={<AssistantMessageActions message={message} skillId={skillId} view={view} openView={openView} openSkillFolder={openSkillFolder} onRetry={onRetry} intl={intl} />} />
     </article>;
 }

@@ -86,6 +86,10 @@ describe("AssistantTimelineMessage", () => {
 
         const action = within(view.container).getByRole("button", { name: /Edit from Author message at/ });
         expect(action.previousElementSibling?.textContent).toBe("2026-01-01, 00:00");
+        const bubble = screen.getByText("Author message").closest("div.rounded-panel");
+        expect(bubble?.classList.contains("p-2")).toBe(true);
+        expect(screen.getByText("Author message").classList.contains("mt-1")).toBe(false);
+        expect(bubble?.querySelector("time, button")).toBeNull();
         await userEvent.setup().click(action);
         expect(onCheckpoint).toHaveBeenCalledWith("author-message");
     });

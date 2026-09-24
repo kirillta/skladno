@@ -121,7 +121,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
 
 
     return <div data-focus-area="assistant-chat" onKeyDown={handleChatKeyDown} className="relative min-h-0 flex-1">
-        <div ref={timeline} data-focus-area-entry tabIndex={0} onScroll={trackScroll} className="h-full select-text cursor-default space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "assistant.response.conversation" })} aria-live="polite">
+        <div ref={timeline} data-focus-area-entry tabIndex={0} onScroll={trackScroll} className="h-full select-text cursor-default flex flex-col gap-2 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "assistant.response.conversation" })} aria-live="polite">
             <AssistantTimelineMessages data={data} actions={actions} greeting={greeting} lastMessage={lastMessage} completedFactCheck={completedFactCheck} skillByRequest={skillByRequest} skillNames={skillNames} />
             <AssistantTimelineStatus data={data} actions={actions} />
         </div>
