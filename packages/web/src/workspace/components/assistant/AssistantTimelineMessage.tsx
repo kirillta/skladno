@@ -1,8 +1,9 @@
 import { BUILT_IN_SKILL, isBuiltInSkillId, type AssistantMessage, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
-import { Button, IconButton } from "../../../ui/primitives.js";
-import { StatusIcon, UndoIcon } from "../../../ui/icons.js";
+import { IconButton } from "../../../ui/primitives.js";
+import { ArticleIcon, FolderIcon, StatusIcon, UndoIcon, UpdateIcon } from "../../../ui/icons.js";
 import { formatDateTime } from "../../../i18n/formatting.js";
 import { useIntl } from "react-intl";
+import type { ReactNode } from "react";
 import { getSelectionPreview, responseMessages, skillMessages } from "./assistant-messages.js";
 import { FactCheckClaims } from "./FactCheckClaims.js";
 import { AssistantMarkdown } from "./AssistantMarkdown.js";
@@ -148,19 +149,21 @@ function AssistantMessageContent({ message, visible, content, handoffOwnsContent
 
 
 function AssistantMessageActions({ message, skillId, view, openView, openSkillFolder, onRetry, intl }: { message: AssistantMessage; skillId: string | undefined; view: AssistantView | undefined; openView?: AssistantViewHandler; openSkillFolder?: (requestId: string) => void; onRetry?: (requestId: string) => void; intl: Intl }) {
-    return <>
-        {view && message.status !== "rejected" && <Button className="mt-3" variant="secondary" onClick={() => openView?.(view)}>
-            {getViewLabel(view, intl)}
-        </Button>}
-        {message.role !== "author" && skillId === BUILT_IN_SKILL.SKILL_CREATOR && message.status === "completed" && message.requestId && openSkillFolder && <Button className="mt-3" variant="secondary" onClick={() => openSkillFolder(message.requestId!)}>
-            {intl.formatMessage({ id: "assistant.openSkillFolder" })}
-        </Button>}
-        {(message.status === "failed" || message.status === "cancelled") && message.requestId && onRetry && <Button className="mt-3" variant="secondary" onClick={() => onRetry(message.requestId!)}>{intl.formatMessage({ id: "assistant.retry" })}</Button>}
-    </>;
+    const canReview = Boolean(view && message.status !== "rejected");
+    const canOpenFolder = Boolean(message.role !== "author" && skillId === BUILT_IN_SKILL.SKILL_CREATOR && message.status === "completed" && message.requestId && openSkillFolder);
+    const canRetry = Boolean((message.status === "failed" || message.status === "cancelled") && message.requestId && onRetry);
+    if (!canReview && !canOpenFolder && !canRetry)
+        return null;
+
+    return <div className="flex shrink-0 gap-1">
+        {canReview && view && <IconButton className="!size-6" variant="secondary" label={getViewLabel(view, intl)} title={getViewLabel(view, intl)} onClick={() => openView?.(view)}><ArticleIcon className="size-3" /></IconButton>}
+        {canOpenFolder && message.requestId && <IconButton className="!size-6" variant="secondary" label={intl.formatMessage({ id: "assistant.openSkillFolder" })} title={intl.formatMessage({ id: "assistant.openSkillFolder" })} onClick={() => openSkillFolder?.(message.requestId!)}><FolderIcon className="size-3" /></IconButton>}
+        {canRetry && message.requestId && <IconButton className="!size-6" variant="secondary" label={intl.formatMessage({ id: "assistant.retry" })} title={intl.formatMessage({ id: "assistant.retry" })} onClick={() => onRetry?.(message.requestId!)}><UpdateIcon className="size-3" /></IconButton>}
+    </div>;
 }
 
 
-function AssistantMessageMetadata({ message, dateTime, skillId, skillNames, intl, onCheckpoint }: { message: AssistantMessage; dateTime: string; skillId: string | undefined; skillNames: ReadonlyMap<string, string>; intl: Intl; onCheckpoint?: (messageId: string) => void }) {
+function AssistantMessageMetadata({ message, dateTime, skillId, skillNames, intl, onCheckpoint, actions }: { message: AssistantMessage; dateTime: string; skillId: string | undefined; skillNames: ReadonlyMap<string, string>; intl: Intl; onCheckpoint?: (messageId: string) => void; actions?: ReactNode }) {
     if (message.role === "author")
         return <div className="mt-2 flex items-center justify-end gap-2">
             <time className="text-xs text-muted">{dateTime}</time>
@@ -173,13 +176,16 @@ function AssistantMessageMetadata({ message, dateTime, skillId, skillNames, intl
     const skillUsedLabel = skillId ? intl.formatMessage({ id: "assistant.skillUsed" }) : undefined;
     const skillTitle = skillId ? getSkillLabel(skillId, intl, skillNames) : undefined;
 
-    return <p className="mt-2 flex items-center gap-1 text-xs text-muted">
-        <StatusIcon className="size-3" tone={getStatusTone(message.status)} />
-        <span>{statusLabel}</span>
-        {skillUsedLabel && <span className="before:mr-1 before:content-['\00b7']" title={skillTitle}>{skillUsedLabel}</span>}
-        <span aria-hidden="true" className="before:content-['\00b7']" />
-        <time>{dateTime}</time>
-    </p>;
+    return <div className="mt-2 flex items-center gap-2">
+        <p className="flex min-w-0 flex-wrap items-center gap-1 text-xs text-muted">
+            <StatusIcon className="size-3" tone={getStatusTone(message.status)} />
+            <span>{statusLabel}</span>
+            {skillUsedLabel && <span className="before:mr-1 before:content-['\00b7']" title={skillTitle}>{skillUsedLabel}</span>}
+            <span aria-hidden="true" className="before:content-['\00b7']" />
+            <time>{dateTime}</time>
+        </p>
+        {actions}
+    </div>;
 }
 
 
@@ -212,7 +218,6 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
         <AuthorMessageContent visible={authorMessage} content={messageContent} selectionText={selectionText} skillOffset={skillOffset} skillId={skillId} skillNames={skillNames} intl={intl} />
         <AssistantMessageContent message={message} visible={!authorMessage} content={messageContent} handoffOwnsContent={handoffOwnsContent} />
         {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
-        <AssistantMessageActions message={message} skillId={skillId} view={view} openView={openView} openSkillFolder={openSkillFolder} onRetry={onRetry} intl={intl} />
-        <AssistantMessageMetadata message={message} dateTime={dateTime} skillId={skillId} skillNames={skillNames} intl={intl} onCheckpoint={onCheckpoint} />
+        <AssistantMessageMetadata message={message} dateTime={dateTime} skillId={skillId} skillNames={skillNames} intl={intl} onCheckpoint={onCheckpoint} actions={<AssistantMessageActions message={message} skillId={skillId} view={view} openView={openView} openSkillFolder={openSkillFolder} onRetry={onRetry} intl={intl} />} />
     </article>;
 }

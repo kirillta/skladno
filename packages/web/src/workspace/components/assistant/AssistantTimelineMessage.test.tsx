@@ -45,7 +45,11 @@ describe("AssistantTimelineMessage", () => {
         expect(scope.getByText("Completed")).toBeTruthy();
         expect(scope.getByText(/Used skill/).getAttribute("title")).toBe("Talking points");
         expect(scope.queryByText("A long proposal owned by the Proposal View.")).toBeNull();
-        await userEvent.setup().click(scope.getByRole("button", { name: "Review Proposal" }));
+        const review = scope.getByRole("button", { name: "Review Proposal" });
+        expect(review.classList.contains("!size-6")).toBe(true);
+        expect(review.parentElement?.classList.contains("ml-auto")).toBe(false);
+        expect(review.parentElement?.parentElement?.querySelector("time")?.textContent).toBe("2026-01-01, 00:00");
+        await userEvent.setup().click(review);
         expect(openView).toHaveBeenCalledWith("proposal");
         expect(scope.getByText("2026-01-01, 00:00")).toBeTruthy();
     });
