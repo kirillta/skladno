@@ -99,7 +99,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
         if (!element)
             return;
 
-        element.scrollTop = element.scrollHeight;
+        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
         followStream.current = true;
         setAtEnd(true);
     }
