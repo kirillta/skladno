@@ -15,6 +15,37 @@ import { AssistantQuickActions } from "./components/assistant/AssistantComposerA
 describe("Editorial Assistant composer", () => {
     afterEach(resetWorkspaceTestEnvironment);
 
+    it("restores an unsent message only for its Article and clears it after sending", async () => {
+        const user = userEvent.setup();
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+        const panel = (articleId: string) => <EditorialAssistantPanel articleId={articleId} state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} assistantMessages={[]} />;
+        const first = renderLocalized(panel("one"));
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.quickActions") }));
+        await user.click(screen.getByRole("option", { name: getMessage("assistant.skill.talkingPoints.label") }));
+        await waitFor(() => expect(localStorage.getItem("skladno-assistant-composer:one")).toContain("talking_points"));
+        first.unmount();
+
+        const second = renderLocalized(panel("two"));
+        expect(screen.getByRole("combobox", { name: getMessage("assistant.guidance") }).textContent).toBe("");
+        second.unmount();
+
+        renderLocalized(panel("one"));
+        const restored = screen.getByRole("combobox", { name: getMessage("assistant.guidance") });
+        await waitFor(() => expect(restored.textContent).toContain("Talking points"));
+        expect(onRequest).not.toHaveBeenCalled();
+        await user.click(screen.getByRole("button", { name: getMessage("assistant.send") }));
+        await waitFor(() => expect(localStorage.getItem("skladno-assistant-composer:one")).toBeNull());
+    });
+
+    it("restores saved Author text without sending it", async () => {
+        const onRequest = vi.fn().mockResolvedValue(undefined);
+        localStorage.setItem("skladno-assistant-composer:one", JSON.stringify({ guidance: "Unsent direction", skillOffset: 0 }));
+        renderLocalized(<EditorialAssistantPanel articleId="one" state="idle" message="" onRequest={onRequest} onCancel={vi.fn()} collapsed={false} setCollapsed={vi.fn()} assistantMessages={[]} />);
+
+        await waitFor(() => expect(screen.getByRole("combobox", { name: getMessage("assistant.guidance") }).textContent).toBe("Unsent direction"));
+        expect(onRequest).not.toHaveBeenCalled();
+    });
+
     it("inserts a Quick action before sending an editorial request", async () => {
         const user = userEvent.setup();
         const onRequest = vi.fn().mockResolvedValue(undefined);

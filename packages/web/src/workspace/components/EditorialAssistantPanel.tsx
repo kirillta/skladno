@@ -40,6 +40,7 @@ function useElapsedDuration(state: AssistantState, intl: IntlShape) {
 
 
 interface EditorialAssistantData {
+    articleId?: string;
     state: AssistantState;
     message: string;
     errorDetails?: string;
@@ -81,11 +82,11 @@ interface EditorialAssistantLayout {
 
 
 export function EditorialAssistantPanel({ data, actions, layout }: { data: EditorialAssistantData; actions: EditorialAssistantActions; layout: EditorialAssistantLayout }) {
-    const { state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, checkpointPreview, restoredComposer, authorSkills } = data;
+    const { articleId, state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, checkpointPreview, restoredComposer, authorSkills } = data;
     const { onRequest, onCancel, onRetry, loadAuthorSkills, dispatcher, shortcutOverrides, openView, openSkillFolder, clearSelection, openSettings, previewCheckpoint, restoreCheckpoint, closeCheckpoint } = actions;
     const { collapsed, setCollapsed } = layout;
     const intl = useIntl();
-    const composerState = useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, authorSkills, loadAuthorSkills, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {}, restoredComposer });
+    const composerState = useAssistantComposer({ articleId, intl, state, onRequest, onCancel, translationLanguages, authorSkills, loadAuthorSkills, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {}, restoredComposer });
     const elapsedDuration = useElapsedDuration(state, intl);
     const checkpointOrigin = useRef<HTMLElement>();
     const openCheckpoint = useCallback((messageId: string) => {

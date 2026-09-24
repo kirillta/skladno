@@ -90,7 +90,9 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
                 navigation={{ selectArticle: workspace.selectArticle, setCollapsed: layout.setLibraryCollapsed, createBlank, openStyleProfile: () => layout.setView("style-profile"), openSettings, dispatcher, shortcutOverrides }}
                 mutations={{ remove: workspace.remove, setArchived: workspace.setArchived, setPinned: workspace.setPinned, reorderPinned: workspace.reorderPinned, notifyError }} />,
             assistant: <EditorialAssistantPanel
+                key={workspace.selectedArticle?.id}
                 data={{
+                    articleId: workspace.selectedArticle?.id,
                     state: assistant.state,
                     message: assistant.message,
                     errorDetails: assistant.errorDetails,

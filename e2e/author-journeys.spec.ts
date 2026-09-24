@@ -217,6 +217,23 @@ test("the Assistant Lexical composer supports skill tags and slash invocation", 
 });
 
 
+test("unsent Assistant text survives reload for its Article and clears when erased", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+    const composer = page.getByRole("combobox", { name: "Editorial guidance" });
+    await composer.fill("Unsent direction");
+    await expect(composer).toContainText("Unsent direction");
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("skladno-assistant-composer:")).length)).toBe(1);
+
+    await page.reload();
+    await expect(composer).toContainText("Unsent direction");
+    await composer.fill("");
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("skladno-assistant-composer:")).length)).toBe(0);
+    await page.reload();
+    await expect(composer).toBeEmpty();
+});
+
+
 test("Assistant skill tags delete as single Lexical tokens", async ({ page }) => {
     await page.goto("/");
     await createArticle(page);
