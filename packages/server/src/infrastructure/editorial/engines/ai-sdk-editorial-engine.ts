@@ -79,6 +79,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
             const modelMessage = createEditorialMessages({
                 operation: request.operation,
                 article: getBoundedArticleContext(request.article),
+                articleTitle: request.articleTitle,
                 articleSelection: request.articleSelection,
                 authorContext: request.authorContext,
                 skillId: request.skillId,
@@ -194,6 +195,8 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                 messages: createEditorialMessages({
                     operation: request.operation,
                     article: getBoundedArticleContext(request.article),
+                    articleTitle: request.articleTitle,
+                    articleSelection: request.articleSelection,
                     authorContext: request.authorContext,
                     styleProfile: request.styleProfile,
                     articleStyleRules: request.articleStyleRules,

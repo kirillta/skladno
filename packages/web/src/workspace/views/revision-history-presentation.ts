@@ -8,7 +8,15 @@ export function getCharacterCount(content: string): number {
 }
 
 
-export function getProvenanceMessageId(revision: Pick<ArticleRevision, "provenance" | "restoredFromRevisionId">): "revisions.initial" | "revisions.author" | "revisions.acceptedProposal" | "revisions.restored" | "revisions.saved" {
+export function getProvenanceMessageId(revision: Pick<ArticleRevision, "provenance" | "restoredFromRevisionId"> & Partial<Pick<ArticleRevision, "id">>, revisions?: readonly ArticleRevision[]): "revisions.empty" | "revisions.initial" | "revisions.author" | "revisions.acceptedProposal" | "revisions.restored" | "revisions.saved" {
+    if (revisions?.[0]?.provenance.kind === REVISION_PROVENANCE_KIND.INITIAL && revisions[0].content.length === 0) {
+        if (revision.id === revisions[0].id)
+            return "revisions.empty";
+
+        if (revision.id === revisions[1]?.id)
+            return "revisions.initial";
+    }
+
     if (revision.restoredFromRevisionId || revision.provenance.kind === REVISION_PROVENANCE_KIND.RESTORE)
         return "revisions.restored";
 
@@ -49,11 +57,11 @@ export function getRestoredRevisionTarget(revisions: ArticleRevision[], revision
 export type RevisionTimelineKind = "initial" | "manual" | "ai" | "restored";
 
 
-export function getTimelineKind(revision: ArticleRevision): RevisionTimelineKind {
+export function getTimelineKind(revision: ArticleRevision, revisions?: readonly ArticleRevision[]): RevisionTimelineKind {
     if (revision.restoredFromRevisionId || revision.provenance.kind === REVISION_PROVENANCE_KIND.RESTORE)
         return "restored";
 
-    if (revision.provenance.kind === REVISION_PROVENANCE_KIND.INITIAL)
+    if (getProvenanceMessageId(revision, revisions) === "revisions.initial")
         return "initial";
 
     if (revision.provenance.kind === REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL)

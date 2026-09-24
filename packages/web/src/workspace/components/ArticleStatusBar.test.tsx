@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { PUBLISH_LIMIT_PROFILE, publishLimitProfiles, type ArticleRevision } from "@skladno/shared";
 import { messages } from "../../i18n/messages.js";
 import { ArticleStatusBar } from "./ArticleStatusBar.js";
@@ -11,6 +11,8 @@ const revisions: ArticleRevision[] = [
     { id: "revision-one", articleId: "article-one", content: "Initial text", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" } },
     { id: "revision-two", articleId: "article-one", content: "Current text", createdAt: "2026-01-02T00:00:00.000Z", description: "Current saved draft", provenance: { kind: "author-draft" } },
 ];
+
+afterEach(cleanup);
 
 
 it("moves between status controls with Left and Right", () => {
@@ -94,4 +96,31 @@ it("lists Revisions newest first by description and opens restore confirmation f
 
     expect(selectForRestore).toHaveBeenCalledWith(revisions[0]);
     expect(screen.queryByRole("menu", { name: "Saved Revisions" })).toBeNull();
+});
+
+
+it("labels the first saved text as the initial Revision in the status menu", async () => {
+    const user = userEvent.setup();
+    const emptyRevisions: ArticleRevision[] = [
+        { ...revisions[0]!, content: "" },
+        { ...revisions[1]!, description: undefined },
+    ];
+    render(<IntlProvider locale="en" messages={messages}><ArticleStatusBar
+        revisionNumber={2}
+        revisionSelector={{ revisions: emptyRevisions, currentRevisionId: "revision-two", selectForRestore: vi.fn() }}
+        language="en"
+        setLanguage={vi.fn().mockResolvedValue(undefined)}
+        saveState="saved"
+        length={{ count: 100, state: "within-limit" }}
+        profile={publishLimitProfiles.find((profile) => profile.id === PUBLISH_LIMIT_PROFILE.NO_RESTRICTIONS)!}
+        customProfiles={[]}
+        setProfile={vi.fn().mockResolvedValue(undefined)}
+        copyMarkdown={vi.fn().mockResolvedValue(true)}
+        copyPlainText={vi.fn().mockResolvedValue(true)}
+    /></IntlProvider>);
+
+    await user.click(screen.getByRole("button", { name: /Current Revision v2/ }));
+    const items = within(screen.getByRole("menu", { name: "Saved Revisions" })).getAllByRole("menuitem");
+    expect(items[0]?.textContent).toContain("Initial Revision");
+    expect(items[1]?.textContent).toContain("Empty Revision");
 });

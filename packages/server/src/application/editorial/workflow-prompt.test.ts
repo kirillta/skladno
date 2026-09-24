@@ -12,19 +12,23 @@ function getPromptText(input: Parameters<typeof createEditorialMessages>[0]): st
 }
 
 
-test("thesis-to-narrative prompt preserves author control and supplied theses", async () => {
-    const prompt = getPromptText({
+test("direct thesis composition uses the Narrative Draft prompt", async () => {
+    const input = {
         operation: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
         article: "Current draft.",
+        articleTitle: "Saved title",
         authorContext: "Explain Kubernetes retries for senior engineers.",
-    });
+    };
+    const prompt = getPromptText(input);
 
-    assert.match(prompt, /For thesis-to-narrative work/);
+    assert.deepEqual(createEditorialMessages(input), createEditorialMessages({ ...input, skillId: BUILT_IN_SKILL.NARRATIVE_DRAFT }));
     assert.match(prompt, /Explain Kubernetes retries/);
     assert.match(prompt, /Current draft/);
     assert.match(prompt, /Preserve the author's claims, numbers, URLs, code, technical terms/);
     assert.match(prompt, /Do not invent facts, examples, or sources/);
     assert.ok(prompt.includes(authorControlInstruction));
+    assert.match(prompt, /Current Article title:\nSaved title/);
+    assert.match(prompt, /title is managed separately/i);
 });
 
 
@@ -77,6 +81,7 @@ test("narrative-draft prompt follows Author direction, selection priority, and t
     const prompt = getPromptText({
         operation: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
         article: "Selected theses.",
+        articleTitle: "Existing Article title",
         articleSelection: true,
         authorContext: "Add one simple example.",
         skillId: BUILT_IN_SKILL.NARRATIVE_DRAFT,
@@ -91,8 +96,24 @@ test("narrative-draft prompt follows Author direction, selection priority, and t
     assert.match(prompt, /not a hard limit on your response/);
     assert.match(prompt, /unchanged surrounding Article currently contains 800 characters/);
     assert.match(prompt, /Output format:\nSelected-passage Markdown replacement/);
+    assert.match(prompt, /title is managed separately/i);
+    assert.doesNotMatch(prompt, /Current Article title:\nExisting Article title/);
     assert.match(prompt, /not the Article's author/);
     assert.match(prompt, /Prefer straightforward structure and ideas/);
+});
+
+test("full Narrative Draft uses the existing Article title without adding it to the body", async () => {
+    const prompt = getPromptText({
+        operation: EDITORIAL_OPERATION.THESIS_TO_NARRATIVE,
+        article: "Draft body.",
+        articleTitle: "Existing Article title",
+        authorContext: "",
+        skillId: BUILT_IN_SKILL.NARRATIVE_DRAFT,
+    });
+
+    assert.match(prompt, /Current Article title:\nExisting Article title/);
+    assert.match(prompt, /title is managed separately/i);
+    assert.match(prompt, /do not include a title or title label in the proposed body/i);
 });
 
 
@@ -100,6 +121,7 @@ test("flow-revision prompt asks for a full-text proposal rather than feedback", 
     const prompt = getPromptText({
         operation: EDITORIAL_OPERATION.FLOW_REVISION,
         article: "Current draft.",
+        articleTitle: "Saved title",
         authorContext: "Keep the opening sentence.",
     });
 
@@ -107,6 +129,8 @@ test("flow-revision prompt asks for a full-text proposal rather than feedback", 
     assert.match(prompt, /complete Article/);
     assert.match(prompt, /do not summarize it or turn it into feedback/);
     assert.match(prompt, /Keep the opening sentence/);
+    assert.match(prompt, /Current Article title:\nSaved title/);
+    assert.match(prompt, /do not include a title or title label in the proposed body/i);
 });
 
 
@@ -114,6 +138,7 @@ test("style review sends a compact profile rather than raw corpus text", async (
     const prompt = getPromptText({
         operation: EDITORIAL_OPERATION.STYLE_REVIEW,
         article: "Current draft.",
+        articleTitle: "Saved title",
         authorContext: "",
         styleProfile: {
             version: 1,
@@ -131,6 +156,20 @@ test("style review sends a compact profile rather than raw corpus text", async (
     assert.match(prompt, /Supplied corpus traits/);
     assert.match(prompt, /paragraphing: Compact paragraphs/);
     assert.match(prompt, /No additional author guidance was provided/);
+    assert.match(prompt, /Current Article title:\nSaved title/);
+    assert.match(prompt, /do not include a title or title label in the proposed body/i);
+});
+
+test("selected editorial text does not send the surrounding Article title", () => {
+    const prompt = getPromptText({
+        operation: EDITORIAL_OPERATION.FLOW_REVISION,
+        article: "Selected passage.",
+        articleTitle: "Private surrounding title",
+        articleSelection: true,
+        authorContext: "",
+    });
+
+    assert.doesNotMatch(prompt, /Private surrounding title/);
 });
 
 
@@ -145,6 +184,7 @@ test("translation prompt names the target language and preserves protected token
 
     assert.match(prompt, /Target language:\nSpanish/);
     assert.match(prompt, /Translate its title and body in the same response/);
+    assert.match(prompt, /title field.*translation field.*body only/i);
     assert.match(prompt, /Deploy Node\.js safely/);
     assert.match(prompt, /copy every token exactly once/);
     assert.match(prompt, /\[\[SKLADNO_PROTECTED_0\]\]/);

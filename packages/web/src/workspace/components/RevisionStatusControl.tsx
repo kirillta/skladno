@@ -33,8 +33,8 @@ export function RevisionStatusControl({ revisionNumber, revisionSelector, open, 
                 {[...availableRevisions].reverse().map((revision) => {
                     const itemRevisionNumber = availableRevisions.indexOf(revision) + 1;
                     const current = revision.id === revisionSelector.currentRevisionId;
-                    const description = revision.description ?? intl.formatMessage({ id: getProvenanceMessageId(revision) });
-                    const kind = getTimelineKind(revision);
+                    const description = revision.description ?? intl.formatMessage({ id: getProvenanceMessageId(revision, availableRevisions) });
+                    const kind = getTimelineKind(revision, availableRevisions);
                     const TimelineIcon = timelineIcons[kind];
 
                     return <button key={revision.id} className="flex min-h-9 w-full items-center gap-2 rounded-control px-2 py-1 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" role="menuitem" aria-label={[description, current ? intl.formatMessage({ id: "revisions.current" }) : undefined].filter(Boolean).join(", ")} onClick={() => {

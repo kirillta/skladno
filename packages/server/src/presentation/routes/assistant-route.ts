@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { APPLICATION_ERROR, HTTP_STATUS, resolveBuiltInSkillId, type AssistantCheckpointDraftMode, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, HTTP_STATUS, type AssistantCheckpointDraftMode, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
 
 import { AssistantService, type PreparedAssistantRequest } from "../../application/assistant/assistant-service.js";
 import type { AssistantSkillCatalog } from "../../application/assistant/skills/assistant-skill-catalog.js";
@@ -33,11 +33,6 @@ function getAssistantRequestScope(value: unknown): AssistantRequestScope {
 }
 
 
-function resolveExplicitSkillId(explicitSkillValue: string | undefined): string | undefined {
-    return explicitSkillValue && (resolveBuiltInSkillId(explicitSkillValue) ?? explicitSkillValue);
-}
-
-
 function readSkillOffset(body: Record<string, unknown>, explicitSkillValue: string | undefined): number | undefined {
     const skillOffset = body.skillOffset === undefined ? undefined : Number(body.skillOffset);
     if (skillOffset !== undefined && (!explicitSkillValue || !Number.isInteger(skillOffset) || skillOffset < 0 || skillOffset > String(body.authorMessage ?? "").length))
@@ -49,7 +44,7 @@ function readSkillOffset(body: Record<string, unknown>, explicitSkillValue: stri
 
 function readAssistantSkillOptions(body: Record<string, unknown>): { explicitSkillId?: string; skillOffset?: number } {
     const explicitSkillValue = body.explicitSkillId === undefined ? undefined : parseString(body.explicitSkillId, "explicitSkillId");
-    const explicitSkillId = resolveExplicitSkillId(explicitSkillValue);
+    const explicitSkillId = explicitSkillValue;
     const skillOffset = readSkillOffset(body, explicitSkillValue);
 
     return { ...(explicitSkillId ? { explicitSkillId } : {}), ...(skillOffset === undefined ? {} : { skillOffset }) };

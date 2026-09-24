@@ -136,7 +136,7 @@ test("an Author Skill persists its Article result as a Proposal instead of chat"
     const engine: EditorialEngine = {
         async *stream(request): AsyncIterable<EditorialEngineEvent> {
             assert.equal(request.article, "Original Article");
-            assert.equal(request.articleTitle, undefined);
+            assert.equal(request.articleTitle, "Draft");
             assert.match(request.authorContext, /Rewrite without em dashes/);
             yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "proposal", text: "Rephrased without em dashes." };
         },

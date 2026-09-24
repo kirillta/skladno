@@ -1,4 +1,4 @@
-export { BUILT_IN_SKILL, builtInSkillScopeCompatibility, builtInSkills, isBuiltInSkillId, legacyEditorialOperationSkillMap, resolveBuiltInSkillId } from "./assistant-skills.js";
+export { BUILT_IN_SKILL, builtInSkillScopeCompatibility, builtInSkills, editorialOperationSkillMap, isBuiltInSkillId } from "./assistant-skills.js";
 export type { BuiltInSkillId } from "./assistant-skills.js";
 import type { AssistantEvent } from "./assistant-events.js";
 import type { Article } from "../articles/article/article.js";

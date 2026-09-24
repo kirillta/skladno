@@ -1,4 +1,4 @@
-import { AI_PROVIDER, parseAiModelPreferenceId, resolveBuiltInSkillId, type AiConnection, type AiProvider, type AppModelPreference, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
+import { AI_PROVIDER, editorialOperationSkillMap, parseAiModelPreferenceId, type AiConnection, type AiProvider, type AppModelPreference, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
 
 import type { EditorialEngineResolver } from "../../../application/editorial/engine/editorial-engine-resolver.js";
 import type { EditorialEngine } from "../../../application/editorial/engine/editorial-engine.js";
@@ -43,7 +43,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
 
 
     resolve(operation: EditorialOperation, assistantSkillId?: BuiltInSkillId): EditorialEngine | undefined {
-        const skillId = assistantSkillId ?? resolveBuiltInSkillId(operation);
+        const skillId = assistantSkillId ?? editorialOperationSkillMap[operation];
         const preferences = this.resolvePreferences();
         const connection = this.resolveModel((skillId ? preferences.skillOverrides[skillId] : undefined) || preferences.defaultModel || this.config.aiModel);
         if (!connection)

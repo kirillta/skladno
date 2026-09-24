@@ -69,7 +69,7 @@ function ProposalDiff({ original, proposed, layout, decision = "pending", highli
 }
 
 
-function ProposalReviewHeader({ presentation, counts, stale, accepted, displayMode, setDisplayMode, highlightChanges, setHighlightChanges, rejectAll, acceptAll, applyAccepted, acceptanceBlocked, allResolved, moveChange }: {
+function ProposalReviewHeader({ presentation, counts, stale, accepted, displayMode, setDisplayMode, highlightChanges, setHighlightChanges, rejectAll, acceptAll, applyAccepted, acceptanceBlocked, allResolved, moveChange, openWrite, openAssistant, dismissProposal }: {
     presentation: ReturnType<typeof presentProposalReview>;
     counts: { pending: number; accepted: number; rejected: number };
     stale: boolean;
@@ -84,31 +84,43 @@ function ProposalReviewHeader({ presentation, counts, stale, accepted, displayMo
     acceptanceBlocked: boolean;
     allResolved: boolean;
     moveChange: (direction: -1 | 1) => void;
+    openWrite: () => void;
+    openAssistant: () => void;
+    dismissProposal: () => void;
 }) {
     const intl = useIntl();
     const disabled = accepted || stale || presentation.changes.length === 0;
     return <header className="shrink-0 border-b border-border bg-canvas">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-start justify-between gap-3 px-5 py-4">
-            <div>
-                <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.proposalReview" })}</h2>
-                <p className="mt-1 text-xs text-muted">{stale || !presentation.reliable
-                    ? intl.formatMessage({ id: "views.proposalWhole" }, { changes: presentation.changes.length })
-                    : intl.formatMessage({ id: "views.proposalCounts" }, { total: presentation.changes.length, pending: counts.pending, accepted: counts.accepted, rejected: counts.rejected })}</p>
+        <div className="mx-auto w-full max-w-6xl px-5 py-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.proposalReview" })}</h2>
+                    <p className="mt-1 text-xs text-muted">{stale || !presentation.reliable
+                        ? intl.formatMessage({ id: "views.proposalWhole" }, { changes: presentation.changes.length })
+                        : intl.formatMessage({ id: "views.proposalCounts" }, { total: presentation.changes.length, pending: counts.pending, accepted: counts.accepted, rejected: counts.rejected })}</p>
+                </div>
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                    {presentation.changes.length > 0 && <div className="flex items-center gap-1" aria-label={intl.formatMessage({ id: "views.proposalDisplayMode" })}>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalSideBySide" })} title={intl.formatMessage({ id: "views.proposalSideBySide" })} aria-pressed={displayMode === "side-by-side"} onClick={() => setDisplayMode("side-by-side")}><SideBySideIcon /></IconButton>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalStacked" })} title={intl.formatMessage({ id: "views.proposalStacked" })} aria-pressed={displayMode === "stacked"} onClick={() => setDisplayMode("stacked")}><StackedDiffIcon /></IconButton>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalHighlight" })} title={intl.formatMessage({ id: "views.proposalHighlight" })} aria-pressed={highlightChanges} onClick={() => setHighlightChanges((current) => !current)}><HighlightChangesIcon /></IconButton>
+                    </div>}
+                    {presentation.changes.length > 1 && <nav className="flex gap-2" aria-label={intl.formatMessage({ id: "views.changeNavigation" })}>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.previousChange" })} title={intl.formatMessage({ id: "views.previousChange" })} onClick={() => moveChange(-1)}><ChevronRightIcon className="size-4 rotate-180" /></IconButton>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.nextChange" })} title={intl.formatMessage({ id: "views.nextChange" })} onClick={() => moveChange(1)}><ChevronRightIcon className="size-4" /></IconButton>
+                    </nav>}
+                    {stale ? <>
+                        <Button variant="secondary" onClick={openWrite}>{intl.formatMessage({ id: "views.reviewCurrentArticle" })}</Button>
+                        <Button variant="secondary" onClick={openAssistant}>{intl.formatMessage({ id: "views.regenerateInAssistant" })}</Button>
+                        <Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button>
+                    </> : <>
+                        <Button variant="secondary" disabled={disabled} onClick={rejectAll}>{intl.formatMessage({ id: "views.rejectAll" })}</Button>
+                        <Button variant="secondary" disabled={disabled} onClick={() => void acceptAll()}>{intl.formatMessage({ id: "views.acceptAll" })}</Button>
+                        <Button disabled={acceptanceBlocked || !allResolved || counts.accepted === 0} onClick={() => void applyAccepted()}>{intl.formatMessage({ id: "views.applyAccepted" })}</Button>
+                    </>}
+                </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-                {presentation.changes.length > 0 && <div className="flex items-center gap-1" aria-label={intl.formatMessage({ id: "views.proposalDisplayMode" })}>
-                    <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalSideBySide" })} title={intl.formatMessage({ id: "views.proposalSideBySide" })} aria-pressed={displayMode === "side-by-side"} onClick={() => setDisplayMode("side-by-side")}><SideBySideIcon /></IconButton>
-                    <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalStacked" })} title={intl.formatMessage({ id: "views.proposalStacked" })} aria-pressed={displayMode === "stacked"} onClick={() => setDisplayMode("stacked")}><StackedDiffIcon /></IconButton>
-                    <IconButton variant="quiet" label={intl.formatMessage({ id: "views.proposalHighlight" })} title={intl.formatMessage({ id: "views.proposalHighlight" })} aria-pressed={highlightChanges} onClick={() => setHighlightChanges((current) => !current)}><HighlightChangesIcon /></IconButton>
-                </div>}
-                {presentation.changes.length > 1 && <nav className="flex gap-2" aria-label={intl.formatMessage({ id: "views.changeNavigation" })}>
-                    <IconButton variant="quiet" label={intl.formatMessage({ id: "views.previousChange" })} title={intl.formatMessage({ id: "views.previousChange" })} onClick={() => moveChange(-1)}><ChevronRightIcon className="size-4 rotate-180" /></IconButton>
-                    <IconButton variant="quiet" label={intl.formatMessage({ id: "views.nextChange" })} title={intl.formatMessage({ id: "views.nextChange" })} onClick={() => moveChange(1)}><ChevronRightIcon className="size-4" /></IconButton>
-                </nav>}
-                <Button variant="secondary" disabled={disabled} onClick={rejectAll}>{intl.formatMessage({ id: "views.rejectAll" })}</Button>
-                <Button variant="secondary" disabled={disabled} onClick={() => void acceptAll()}>{intl.formatMessage({ id: "views.acceptAll" })}</Button>
-                <Button disabled={acceptanceBlocked || !allResolved || counts.accepted === 0} onClick={() => void applyAccepted()}>{intl.formatMessage({ id: "views.applyAccepted" })}</Button>
-            </div>
+            {stale && <p role="alert" className="mt-2 text-xs text-warning">{intl.formatMessage({ id: "views.proposalStale" })}</p>}
         </div>
     </header>;
 }
@@ -166,20 +178,10 @@ export function ProposalReviewView({ data, actions }: { data: ProposalReviewData
     const allResolved = counts.pending === 0 && presentation.changes.length > 0;
 
     return <div className="flex min-h-0 flex-1 flex-col">
-        <ProposalReviewHeader presentation={presentation} counts={counts} stale={stale} accepted={accepted} displayMode={displayMode} setDisplayMode={setDisplayMode} highlightChanges={highlightChanges} setHighlightChanges={setHighlightChanges} rejectAll={rejectAll} acceptAll={acceptAll} applyAccepted={applyAccepted} acceptanceBlocked={acceptanceBlocked} allResolved={allResolved} moveChange={moveChange} />
+        <ProposalReviewHeader presentation={presentation} counts={counts} stale={stale} accepted={accepted} displayMode={displayMode} setDisplayMode={setDisplayMode} highlightChanges={highlightChanges} setHighlightChanges={setHighlightChanges} rejectAll={rejectAll} acceptAll={acceptAll} applyAccepted={applyAccepted} acceptanceBlocked={acceptanceBlocked} allResolved={allResolved} moveChange={moveChange} openWrite={openWrite} openAssistant={openAssistant} dismissProposal={dismissProposal} />
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong">
             <div className="mx-auto w-full max-w-6xl p-5 pb-6">
                 {accepted && <Status className="mb-4" label={intl.formatMessage({ id: "views.proposalAccepted" })} tone="success" />}
-                {stale && <Banner className="mb-4" tone="warning">
-                    <div>
-                        <p>{intl.formatMessage({ id: "views.proposalStale" })}</p>
-                        <div className="mt-2 flex gap-2">
-                            <Button variant="secondary" onClick={openWrite}>{intl.formatMessage({ id: "views.reviewCurrentArticle" })}</Button>
-                            <Button variant="secondary" onClick={openAssistant}>{intl.formatMessage({ id: "views.regenerateInAssistant" })}</Button>
-                            <Button variant="secondary" onClick={dismissProposal}>{intl.formatMessage({ id: "views.dismissProposal" })}</Button>
-                        </div>
-                    </div>
-                </Banner>}
                 {presentation.warnings.length > 0 && !warningsDismissed && <div className="relative mb-4">
                     <Status label={intl.formatMessage({ id: "views.preservationWarnings" })} tone="warning">
                         <ul className="mt-1 list-disc pl-4 pr-8">

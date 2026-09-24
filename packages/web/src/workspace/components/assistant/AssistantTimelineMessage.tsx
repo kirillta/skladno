@@ -26,12 +26,12 @@ interface MessagePresentation {
 }
 
 
-function getSkillLabel(skillId: string, intl: Intl): string {
-    return isBuiltInSkillId(skillId) ? intl.formatMessage({ id: skillMessages[skillId] }) : skillId;
+function getSkillLabel(skillId: string, intl: Intl, skillNames: ReadonlyMap<string, string>): string {
+    return isBuiltInSkillId(skillId) ? intl.formatMessage({ id: skillMessages[skillId] }) : skillNames.get(skillId) ?? skillId;
 }
 
 
-function getMessageLabel(message: AssistantMessage, skillId: string | undefined, intl: Intl): string {
+function getMessageLabel(message: AssistantMessage, skillId: string | undefined, intl: Intl, skillNames: ReadonlyMap<string, string>): string {
     if (message.responseKind === "proposal_prepared" && skillId === BUILT_IN_SKILL.TALKING_POINTS)
         return intl.formatMessage({ id: "assistant.response.talkingPointsProposal" });
 
@@ -39,10 +39,10 @@ function getMessageLabel(message: AssistantMessage, skillId: string | undefined,
         return intl.formatMessage({ id: "assistant.response.narrativeDraftProposal" });
 
     if (message.responseKind)
-        return intl.formatMessage({ id: responseMessages[message.responseKind] }, skillId ? { skill: getSkillLabel(skillId, intl) } : {});
+        return intl.formatMessage({ id: responseMessages[message.responseKind] }, skillId ? { skill: getSkillLabel(skillId, intl, skillNames) } : {});
 
     if (skillId)
-        return getSkillLabel(skillId, intl);
+        return getSkillLabel(skillId, intl, skillNames);
 
     return message.role === "author"
         ? intl.formatMessage({ id: "assistant.authorMessage" })
@@ -120,7 +120,7 @@ function getViewLabel(view: AssistantView, intl: Intl): string {
 }
 
 
-function AuthorMessageContent({ visible, content, selectionText, skillOffset, skillId, intl }: { visible: boolean; content: string; selectionText?: string; skillOffset?: number; skillId?: string; intl: Intl }) {
+function AuthorMessageContent({ visible, content, selectionText, skillOffset, skillId, skillNames, intl }: { visible: boolean; content: string; selectionText?: string; skillOffset?: number; skillId?: string; skillNames: ReadonlyMap<string, string>; intl: Intl }) {
     if (!visible || (!content && !selectionText && skillOffset === undefined))
         return null;
 
@@ -129,7 +129,7 @@ function AuthorMessageContent({ visible, content, selectionText, skillOffset, sk
             <span className="relative -top-px max-w-48 truncate">{getSelectionPreview(selectionText)}</span>
         </span>}
         {skillOffset === undefined ? content : <>{content.slice(0, skillOffset)}
-            <span className="mx-1 inline-flex h-5 items-center align-middle rounded-full border border-brand/45 bg-surface-raised px-1.5 text-xs font-semibold text-brand">{skillId && getSkillLabel(skillId, intl)}</span>
+            <span className="mx-1 inline-flex h-5 items-center align-middle rounded-full border border-brand/45 bg-surface-raised px-1.5 text-xs font-semibold text-brand">{skillId && getSkillLabel(skillId, intl, skillNames)}</span>
             {content.slice(skillOffset)}
         </>}
     </p>;
@@ -160,7 +160,7 @@ function AssistantMessageActions({ message, skillId, view, openView, openSkillFo
 }
 
 
-function AssistantMessageMetadata({ message, dateTime, skillId, intl, onCheckpoint }: { message: AssistantMessage; dateTime: string; skillId: string | undefined; intl: Intl; onCheckpoint?: (messageId: string) => void }) {
+function AssistantMessageMetadata({ message, dateTime, skillId, skillNames, intl, onCheckpoint }: { message: AssistantMessage; dateTime: string; skillId: string | undefined; skillNames: ReadonlyMap<string, string>; intl: Intl; onCheckpoint?: (messageId: string) => void }) {
     if (message.role === "author")
         return <div className="mt-2 flex items-center justify-end gap-2">
             <time className="text-xs text-muted">{dateTime}</time>
@@ -171,7 +171,7 @@ function AssistantMessageMetadata({ message, dateTime, skillId, intl, onCheckpoi
 
     const statusLabel = getStatusLabel(message.status, intl);
     const skillUsedLabel = skillId ? intl.formatMessage({ id: "assistant.skillUsed" }) : undefined;
-    const skillTitle = skillId ? getSkillLabel(skillId, intl) : undefined;
+    const skillTitle = skillId ? getSkillLabel(skillId, intl, skillNames) : undefined;
 
     return <p className="mt-2 flex items-center gap-1 text-xs text-muted">
         <StatusIcon className="size-3" tone={getStatusTone(message.status)} />
@@ -183,7 +183,7 @@ function AssistantMessageMetadata({ message, dateTime, skillId, intl, onCheckpoi
 }
 
 
-function getMessagePresentation(message: AssistantMessage, generalSettings: GeneralSettings, skillByRequest: ReadonlyMap<string, string>, intl: Intl): MessagePresentation {
+function getMessagePresentation(message: AssistantMessage, generalSettings: GeneralSettings, skillByRequest: ReadonlyMap<string, string>, skillNames: ReadonlyMap<string, string>, intl: Intl): MessagePresentation {
     const authorMessage = message.role === "author";
     const skillId = message.skillId ?? (message.requestId ? skillByRequest.get(message.requestId) : undefined);
     const content = resolveMessageContent(message, intl);
@@ -192,7 +192,7 @@ function getMessagePresentation(message: AssistantMessage, generalSettings: Gene
     return {
         authorMessage,
         skillId,
-        label: getMessageLabel(message, skillId, intl),
+        label: getMessageLabel(message, skillId, intl, skillNames),
         messageContent: content ?? "",
         skillOffset: authorMessage && skillId ? Math.min(Math.max(message.skillOffset ?? 0, 0), content?.length ?? 0) : undefined,
         selectionText: authorMessage ? message.selectionText : undefined,
@@ -203,16 +203,16 @@ function getMessagePresentation(message: AssistantMessage, generalSettings: Gene
 }
 
 
-export function AssistantTimelineMessage({ message, factCheckClaims, openView, openSkillFolder, onRetry, onCheckpoint, generalSettings, skillByRequest }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: AssistantViewHandler; openSkillFolder?: (requestId: string) => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, string> }) {
+export function AssistantTimelineMessage({ message, factCheckClaims, openView, openSkillFolder, onRetry, onCheckpoint, generalSettings, skillByRequest, skillNames = new Map() }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: AssistantViewHandler; openSkillFolder?: (requestId: string) => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, string>; skillNames?: ReadonlyMap<string, string> }) {
     const intl = useIntl();
-    const { authorMessage, skillId, label, messageContent, skillOffset, selectionText, view, handoffOwnsContent, dateTime } = getMessagePresentation(message, generalSettings, skillByRequest, intl);
+    const { authorMessage, skillId, label, messageContent, skillOffset, selectionText, view, handoffOwnsContent, dateTime } = getMessagePresentation(message, generalSettings, skillByRequest, skillNames, intl);
 
     return <article className={authorMessage ? "ml-6 rounded-panel border border-brand/45 bg-brand-soft p-3" : "p-0"} aria-label={authorMessage ? label : undefined}>
         {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
-        <AuthorMessageContent visible={authorMessage} content={messageContent} selectionText={selectionText} skillOffset={skillOffset} skillId={skillId} intl={intl} />
+        <AuthorMessageContent visible={authorMessage} content={messageContent} selectionText={selectionText} skillOffset={skillOffset} skillId={skillId} skillNames={skillNames} intl={intl} />
         <AssistantMessageContent message={message} visible={!authorMessage} content={messageContent} handoffOwnsContent={handoffOwnsContent} />
         {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
         <AssistantMessageActions message={message} skillId={skillId} view={view} openView={openView} openSkillFolder={openSkillFolder} onRetry={onRetry} intl={intl} />
-        <AssistantMessageMetadata message={message} dateTime={dateTime} skillId={skillId} intl={intl} onCheckpoint={onCheckpoint} />
+        <AssistantMessageMetadata message={message} dateTime={dateTime} skillId={skillId} skillNames={skillNames} intl={intl} onCheckpoint={onCheckpoint} />
     </article>;
 }

@@ -205,7 +205,8 @@ test("the live Assistant authorizes an exact metadata action in the Author's lan
 });
 
 
-test("Assistant HTTP accepts a legacy Editorial operation without persisting its legacy ID", async () => {
+// Product scenario: editorial-workflows.skill-id-boundary
+test("Assistant HTTP rejects an Editorial operation used as a Skill ID", async () => {
     const engine = new FixtureEngine([
         { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "legacy-flow", text: "Improved" },
     ]);
@@ -223,8 +224,8 @@ test("Assistant HTTP accepts a legacy Editorial operation without persisting its
             }),
         });
 
-        assert.match(await response.text(), /"skillId":"flow_and_clarity"/);
-        assert.equal(repositories.assistant.getRequest("legacy-flow-request")?.explicitSkillId, "flow_and_clarity");
+        assert.match(await response.text(), /assistant_skill_unsupported/);
+        assert.equal(repositories.assistant.getRequest("legacy-flow-request"), undefined);
     });
 });
 
@@ -248,6 +249,7 @@ test("Narrative Draft without guidance uses the whole Article and its selected c
         });
 
         assert.equal(engine.requests[0]?.article, "The whole Article");
+        assert.equal(engine.requests[0]?.articleTitle, "Draft");
         assert.equal(engine.requests[0]?.authorContext, "");
         assert.equal(engine.requests[0]?.skillId, "narrative_draft");
         assert.equal(engine.requests[0]?.targetArticleCharacterLimit, 3_000);

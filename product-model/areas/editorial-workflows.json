@@ -35,7 +35,7 @@
             "title": "Thesis-to-narrative composition",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "The server creates a composition Proposal from author-supplied theses; it remains reviewable until acceptance.",
+            "contract": "The server creates a body-only composition Proposal from author-supplied theses, keeping the existing Article title separate; it remains reviewable until acceptance.",
             "persistence": "Completed proposal artifacts are local and revision-bound."
         },
         {
@@ -44,7 +44,7 @@
             "title": "Flow revision",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "Flow revision generates a full-text Proposal rather than silently editing the Article.",
+            "contract": "Flow revision generates a full-body Proposal with the existing Article title kept separate rather than silently editing the Article.",
             "persistence": "Completed proposal artifacts are local and revision-bound."
         },
         {
@@ -62,7 +62,7 @@
             "title": "Style review",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/infrastructure/persistence/repositories/style-corpus-repository.ts"],
-            "contract": "Style review uses only the current compact, explicitly rebuilt profile plus Article-specific manual rules; raw style samples remain local and review findings retain freshness state with the grounded trait or rule that supports each finding.",
+            "contract": "Style review uses only the current compact, explicitly rebuilt profile plus Article-specific manual rules; its full-body Proposal keeps the existing Article title separate, raw style samples remain local, and review findings retain freshness state with the grounded trait or rule that supports each finding.",
             "persistence": "Raw style corpus and derived review artifacts stay local."
         },
         {
@@ -71,7 +71,7 @@
             "title": "Translation request",
             "status": "implemented",
             "owners": ["packages/server/src/application/editorial/translation/translation.ts", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "Translation requests prepare a translated Article title and linked Article content together; the source Article is never overwritten.",
+            "contract": "Translation requests prepare a translated Article title and body in separate structured fields, then create linked Article content; the source Article is never overwritten.",
             "persistence": "Translation review metadata is local and source linkage remains recoverable."
         },
         {
@@ -80,7 +80,7 @@
             "title": "Summarized diff review, bulk acceptance or rejection, fallback, and stale protection",
             "status": "implemented",
             "owners": ["packages/shared/src/articles/revision/revisions.ts", "packages/web/src/workspace/views/ProposalReviewView.tsx", "packages/web/src/workspace/views/proposal-review-presentation.ts", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "Authors may switch Proposal diffs between side-by-side and stacked layouts, then independently toggle exact-text highlighting in either layout. Highlighting marks changed original text in bright red and changed proposed text in bright green within the existing light paragraph backgrounds. Authors may review non-authoritative Interface-locale summaries, decide every change locally, apply the accepted subset in one Revision, accept a whole Proposal in one Revision, or dismiss stale and zero-change Proposals without Article changes. Zero-change Proposals are labelled Unchanged. Accepted Proposals restore with read-only decisions instead of becoming stale. Fact corrections preserve blank-line formatting. Summary failure does not block review. Stale and preservation warnings remain visible above patterned diffs in the scrolling review content; labelled change navigation remains reachable outside it and scrolls and focuses the selected change at review start; stale or unreliable Proposals cannot be partially accepted. Whole-Proposal fallback discloses its change count.",
+            "contract": "Authors may switch Proposal diffs between side-by-side and stacked layouts, then independently toggle exact-text highlighting in either layout. Highlighting marks changed original text in bright red and changed proposed text in bright green within the existing light paragraph backgrounds. Authors may review non-authoritative Interface-locale summaries, decide every change locally, apply the accepted subset in one Revision, accept a whole Proposal in one Revision, or dismiss stale and zero-change Proposals without Article changes. Zero-change Proposals are labelled Unchanged. Accepted Proposals restore with read-only decisions instead of becoming stale. Fact corrections preserve blank-line formatting. Summary failure does not block review. A stale warning and recovery actions replace decision actions in the review header; preservation warnings remain above patterned diffs in scrolling review content. Labelled change navigation remains reachable outside it and scrolls and focuses the selected change at review start; stale or unreliable Proposals cannot be partially accepted. Whole-Proposal fallback discloses its change count.",
             "persistence": "Completed Proposal content, summaries with their Interface locale, and the base Revision remain locally recoverable in the Proposal artifact; acceptance creates one immutable Revision whose provenance links the Proposal artifact, and rejection leaves Article history unchanged.",
             "relatedCapabilityIds": ["workspace.proposal.explicit-acceptance"]
         },
@@ -131,9 +131,19 @@
             "capabilityIds": ["editorial-workflows.assistant-foundation"],
             "preconditions": ["The author explicitly selects Narrative Draft."],
             "event": "The author requests a narrative from an Article or selection, optionally with a composer message and publishing-profile limit." ,
-            "expected": ["Author direction has priority, an active selection replaces whole Article content as the Article source, and the selected character limit is advisory guidance for the resulting complete Article.", "The proposal develops supplied ideas simply unless the Author requests otherwise."],
+            "expected": ["Author direction has priority, an active selection replaces whole Article content as the Article source, and the selected character limit is advisory guidance for the resulting complete Article.", "The proposal develops supplied ideas simply unless the Author requests otherwise; the existing Article title remains separate from proposed body text."],
             "forbidden": ["Inventing unsupported arguments, using unselected Article content, or treating the character hint as an output-token limit."],
             "evidence": { "kind": "automated", "path": "packages/server/src/application/editorial/workflow-prompt.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.skill-id-boundary",
+            "title": "Assistant accepts current Skill IDs only",
+            "capabilityIds": ["editorial-workflows.assistant-foundation"],
+            "preconditions": ["An Assistant request names an Editorial operation as its Skill ID."],
+            "event": "The Assistant validates the request.",
+            "expected": ["The operation name is rejected as an unsupported Skill ID."],
+            "forbidden": ["Translating an Editorial operation name into a Skill ID or persisting a new request."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
         },
         {
             "id": "editorial-workflows.talking-points-source",
@@ -241,7 +251,7 @@
             "capabilityIds": ["editorial-workflows.proposal-lifecycle", "editorial-workflows.ai-safety"],
             "preconditions": ["A Proposal base Revision is no longer current."],
             "event": "The author opens Proposal Review." ,
-            "expected": ["The stale warning is shown above the diff in scrolling review content, selection actions are disabled, and recovery actions including proposal dismissal remain available."],
+            "expected": ["The stale warning and recovery actions appear in the review header, acceptance actions are absent, and proposal dismissal remains available."],
             "forbidden": ["Creating a Revision from a stale Proposal."],
             "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/ProposalReviewView.test.tsx" }
         },

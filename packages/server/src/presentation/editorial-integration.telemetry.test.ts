@@ -22,7 +22,7 @@ test("server records one private-content-free terminal event for each explicit A
         await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
             method: HTTP_METHOD.POST,
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ requestId: "assistant-request", authorMessage: "Private prompt", explicitSkillId: "flow_revision", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+            body: JSON.stringify({ requestId: "assistant-request", authorMessage: "Private prompt", explicitSkillId: "flow_and_clarity", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
         });
     }, true, undefined, telemetry);
 

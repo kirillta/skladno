@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
-import { defaultGeneralSettings, type AssistantCapabilityActivity, type AssistantMessage, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
+import { defaultGeneralSettings, type AssistantCapabilityActivity, type AssistantMessage, type AssistantSkillSummary, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
 import { messages } from "../../../i18n/messages.js";
 import { getMessage } from "../../../i18n/test-message.js";
 import { AssistantTimeline as RenderAssistantTimeline } from "./AssistantTimeline.js";
@@ -11,7 +11,7 @@ import { AssistantTimeline as RenderAssistantTimeline } from "./AssistantTimelin
 // Product scenario: workspace.assistant.checkpoint-keyboard
 
 
-function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, openView, onRetry, onCheckpoint, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings }: {
+function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, openView, onRetry, onCheckpoint, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings, authorSkills }: {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
@@ -27,12 +27,19 @@ function AssistantTimeline({ state, message, errorDetails, activity, factCheckCl
     elapsedDuration: string;
     hasUnavailableAiConnection?: boolean;
     openSettings?: () => void;
+    authorSkills?: readonly AssistantSkillSummary[];
 }) {
-    return <RenderAssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, onRetry, onCheckpoint, openSettings }} />;
+    return <RenderAssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection, authorSkills }} actions={{ openView, onRetry, onCheckpoint, openSettings }} />;
 }
 
 
 describe("AssistantTimeline", () => {
+    it("shows the custom Skill name in used-skill metadata", () => {
+        render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={[{ id: "response", requestId: "request", articleId: "article", role: "assistant", kind: "response", status: "completed", skillId: "em_dash_free_rephrase", content: "Done", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }]} authorSkills={[{ reference: { source: "author", id: "em_dash_free_rephrase", version: "1" }, name: "Em dash-free rephrase", description: "Rephrase without em dashes." }]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+
+        expect(screen.getByText(/Used skill/).getAttribute("title")).toBe("Em dash-free rephrase");
+    });
+
     it("keeps conversation text selectable with the default cursor", () => {
         const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
         const timeline = view.container.querySelector<HTMLElement>("[aria-live='polite']")!;

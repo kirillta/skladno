@@ -48,7 +48,7 @@
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
-            "contract": "A Lexical composer stores plain author text and one structured skill tag separately; selecting a skill never sends a request, and a tag can run against the whole Article without additional guidance. Selection scope records exact Markdown offsets and a content fingerprint, then requires the same promoted Revision before sending. Deselecting Article text clears that scope and its visible indicator before the next request. The Assistant discovers only classified current-Article capabilities, validates every action against the Author's exact request, and returns Workspace-owned decisions as handoffs. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
+            "contract": "A Lexical composer stores plain author text and one structured skill tag separately; selecting a skill never sends a request, and a tag can run against the whole Article without additional guidance. Clicking unused composer space focuses the editor without overriding its action controls. Selection scope records exact Markdown offsets and a content fingerprint, then requires the same promoted Revision before sending. Deselecting Article text clears that scope and its visible indicator before the next request. The Assistant discovers only classified current-Article capabilities, validates every action against the Author's exact request, and returns Workspace-owned decisions as handoffs. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
             "persistence": "Per-Article Assistant records, minimal capability execution history, and explicit Editorial Requests."
         },
         {
@@ -171,7 +171,7 @@
                 "packages/web/src/workspace/views/proposal-review-presentation.ts",
                 "packages/web/src/workspace/state/editorial-proposal-state.ts"
             ],
-            "contract": "AI text stays outside the Article until explicit acceptance. Reliable changes may show non-authoritative Interface-locale summaries whose failure does not block review. Accept all and Reject all select decisions; a separate action applies accepted changes. Accepted Proposals remain visible with read-only decisions after restart. Stale or unreliable Proposals cannot be partially accepted. Stale and preservation warnings remain visible above patterned diffs in the scrolling review content; labelled change navigation remains reachable outside it and scrolls and focuses the selected change at review start; stale recovery permits dismissal without Article changes. Whole-Proposal fallback discloses its change count.",
+            "contract": "AI text stays outside the Article until explicit acceptance. Reliable changes may show non-authoritative Interface-locale summaries whose failure does not block review. Accept all and Reject all select decisions; a separate action applies accepted changes. Accepted Proposals remain visible with read-only decisions after restart. Stale or unreliable Proposals cannot be partially accepted. A stale warning and recovery actions replace decision actions in the review header; preservation warnings remain above patterned diffs in scrolling review content. Labelled change navigation remains reachable outside it and scrolls and focuses the selected change at review start; stale recovery permits dismissal without Article changes. Whole-Proposal fallback discloses its change count.",
             "persistence": "Completed Proposal content, localized summaries, and the base Revision are recovered from local Assistant and editorial artifact records; accepted Revision provenance links the Proposal artifact and records accepted changes or whole-proposal fallback, and dismissal is a local workspace preference.",
             "relatedCapabilityIds": ["editorial-workflows.proposal-lifecycle", "editorial-workflows.ai-safety"]
         },
@@ -186,7 +186,7 @@
                 "packages/web/src/workspace/components/ArticleStatusBar.tsx",
                 "packages/web/src/workspace/editor/RevisionArticlePreview.tsx"
             ],
-            "contract": "Selecting a Revision from history or the compact Status Bar selector is local-only and opens a read-only preview; restoring creates a new Revision through the existing confirmation and Draft-conflict flow.",
+            "contract": "Selecting a Revision from history or the compact Status Bar selector is local-only and opens a read-only preview; restoring creates a new Revision through the existing confirmation and Draft-conflict flow. When the first immutable Revision is empty, history labels it Empty Revision and presents the second saved Revision as Initial Revision while keeping both available.",
             "persistence": "Immutable Article Revisions and recoverable Draft checkpoints."
         },
         {
@@ -631,7 +631,7 @@
             ],
             "event": "Author attempts to accept selected changes.",
             "expected": [
-                "The stale warning is visible above the diff in scrolling review content, review controls remain reachable, and acceptance is disabled"
+                "The stale warning and recovery actions are visible in the review header, review controls remain reachable, and acceptance actions are absent"
             ],
             "forbidden": [
                 "Applying AI-generated text to a newer Article Revision"

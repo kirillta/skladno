@@ -110,7 +110,7 @@ export function EditorialAssistantPanel({ data, actions, layout }: { data: Edito
             <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="text-base font-semibold text-brand">{intl.formatMessage({ id: "assistant.heading" })}</h2>
         </header>
-        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection }} actions={{ openView, openSkillFolder, onRetry, openSettings, onCheckpoint: openCheckpoint }} />
+        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection, authorSkills }} actions={{ openView, openSkillFolder, onRetry, openSettings, onCheckpoint: openCheckpoint }} />
         <AssistantComposer
             state={{ state, canSend: composerState.canSend, guidance: composerState.guidance, selectedSkill: composerState.selectedSkill, skillOffset: composerState.skillOffset, caretOffset: composerState.caretOffset, selection, clearSelection, incompatibleSelectionSkill: composerState.incompatibleSelectionSkill }}
             picker={{ quickActionsOpen: composerState.quickActionsOpen, availableSkills: composerState.availableSkills, activeSkillIndex: composerState.activeSkillIndex, setQuickActionsOpen: composerState.setQuickActionsOpen, setActiveSkillIndex: composerState.setActiveSkillIndex, selectSkill: composerState.selectSkill, focusQuickAction: composerState.focusQuickAction }}

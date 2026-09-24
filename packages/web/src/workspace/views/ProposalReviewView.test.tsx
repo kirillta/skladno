@@ -34,7 +34,7 @@ describe("ProposalReviewView", () => {
         expect(screen.getByText(getMessage("views.preservationWarnings")).closest(".overflow-y-auto")).toBeTruthy();
     });
 
-    it("workspace.proposal.stale-blocked keeps warnings in the scrolling content while blocking acceptance", () => {
+    it("workspace.proposal.stale-blocked shows recovery actions in the header instead of acceptance", () => {
         const dismissProposal = vi.fn();
 
         render(<IntlProvider locale="en" messages={messages}>
@@ -49,13 +49,16 @@ describe("ProposalReviewView", () => {
         </IntlProvider>);
 
         const warning = screen.getByText("This proposal is stale because the article has a newer revision. Generate a new proposal before accepting changes.");
-        const content = screen.getByRole("heading", { name: getMessage("views.proposalReview") }).closest("header")?.nextElementSibling;
+        const header = screen.getByRole("heading", { name: getMessage("views.proposalReview") }).closest("header");
 
-        expect(content?.contains(warning)).toBe(true);
+        expect(header?.contains(warning)).toBe(true);
+        expect(warning.parentElement?.lastElementChild).toBe(warning);
+        expect(warning.previousElementSibling?.contains(screen.getByRole("button", { name: getMessage("views.dismissProposal") }))).toBe(true);
         expect(screen.getByText("Complete proposal · 2 changes")).toBeTruthy();
-        expect(screen.getByRole("button", { name: getMessage("views.acceptAll") }).hasAttribute("disabled")).toBe(true);
-        expect(screen.getByRole("button", { name: getMessage("views.rejectAll") }).hasAttribute("disabled")).toBe(true);
-        expect(screen.getByRole("button", { name: getMessage("views.reviewCurrentArticle") })).toBeTruthy();
+        expect(screen.queryByRole("button", { name: getMessage("views.acceptAll") })).toBeNull();
+        expect(screen.queryByRole("button", { name: getMessage("views.rejectAll") })).toBeNull();
+        expect(header?.contains(screen.getByRole("button", { name: getMessage("views.reviewCurrentArticle") }))).toBe(true);
+        expect(header?.contains(screen.getByRole("button", { name: getMessage("views.regenerateInAssistant") }))).toBe(true);
         fireEvent.click(screen.getByRole("button", { name: getMessage("views.dismissProposal") }));
         expect(dismissProposal).toHaveBeenCalledOnce();
     });

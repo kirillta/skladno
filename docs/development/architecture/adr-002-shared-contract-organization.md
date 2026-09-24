@@ -16,7 +16,7 @@ Organize `packages/shared/src` by product feature and contract responsibility. F
 
 The root barrel and dedicated feature barrels only re-export. Independently named concepts use separate files when they have an independent caller or test contract; cohesive protocol unions may remain together. A domain module may retain compatibility re-exports without becoming a barrel-only file.
 
-`application/client.ts` owns `EditorialWorkspaceClient`; `application/desktop/` owns Electron and desktop bridge contracts. In `assistant/`, `assistant.ts` owns requests, messages, and results, `assistant-skills.ts` owns built-in Skill IDs and compatibility mapping, and `assistant-events.ts` owns the event protocol and its validator. Keep public exports available through `index.ts` when moving a contract.
+`application/client.ts` owns `EditorialWorkspaceClient`; `application/desktop/` owns Electron and desktop bridge contracts. In `assistant/`, `assistant.ts` owns requests, messages, and results, `assistant-skills.ts` owns built-in Skill IDs and the current Editorial-operation-to-Skill mapping, and `assistant-events.ts` owns the event protocol and its validator. Keep public exports available through `index.ts` when moving a contract.
 
 Shared code remains transport-neutral and renderer-safe. It may contain schemas, pure validation, constants, domain algorithms, and client interfaces. It does not contain server orchestration or import Node, Electron, SQLite, filesystem, or provider SDK modules.
 

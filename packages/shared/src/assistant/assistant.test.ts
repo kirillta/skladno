@@ -1,16 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, builtInSkills, isAssistantEvent, legacyEditorialOperationSkillMap, resolveBuiltInSkillId, type AssistantEvent, type AssistantExecutionMetadata, type AssistantRequest, type AssistantSkillSummary, type ElectronStreamRequest, type StartAssistantRequest } from "../index.js";
+import { ASSISTANT_EVENT, BUILT_IN_SKILL, builtInSkillScopeCompatibility, builtInSkills, editorialOperationSkillMap, isAssistantEvent, isBuiltInSkillId, type AssistantEvent, type AssistantExecutionMetadata, type AssistantRequest, type AssistantSkillSummary, type ElectronStreamRequest, type StartAssistantRequest } from "../index.js";
 
-test("resolves current skill IDs and legacy editorial operations through one compatibility seam", () => {
+test("keeps Editorial operations distinct from Skill IDs", () => {
     for (const skillId of builtInSkills)
-        assert.equal(resolveBuiltInSkillId(skillId), skillId);
+        assert.equal(isBuiltInSkillId(skillId), true);
 
-    assert.equal(resolveBuiltInSkillId("thesis_to_narrative"), BUILT_IN_SKILL.NARRATIVE_DRAFT);
-    assert.equal(resolveBuiltInSkillId("flow_revision"), BUILT_IN_SKILL.FLOW_AND_CLARITY);
-    assert.equal(resolveBuiltInSkillId("unknown"), undefined);
-    assert.equal(legacyEditorialOperationSkillMap.translation, BUILT_IN_SKILL.TRANSLATION);
+    assert.equal(isBuiltInSkillId("thesis_to_narrative"), false);
+    assert.equal(isBuiltInSkillId("flow_revision"), false);
+    assert.equal(editorialOperationSkillMap.translation, BUILT_IN_SKILL.TRANSLATION);
     assert.deepEqual(builtInSkillScopeCompatibility.talking_points, ["article", "selection"]);
     assert.deepEqual(builtInSkillScopeCompatibility.narrative_draft, ["article", "selection"]);
     assert.deepEqual(builtInSkillScopeCompatibility.skill_creator, ["article", "selection"]);

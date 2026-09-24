@@ -72,7 +72,7 @@ The completion gate applies to the full run. New artifacts remain staged until t
 
 A run normally produces one primary artifact. It may produce an existing related set, such as style Findings with their correction Proposal, when the application workflow already defines that relationship. The implementation does not add general cross-artifact transactions.
 
-Conversation uses the configured Assistant model. Each invoked capability retains its purpose-specific Editorial model selection. Existing persisted built-in Skill IDs map to the new Skill references at the compatibility boundary; stored conversation history is not rewritten.
+Conversation uses the configured Assistant model. Each invoked capability retains its purpose-specific Editorial model selection. Assistant requests and stored records use Skill IDs directly; Editorial operation IDs are not accepted as Skill IDs.
 
 ### Quiet progress and Workspace review
 
@@ -80,7 +80,7 @@ The existing typed Assistant stream carries quiet, human-readable activity such 
 
 A completed artifact produces a short conversational summary and a result card with an explicit action to review it in its owning Workspace View. Completion does not change the current view automatically. Proposal decisions, Finding resolution, Revision restoration, translation Article creation, style-profile management, and publishing remain in their current screens.
 
-Persist an append-only minimal local activity record for each capability call: capability ID, status, request ID, base Revision, and timestamps. It follows the Article conversation lifecycle and stores no prompt, tool argument, private context, result body, secret, or raw provider response. Legacy last-capability metadata remains readable for compatibility only.
+Persist an append-only minimal local activity record for each capability call: capability ID, status, request ID, base Revision, and timestamps. It follows the Article conversation lifecycle and stores no prompt, tool argument, private context, result body, secret, or raw provider response.
 
 ## Consequences
 
@@ -94,6 +94,6 @@ MCP transport, third-party tools, background runs, direct publishing, arbitrary 
 
 ## Verification
 
-Deterministic tests cover untagged and explicit Skill requests, relevant Skill loading, complementary Skills, capability discovery and selection, bounded multi-step execution, missing prerequisites, selection authority, safe retry, cancellation, step exhaustion, stale Revisions, invalid calls, incomplete output, completion-gated artifact persistence, compatibility with stored built-in Skill IDs, and direct Workspace invocation. Coverage tests account for every Author-facing Editorial Workspace operation and every registered HTTP, streaming, and Electron application operation as callable, handoff-only, excluded, or outside Assistant authority; they reject duplicate or missing classifications. Discovery tests cover scope filtering, the ten-result bound, close alternatives, empty results, explicit-skill bypass, active-tool narrowing, and unchanged authority. Routing tests distinguish operations with nearby language, result, or action terms and prove that an unavailable operation is not replaced with another capability.
+Deterministic tests cover untagged and explicit Skill requests, relevant Skill loading, complementary Skills, capability discovery and selection, bounded multi-step execution, missing prerequisites, selection authority, safe retry, cancellation, step exhaustion, stale Revisions, invalid calls, incomplete output, completion-gated artifact persistence, rejection of Editorial operation IDs as Skill IDs, and direct Workspace invocation. Coverage tests account for every Author-facing Editorial Workspace operation and every registered HTTP, streaming, and Electron application operation as callable, handoff-only, excluded, or outside Assistant authority; they reject duplicate or missing classifications. Discovery tests cover scope filtering, the ten-result bound, close alternatives, empty results, explicit-skill bypass, active-tool narrowing, and unchanged authority. Routing tests distinguish operations with nearby language, result, or action terms and prove that an unavailable operation is not replaced with another capability.
 
 Workspace tests verify quiet progress, stable streamed output, result cards, explicit review handoffs, keyboard access, and continued operation of dedicated Views. Regression coverage includes corrected selection scope from issue #156 and stable stream completion from issue #161.
