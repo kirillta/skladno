@@ -34,7 +34,7 @@ async function launchPackaged(root: string): Promise<{ process: ChildProcess; br
                 throw new Error("Packaged Skladno exited before opening its window.");
 
             try {
-                return (await fetch(`http://127.0.0.1:${port}/json/version`)).ok;
+                return (await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(1_000) })).ok;
             } catch {
                 return false;
             }
@@ -79,7 +79,9 @@ test("packaged Electron Assistant failure preserves the Article and its Revision
     let app: Awaited<ReturnType<typeof launchPackaged>> | undefined;
 
     try {
+        console.log("Launching packaged Electron for Assistant smoke test");
         app = await launchPackaged(root);
+        console.log("Packaged Electron launched");
         let page = app.page;
         await page.addInitScript(() => localStorage.setItem("skladno.quick-start.v1", "complete"));
         await page.reload();
@@ -101,9 +103,11 @@ test("packaged Electron Assistant failure preserves the Article and its Revision
         await expect(page.getByRole("alert")).toBeVisible();
         await expect(editor).toContainText("Electron fixture Article.");
 
+        console.log("Restarting packaged Electron");
         await closePackaged(app);
         app = undefined;
         app = await launchPackaged(root);
+        console.log("Packaged Electron restarted");
         page = app.page;
         await expect(page.getByRole("textbox", { name: "Article draft" })).toContainText("Electron fixture Article.");
         await page.getByRole("tab", { name: "Revisions" }).click();
