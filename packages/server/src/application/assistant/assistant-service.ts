@@ -1,4 +1,4 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, isBuiltInSkillId, type ArticleRevision, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantEditMode, type AssistantEvent, type AssistantMessage, type RestoreAssistantCheckpointResult, type TimedTelemetryCapture } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, HTTP_STATUS, type AssistantEvent, type AssistantMessage, type TimedTelemetryCapture } from "@skladno/shared";
 
 import { AssistantCapabilityLoop } from "./capabilities/assistant-capability-loop.js";
 import { AssistantCompletion, getCompletedContent, getEditCandidate, getResponseKind } from "./completion/assistant-completion.js";
@@ -7,7 +7,6 @@ import type { FactChecksStore } from "./fact-checks-store.js";
 import type { PreparedAssistantRequest } from "./requests/prepared-assistant-request.js";
 import type { AssistantServiceRequest } from "./requests/assistant-service-request.js";
 import { getActivityForEditorialOperation } from "./capabilities/editorial-capability-catalog.js";
-import { getReusableFactFindings } from "../editorial/fact-checking/reusable-fact-findings.js";
 import type { AssistantStore } from "./assistant-store.js";
 import { EDITORIAL_ENGINE_EVENT } from "../editorial/engine/editorial-engine-events.js";
 import { EDITORIAL_ENGINE_ERROR } from "../editorial/engine/editorial-engine-errors.js";
@@ -15,13 +14,13 @@ import { EditorialEngineError } from "../editorial/engine/editorial-engine-error
 import type { EditorialEngineEvent } from "../editorial/engine/editorial-engine-event.js";
 import type { StyleCorpusStore } from "../editorial/style/style-corpus-store.js";
 import type { TelemetryObserver } from "../telemetry/telemetry-observer.js";
-import { getConversationHistory } from "./requests/conversation-history.js";
 import { streamWithAssistantDeadline } from "./requests/assistant-request-deadline.js";
 import { normalizeGeneralSettings } from "../settings/application-settings-normalizers.js";
 import type { SettingsStore } from "../settings/settings-store.js";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
-import { AssistantCheckpointError, AssistantEditError } from "./assistant-store.js";
-import type { ArticleService } from "../articles/article-service.js";
+import { AssistantEditError } from "./assistant-store.js";
+import { streamAssistantEngineEvents } from "./assistant-engine-request.js";
+import { AssistantEditService } from "./assistant-edit-service.js";
 
 
 export type { AssistantServiceRequest } from "./requests/assistant-service-request.js";
@@ -49,9 +48,12 @@ export class AssistantService {
     private readonly completion: AssistantCompletion;
 
 
+    private readonly edits: AssistantEditService;
+
+
     constructor(
         private readonly stores: AssistantServiceStores,
-        private readonly articles: Pick<ArticleService, "describeContentChange">,
+        private readonly articles: ConstructorParameters<typeof AssistantEditService>[2],
         private readonly telemetry: TelemetryObserver | undefined,
         preparation: AssistantRequestPreparation,
         capabilityLoop: AssistantCapabilityLoop,
@@ -60,6 +62,7 @@ export class AssistantService {
         this.preparation = preparation;
         this.capabilityLoop = capabilityLoop;
         this.completion = completion;
+        this.edits = new AssistantEditService(stores.assistant, stores.settings, articles);
     }
 
 
@@ -68,73 +71,35 @@ export class AssistantService {
     }
 
 
-    getEditMode(articleId: string): AssistantEditMode {
+    getEditMode(articleId: string) {
         this.preparation.listMessages(articleId);
-        const defaultMode = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).defaultAssistantEditMode;
-        return this.stores.assistant.getEditMode(articleId, defaultMode);
+        return this.edits.getEditMode(articleId);
     }
 
 
-    setEditMode(articleId: string, mode: AssistantEditMode): AssistantEditMode {
+    setEditMode(articleId: string, mode: Parameters<AssistantEditService["setEditMode"]>[1]) {
         this.preparation.listMessages(articleId);
-        return this.stores.assistant.setEditMode(articleId, mode);
+        return this.edits.setEditMode(articleId, mode);
     }
 
 
-    async applyEdit(articleId: string, messageId: string): Promise<ArticleRevision> {
-        try {
-            return this.stores.assistant.applyEdit(articleId, messageId, await this.describePendingEdit(articleId, messageId));
-        } catch (error) {
-            if (error instanceof AssistantEditError)
-                throw new ApplicationServiceError(error.kind === "conflict" ? APPLICATION_ERROR.ASSISTANT_EDIT_CONFLICT : APPLICATION_ERROR.ASSISTANT_EDIT_INVALID, error.kind === "conflict" ? HTTP_STATUS.CONFLICT : HTTP_STATUS.BAD_REQUEST);
-
-            throw error;
-        }
+    applyEdit(articleId: string, messageId: string) {
+        return this.edits.applyEdit(articleId, messageId);
     }
 
 
-    private async describePendingEdit(articleId: string, messageId: string): Promise<string | undefined> {
-        const preview = this.stores.assistant.previewEdit(articleId, messageId);
-        if (!preview)
-            return undefined;
-
-        const locale = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).interfaceLocale;
-        return this.articles.describeContentChange(preview.previousContent, preview.content, locale, new AbortController().signal);
+    rejectTranslation(articleId: string, editorialArtifactId: string) {
+        this.edits.rejectTranslation(articleId, editorialArtifactId);
     }
 
 
-    rejectTranslation(articleId: string, editorialArtifactId: string): void {
-        this.stores.assistant.rejectTranslation(articleId, editorialArtifactId);
+    previewCheckpoint(articleId: string, messageId: string) {
+        return this.edits.previewCheckpoint(articleId, messageId);
     }
 
 
-    previewCheckpoint(articleId: string, messageId: string): AssistantCheckpointPreview {
-        return this.runCheckpoint(() => this.stores.assistant.previewCheckpoint(articleId, messageId));
-    }
-
-
-    restoreCheckpoint(articleId: string, messageId: string, tailToken: string, draftMode?: AssistantCheckpointDraftMode): RestoreAssistantCheckpointResult {
-        return this.runCheckpoint(() => this.stores.assistant.restoreCheckpoint(articleId, messageId, tailToken, draftMode));
-    }
-
-
-    private runCheckpoint<T>(operation: () => T): T {
-        try {
-            return operation();
-        } catch (error) {
-            if (error instanceof AssistantCheckpointError) {
-                const errorCode = error.kind === "conflict"
-                    ? APPLICATION_ERROR.ASSISTANT_CHECKPOINT_CONFLICT
-                    : APPLICATION_ERROR.ASSISTANT_CHECKPOINT_INVALID;
-                const httpStatus = error.kind === "conflict"
-                    ? HTTP_STATUS.CONFLICT
-                    : HTTP_STATUS.BAD_REQUEST;
-
-                throw new ApplicationServiceError(errorCode, httpStatus);
-            }
-
-            throw error;
-        }
+    restoreCheckpoint(articleId: string, messageId: string, tailToken: string, draftMode?: Parameters<AssistantEditService["restoreCheckpoint"]>[3]) {
+        return this.edits.restoreCheckpoint(articleId, messageId, tailToken, draftMode);
     }
 
 
@@ -341,10 +306,7 @@ export class AssistantService {
         try {
             return this.completion.persist(request, event);
         } catch (error) {
-            if (createdSkill)
-                this.capabilityLoop.rollbackCreatedSkill(createdSkill);
-
-            this.capabilityLoop.finishPendingSkill(request.requestId);
+            this.rollbackSkillCompletion(request.requestId, createdSkill);
             if (error instanceof AssistantEditError)
                 throw new ApplicationServiceError(error.kind === "conflict" ? APPLICATION_ERROR.ASSISTANT_EDIT_CONFLICT : APPLICATION_ERROR.ASSISTANT_EDIT_INVALID, error.kind === "conflict" ? HTTP_STATUS.CONFLICT : HTTP_STATUS.BAD_REQUEST);
 
@@ -353,42 +315,16 @@ export class AssistantService {
     }
 
 
+    private rollbackSkillCompletion(requestId: string, createdSkill: ReturnType<AssistantCapabilityLoop["commitPendingSkill"]>): void {
+        if (createdSkill)
+            this.capabilityLoop.rollbackCreatedSkill(createdSkill);
+
+        this.capabilityLoop.finishPendingSkill(requestId);
+    }
+
+
     private streamEngineEvents(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const excerpt = this.getArticleExcerpt(request);
-        if (request.resolvedSkillId)
-            return request.engine.stream(this.createEngineRequest(request, excerpt), signal);
-
-        return request.engine.streamConversation({ message: request.authorMessage, article: excerpt, scope: request.scope.kind, history: getConversationHistory(this.stores.assistant, request.articleId) }, signal);
-    }
-
-
-    private getArticleExcerpt(request: PreparedAssistantRequest): string {
-        return request.scope.kind === "selection"
-            ? request.articleContent.slice(request.scope.startOffset, request.scope.endOffset)
-            : request.articleContent;
-    }
-
-
-    private createEngineRequest(request: PreparedAssistantRequest, excerpt: string) {
-        if (!request.operation)
-            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
-
-        return {
-            operation: request.operation,
-            article: excerpt,
-            articleTitle: request.articleTitle,
-            ...(request.scope.kind === "selection" ? { articleSelection: true } : {}),
-            authorContext: request.authorMessage,
-            skillId: isBuiltInSkillId(request.resolvedSkillId) ? request.resolvedSkillId : undefined,
-            ...(request.scope.kind === "selection" ? { surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
-            ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
-            ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
-            ...(request.resolvedSkillId === BUILT_IN_SKILL.STYLE_REVIEW
-                ? { styleProfile: this.stores.styleCorpus.getStyleCorpus().profile, articleStyleRules: this.stores.styleCorpus.getArticleStyleRules(request.articleId) }
-                : {}
-            ),
-            ...(request.operation === EDITORIAL_OPERATION.FACT_CHECK ? { reusableFactFindings: getReusableFactFindings(this.stores.factChecks, request.articleId) } : {})
-        };
+        return streamAssistantEngineEvents(request, this.stores, signal);
     }
 
 
