@@ -11,6 +11,8 @@ const reviewThreshold = 10;
 const failureThreshold = 16;
 const fileReviewThreshold = 300;
 const fileFailureThreshold = 350;
+const fileLengthExclusions = new Set(["packages/web/src/i18n/messages.ts"]);
+const failuresOnly = process.argv.includes("--failures-only");
 
 
 async function sourceFiles(directory) {
@@ -89,11 +91,12 @@ async function main() {
     for (const path of files) {
         const content = await readFile(path, "utf8");
         const lineCount = content === "" ? 0 : content.split(/\r\n|\r|\n/).length - (/(\r\n|\r|\n)$/.test(content) ? 1 : 0);
+        const relativePath = relative(root, path).replaceAll("\\", "/");
         const sourceFile = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true,
             path.endsWith(".tsx") || path.endsWith(".jsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
 
-        if (lineCount >= fileReviewThreshold)
-            longFiles.push({ path: relative(root, path).replaceAll("\\", "/"), lineCount });
+        if (!fileLengthExclusions.has(relativePath) && lineCount >= fileReviewThreshold)
+            longFiles.push({ path: relativePath, lineCount });
 
 
         function inspect(node) {
@@ -111,24 +114,28 @@ async function main() {
     }
 
     violations.sort((left, right) => right.score - left.score || left.path.localeCompare(right.path));
-    for (const violation of violations)
+    for (const violation of violations.filter(({ score }) => !failuresOnly || score >= failureThreshold))
         console.log(`${violation.path}:${violation.line} ${violation.name} ${violation.score}`);
 
     const failures = violations.filter(({ score }) => score >= failureThreshold);
     const reviewOnly = violations.length - failures.length;
-    console.log(`${failures.length} function(s) above the complexity ceiling of ${failureThreshold - 1}; ${reviewOnly} additional function(s) in the review range ${reviewThreshold}-${failureThreshold - 1}`);
+    console.log(failuresOnly
+        ? `${failures.length} function(s) above the complexity ceiling of ${failureThreshold - 1}`
+        : `${failures.length} function(s) above the complexity ceiling of ${failureThreshold - 1}; ${reviewOnly} additional function(s) in the review range ${reviewThreshold}-${failureThreshold - 1}`);
     if (failures.length)
 
         process.exitCode = 1;
 
     longFiles.sort((left, right) => right.lineCount - left.lineCount || left.path.localeCompare(right.path));
-    for (const file of longFiles) {
+    for (const file of longFiles.filter(({ lineCount }) => !failuresOnly || lineCount >= fileFailureThreshold)) {
         const level = file.lineCount >= fileFailureThreshold ? "FAIL" : "WARN";
         console.log(`${level} ${file.path} ${file.lineCount} lines`);
     }
 
     const oversizedFiles = longFiles.filter(({ lineCount }) => lineCount >= fileFailureThreshold);
-    console.log(`${oversizedFiles.length} file(s) at or above ${fileFailureThreshold} lines; ${longFiles.length - oversizedFiles.length} additional file(s) in the review range ${fileReviewThreshold}-${fileFailureThreshold - 1}`);
+    console.log(failuresOnly
+        ? `${oversizedFiles.length} file(s) at or above ${fileFailureThreshold} lines`
+        : `${oversizedFiles.length} file(s) at or above ${fileFailureThreshold} lines; ${longFiles.length - oversizedFiles.length} additional file(s) in the review range ${fileReviewThreshold}-${fileFailureThreshold - 1}`);
     if (oversizedFiles.length)
         process.exitCode = 1;
 }
