@@ -111,8 +111,13 @@ export class ArticleService {
     }
 
 
-    private async describeChange(articleId: string, content: string, interfaceLocale: string, signal: AbortSignal): Promise<string> {
+    private describeChange(articleId: string, content: string, interfaceLocale: string, signal: AbortSignal): Promise<string> {
         const previousContent = this.store.getArticle(articleId)?.currentRevision.content ?? "";
+        return this.describeContentChange(previousContent, content, interfaceLocale, signal);
+    }
+
+
+    async describeContentChange(previousContent: string, content: string, interfaceLocale: string, signal: AbortSignal): Promise<string> {
         try {
             const description = await this.revisionDescriptionGenerator?.()?.generate(previousContent, content, interfaceLocale, signal);
             if (description?.trim())

@@ -12,8 +12,9 @@ export const skillMessages: Record<BuiltInSkillId, "assistant.skill.talkingPoint
 };
 
 
-export const responseMessages: Record<AssistantResponseKind, "assistant.response.conversation" | "assistant.response.skill" | "assistant.response.proposal" | "assistant.response.findings" | "assistant.response.proposalAndFindings" | "assistant.response.translation" | "assistant.requestCancelled" | "assistant.requestFailed"> = {
+export const responseMessages: Record<AssistantResponseKind, "assistant.response.conversation" | "assistant.response.editApplied" | "assistant.response.skill" | "assistant.response.proposal" | "assistant.response.findings" | "assistant.response.proposalAndFindings" | "assistant.response.translation" | "assistant.requestCancelled" | "assistant.requestFailed"> = {
     editorial_conversation: "assistant.response.conversation",
+    edit_applied: "assistant.response.editApplied",
     skill_response: "assistant.response.skill",
     proposal_prepared: "assistant.response.proposal",
     findings_prepared: "assistant.response.findings",

@@ -1,4 +1,4 @@
-import type { BuiltInSkillId } from "../assistant/assistant.js";
+import type { AssistantEditMode, BuiltInSkillId } from "../assistant/assistant.js";
 import type { KeyBindingOverrides } from "../cross-cutting/key-bindings.js";
 
 export const applicationSettingsPath = "/api/settings";
@@ -83,6 +83,7 @@ export interface GeneralSettings {
     timeFormat: TimeFormatPreference;
     timeZone: TimeZonePreference;
     assistantSendMode: AssistantSendMode;
+    defaultAssistantEditMode: AssistantEditMode;
     assistantRequestTimeoutMinutes: AssistantRequestTimeout;
     defaultArticleLanguage: string;
     defaultTranslationLanguages: string[];
@@ -196,6 +197,7 @@ export const defaultGeneralSettings: GeneralSettings = {
     timeFormat: "system",
     timeZone: "system",
     assistantSendMode: "enter",
+    defaultAssistantEditMode: "review",
     assistantRequestTimeoutMinutes: 2,
     defaultArticleLanguage: "en",
     defaultTranslationLanguages: [],

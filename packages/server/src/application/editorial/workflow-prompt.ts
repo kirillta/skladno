@@ -148,7 +148,7 @@ function createFlowRevisionPrompt(input: EditorialPromptInput): ModelMessage[] {
     return [
         {
             role: "system",
-            content: getSkillInstructions(input)
+            content: `${getSkillInstructions(input)}\n\nWhen Author guidance requests a specific textual change, make only that change. Preserve all other wording, punctuation, and formatting exactly.`
         },
         {
             role: "user",

@@ -11,6 +11,15 @@ test("preload exposes only the typed application client and completes streams", 
             if (request.method === "getHealth")
                 return Promise.resolve({ ok: true, value: { status: "ok", service: "skladno-local-service", timestamp: "2026-08-23T00:00:00.000Z" } });
 
+            if (request.method === "getAssistantEditMode")
+                return Promise.resolve({ ok: true, value: "review" });
+
+            if (request.method === "setAssistantEditMode")
+                return Promise.resolve({ ok: true, value: request.args[1] });
+
+            if (request.method === "applyAssistantEdit")
+                return Promise.resolve({ ok: true, value: { id: "revision-2", articleId: "article-1", content: "After", createdAt: "2026-08-23T00:00:00.000Z", provenance: { kind: "assistant-edit" } } });
+
             return Promise.resolve({ ok: true, value: [] });
         },
         send: (channel, payload) => {
@@ -44,6 +53,9 @@ test("preload exposes only the typed application client and completes streams", 
     const client = createElectronApplicationClient(ipcRenderer, () => "00000000-0000-4000-8000-000000000001");
     assert.equal((await client.getHealth()).status, "ok");
     assert.deepEqual(await client.listFactChecks?.("article-1"), []);
+    assert.equal(await client.getAssistantEditMode("article-1"), "review");
+    assert.equal(await client.setAssistantEditMode("article-1", "direct"), "direct");
+    assert.equal((await client.applyAssistantEdit("article-1", "reply-1")).id, "revision-2");
     await client.streamAssistantRequest("article-1", {
         kind: "new",
         requestId: "request-1",

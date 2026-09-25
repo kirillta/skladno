@@ -108,6 +108,7 @@ function handleSendKeyDown(event: Parameters<KeyboardEventHandler<HTMLDivElement
 
 
 interface AssistantComposerOptions {
+    articleId?: string;
     intl: IntlShape;
     state: AssistantState;
     onRequest: (authorMessage: string, skillId?: string, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
@@ -124,16 +125,60 @@ interface AssistantComposerOptions {
 }
 
 
-export function useAssistantComposer({ intl, state, onRequest, onCancel, translationLanguages, authorSkills = [], loadAuthorSkills, dispatcher, selection, clearSelection, assistantSendMode, shortcutOverrides, restoredComposer }: AssistantComposerOptions) {
-    const [guidance, setGuidance] = useState("");
+const draftKey = (articleId: string) => `skladno-assistant-composer:${articleId}`;
+
+
+function savedSkill(value: unknown): AssistantComposerSkill | undefined {
+    if (typeof value !== "object" || value === null || !("id" in value) || typeof value.id !== "string" || !("name" in value) || typeof value.name !== "string")
+        return undefined;
+
+    return { id: value.id, name: value.name };
+}
+
+
+function readDraft(articleId?: string): AssistantComposerValue | undefined {
+    if (!articleId)
+        return undefined;
+
+    try {
+        const stored: unknown = JSON.parse(localStorage.getItem(draftKey(articleId)) ?? "null");
+        if (typeof stored !== "object" || stored === null || !("guidance" in stored) || typeof stored.guidance !== "string")
+            return undefined;
+
+        const selectedSkill = "selectedSkill" in stored
+            ? savedSkill(stored.selectedSkill)
+            : undefined;
+        const skillOffset = "skillOffset" in stored && typeof stored.skillOffset === "number" && Number.isInteger(stored.skillOffset) && stored.skillOffset >= 0 && stored.skillOffset <= stored.guidance.length
+            ? stored.skillOffset
+            : 0;
+
+        return { guidance: stored.guidance, selectedSkill, skillOffset, caretOffset: stored.guidance.length };
+    } catch {
+        return undefined;
+    }
+}
+
+
+export function useAssistantComposer({ articleId, intl, state, onRequest, onCancel, translationLanguages, authorSkills = [], loadAuthorSkills, dispatcher, selection, clearSelection, assistantSendMode, shortcutOverrides, restoredComposer }: AssistantComposerOptions) {
+    const [initialDraft] = useState(() => readDraft(articleId));
+    const [guidance, setGuidance] = useState(initialDraft?.guidance ?? "");
     const [quickActionsOpen, setQuickActionsOpen] = useState(false);
-    const [selectedSkill, setSelectedSkill] = useState<AssistantComposerSkill>();
-    const [skillOffset, setSkillOffset] = useState(0);
+    const [selectedSkill, setSelectedSkill] = useState<AssistantComposerSkill | undefined>(initialDraft?.selectedSkill);
+    const [skillOffset, setSkillOffset] = useState(initialDraft?.skillOffset ?? 0);
     const [slashRange, setSlashRange] = useState<{ start: number; end: number }>();
     const [slashQuery, setSlashQuery] = useState("");
-    const [caretOffset, setCaretOffset] = useState(0);
+    const [caretOffset, setCaretOffset] = useState(initialDraft?.caretOffset ?? 0);
     const [activeSkillIndex, setActiveSkillIndex] = useState(0);
     const [restoredTargetLanguage, setRestoredTargetLanguage] = useState<string>();
+    useEffect(() => {
+        if (!articleId)
+            return;
+
+        if (guidance || selectedSkill)
+            localStorage.setItem(draftKey(articleId), JSON.stringify({ guidance, selectedSkill, skillOffset }));
+        else
+            localStorage.removeItem(draftKey(articleId));
+    }, [articleId, guidance, selectedSkill, skillOffset]);
     useEffect(() => {
         if (!restoredComposer)
             return;

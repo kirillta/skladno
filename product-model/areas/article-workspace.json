@@ -45,11 +45,21 @@
             "owners": [
                 "packages/web/src/workspace/components/EditorialAssistantPanel.tsx",
                 "packages/web/src/workspace/components/assistant/AssistantComposer.tsx",
+                "packages/web/src/workspace/components/assistant/use-assistant-composer.ts",
                 "packages/web/src/workspace/EditorialWorkspace.tsx",
                 "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
-            "contract": "A Lexical composer stores plain author text and one structured skill tag separately; selecting a skill never sends a request, and a tag can run against the whole Article without additional guidance. Clicking unused composer space focuses the editor without overriding its action controls. Selection scope records exact Markdown offsets and a content fingerprint, then requires the same promoted Revision before sending. Deselecting Article text clears that scope and its visible indicator before the next request. The Assistant discovers only classified current-Article capabilities, validates every action against the Author's exact request, and returns Workspace-owned decisions as handoffs. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it; generated text remains a Proposal until accepted.",
-            "persistence": "Per-Article Assistant records, minimal capability execution history, and explicit Editorial Requests."
+            "contract": "A Lexical composer stores plain author text and one structured skill tag separately; selecting a skill never sends a request, and a tag can run against the whole Article without additional guidance. Clicking unused composer space focuses the editor without overriding its action controls. Selection scope records exact Markdown offsets and a content fingerprint, then requires the same promoted Revision before sending. Deselecting Article text clears that scope and its visible indicator before the next request. The Assistant discovers only classified current-Article capabilities and validates every action against the Author's exact request. Talking Points and Narrative Draft remain available when an Article selection is active, use that selection as their primary Article source, and may use the Author message to guide or extend it. Ordinary generated text remains a Proposal until accepted; an explicitly requested, validated single replacement may use the conversation edit path.",
+            "persistence": "Per-Article Assistant records, minimal capability execution history, explicit Editorial Requests, and a device-local unsent composer draft per Article. Sending or clearing the composer removes its draft."
+        },
+        {
+            "id": "workspace.assistant.conversational-edits",
+            "area": "Editorial Assistant Panel",
+            "title": "Explicit reply replacement and opt-in direct edits",
+            "status": "implemented",
+            "owners": ["packages/web/src/workspace/components/assistant/AssistantComposer.tsx", "packages/web/src/workspace/components/assistant/AssistantTimelineMessage.tsx", "packages/web/src/workspace/state/assistant-messages-state.ts", "packages/server/src/application/assistant/completion/assistant-completion.ts", "packages/server/src/infrastructure/persistence/repositories/assistant-repository.ts"],
+            "contract": "Each Article conversation has Propose edits for review or Apply edits directly mode, shown in a compact composer popover selector without persistent explanatory copy; Proposal review is the default and existing conversations retain it. An exact, completed, single replacement from an explicit edit request can be applied once from its reply. An untagged explicit one-character substitution uses the captured Article or selection directly, preserving all other text. Direct mode applies a valid replacement after a separate structured intent check, without creating a Proposal; an invalid replacement fails rather than becoming a review Proposal. Generated capability summaries stay out of chat before the final provenance handoff. Selection scope never expands to the whole Article. Stale Revisions and any current Draft block application with recovery guidance. An applied reply identifies its immutable Assistant Revision; ordinary Proposals retain Proposal Review.",
+            "persistence": "The per-Article mode, validated reply candidate, applied Revision identity, and Revision provenance persist locally in SQLite."
         },
         {
             "id": "workspace.assistant.conversation-checkpoints",
@@ -230,6 +240,26 @@
         }
     ],
     "scenarios": [
+        {
+            "id": "workspace.assistant.conversational-selection-edit",
+            "title": "One completed selection reply applies exact text once",
+            "capabilityIds": ["workspace.assistant.conversational-edits"],
+            "preconditions": ["The Author explicitly requests one edit to a selected passage and the Assistant completes one valid replacement."],
+            "event": "The Author clicks Apply to selection on the reply.",
+            "expected": ["Only the captured passage changes and one attributable Revision is appended.", "The reply identifies the applied Revision."],
+            "forbidden": ["A second acceptance step, duplicate Revision, or replacement of surrounding Article text."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
+        },
+        {
+            "id": "workspace.assistant.conversational-direct-edit",
+            "title": "Opt-in direct mode requires exact edit intent",
+            "capabilityIds": ["workspace.assistant.conversational-edits"],
+            "preconditions": ["Apply edits directly mode is active for the Article conversation."],
+            "event": "An Assistant request, with or without a Skill tag, completes with or without explicit edit intent.",
+            "expected": ["An untagged explicit edit request starts the Proposal capability with the captured Article or selection context; a one-character substitution preserves all other text.", "Only an explicitly authorized and validated replacement appends a Revision at completion."],
+            "forbidden": ["Mode alone authorizing an unrelated edit, a rejected direct edit becoming a review Proposal, or interim generated text appearing before provenance."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
+        },
         {
             "id": "workspace.shell.responsive-collapse",
             "title": "Constrained layout collapses supporting panels before narrowing the Article Workspace",

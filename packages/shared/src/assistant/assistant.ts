@@ -11,10 +11,21 @@ export type AssistantRequestScope =
 export type AssistantMessageRole = "assistant" | "author" | "system";
 export type AssistantMessageKind = "greeting" | "message" | "response" | "status";
 /** Stable application-authored message templates; render these through the interface catalog. */
-export type AssistantMessageTemplate = "greeting" | "request_cancelled" | "request_failed" | "profile_rebuilt";
+export type AssistantMessageTemplate = "greeting" | "request_cancelled" | "request_failed" | "profile_rebuilt" | "edit_applied";
 export type AssistantMessageStatus = "completed" | "pending" | "failed" | "cancelled" | "rejected";
 export type AssistantRequestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type AssistantSkillSource = "explicit" | "inferred";
+export type AssistantEditMode = "review" | "direct";
+
+
+export type AssistantEditCandidate =
+    | { target: "article"; replacement: string }
+    | { target: "selection"; original: string; replacement: string };
+
+
+export interface AssistantAppliedEdit {
+    revisionId: string;
+}
 
 
 /** A source-neutral Skill pointer. Skills guide requests; they grant no capability. */
@@ -41,6 +52,7 @@ export interface AssistantCapabilityActivity {
 
 
 export type AssistantAuthorizedAction = "rename_article"
+    | "apply_article_edit"
     | "change_article_language"
     | "assign_publishing_profile"
     | "set_article_style_rules"
@@ -80,6 +92,7 @@ export interface AssistantCapabilityExecution {
 
 
 export type AssistantResponseKind = "editorial_conversation"
+    | "edit_applied"
     | "skill_response"
     | "proposal_prepared"
     | "findings_prepared"
@@ -135,6 +148,8 @@ export interface AssistantMessage {
     baseRevisionContent?: string;
     proposalContent?: string;
     proposalAcceptance?: ProposalAcceptance;
+    editCandidate?: AssistantEditCandidate;
+    appliedEdit?: AssistantAppliedEdit;
     translation?: AssistantEditorialResult["translation"];
     proposalSummaries?: import("../articles/revision/revisions.js").ProposalChangeSummary[];
     proposalSummaryLocale?: string;
@@ -145,6 +160,7 @@ export interface AssistantMessage {
 
 export interface AssistantEditorialResult {
     metadataChanged?: boolean;
+    articleChanged?: boolean;
     proposal?: string;
     factCheck?: import("../editorial/editorial.js").FactCheck;
     styleReview?: import("../editorial/editorial.js").StyleReview;
@@ -161,6 +177,8 @@ export const assistantSkillsPath = "/api/assistant/skills";
 export const createAssistantTranslationRejectionPath = (articleId: string, editorialArtifactId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(editorialArtifactId)}/translation-rejection`;
 export const createAssistantCheckpointPreviewPath = (articleId: string, messageId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(messageId)}/checkpoint`;
 export const createAssistantCheckpointRestorePath = (articleId: string, messageId: string) => `${createAssistantCheckpointPreviewPath(articleId, messageId)}/restore`;
+export const createAssistantEditModePath = (articleId: string) => `${createAssistantMessagesPath(articleId)}/edit-mode`;
+export const createAssistantApplyEditPath = (articleId: string, messageId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(messageId)}/apply-edit`;
 
 
 export interface AssistantCheckpointCounts {
@@ -236,6 +254,9 @@ export type { AssistantEvent, FactCheckClaimPreview } from "./assistant-events.j
 
 
 export interface AssistantClient {
+    getAssistantEditMode(articleId: string): Promise<AssistantEditMode>;
+    setAssistantEditMode(articleId: string, mode: AssistantEditMode): Promise<AssistantEditMode>;
+    applyAssistantEdit(articleId: string, messageId: string): Promise<import("../articles/revision/revision.js").ArticleRevision>;
     listAssistantSkills(): Promise<AssistantSkillSummary[]>;
     streamAssistantRequest(articleId: string, input: StartAssistantRequest, onEvent: (event: AssistantEvent) => void, signal?: AbortSignal): Promise<void>;
     rejectTranslation(articleId: string, editorialArtifactId: string): Promise<void>;

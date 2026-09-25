@@ -111,6 +111,11 @@ export function ArticleIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 
+export function FolderIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon strokeWidth="1.8" {...props}><path d="M3 6h7l2 2h9v11H3z" /></Icon>;
+}
+
+
 export function AssistantIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon strokeWidth="1.8" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="m12 3 .9 3.1L16 7l-3.1.9L12 11l-.9-3.1L8 7l3.1-.9L12 3Zm6 8 .6 2.4L21 14l-2.4.6L18 17l-.6-2.4L15 14l2.4-.6L18 11ZM6 13l.9 3.1L10 17l-3.1.9L6 21l-.9-3.1L2 17l3.1-.9L6 13Z" /></Icon>;
 }

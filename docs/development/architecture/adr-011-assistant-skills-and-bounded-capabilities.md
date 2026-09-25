@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-30
-- Updated: 2026-09-22
+- Updated: 2026-09-24
 - Scope: Assistant skills, application capabilities, tool execution, Workspace handoffs, and generated artifact completion
 - Depends on: [ADR-002](adr-002-shared-contract-organization.md), [ADR-003](adr-003-web-feature-oriented-react-architecture.md), [ADR-005](adr-005-article-state-and-consistency.md), [ADR-007](adr-007-completion-gated-editorial-engine.md), [ADR-008](adr-008-loopback-service-trust-boundary.md)
 
@@ -44,7 +44,9 @@ Assistant-callable operations include safe existing work:
 - run existing Proposal generation, fact-checking, style review, and translation operations.
 - inspect Style Corpus readiness, add the current immutable Revision as a local style sample, and explicitly rebuild the Style Profile.
 
-The catalog excludes Draft mutation, Proposal acceptance or rejection, Revision restoration, Finding resolution, translation Article creation, arbitrary Style Corpus editing or deletion, Publishing profile definition mutation, copying for publication, direct publishing, Article deletion, arbitrary filesystem or network access, credentials, persistence stores, and unrestricted internal routes. Assigning an existing Publishing profile to the current Article is Article metadata, not Publishing profile definition mutation. Adding the current immutable Revision, rebuilding its local Style Profile, or changing Article metadata is allowed only after an explicit Author request. The excluded operations remain Author actions behind their existing application and Workspace boundaries.
+The catalog excludes Draft mutation, ordinary Proposal acceptance or rejection, Revision restoration, Finding resolution, translation Article creation, arbitrary Style Corpus editing or deletion, Publishing profile definition mutation, copying for publication, direct publishing, Article deletion, arbitrary filesystem or network access, credentials, persistence stores, and unrestricted internal routes. Assigning an existing Publishing profile to the current Article is Article metadata, not Publishing profile definition mutation. Adding the current immutable Revision, rebuilding its local Style Profile, or changing Article metadata is allowed only after an explicit Author request. The excluded operations remain Author actions behind their existing application and Workspace boundaries.
+
+An exact, completed single replacement from `generate_proposal` may become an Assistant reply edit candidate only after a replacement check. The candidate retains its base Revision and selected offsets. For an untagged explicit edit request, the structured intent check activates `generate_proposal` before orchestration so the model cannot answer without that capability. Exact single-character substitutions are applied to the captured Article or selection locally, leaving all other characters intact; other replacements use a structured model check. Capability result summaries do not stream into chat before the final provenance handoff. The Author can click Apply on that reply in either conversation mode. The default Propose edits for review mode retains Proposal review; opt-in Apply edits directly mode also requires the structured check of the Author's explicit edit intent and may apply that edit at completion without creating a Proposal. Invalid direct replacements fail instead of becoming review Proposals. The per-Article mode is captured when the request starts and cannot authorize an unrelated edit. Both paths use the same atomic Revision operation and reject a current Draft or stale Revision. Ordinary Proposals keep their Workspace review path. The reply action itself is an Author handoff, not a model-callable Proposal acceptance tool.
 
 Selection is an authority boundary. A selection-scoped request receives the selected text and required metadata. A capability that needs the whole Article must explain the need and obtain a new whole-Article request. If the current Revision changes during execution, the run stops instead of rebasing its work.
 
@@ -78,7 +80,7 @@ Conversation uses the configured Assistant model. Each invoked capability retain
 
 The existing typed Assistant stream carries quiet, human-readable activity such as "Checking facts." Successful activity collapses to one short summary with optional local detail. It does not expose tool identifiers, prompts, private arguments, provider errors, credentials, or privileged handles.
 
-A completed artifact produces a short conversational summary and a result card with an explicit action to review it in its owning Workspace View. Completion does not change the current view automatically. Proposal decisions, Finding resolution, Revision restoration, translation Article creation, style-profile management, and publishing remain in their current screens.
+A completed artifact produces a short conversational summary and a result card with an explicit action to review it in its owning Workspace View. Completion does not change the current view automatically. Ordinary Proposal decisions, Finding resolution, Revision restoration, translation Article creation, style-profile management, and publishing remain in their current screens. A validated conversational edit can instead append its Revision through the narrow mode and reply-action rules above.
 
 Persist an append-only minimal local activity record for each capability call: capability ID, status, request ID, base Revision, and timestamps. It follows the Article conversation lifecycle and stores no prompt, tool argument, private context, result body, secret, or raw provider response.
 

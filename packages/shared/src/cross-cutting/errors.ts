@@ -33,6 +33,8 @@ export const APPLICATION_ERROR = {
     ASSISTANT_REQUEST_CONFLICT: "assistant_request_conflict",
     ASSISTANT_CHECKPOINT_CONFLICT: "assistant_checkpoint_conflict",
     ASSISTANT_CHECKPOINT_INVALID: "assistant_checkpoint_invalid",
+    ASSISTANT_EDIT_CONFLICT: "assistant_edit_conflict",
+    ASSISTANT_EDIT_INVALID: "assistant_edit_invalid",
     ASSISTANT_RETRY_INVALID: "assistant_retry_invalid",
     ASSISTANT_COORDINATOR_FAILED: "assistant_coordinator_failed",
     SKILL_INVALID_FRONTMATTER: "skill_invalid_frontmatter",

@@ -31,6 +31,7 @@ interface AssistantTimelineActions {
     onRetry?: (requestId: string) => void;
     openSettings?: () => void;
     onCheckpoint?: (messageId: string) => void;
+    applyEdit?: (messageId: string) => Promise<void>;
 }
 
 
@@ -99,7 +100,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
         if (!element)
             return;
 
-        element.scrollTop = element.scrollHeight;
+        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
         followStream.current = true;
         setAtEnd(true);
     }
@@ -121,7 +122,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
 
 
     return <div data-focus-area="assistant-chat" onKeyDown={handleChatKeyDown} className="relative min-h-0 flex-1">
-        <div ref={timeline} data-focus-area-entry tabIndex={0} onScroll={trackScroll} className="h-full select-text cursor-default space-y-4 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "assistant.response.conversation" })} aria-live="polite">
+        <div ref={timeline} data-focus-area-entry tabIndex={0} onScroll={trackScroll} className="h-full select-text cursor-default flex flex-col gap-2 overflow-y-auto px-5 py-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong" aria-label={intl.formatMessage({ id: "assistant.response.conversation" })} aria-live="polite">
             <AssistantTimelineMessages data={data} actions={actions} greeting={greeting} lastMessage={lastMessage} completedFactCheck={completedFactCheck} skillByRequest={skillByRequest} skillNames={skillNames} />
             <AssistantTimelineStatus data={data} actions={actions} />
         </div>
@@ -142,11 +143,11 @@ function AssistantTimelineMessages({ data, actions, greeting, lastMessage, compl
     skillNames: ReadonlyMap<string, string>;
 }) {
     const { assistantMessages, factCheckClaims, streamedMessage, generalSettings } = data;
-    const { openView, openSkillFolder, onRetry, onCheckpoint } = actions;
+    const { openView, openSkillFolder, onRetry, onCheckpoint, applyEdit } = actions;
     const intl = useIntl();
     return <>
         {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />}
-        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={onCheckpoint} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />)}
+        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={onCheckpoint} applyEdit={applyEdit} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />)}
         {streamedMessage?.responseKind
             ? <AssistantTimelineMessage message={{ id: streamedMessage.id, articleId: streamedMessage.articleId, role: "assistant", kind: "response", status: streamedMessage.status, responseKind: streamedMessage.responseKind, createdAt: streamedMessage.createdAt, updatedAt: streamedMessage.createdAt }} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />
             : streamedMessage?.blocks.length ? <article className="p-0"><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "assistant.heading" })}</p>{streamedMessage.blocks.map((block, index) => <AssistantMarkdown key={`${streamedMessage.id}-${index}`} content={block} />)}</article> : null}

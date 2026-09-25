@@ -10,7 +10,7 @@ Apply these rules within the requested scope. A review or plan does not authoriz
 ## Structure rules
 
 - Keep each function and method within one semantic responsibility. Extract work that crosses a responsibility boundary into a focused function or, within a class, usually a private method. An orchestration method may sequence named operations while each operation owns its implementation.
-- Keep cognitive complexity strictly below 10 for every function and method, including callbacks: the maximum is 9. Flatten nesting and extract meaningful responsibilities. Cognitive complexity is not cyclomatic complexity or line count; splitting arbitrary code fragments just to lower a score does not satisfy the responsibility rule.
+- Keep cognitive complexity below 10 as a target for every function and method, including callbacks. Scores 10–15 are a review range: simplify meaningful complexity when practical, but retain it when the code remains clear and extraction would not improve responsibility boundaries. Scores 16 or higher fail the configured check. Cognitive complexity is not cyclomatic complexity or line count; splitting arbitrary code fragments just to lower a score does not satisfy the responsibility rule.
 - Group interface, class, and other exported-entity properties by meaning. Split unrelated responsibilities instead of growing a god object or hiding unrelated properties inside a generic options object.
 - Use explicit control flow or intermediate variables instead of nested ternaries. A ternary expression may contain only one conditional level.
 - Prefer robust solutions that remain understandable as the code evolves. Reuse an existing helper or native facility when it fits the responsibility; introduce abstractions only for a demonstrated need.

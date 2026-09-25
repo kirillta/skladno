@@ -2,6 +2,70 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { APPLICATION_ERROR, builtInSkills } from "@skladno/shared";
 import { withRepository } from "./repositories.test-utils.js";
+
+test("Assistant edit modes use the default only for new conversations", () => withRepository((repositories) => {
+    const fresh = repositories.articleService.createArticle({ title: "Fresh", content: "First" });
+    const existing = repositories.articleService.createArticle({ title: "Existing", content: "First" });
+    repositories.assistant.createRequest({ id: "older", articleId: existing.id, scope: { kind: "article", baseRevisionId: existing.currentRevisionId } });
+
+    assert.equal(repositories.assistant.getEditMode(fresh.id, "direct"), "direct");
+    assert.equal(repositories.assistant.getEditMode(existing.id, "direct"), "review");
+    assert.equal(repositories.assistant.setEditMode(existing.id, "direct"), "direct");
+    assert.equal(repositories.assistant.getEditMode(existing.id, "review"), "direct");
+}));
+
+
+test("a completed selection edit applies exactly once as an attributable Revision", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Selection", content: "Before selected after" });
+    repositories.assistant.createRequest({ id: "edit-selection", articleId: article.id, scope: { kind: "selection", baseRevisionId: article.currentRevisionId, startOffset: 7, endOffset: 15 } });
+    const reply = repositories.assistant.completeRequest({ requestId: "edit-selection", articleId: article.id, responseKind: "proposal_prepared", content: "", editCandidate: { target: "selection", original: "selected", replacement: "improved" } });
+
+    assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Before selected after");
+    const applied = repositories.assistant.applyEdit(article.id, reply.id);
+    assert.equal(applied.content, "Before improved after");
+    assert.equal(applied.provenance.kind, "assistant-edit");
+    assert.equal(applied.provenance.requestId, "edit-selection");
+    assert.equal(repositories.assistant.applyEdit(article.id, reply.id).id, applied.id);
+    assert.equal(repositories.articles.listRevisions(article.id).length, 2);
+    assert.equal(repositories.assistant.listMessages(article.id).find((message) => message.id === reply.id)?.appliedEdit?.revisionId, applied.id);
+}));
+
+
+test("Assistant edits reject a Draft, stale Revision, and missing candidate", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Conflicts", content: "Before" });
+    repositories.assistant.createRequest({ id: "draft-edit", articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+    const reply = repositories.assistant.completeRequest({ requestId: "draft-edit", articleId: article.id, responseKind: "proposal_prepared", content: "", editCandidate: { target: "article", replacement: "After" } });
+    repositories.articles.saveDraft(article.id, { baseRevisionId: article.currentRevisionId, content: "Unsaved" });
+    assert.throws(() => repositories.assistant.applyEdit(article.id, reply.id), { message: "conflict" });
+    assert.equal(repositories.articles.getArticle(article.id)?.draft?.content, "Unsaved");
+    repositories.articles.discardDraft(article.id, 1);
+    repositories.articleService.acceptChange(article.id, { content: "Newer", provenance: { kind: "author-draft" } });
+    assert.throws(() => repositories.assistant.applyEdit(article.id, reply.id), { message: "conflict" });
+    assert.equal(repositories.articles.listRevisions(article.id).length, 2);
+    assert.throws(() => repositories.assistant.applyEdit(article.id, "unknown"), { message: "invalid" });
+}));
+
+
+test("direct Assistant edit and its reply commit together", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Direct", content: "Before" });
+    repositories.assistant.createRequest({ id: "direct-edit", articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+    const reply = repositories.assistant.completeRequest({ requestId: "direct-edit", articleId: article.id, responseKind: "edit_applied", content: "", editCandidate: { target: "article", replacement: "After" }, directEdit: true });
+    assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "After");
+    assert.equal(reply.appliedEdit?.revisionId, repositories.articles.getArticle(article.id)?.currentRevisionId);
+}));
+
+
+test("a conflicting direct edit rolls back its reply and Revision", () => withRepository((repositories) => {
+    const article = repositories.articleService.createArticle({ title: "Direct", content: "Before" });
+    repositories.assistant.createRequest({ id: "direct-conflict", articleId: article.id, scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+    repositories.articles.saveDraft(article.id, { baseRevisionId: article.currentRevisionId, content: "Unsaved" });
+
+    assert.throws(() => repositories.assistant.completeRequest({ requestId: "direct-conflict", articleId: article.id, responseKind: "edit_applied", content: "", editCandidate: { target: "article", replacement: "After" }, directEdit: true }), { message: "conflict" });
+    assert.equal(repositories.assistant.getRequest("direct-conflict")?.status, "running");
+    assert.equal(repositories.assistant.listMessages(article.id).filter((message) => message.requestId === "direct-conflict" && message.role === "assistant").length, 0);
+    assert.equal(repositories.articles.listRevisions(article.id).length, 1);
+    assert.equal(repositories.articles.getArticle(article.id)?.draft?.content, "Unsaved");
+}));
 // Product scenarios: cross-cutting.assistant-records-local
 test("Assistant records retain current Skill IDs", () => withRepository((repositories) => {
     const article = repositories.articleService.createArticle({ title: "Skills", content: "Draft" });

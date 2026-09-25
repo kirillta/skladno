@@ -9,12 +9,14 @@ test.beforeEach(async ({ page }) => {
 test("Assistant request time limit persists through Settings reload", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "AI assistant" }).click();
     const limit = page.getByRole("combobox", { name: "Request time limit" });
     const saved = page.waitForResponse((response) => response.url().endsWith("/api/settings/general") && response.request().method() === "PUT");
     await limit.selectOption("5");
     await saved;
     await page.reload();
     await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "AI assistant" }).click();
     await expect(limit).toHaveValue("5");
     const reset = page.waitForResponse((response) => response.url().endsWith("/api/settings/general") && response.request().method() === "PUT");
     await limit.selectOption("2");
@@ -29,7 +31,7 @@ async function activateWithKeyboard(page: import("@playwright/test").Page, targe
 }
 
 
-async function createArticle(page: import("@playwright/test").Page): Promise<void> {
+async function createArticle(page: import("@playwright/test").Page, content = "Original fixture Article."): Promise<void> {
     const create = page.getByRole("button", { name: "Create" });
     const created = page.waitForResponse((response) => response.url().endsWith("/api/articles") && response.request().method() === "POST");
     if (await create.isVisible())
@@ -41,8 +43,8 @@ async function createArticle(page: import("@playwright/test").Page): Promise<voi
 
     const editor = page.getByRole("textbox", { name: "Article draft" });
     const checkpointed = page.waitForResponse((response) => response.url().includes("/draft") && response.request().method() === "PUT");
-    await editor.pressSequentially("Original fixture Article.");
-    await expect(editor).toContainText("Original fixture Article.");
+    await editor.pressSequentially(content);
+    await expect(editor).toContainText(content);
     await checkpointed;
     const saved = page.waitForResponse((response) => response.url().includes("/revisions") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Save revision" }).click();
@@ -159,7 +161,7 @@ test("the Assistant Lexical composer supports skill tags and slash invocation", 
     await createArticle(page);
 
     const composer = page.getByRole("combobox", { name: "Editorial guidance" });
-    await page.locator("[data-assistant-composer-actions]").click({ position: { x: 8, y: 18 } });
+    await composer.click();
     await expect(composer).toBeFocused();
     await composer.fill("Keep this focused /nar");
     await expect(composer).toHaveAttribute("aria-expanded", "true");
@@ -214,6 +216,84 @@ test("the Assistant Lexical composer supports skill tags and slash invocation", 
     });
     await expect(composer).toContainText("plain");
     await expect(composer).toContainText("text");
+});
+
+
+test("a completed selection suggestion applies once from the Assistant reply", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+    const editor = page.getByRole("textbox", { name: "Article draft" });
+    await editor.click();
+    await editor.press("ControlOrMeta+A");
+    await page.getByRole("combobox", { name: "Editorial guidance" }).fill("E2E edit and suggest");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Flow and clarity" }).click();
+    await page.getByRole("button", { name: "Send editorial request" }).click();
+    await expect(page.getByRole("button", { name: "Apply to selection" })).toBeVisible();
+    await page.getByRole("button", { name: "Apply to selection" }).click();
+    await expect(editor).toContainText("Improved fixture Article.");
+    await expect(page.getByText("Applied as a new Revision")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Apply to selection" })).toHaveCount(0);
+});
+
+
+test("direct Assistant mode applies an explicitly requested Article edit", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+    const mode = page.getByRole("button", { name: "Edit mode: Propose edits for review" });
+    expect((await mode.boundingBox())?.width).toBeLessThan(300);
+    await expect(page.getByText("You approve each suggested replacement from its reply.")).toHaveCount(0);
+    await mode.focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("menuitemradio", { name: "Propose edits for review" })).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("menuitemradio", { name: "Apply edits directly" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("button", { name: "Edit mode: Apply edits directly" })).toBeVisible();
+    await page.getByRole("combobox", { name: "Editorial guidance" }).fill("E2E edit and apply");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Flow and clarity" }).click();
+    await page.getByRole("button", { name: "Send editorial request" }).click();
+    await expect(page.getByRole("textbox", { name: "Article draft" })).toContainText("Improved fixture Article.");
+    await expect(page.getByText("Applied as a new Revision")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Replace Article" })).toHaveCount(0);
+});
+
+
+test("an untagged edit request uses the Article and survives reload after Author approval", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page, "ё first. ё second.");
+    const editor = page.getByRole("textbox", { name: "Article draft" });
+    await page.getByRole("combobox", { name: "Editorial guidance" }).fill("Change ё to е");
+    await page.getByRole("button", { name: "Send editorial request" }).click();
+
+    await expect(page.getByRole("button", { name: "Replace Article" })).toBeVisible();
+    await expect(editor).toContainText("ё first. ё second.");
+    await page.getByRole("button", { name: "Replace Article" }).click();
+    await expect(editor).toContainText("е first. е second.");
+    await expect(page.getByText("Applied as a new Revision")).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Article draft" })).toContainText("е first. е second.");
+    await expect(page.getByRole("button", { name: "Replace Article" })).toHaveCount(0);
+});
+
+
+test("unsent Assistant text survives reload for its Article and clears when erased", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+    const composer = page.getByRole("combobox", { name: "Editorial guidance" });
+    await composer.fill("Unsent direction");
+    await expect(composer).toContainText("Unsent direction");
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("skladno-assistant-composer:")).length)).toBe(1);
+
+    await page.reload();
+    await expect(composer).toContainText("Unsent direction");
+    await composer.press("ControlOrMeta+A");
+    await composer.press("Backspace");
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("skladno-assistant-composer:")).length)).toBe(0);
+    await page.reload();
+    await expect(composer).toBeEmpty();
 });
 
 

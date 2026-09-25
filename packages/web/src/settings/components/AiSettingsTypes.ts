@@ -1,8 +1,10 @@
-import type { AiConnection, AiProvider, AppModelPreference, ApplicationSettingsSnapshot, AvailableAiModel, ModelPreferences } from "@skladno/shared";
+import type { AiConnection, AiProvider, AppModelPreference, ApplicationSettingsSnapshot, AvailableAiModel, GeneralSettings, ModelPreferences } from "@skladno/shared";
 
 
 export interface AiSettingsSectionProps {
     settings: ApplicationSettingsSnapshot;
+    general: GeneralSettings;
+    saveGeneral: (next: GeneralSettings) => Promise<void>;
     preferences: ModelPreferences;
     appModel?: AppModelPreference;
     models: AvailableAiModel[];

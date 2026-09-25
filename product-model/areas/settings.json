@@ -8,7 +8,16 @@
             "title": "Appearance, locale, and date/time/time-zone",
             "status": "implemented",
             "owners": ["packages/web/src/settings/ApplicationSettings.tsx", "packages/web/src/settings/components/GeneralSettingsSection.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/settings/settings-store.ts", "packages/server/src/application/settings/system-date-time-format-provider.ts", "packages/server/src/presentation/routes/settings-route.ts", "packages/server/src/infrastructure/persistence/repositories/settings-repository.ts"],
-            "contract": "General Settings persists a System, Light, or Dark appearance preference; the shared resolver maps System to the current device appearance for visual application. It also supports the Interface locale, device-local or explicit IANA time zones, device-local date and time formatting, and explicit date and time formats. Revision History honors saved formatting while generated supporting UI text uses the Interface locale independently of Article language. The Assistant request time limit defaults to two minutes and accepts 1, 2, 3, 5, 10, 15, or 30 minutes, or no limit, applying to each new request or retry.",
+            "contract": "General Settings persists a System, Light, or Dark appearance preference; the shared resolver maps System to the current device appearance for visual application. It also supports the Interface locale, device-local or explicit IANA time zones, device-local date and time formatting, and explicit date and time formats. Revision History honors saved formatting while generated supporting UI text uses the Interface locale independently of Article language.",
+            "persistence": "app_settings.application-general"
+        },
+        {
+            "id": "settings.assistant-preferences",
+            "area": "AI",
+            "title": "Assistant edit default and request time limit",
+            "status": "implemented",
+            "owners": ["packages/web/src/settings/components/AssistantBehaviorSettings.tsx", "packages/server/src/application/settings/application-settings-service.ts", "packages/server/src/application/settings/settings-store.ts"],
+            "contract": "AI assistant Settings shows the default edit mode and request time limit together. The time limit defaults to two minutes and accepts 1, 2, 3, 5, 10, 15, or 30 minutes, or no limit, applying to each new request or retry. The default edit mode proposes edits for review; direct application of explicitly requested edits is opt-in for new Article conversations and never changes an existing conversation. Other Proposals still require review.",
             "persistence": "app_settings.application-general"
         },
         {
@@ -116,10 +125,20 @@
     ],
     "scenarios": [
         {
+            "id": "settings.default-assistant-edit-mode",
+            "title": "A saved Assistant edit default applies to new conversations",
+            "capabilityIds": ["settings.assistant-preferences"],
+            "preconditions": ["An Author opens AI assistant Settings."],
+            "event": "The Author chooses a default Assistant edit mode.",
+            "expected": ["The choices distinguish reviewable Proposals from directly applied, explicitly requested edits.", "The saved value initializes a new Article conversation; existing conversations keep their mode."],
+            "forbidden": ["Changing the mode of an existing conversation without its own control."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/settings/ApplicationSettings.general.test.tsx" }
+        },
+        {
             "id": "settings.assistant-request-timeout",
             "title": "Assistant request time limit is configurable",
-            "capabilityIds": ["settings.general-preferences"],
-            "preconditions": ["The Author opens General Settings."],
+            "capabilityIds": ["settings.assistant-preferences"],
+            "preconditions": ["The Author opens AI assistant Settings."],
             "event": "The Author changes the Assistant request time limit.",
             "expected": ["The default is two minutes. A labeled control with persistent guidance saves the selected whole-minute limit."],
             "forbidden": ["An invalid limit disables the deadline."],

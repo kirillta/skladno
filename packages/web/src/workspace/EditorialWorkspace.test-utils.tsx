@@ -13,6 +13,7 @@ import type { KeyBindingDispatcher } from "../key-bindings/dispatcher.js";
 
 
 export function TestEditorialAssistantPanel(props: {
+    articleId?: string;
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
@@ -40,9 +41,9 @@ export function TestEditorialAssistantPanel(props: {
     article?: Article;
     updateArticle?: (articleId: string, input: unknown) => Promise<unknown>;
 }) {
-    const { state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages, assistantMessages, streamedMessage, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings, hasUnavailableAiConnection, openSettings, authorSkills, loadAuthorSkills } = props;
+    const { articleId, state, message, errorDetails, activity, factCheckClaims, onRequest, onCancel, onRetry, collapsed, setCollapsed, translationLanguages, assistantMessages, streamedMessage, dispatcher, shortcutOverrides, openView, selection, clearSelection, generalSettings, hasUnavailableAiConnection, openSettings, authorSkills, loadAuthorSkills } = props;
     return <EditorialAssistantPanel
-        data={{ state, message, errorDetails, activity, factCheckClaims, translationLanguages, assistantMessages, streamedMessage, selection, generalSettings, hasUnavailableAiConnection, authorSkills }}
+        data={{ articleId, state, message, errorDetails, activity, factCheckClaims, translationLanguages, assistantMessages, streamedMessage, selection, generalSettings, hasUnavailableAiConnection, authorSkills }}
         actions={{ onRequest, onCancel, onRetry, loadAuthorSkills, dispatcher, shortcutOverrides, openView, clearSelection, openSettings }}
         layout={{ collapsed, setCollapsed }} />;
 }
@@ -73,6 +74,9 @@ export function createFakeClient(): EditorialWorkspaceClient {
         listArticleRevisions: vi.fn().mockResolvedValue([]),
         listAssistantSkills: vi.fn().mockResolvedValue([]),
         listAssistantMessages: vi.fn().mockResolvedValue([]),
+        getAssistantEditMode: vi.fn().mockResolvedValue("review"),
+        setAssistantEditMode: vi.fn().mockResolvedValue("direct"),
+        applyAssistantEdit: vi.fn(),
         streamAssistantRequest: vi.fn(),
         acceptProposal: vi.fn(),
         summarizeProposal: vi.fn().mockResolvedValue([]),

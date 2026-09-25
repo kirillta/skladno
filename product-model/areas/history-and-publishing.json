@@ -8,7 +8,7 @@
             "title": "Immutable Revision timeline and read-only preview",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/RevisionHistoryView.tsx", "packages/web/src/workspace/components/ArticleStatusBar.tsx", "packages/web/src/workspace/editor/RevisionArticlePreview.tsx", "packages/server/src/infrastructure/persistence/repositories/articles-repository.ts"],
-            "contract": "The timeline and compact Status Bar selector distinguish initial, manual, AI-assisted, and restored Revisions. When the first immutable Revision is empty, the UI labels it Empty Revision and labels the second saved Revision Initial Revision; both remain selectable. New author and accepted-Proposal Revisions use a concise configured-model summary of the changed context in the interface locale as their accessible history title, with a deterministic local fallback when completion fails or is cancelled; initial and restored Revisions retain service labels. Selecting a Revision is local-only, opens a read-only preview, and does not alter the Article or Draft; restoration keeps the existing confirmation flow, and revision conflicts use an application contract rather than persistence types.",
+            "contract": "The timeline and compact Status Bar selector distinguish initial, manual, AI-assisted, and restored Revisions. Conversational Assistant edits use the AI-assisted presentation and retain request and reply provenance. When the first immutable Revision is empty, the UI labels it Empty Revision and labels the second saved Revision Initial Revision; both remain selectable. New author, accepted-Proposal, and Assistant-edit Revisions use a concise configured-model summary of the changed context in the interface locale as their accessible history title, with a deterministic local fallback when generation fails or is cancelled. Selecting a Revision is local-only, opens a read-only preview, and does not alter the Article or Draft; restoration keeps the existing confirmation flow, and revision conflicts use an application contract rather than persistence types.",
             "persistence": "Revisions are immutable local records ordered by creation. New content-changing Revisions persist their generated or fallback description only after completion; existing Revision records remain unchanged."
         },
         {
@@ -97,6 +97,16 @@
             "expected": ["A successful concise description is stored with the new Revision; otherwise a deterministic local fallback is stored and the accepted content remains recoverable."],
             "forbidden": ["Changing existing Revision records, blocking Revision creation after model failure, or sending unchanged Article context to the model."],
             "evidence": { "kind": "automated", "path": "packages/server/src/infrastructure/persistence/repositories.article-lifecycle.test.ts" }
+        },
+        {
+            "id": "history-and-publishing.assistant-edit-descriptions",
+            "title": "Assistant edit Revisions have generated descriptions",
+            "capabilityIds": ["history-and-publishing.revision-history"],
+            "preconditions": ["An explicit Assistant edit has a valid replacement for the Article or its selection."],
+            "event": "The edit is applied directly or from its completed reply.",
+            "expected": ["The new immutable Revision stores a concise description generated from the changed context in the interface locale; generation failure uses the existing local fallback."],
+            "forbidden": ["A fixed Assistant edit title replacing an available generated description, duplicate Revisions on repeated Apply, or a description update to an older Revision."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
         },
         {
             "id": "history-and-publishing.style-corpus-local",

@@ -153,7 +153,7 @@ export function WorkspaceShell({ content, layout }: { content: WorkspaceShellCon
             {!panelLayout.libraryCollapsed && <ResizeHandle label={intl.formatMessage({ id: "navigation.resizeArticleLibrary" })} value={libraryWidth} minimum={libraryLimits.minimum} maximum={libraryLimits.maximum} onChange={setLibraryWidth} />}
         </div>}
         {!focusMode && <div data-responsive-overlay={panelLayout.assistantOverlay || undefined} className={panelLayout.assistantOverlay ? "absolute inset-y-0 right-0 z-20 min-h-0 min-w-0 border-l border-border-strong shadow-raised" : "relative min-h-0 min-w-0"} style={{ gridArea: "assistant", ...(panelLayout.assistantOverlay ? { width: panelLayout.assistantWidth } : {}) }}>
-            {isValidElement(assistant) ? cloneElement(assistant, { collapsed: panelLayout.assistantCollapsed, setCollapsed: setAssistantCollapsed }) : assistant}
+            {isValidElement(assistant) ? cloneElement(assistant, { layout: { collapsed: panelLayout.assistantCollapsed, setCollapsed: setAssistantCollapsed } }) : assistant}
             {!panelLayout.assistantCollapsed && !panelLayout.assistantOverlay && <ResizeHandle label={intl.formatMessage({ id: "assistant.resize" })} value={panelLayout.assistantWidth} minimum={assistantLimits.minimum} maximum={panelLayout.assistantMaximum} direction={-1} edge="start" onChange={setAssistantWidth} />}
         </div>}
     </main>;

@@ -119,6 +119,11 @@ describe("AssistantTimeline", () => {
             scrollHeight: { configurable: true, value: 500 },
             scrollTop: { configurable: true, writable: true, value: 0 },
         });
+        Object.defineProperty(timeline, "scrollTo", {
+            value: ({ top }: ScrollToOptions) => {
+                timeline.scrollTop = top ?? 0;
+            },
+        });
 
         fireEvent.scroll(timeline);
         const scrollToEnd = screen.getByRole("button", { name: "Scroll to end" });

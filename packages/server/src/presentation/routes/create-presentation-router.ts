@@ -1,4 +1,4 @@
-import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, assistantSkillsPath, backupExportsPath, backupImportsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantCheckpointPreviewPath, createAssistantCheckpointRestorePath, createAssistantMessagesPath, createAssistantRequestsPath, createAssistantTranslationRejectionPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
+import { acceptProposalPath, aiAppModelPath, aiConnectionsPath, aiModelPreferencesPath, aiModelsPath, applicationSettingsPath, assistantSkillsPath, backupExportsPath, backupImportsPath, createArticleArchivePath, createArticleDraftPath, createArticlePinPath, createArticleRevisionsPath, articlesPath, createArticleStyleCorpusSnapshotPath, createArticleStyleRulesPath, createAssistantApplyEditPath, createAssistantEditModePath, createAssistantCheckpointPreviewPath, createAssistantCheckpointRestorePath, createAssistantMessagesPath, createAssistantRequestsPath, createAssistantTranslationRejectionPath, backupsPath, createEditorialPath, createFactCheckResolutionPath, createFactChecksPath, HTTP_METHOD, healthPath, keyBindingsPath, pinnedArticleOrderPath, createProposalSummariesPath, publishSettingsPath, restoreBackupPath, restoreRevisionPath, styleCorpusPath, styleCorpusRebuildPath, styleCorpusRulesPath } from "@skladno/shared";
 
 import type { ApplicationServices } from "../../application/application-services.js";
 import type { EditorialService } from "../../application/editorial/editorial-service.js";
@@ -6,7 +6,7 @@ import type { LocalDiagnostics } from "../../infrastructure/diagnostics/local-di
 import type { BackupBundleTransfers } from "../../infrastructure/persistence/backup-bundle.js";
 import { Router } from "../router.js";
 import { acceptProposalRoute, createArticleRoute, deleteArticleRoute, discardDraftRoute, listArticlesRoute, listRevisionsRoute, reorderPinnedArticlesRoute, restoreRevisionRoute, saveDraftRoute, saveRevisionRoute, setArticleArchivedRoute, setArticlePinnedRoute, updateArticleRoute } from "./articles-route.js";
-import { createAssistantRequestRoute, listAssistantMessagesRoute, listAssistantSkillsRoute, previewAssistantCheckpointRoute, rejectAssistantTranslationRoute, restoreAssistantCheckpointRoute } from "./assistant-route.js";
+import { applyAssistantEditRoute, createAssistantRequestRoute, getAssistantEditModeRoute, listAssistantMessagesRoute, listAssistantSkillsRoute, previewAssistantCheckpointRoute, rejectAssistantTranslationRoute, restoreAssistantCheckpointRoute, setAssistantEditModeRoute } from "./assistant-route.js";
 import { handleEditorialRoute } from "./editorial-route.js";
 import { handleHealthRoute } from "./health-route.js";
 import { handlePublishSettingsRoute, updatePublishSettingsRoute } from "./publish-settings-route.js";
@@ -35,6 +35,8 @@ const ARTICLE_PROPOSAL_SUMMARIES_PATH = createRoutePattern(createProposalSummari
 const ARTICLE_RESTORATION_PATH = createRoutePattern(restoreRevisionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const ASSISTANT_MESSAGES_PATH = createRoutePattern(createAssistantMessagesPath(ROUTE_PARAMETER));
 const ASSISTANT_REQUESTS_PATH = createRoutePattern(createAssistantRequestsPath(ROUTE_PARAMETER));
+const ASSISTANT_EDIT_MODE_PATH = createRoutePattern(createAssistantEditModePath(ROUTE_PARAMETER));
+const ASSISTANT_APPLY_EDIT_PATH = createRoutePattern(createAssistantApplyEditPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const ASSISTANT_TRANSLATION_REJECTION_PATH = createRoutePattern(createAssistantTranslationRejectionPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const ASSISTANT_CHECKPOINT_PREVIEW_PATH = createRoutePattern(createAssistantCheckpointPreviewPath(ROUTE_PARAMETER, ROUTE_PARAMETER));
 const ASSISTANT_CHECKPOINT_RESTORE_PATH = createRoutePattern(createAssistantCheckpointRestorePath(ROUTE_PARAMETER, ROUTE_PARAMETER));
@@ -61,6 +63,9 @@ export function createPresentationRouter(editorial: EditorialService, services: 
     router.register(HTTP_METHOD.GET, healthPath, (_request, response) => handleHealthRoute(response));
     router.register(HTTP_METHOD.GET, assistantSkillsPath, (_request, response) => listAssistantSkillsRoute(response, skills));
     router.register(HTTP_METHOD.GET, ASSISTANT_MESSAGES_PATH, (_request, response, parameters) => listAssistantMessagesRoute(response, parameters[0]!, assistant));
+    router.register(HTTP_METHOD.GET, ASSISTANT_EDIT_MODE_PATH, (_request, response, parameters) => getAssistantEditModeRoute(response, parameters[0]!, assistant));
+    router.register(HTTP_METHOD.PUT, ASSISTANT_EDIT_MODE_PATH, (request, response, parameters) => setAssistantEditModeRoute(request, response, parameters[0]!, assistant));
+    router.register(HTTP_METHOD.POST, ASSISTANT_APPLY_EDIT_PATH, (_request, response, parameters) => applyAssistantEditRoute(response, parameters[0]!, parameters[1]!, assistant));
     router.register(HTTP_METHOD.POST, ASSISTANT_REQUESTS_PATH, (request, response, parameters) => createAssistantRequestRoute(request, response, parameters[0]!, assistant, diagnostics));
     router.register(HTTP_METHOD.POST, ASSISTANT_TRANSLATION_REJECTION_PATH, (_request, response, parameters) => rejectAssistantTranslationRoute(response, parameters[0]!, parameters[1]!, assistant));
     router.register(HTTP_METHOD.GET, ASSISTANT_CHECKPOINT_PREVIEW_PATH, (_request, response, parameters) => previewAssistantCheckpointRoute(response, parameters[0]!, parameters[1]!, assistant));

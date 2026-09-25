@@ -15,6 +15,27 @@ function renderMessage(message: AssistantMessage, props: Partial<ComponentProps<
 
 
 describe("AssistantTimelineMessage", () => {
+    it("shows one exact completed replacement and applies it on click", async () => {
+        const applyEdit = vi.fn().mockResolvedValue(undefined);
+        const message: AssistantMessage = { id: "reply", articleId: "article", requestId: "request", role: "assistant", kind: "response", status: "completed", responseKind: "proposal_prepared", editCandidate: { target: "selection", original: "Original text", replacement: "Exact replacement" }, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+        const view = renderMessage(message, { applyEdit });
+        expect(within(view.container).getByText("Exact replacement")).toBeTruthy();
+        await userEvent.setup().click(within(view.container).getByRole("button", { name: "Apply to selection" }));
+        expect(applyEdit).toHaveBeenCalledWith("reply");
+
+        view.rerender(<IntlProvider locale="en" messages={messages}><AssistantTimelineMessage message={{ ...message, appliedEdit: { revisionId: "revision" } }} generalSettings={defaultGeneralSettings} skillByRequest={new Map()} applyEdit={applyEdit} /></IntlProvider>);
+        expect(within(view.container).queryByRole("button", { name: "Apply to selection" })).toBeNull();
+        expect(within(view.container).getByText("Applied as a new Revision")).toBeTruthy();
+    });
+
+    it("does not offer replacement for ordinary or incomplete replies", () => {
+        const applyEdit = vi.fn();
+        const message: AssistantMessage = { id: "reply", articleId: "article", requestId: "request", role: "assistant", kind: "response", status: "completed", content: "Option one or two", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+        const view = renderMessage(message, { applyEdit });
+        expect(within(view.container).queryByRole("button", { name: "Replace Article" })).toBeNull();
+        view.rerender(<IntlProvider locale="en" messages={messages}><AssistantTimelineMessage message={{ ...message, status: "failed", editCandidate: { target: "article", replacement: "After" } }} generalSettings={defaultGeneralSettings} skillByRequest={new Map()} applyEdit={applyEdit} /></IntlProvider>);
+        expect(within(view.container).queryByRole("button", { name: "Replace Article" })).toBeNull();
+    });
     it("replaces Markdown when a response body changes", async () => {
         const view = render(<IntlProvider locale="en" messages={messages}><AssistantMarkdown content="First response." /></IntlProvider>);
 
@@ -45,7 +66,11 @@ describe("AssistantTimelineMessage", () => {
         expect(scope.getByText("Completed")).toBeTruthy();
         expect(scope.getByText(/Used skill/).getAttribute("title")).toBe("Talking points");
         expect(scope.queryByText("A long proposal owned by the Proposal View.")).toBeNull();
-        await userEvent.setup().click(scope.getByRole("button", { name: "Review Proposal" }));
+        const review = scope.getByRole("button", { name: "Review Proposal" });
+        expect(review.classList.contains("!size-6")).toBe(true);
+        expect(review.parentElement?.classList.contains("ml-auto")).toBe(false);
+        expect(review.parentElement?.parentElement?.querySelector("time")?.textContent).toBe("2026-01-01, 00:00");
+        await userEvent.setup().click(review);
         expect(openView).toHaveBeenCalledWith("proposal");
         expect(scope.getByText("2026-01-01, 00:00")).toBeTruthy();
     });
@@ -82,6 +107,10 @@ describe("AssistantTimelineMessage", () => {
 
         const action = within(view.container).getByRole("button", { name: /Edit from Author message at/ });
         expect(action.previousElementSibling?.textContent).toBe("2026-01-01, 00:00");
+        const bubble = screen.getByText("Author message").closest("div.rounded-panel");
+        expect(bubble?.classList.contains("p-2")).toBe(true);
+        expect(screen.getByText("Author message").classList.contains("mt-1")).toBe(false);
+        expect(bubble?.querySelector("time, button")).toBeNull();
         await userEvent.setup().click(action);
         expect(onCheckpoint).toHaveBeenCalledWith("author-message");
     });

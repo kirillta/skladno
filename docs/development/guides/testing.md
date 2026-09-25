@@ -38,6 +38,10 @@ Browser E2E does not exercise Electron IPC, preload isolation, native dialogs, c
 
 Provider tests use injected models, fetch implementations, or the deterministic E2E service. They require no API key or network call. Add fixtures at the narrowest existing provider or application boundary. Test stable domain events and safety behavior rather than SDK wording.
 
+Browser Assistant E2E uses the deterministic engine in `packages/server/src/test-support/e2e-service.ts`. Keep `resolveAssistant`, the Editorial integration, capability execution, completion, and persistence in that fixture so browser tests exercise the production Assistant path. Assert the Author-visible result and the persisted Article or Revision after reload. The Windows pull-request workflow also runs `playwright.electron.config.ts` against the packaged app to check the preload and IPC path, request failure, and restart recovery without a provider credential.
+
+For an escaped Assistant regression, add a test that fails on the broken behavior and check one nearby variant, such as selection versus whole Article or tagged versus untagged input. Explain in the change why the previous checks passed.
+
 Cancellation, malformed streams, provider failures, response-storage settings, and structured output must remain deterministic. Persisted generated output is asserted only after a valid completion.
 
 ## Product evidence

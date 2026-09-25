@@ -101,10 +101,14 @@ export function createArticleWorkspaceActions(options: ArticleWorkspaceActionsOp
     }
 
 
-    async function refreshArticle(articleId: string) {
+    async function refreshArticle(articleId: string, refreshDraft = false) {
         const article = (await client.listArticles()).find((item) => item.id === articleId);
-        if (article)
+        if (article) {
+            if (refreshDraft)
+                draftLifecycle.replace({ ...draftLifecycle.sessionsRef.current, [articleId]: hydrateDraftLifecycle(article) });
+
             replaceArticles((items) => items.map((item) => item.id === articleId ? article : item));
+        }
     }
 
 
