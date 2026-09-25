@@ -7,6 +7,7 @@ import { createApplicationServices } from "../application/create-application-ser
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { EditorialEngineError } from "../application/editorial/engine/editorial-engine-error.js";
 import type { EditorialConversationRequest } from "../application/editorial/engine/editorial-conversation-request.js";
+import type { EditorialAssistantRequest } from "../application/editorial/engine/editorial-assistant-request.js";
 import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
 import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
 import type { EditorialEngineRequest } from "../application/editorial/engine/editorial-engine-request.js";
@@ -20,6 +21,46 @@ import { createLocalService } from "../presentation/server.js";
 
 
 class E2eFixtureEngine implements EditorialEngine {
+    async *streamAssistant(request: EditorialAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+        if (request.message === "provider error")
+            throw new EditorialEngineError("provider", "Deterministic provider failure.");
+
+        if (request.message === "wait") {
+            yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial fixture response" };
+            if (signal.aborted)
+                return;
+
+            await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+            return;
+        }
+
+        const capabilities = request.initialActiveCapabilities;
+        let capability: "fact_check" | "translate" | "generate_proposal" | undefined;
+        if (capabilities?.includes("fact_check"))
+            capability = "fact_check";
+        else if (capabilities?.includes("translate"))
+            capability = "translate";
+        else if (capabilities?.includes("generate_proposal") || request.message.startsWith("E2E edit") || request.message === "Change ё to е")
+            capability = "generate_proposal";
+
+        if (capability) {
+            const tool = request.tools.find((candidate) => candidate.capability === capability);
+            if (!tool)
+                throw new Error(`E2E fixture expected ${capability} capability`);
+
+            const input: Record<string, string> = {};
+            if (capability === "generate_proposal")
+                input.operation = EDITORIAL_OPERATION.FLOW_REVISION;
+            else if (capability === "translate")
+                input.targetLanguage = "Spanish";
+
+            await tool.execute(input, signal);
+        }
+
+        yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "e2e-assistant", text: "Fixture Assistant completed." };
+    }
+
+
     async *stream(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
         if (request.authorContext === "provider error")
             throw new EditorialEngineError("provider", "Deterministic provider failure.");
@@ -113,12 +154,17 @@ const sessions = new EditorialSessionsRepository(database, (articleId) => Boolea
 const styleCorpus = new StyleCorpusRepository(database);
 const assistant = new AssistantRepository(database);
 const editVerifier: AssistantActionIntentVerifier = {
-    verify: async (message) => message === "E2E edit and apply",
+    verify: async (message) => message === "E2E edit and apply" || message === "Change ё to е",
     verifyReplacement: async (message) => message.startsWith("E2E edit"),
 };
-const engines: EditorialEngineResolver = { resolve: () => new E2eFixtureEngine(), resolveAssistantActionIntentVerifier: () => editVerifier };
+const fixtureEngine = new E2eFixtureEngine();
+const engines: EditorialEngineResolver = { resolve: () => fixtureEngine, resolveAssistant: () => fixtureEngine, resolveAssistantActionIntentVerifier: () => editVerifier };
 
 assistant.seedGreetings();
+const editorial = new EditorialService(
+    { articles, sessions, styleCorpus, artifacts, factChecks },
+    { engines, sessionContinuationEnabled: false },
+);
 const services = createApplicationServices({
     stores: { articles, styleCorpus, assistant, artifacts, engines, factChecks },
     settings: {
@@ -127,11 +173,8 @@ const services = createApplicationServices({
         models: { list: async () => [] },
         createConnectionId: randomUUID,
     },
+    integration: { editorial },
 });
-const editorial = new EditorialService(
-    { articles, sessions, styleCorpus, artifacts, factChecks },
-    { engines, sessionContinuationEnabled: false },
-);
 const service = createLocalService(config, editorial, services);
 
 void listenForLocalService(service, config.port, config.host);

@@ -39,6 +39,9 @@ jobs:
             - name: Build packaged application
               run: npm run package:electron
 
+            - name: Smoke test packaged Assistant
+              run: npx playwright test --config playwright.electron.config.ts
+
     release-windows:
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         runs-on: windows-latest

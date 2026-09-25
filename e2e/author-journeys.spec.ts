@@ -31,7 +31,7 @@ async function activateWithKeyboard(page: import("@playwright/test").Page, targe
 }
 
 
-async function createArticle(page: import("@playwright/test").Page): Promise<void> {
+async function createArticle(page: import("@playwright/test").Page, content = "Original fixture Article."): Promise<void> {
     const create = page.getByRole("button", { name: "Create" });
     const created = page.waitForResponse((response) => response.url().endsWith("/api/articles") && response.request().method() === "POST");
     if (await create.isVisible())
@@ -43,8 +43,8 @@ async function createArticle(page: import("@playwright/test").Page): Promise<voi
 
     const editor = page.getByRole("textbox", { name: "Article draft" });
     const checkpointed = page.waitForResponse((response) => response.url().includes("/draft") && response.request().method() === "PUT");
-    await editor.pressSequentially("Original fixture Article.");
-    await expect(editor).toContainText("Original fixture Article.");
+    await editor.pressSequentially(content);
+    await expect(editor).toContainText(content);
     await checkpointed;
     const saved = page.waitForResponse((response) => response.url().includes("/revisions") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Save revision" }).click();
@@ -256,6 +256,25 @@ test("direct Assistant mode applies an explicitly requested Article edit", async
     await page.getByRole("button", { name: "Send editorial request" }).click();
     await expect(page.getByRole("textbox", { name: "Article draft" })).toContainText("Improved fixture Article.");
     await expect(page.getByText("Applied as a new Revision")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Replace Article" })).toHaveCount(0);
+});
+
+
+test("an untagged edit request uses the Article and survives reload after Author approval", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page, "ё first. ё second.");
+    const editor = page.getByRole("textbox", { name: "Article draft" });
+    await page.getByRole("combobox", { name: "Editorial guidance" }).fill("Change ё to е");
+    await page.getByRole("button", { name: "Send editorial request" }).click();
+
+    await expect(page.getByRole("button", { name: "Replace Article" })).toBeVisible();
+    await expect(editor).toContainText("ё first. ё second.");
+    await page.getByRole("button", { name: "Replace Article" }).click();
+    await expect(editor).toContainText("е first. е second.");
+    await expect(page.getByText("Applied as a new Revision")).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Article draft" })).toContainText("е first. е second.");
     await expect(page.getByRole("button", { name: "Replace Article" })).toHaveCount(0);
 });
 
