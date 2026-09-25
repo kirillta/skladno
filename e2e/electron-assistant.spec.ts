@@ -56,13 +56,16 @@ async function launchPackaged(root: string): Promise<{ process: ChildProcess; br
 
 
 async function closePackaged(app: { process: ChildProcess; browser: Browser; page: Page }): Promise<void> {
-    await app.page.close().catch(() => undefined);
-    await app.browser.close().catch(() => undefined);
-    if (app.process.exitCode === null)
-        await Promise.race([once(app.process, "exit"), new Promise((resolveWait) => setTimeout(resolveWait, 5_000))]);
+    if (app.process.exitCode !== null)
+        return;
 
-    if (app.process.exitCode === null)
+    const exited = once(app.process, "exit");
+    void app.page.close().catch(() => undefined);
+    await Promise.race([exited, new Promise((resolveWait) => setTimeout(resolveWait, 5_000))]);
+    if (app.process.exitCode === null) {
         app.process.kill();
+        throw new Error("Packaged Skladno did not close after its draft checkpoint.");
+    }
 }
 
 
