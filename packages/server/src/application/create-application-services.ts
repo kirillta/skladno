@@ -87,7 +87,7 @@ export function createApplicationServices({ stores, settings, integration = {}, 
 
     return {
         articles: articleService,
-        assistant: new AssistantService({ assistant: stores.assistant, styleCorpus: stores.styleCorpus, factChecks, settings: settings.settings }, integration.telemetry, preparation, capabilityLoop, completion),
+        assistant: new AssistantService({ assistant: stores.assistant, styleCorpus: stores.styleCorpus, factChecks, settings: settings.settings }, articleService, integration.telemetry, preparation, capabilityLoop, completion),
         settings: new ApplicationSettingsService(settings.settings, settings.dateTimeFormat, settings.models, settings.createConnectionId, settings.backups, settings.credentialStore),
         publishing,
         styleCorpus: styleCorpusService,

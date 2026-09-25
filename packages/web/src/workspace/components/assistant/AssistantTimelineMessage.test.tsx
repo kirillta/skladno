@@ -15,6 +15,27 @@ function renderMessage(message: AssistantMessage, props: Partial<ComponentProps<
 
 
 describe("AssistantTimelineMessage", () => {
+    it("shows one exact completed replacement and applies it on click", async () => {
+        const applyEdit = vi.fn().mockResolvedValue(undefined);
+        const message: AssistantMessage = { id: "reply", articleId: "article", requestId: "request", role: "assistant", kind: "response", status: "completed", responseKind: "proposal_prepared", editCandidate: { target: "selection", original: "Original text", replacement: "Exact replacement" }, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+        const view = renderMessage(message, { applyEdit });
+        expect(within(view.container).getByText("Exact replacement")).toBeTruthy();
+        await userEvent.setup().click(within(view.container).getByRole("button", { name: "Apply to selection" }));
+        expect(applyEdit).toHaveBeenCalledWith("reply");
+
+        view.rerender(<IntlProvider locale="en" messages={messages}><AssistantTimelineMessage message={{ ...message, appliedEdit: { revisionId: "revision" } }} generalSettings={defaultGeneralSettings} skillByRequest={new Map()} applyEdit={applyEdit} /></IntlProvider>);
+        expect(within(view.container).queryByRole("button", { name: "Apply to selection" })).toBeNull();
+        expect(within(view.container).getByText("Applied as a new Revision")).toBeTruthy();
+    });
+
+    it("does not offer replacement for ordinary or incomplete replies", () => {
+        const applyEdit = vi.fn();
+        const message: AssistantMessage = { id: "reply", articleId: "article", requestId: "request", role: "assistant", kind: "response", status: "completed", content: "Option one or two", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+        const view = renderMessage(message, { applyEdit });
+        expect(within(view.container).queryByRole("button", { name: "Replace Article" })).toBeNull();
+        view.rerender(<IntlProvider locale="en" messages={messages}><AssistantTimelineMessage message={{ ...message, status: "failed", editCandidate: { target: "article", replacement: "After" } }} generalSettings={defaultGeneralSettings} skillByRequest={new Map()} applyEdit={applyEdit} /></IntlProvider>);
+        expect(within(view.container).queryByRole("button", { name: "Replace Article" })).toBeNull();
+    });
     it("replaces Markdown when a response body changes", async () => {
         const view = render(<IntlProvider locale="en" messages={messages}><AssistantMarkdown content="First response." /></IntlProvider>);
 

@@ -26,6 +26,7 @@ function getAssistantIdentityFields(row: Row, role: AssistantMessageRole, kind: 
         status,
         ...(row.content === null ? {} : { content: String(row.content) }),
         ...(kind === "greeting" ? { template: "greeting" as const } : {}),
+        ...(row.response_kind === "edit_applied" ? { template: "edit_applied" as const } : {}),
         ...(status === "cancelled" ? { template: "request_cancelled" as const } : {}),
         ...(status === "failed" ? { template: "request_failed" as const } : {}),
         ...(skillId === undefined ? {} : { skillId }),
@@ -51,6 +52,8 @@ function getAssistantArtifactFields(row: Row, artifactContent: ReturnType<typeof
         ...(artifactContent?.proposalSummaries ? { proposalSummaries: artifactContent.proposalSummaries } : {}),
         ...(artifactContent?.proposalSummaryLocale ? { proposalSummaryLocale: artifactContent.proposalSummaryLocale } : {}),
         ...(row.editorial_artifact_id === null ? {} : { editorialArtifactId: String(row.editorial_artifact_id) }),
+        ...(typeof row.edit_candidate_json === "string" ? { editCandidate: JSON.parse(row.edit_candidate_json) as AssistantMessage["editCandidate"] } : {}),
+        ...(typeof row.applied_revision_id === "string" ? { appliedEdit: { revisionId: row.applied_revision_id } } : {}),
     };
 }
 

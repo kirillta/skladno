@@ -1,7 +1,7 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, isBuiltInSkillId, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantEvent, type AssistantMessage, type RestoreAssistantCheckpointResult, type TimedTelemetryCapture } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, beginTimedTelemetryCapture, BUILT_IN_SKILL, EDITORIAL_OPERATION, HTTP_STATUS, isBuiltInSkillId, type ArticleRevision, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantEditMode, type AssistantEvent, type AssistantMessage, type RestoreAssistantCheckpointResult, type TimedTelemetryCapture } from "@skladno/shared";
 
 import { AssistantCapabilityLoop } from "./capabilities/assistant-capability-loop.js";
-import { AssistantCompletion, getResponseKind } from "./completion/assistant-completion.js";
+import { AssistantCompletion, getCompletedContent, getEditCandidate, getResponseKind } from "./completion/assistant-completion.js";
 import { AssistantRequestPreparation } from "./requests/assistant-request-preparation.js";
 import type { FactChecksStore } from "./fact-checks-store.js";
 import type { PreparedAssistantRequest } from "./requests/prepared-assistant-request.js";
@@ -20,7 +20,8 @@ import { streamWithAssistantDeadline } from "./requests/assistant-request-deadli
 import { normalizeGeneralSettings } from "../settings/application-settings-normalizers.js";
 import type { SettingsStore } from "../settings/settings-store.js";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
-import { AssistantCheckpointError } from "./assistant-store.js";
+import { AssistantCheckpointError, AssistantEditError } from "./assistant-store.js";
+import type { ArticleService } from "../articles/article-service.js";
 
 
 export type { AssistantServiceRequest } from "./requests/assistant-service-request.js";
@@ -50,6 +51,7 @@ export class AssistantService {
 
     constructor(
         private readonly stores: AssistantServiceStores,
+        private readonly articles: Pick<ArticleService, "describeContentChange">,
         private readonly telemetry: TelemetryObserver | undefined,
         preparation: AssistantRequestPreparation,
         capabilityLoop: AssistantCapabilityLoop,
@@ -63,6 +65,41 @@ export class AssistantService {
 
     listMessages(articleId: string): AssistantMessage[] {
         return this.preparation.listMessages(articleId);
+    }
+
+
+    getEditMode(articleId: string): AssistantEditMode {
+        this.preparation.listMessages(articleId);
+        const defaultMode = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).defaultAssistantEditMode;
+        return this.stores.assistant.getEditMode(articleId, defaultMode);
+    }
+
+
+    setEditMode(articleId: string, mode: AssistantEditMode): AssistantEditMode {
+        this.preparation.listMessages(articleId);
+        return this.stores.assistant.setEditMode(articleId, mode);
+    }
+
+
+    async applyEdit(articleId: string, messageId: string): Promise<ArticleRevision> {
+        try {
+            return this.stores.assistant.applyEdit(articleId, messageId, await this.describePendingEdit(articleId, messageId));
+        } catch (error) {
+            if (error instanceof AssistantEditError)
+                throw new ApplicationServiceError(error.kind === "conflict" ? APPLICATION_ERROR.ASSISTANT_EDIT_CONFLICT : APPLICATION_ERROR.ASSISTANT_EDIT_INVALID, error.kind === "conflict" ? HTTP_STATUS.CONFLICT : HTTP_STATUS.BAD_REQUEST);
+
+            throw error;
+        }
+    }
+
+
+    private async describePendingEdit(articleId: string, messageId: string): Promise<string | undefined> {
+        const preview = this.stores.assistant.previewEdit(articleId, messageId);
+        if (!preview)
+            return undefined;
+
+        const locale = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).interfaceLocale;
+        return this.articles.describeContentChange(preview.previousContent, preview.content, locale, new AbortController().signal);
     }
 
 
@@ -105,6 +142,7 @@ export class AssistantService {
         const observed = beginTimedTelemetryCapture(this.telemetry);
         try {
             const prepared = this.preparation.prepare(request);
+            prepared.editMode = this.getEditMode(prepared.articleId);
             this.startedAt.set(prepared.requestId, observed);
             return prepared;
         } catch (error) {
@@ -257,7 +295,9 @@ export class AssistantService {
     private async *completeAssistantEvents(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>, signal: AbortSignal): AsyncIterable<AssistantEvent> {
         signal.throwIfAborted();
 
-        const kind = getResponseKind(request.completedCapability);
+        await this.authorizeCompletedEdit(request, event, signal);
+
+        const kind = request.directEditAuthorized && getEditCandidate(request, event) ? "edit_applied" : getResponseKind(request.completedCapability);
         for (const activity of request.capabilityActivities)
             yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity };
 
@@ -276,6 +316,27 @@ export class AssistantService {
     }
 
 
+    private async authorizeCompletedEdit(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>, signal: AbortSignal): Promise<void> {
+        if (request.completedCapability !== "generate_proposal")
+            return;
+
+        request.editCandidateAuthorized = await this.capabilityLoop.qualifiesReplacement(request, event.text, signal);
+        if (request.editMode !== "direct")
+            return;
+
+        request.editIntentAuthorized ||= await this.capabilityLoop.authorizesArticleEditIntent(request, signal);
+        if (request.editIntentAuthorized && !getEditCandidate(request, event))
+            throw new ApplicationServiceError(APPLICATION_ERROR.ASSISTANT_EDIT_INVALID, HTTP_STATUS.BAD_REQUEST);
+
+        request.directEditAuthorized = request.editIntentAuthorized;
+        if (request.directEditAuthorized) {
+            const content = getCompletedContent(request, event.text);
+            const locale = request.interfaceLocale ?? normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).interfaceLocale;
+            request.editDescription = await this.articles.describeContentChange(request.articleContent, content, locale, signal);
+        }
+    }
+
+
     private persistAssistantCompletion(request: PreparedAssistantRequest, event: Extract<EditorialEngineEvent, { type: "completed" }>, createdSkill: ReturnType<AssistantCapabilityLoop["commitPendingSkill"]>): ReturnType<AssistantCompletion["persist"]> {
         try {
             return this.completion.persist(request, event);
@@ -284,6 +345,9 @@ export class AssistantService {
                 this.capabilityLoop.rollbackCreatedSkill(createdSkill);
 
             this.capabilityLoop.finishPendingSkill(request.requestId);
+            if (error instanceof AssistantEditError)
+                throw new ApplicationServiceError(error.kind === "conflict" ? APPLICATION_ERROR.ASSISTANT_EDIT_CONFLICT : APPLICATION_ERROR.ASSISTANT_EDIT_INVALID, error.kind === "conflict" ? HTTP_STATUS.CONFLICT : HTTP_STATUS.BAD_REQUEST);
+
             throw error;
         }
     }

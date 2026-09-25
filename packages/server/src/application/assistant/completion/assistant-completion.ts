@@ -1,7 +1,8 @@
-import { APPLICATION_ERROR, ASSISTANT_EVENT, HTTP_STATUS, type AssistantEditorialResult, type AssistantEvent, type AssistantResponseKind, type FactCheck } from "@skladno/shared";
+import { APPLICATION_ERROR, ASSISTANT_EVENT, HTTP_STATUS, type AssistantEditCandidate, type AssistantEditorialResult, type AssistantEvent, type AssistantResponseKind, type FactCheck } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
 import { persistFactCheckArtifact } from "../../editorial/fact-checking/persist-fact-check-artifact.js";
+import { protectArticleSpans } from "../../editorial/translation/translation.js";
 import { EDITORIAL_CAPABILITY } from "../capabilities/editorial-capability-catalog.js";
 import type { CompletionEvent } from "./completion-event.js";
 import type { PreparedAssistantRequest } from "../requests/prepared-assistant-request.js";
@@ -13,11 +14,39 @@ import type { AssistantStore } from "../assistant-store.js";
 import type { EditorialCapabilityCatalog } from "../capabilities/editorial-capability-catalog.js";
 
 
-function getCompletedContent(request: PreparedAssistantRequest, text: string): string {
+export function getCompletedContent(request: PreparedAssistantRequest, text: string): string {
     if (request.scope.kind !== "selection" || !request.completedCapability || request.completedCapability === EDITORIAL_CAPABILITY.FACT_CHECK)
         return text;
 
     return `${request.articleContent.slice(0, request.scope.startOffset)}${text}${request.articleContent.slice(request.scope.endOffset)}`;
+}
+
+
+function preservesProtectedContent(source: string, replacement: string): boolean {
+    const protectedSpans = protectArticleSpans(source).protectedSpans;
+    const sourceNumbers = source.match(/\b\d+(?:[.,]\d+)*\b/g) ?? [];
+    const replacementNumbers = replacement.match(/\b\d+(?:[.,]\d+)*\b/g) ?? [];
+    if (sourceNumbers.sort().join("\u0000") !== replacementNumbers.sort().join("\u0000"))
+        return false;
+
+    return ![...new Set(protectedSpans)].some((span) => source.split(span).length !== replacement.split(span).length);
+}
+
+
+export function getEditCandidate(request: PreparedAssistantRequest, event: CompletionEvent): AssistantEditCandidate | undefined {
+    if (!request.editCandidateAuthorized || request.completedCapability !== EDITORIAL_CAPABILITY.GENERATE_PROPOSAL || !event.text.trim())
+        return undefined;
+
+    const source = request.scope.kind === "selection"
+        ? request.articleContent.slice(request.scope.startOffset, request.scope.endOffset)
+        : request.articleContent;
+    const replacement = event.text;
+    if (replacement === source || /(?:^|\n)\s*(?:option|version|alternative)\s*[12]\s*[:.)]/i.test(replacement) || !preservesProtectedContent(source, replacement))
+        return undefined;
+
+    return request.scope.kind === "selection"
+        ? { target: "selection", original: source, replacement }
+        : { target: "article", replacement };
 }
 
 
@@ -59,23 +88,34 @@ export class AssistantCompletion {
             throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
 
         const metadataChanged = this.applyPendingActions(request);
+        const editCandidate = getEditCandidate(request, event);
+        const directEdit = Boolean(editCandidate && request.editMode === "direct" && request.directEditAuthorized);
         const content = getCompletedContent(request, event.text);
-        const kind = getResponseKind(request.completedCapability);
-        const artifact = this.createCompletionArtifact(request, event, content);
+        const kind = directEdit ? "edit_applied" : getResponseKind(request.completedCapability);
+        const artifact = directEdit ? {} : this.createCompletionArtifact(request, event, content);
 
+        return this.persistResponse({ request, event, content, editCandidate, directEdit, kind, artifact, metadataChanged });
+    }
+
+
+    private persistResponse(input: { request: PreparedAssistantRequest; event: CompletionEvent; content: string; editCandidate?: AssistantEditCandidate; directEdit: boolean; kind: AssistantResponseKind; artifact: { id?: string; factCheck?: FactCheck }; metadataChanged: boolean }): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
+        const { request, event, content, editCandidate, directEdit, kind, artifact, metadataChanged } = input;
         const result = this.getCompletionResult(request, event, content, artifact.factCheck, metadataChanged);
-        const input = {
+        const reply = {
             requestId: request.requestId,
             articleId: request.articleId,
             ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId } : {}),
             responseKind: kind,
             content: request.completedCapability ? "" : content,
-            proposalContent: result?.proposal,
-            editorialArtifactId: artifact.id
+            proposalContent: directEdit ? undefined : result?.proposal,
+            editorialArtifactId: artifact.id,
+            ...(editCandidate ? { editCandidate, directEdit } : {}),
+            ...(directEdit && request.editDescription ? { editDescription: request.editDescription } : {})
         };
-        const message = this.dependencies.assistant.completeRequest(input);
+        const message = this.dependencies.assistant.completeRequest(reply);
 
-        return { responseKind: kind, messageId: message.id, ...(artifact.id ? { editorialArtifactId: artifact.id } : {}), ...(result ? { result } : {}) };
+        const completedResult = message.appliedEdit ? { articleChanged: true } : result;
+        return { responseKind: kind, messageId: message.id, ...(artifact.id ? { editorialArtifactId: artifact.id } : {}), ...(completedResult ? { result: completedResult } : {}) };
     }
 
 

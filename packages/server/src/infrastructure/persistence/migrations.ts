@@ -247,4 +247,18 @@ export const migrations = [
         name: "assistant_checkpoint_artifact_rejection",
         sql: "ALTER TABLE editorial_artifacts ADD COLUMN rejected_at TEXT;",
     },
+    {
+        version: 21,
+        name: "assistant_conversational_edits",
+        sql: `
+        CREATE TABLE assistant_conversation_modes (
+            article_id TEXT PRIMARY KEY REFERENCES articles(id) ON DELETE CASCADE,
+            mode TEXT NOT NULL CHECK (mode IN ('review', 'direct'))
+        );
+        INSERT INTO assistant_conversation_modes (article_id, mode)
+            SELECT DISTINCT article_id, 'review' FROM assistant_requests;
+        ALTER TABLE assistant_messages ADD COLUMN edit_candidate_json TEXT;
+        ALTER TABLE assistant_messages ADD COLUMN applied_revision_id TEXT REFERENCES article_revisions(id);
+        `,
+    },
 ] as const;

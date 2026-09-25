@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { APPLICATION_ERROR, HTTP_STATUS, type AssistantCheckpointDraftMode, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
+import { APPLICATION_ERROR, HTTP_STATUS, type AssistantCheckpointDraftMode, type AssistantEditMode, type AssistantEvent, type AssistantRequestScope, type StartAssistantRequest } from "@skladno/shared";
 
 import { AssistantService, type PreparedAssistantRequest } from "../../application/assistant/assistant-service.js";
 import type { AssistantSkillCatalog } from "../../application/assistant/skills/assistant-skill-catalog.js";
@@ -133,6 +133,25 @@ async function streamAssistantRequest(request: PreparedAssistantRequest, incomin
 
 export function listAssistantMessagesRoute(response: ServerResponse, articleId: string, assistant: AssistantService): void {
     writeJson(response, HTTP_STATUS.OK, assistant.listMessages(articleId));
+}
+
+
+export function getAssistantEditModeRoute(response: ServerResponse, articleId: string, assistant: AssistantService): void {
+    writeJson(response, HTTP_STATUS.OK, assistant.getEditMode(articleId));
+}
+
+
+export async function setAssistantEditModeRoute(request: IncomingMessage, response: ServerResponse, articleId: string, assistant: AssistantService): Promise<void> {
+    const body = parseObject(await readJson(request));
+    if (body.mode !== "review" && body.mode !== "direct")
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    writeJson(response, HTTP_STATUS.OK, assistant.setEditMode(articleId, body.mode as AssistantEditMode));
+}
+
+
+export async function applyAssistantEditRoute(response: ServerResponse, articleId: string, messageId: string, assistant: AssistantService): Promise<void> {
+    writeJson(response, HTTP_STATUS.OK, await assistant.applyEdit(articleId, messageId));
 }
 
 

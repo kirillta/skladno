@@ -7,6 +7,8 @@ import {
     createArticleRevisionsPath,
     articlesPath,
     createAssistantMessagesPath,
+    createAssistantEditModePath,
+    createAssistantApplyEditPath,
     createAssistantCheckpointPreviewPath,
     createAssistantCheckpointRestorePath,
     createAssistantRequestsPath,
@@ -24,6 +26,7 @@ import {
     type ArticleRevision,
     type AssistantEvent,
     type AssistantMessage,
+    type AssistantEditMode,
     type AssistantSkillSummary,
     type AssistantCheckpointPreview,
     type RestoreAssistantCheckpointInput,
@@ -124,6 +127,21 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
     async listAssistantMessages(articleId: string): Promise<AssistantMessage[]> {
         return this.request<AssistantMessage[]>(createAssistantMessagesPath(articleId));
+    }
+
+
+    async getAssistantEditMode(articleId: string): Promise<AssistantEditMode> {
+        return this.request<AssistantEditMode>(createAssistantEditModePath(articleId));
+    }
+
+
+    async setAssistantEditMode(articleId: string, mode: AssistantEditMode): Promise<AssistantEditMode> {
+        return this.request<AssistantEditMode>(createAssistantEditModePath(articleId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ mode }) });
+    }
+
+
+    async applyAssistantEdit(articleId: string, messageId: string): Promise<ArticleRevision> {
+        return this.request<ArticleRevision>(createAssistantApplyEditPath(articleId, messageId), { method: HTTP_METHOD.POST });
     }
 
 

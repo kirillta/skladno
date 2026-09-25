@@ -14,6 +14,7 @@ function hasInvalidGeneralPreferences(candidate: Partial<GeneralSettings>): bool
         || (candidate.timeFormat !== undefined && !isTimeFormatPreference(candidate.timeFormat))
         || (candidate.timeZone !== undefined && !isTimeZonePreference(candidate.timeZone))
         || (candidate.assistantSendMode !== undefined && !isAssistantSendMode(candidate.assistantSendMode))
+        || (candidate.defaultAssistantEditMode !== undefined && candidate.defaultAssistantEditMode !== "review" && candidate.defaultAssistantEditMode !== "direct")
         || (candidate.assistantRequestTimeoutMinutes !== undefined && !isAssistantRequestTimeout(candidate.assistantRequestTimeoutMinutes));
 }
 
@@ -26,7 +27,7 @@ function normalizeTranslationLanguages(candidate: Partial<GeneralSettings>): str
 }
 
 
-function normalizeGeneralPreferences(candidate: Partial<GeneralSettings>): Pick<GeneralSettings, "theme" | "interfaceLocale" | "dateFormat" | "timeFormat" | "timeZone" | "assistantSendMode" | "assistantRequestTimeoutMinutes"> {
+function normalizeGeneralPreferences(candidate: Partial<GeneralSettings>): Pick<GeneralSettings, "theme" | "interfaceLocale" | "dateFormat" | "timeFormat" | "timeZone" | "assistantSendMode" | "defaultAssistantEditMode" | "assistantRequestTimeoutMinutes"> {
     return {
         theme: isThemePreference(candidate.theme) ? candidate.theme : defaultGeneralSettings.theme,
         interfaceLocale: candidate.interfaceLocale === INTERFACE_LOCALE.EN ? candidate.interfaceLocale : defaultInterfaceLocale,
@@ -34,6 +35,7 @@ function normalizeGeneralPreferences(candidate: Partial<GeneralSettings>): Pick<
         timeFormat: isTimeFormatPreference(candidate.timeFormat) ? candidate.timeFormat : defaultGeneralSettings.timeFormat,
         timeZone: isTimeZonePreference(candidate.timeZone) ? candidate.timeZone : defaultGeneralSettings.timeZone,
         assistantSendMode: isAssistantSendMode(candidate.assistantSendMode) ? candidate.assistantSendMode : defaultGeneralSettings.assistantSendMode,
+        defaultAssistantEditMode: candidate.defaultAssistantEditMode === "direct" ? "direct" : "review",
         assistantRequestTimeoutMinutes: isAssistantRequestTimeout(candidate.assistantRequestTimeoutMinutes) ? candidate.assistantRequestTimeoutMinutes : defaultGeneralSettings.assistantRequestTimeoutMinutes,
     };
 }

@@ -128,6 +128,7 @@ test("flow-revision prompt asks for a full-text proposal rather than feedback", 
     assert.match(prompt, /Revise the current Article as a complete Article/);
     assert.match(prompt, /complete Article/);
     assert.match(prompt, /do not summarize it or turn it into feedback/);
+    assert.match(prompt, /make only that change\. Preserve all other wording, punctuation, and formatting exactly/);
     assert.match(prompt, /Keep the opening sentence/);
     assert.match(prompt, /Current Article title:\nSaved title/);
     assert.match(prompt, /do not include a title or title label in the proposed body/i);

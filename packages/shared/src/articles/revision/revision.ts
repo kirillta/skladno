@@ -2,6 +2,7 @@ export const REVISION_PROVENANCE_KIND = {
     INITIAL: "initial",
     AUTHOR_DRAFT: "author-draft",
     ACCEPTED_PROPOSAL: "accepted-proposal",
+    ASSISTANT_EDIT: "assistant-edit",
     RESTORE: "restore",
 } as const;
 

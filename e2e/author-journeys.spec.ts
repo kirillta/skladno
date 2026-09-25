@@ -9,12 +9,14 @@ test.beforeEach(async ({ page }) => {
 test("Assistant request time limit persists through Settings reload", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "AI assistant" }).click();
     const limit = page.getByRole("combobox", { name: "Request time limit" });
     const saved = page.waitForResponse((response) => response.url().endsWith("/api/settings/general") && response.request().method() === "PUT");
     await limit.selectOption("5");
     await saved;
     await page.reload();
     await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "AI assistant" }).click();
     await expect(limit).toHaveValue("5");
     const reset = page.waitForResponse((response) => response.url().endsWith("/api/settings/general") && response.request().method() === "PUT");
     await limit.selectOption("2");
@@ -159,7 +161,7 @@ test("the Assistant Lexical composer supports skill tags and slash invocation", 
     await createArticle(page);
 
     const composer = page.getByRole("combobox", { name: "Editorial guidance" });
-    await page.locator("[data-assistant-composer-actions]").click({ position: { x: 8, y: 18 } });
+    await composer.click();
     await expect(composer).toBeFocused();
     await composer.fill("Keep this focused /nar");
     await expect(composer).toHaveAttribute("aria-expanded", "true");
@@ -217,6 +219,47 @@ test("the Assistant Lexical composer supports skill tags and slash invocation", 
 });
 
 
+test("a completed selection suggestion applies once from the Assistant reply", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+    const editor = page.getByRole("textbox", { name: "Article draft" });
+    await editor.click();
+    await editor.press("ControlOrMeta+A");
+    await page.getByRole("combobox", { name: "Editorial guidance" }).fill("E2E edit and suggest");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Flow and clarity" }).click();
+    await page.getByRole("button", { name: "Send editorial request" }).click();
+    await expect(page.getByRole("button", { name: "Apply to selection" })).toBeVisible();
+    await page.getByRole("button", { name: "Apply to selection" }).click();
+    await expect(editor).toContainText("Improved fixture Article.");
+    await expect(page.getByText("Applied as a new Revision")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Apply to selection" })).toHaveCount(0);
+});
+
+
+test("direct Assistant mode applies an explicitly requested Article edit", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+    const mode = page.getByRole("button", { name: "Edit mode: Propose edits for review" });
+    expect((await mode.boundingBox())?.width).toBeLessThan(300);
+    await expect(page.getByText("You approve each suggested replacement from its reply.")).toHaveCount(0);
+    await mode.focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("menuitemradio", { name: "Propose edits for review" })).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("menuitemradio", { name: "Apply edits directly" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("button", { name: "Edit mode: Apply edits directly" })).toBeVisible();
+    await page.getByRole("combobox", { name: "Editorial guidance" }).fill("E2E edit and apply");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Flow and clarity" }).click();
+    await page.getByRole("button", { name: "Send editorial request" }).click();
+    await expect(page.getByRole("textbox", { name: "Article draft" })).toContainText("Improved fixture Article.");
+    await expect(page.getByText("Applied as a new Revision")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Replace Article" })).toHaveCount(0);
+});
+
+
 test("unsent Assistant text survives reload for its Article and clears when erased", async ({ page }) => {
     await page.goto("/");
     await createArticle(page);
@@ -227,7 +270,8 @@ test("unsent Assistant text survives reload for its Article and clears when eras
 
     await page.reload();
     await expect(composer).toContainText("Unsent direction");
-    await composer.fill("");
+    await composer.press("ControlOrMeta+A");
+    await composer.press("Backspace");
     await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("skladno-assistant-composer:")).length)).toBe(0);
     await page.reload();
     await expect(composer).toBeEmpty();

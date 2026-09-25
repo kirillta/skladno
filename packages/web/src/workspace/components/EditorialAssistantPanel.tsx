@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIntl, type IntlShape } from "react-intl";
-import { KEY_BINDING_COMMAND, defaultGeneralSettings, type AssistantCapabilityActivity, type AssistantCheckpointComposer, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantMessage, type AssistantSkillSummary, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
+import { KEY_BINDING_COMMAND, defaultGeneralSettings, type AssistantCapabilityActivity, type AssistantCheckpointComposer, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantEditMode, type AssistantMessage, type AssistantSkillSummary, type FactCheckClaimPreview, type GeneralSettings, type KeyBindingOverrides } from "@skladno/shared";
 import { Button } from "../../ui/primitives.js";
 import { AssistantIcon, ChevronRightIcon } from "../../ui/icons.js";
 import type { KeyBindingDispatcher } from "../../key-bindings/dispatcher.js";
@@ -51,6 +51,7 @@ interface EditorialAssistantData {
     streamedMessage?: StreamedAssistantMessage;
     selection?: AssistantSelectionScope;
     generalSettings?: GeneralSettings;
+    editMode?: AssistantEditMode;
     hasUnavailableAiConnection?: boolean;
     checkpointPreview?: AssistantCheckpointPreview;
     restoredComposer?: AssistantCheckpointComposer;
@@ -63,6 +64,8 @@ interface EditorialAssistantActions {
     loadAuthorSkills?: () => Promise<void>;
     onCancel: () => void;
     onRetry?: (requestId: string) => void;
+    setEditMode?: (mode: AssistantEditMode) => Promise<void>;
+    applyEdit?: (messageId: string) => Promise<void>;
     dispatcher?: KeyBindingDispatcher;
     shortcutOverrides?: KeyBindingOverrides;
     openView?: (view: "proposal" | "fact-check" | "style-profile" | "translations") => void;
@@ -82,8 +85,8 @@ interface EditorialAssistantLayout {
 
 
 export function EditorialAssistantPanel({ data, actions, layout }: { data: EditorialAssistantData; actions: EditorialAssistantActions; layout: EditorialAssistantLayout }) {
-    const { articleId, state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, hasUnavailableAiConnection, checkpointPreview, restoredComposer, authorSkills } = data;
-    const { onRequest, onCancel, onRetry, loadAuthorSkills, dispatcher, shortcutOverrides, openView, openSkillFolder, clearSelection, openSettings, previewCheckpoint, restoreCheckpoint, closeCheckpoint } = actions;
+    const { articleId, state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, editMode, hasUnavailableAiConnection, checkpointPreview, restoredComposer, authorSkills } = data;
+    const { onRequest, onCancel, onRetry, setEditMode, applyEdit, loadAuthorSkills, dispatcher, shortcutOverrides, openView, openSkillFolder, clearSelection, openSettings, previewCheckpoint, restoreCheckpoint, closeCheckpoint } = actions;
     const { collapsed, setCollapsed } = layout;
     const intl = useIntl();
     const composerState = useAssistantComposer({ articleId, intl, state, onRequest, onCancel, translationLanguages, authorSkills, loadAuthorSkills, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {}, restoredComposer });
@@ -111,11 +114,11 @@ export function EditorialAssistantPanel({ data, actions, layout }: { data: Edito
             <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="text-base font-semibold text-brand">{intl.formatMessage({ id: "assistant.heading" })}</h2>
         </header>
-        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection, authorSkills }} actions={{ openView, openSkillFolder, onRetry, openSettings, onCheckpoint: openCheckpoint }} />
+        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection, authorSkills }} actions={{ openView, openSkillFolder, onRetry, openSettings, onCheckpoint: openCheckpoint, applyEdit }} />
         <AssistantComposer
-            state={{ state, canSend: composerState.canSend, guidance: composerState.guidance, selectedSkill: composerState.selectedSkill, skillOffset: composerState.skillOffset, caretOffset: composerState.caretOffset, selection, clearSelection, incompatibleSelectionSkill: composerState.incompatibleSelectionSkill }}
+            state={{ state, canSend: composerState.canSend, guidance: composerState.guidance, selectedSkill: composerState.selectedSkill, skillOffset: composerState.skillOffset, caretOffset: composerState.caretOffset, selection, clearSelection, incompatibleSelectionSkill: composerState.incompatibleSelectionSkill, editMode }}
             picker={{ quickActionsOpen: composerState.quickActionsOpen, availableSkills: composerState.availableSkills, activeSkillIndex: composerState.activeSkillIndex, setQuickActionsOpen: composerState.setQuickActionsOpen, setActiveSkillIndex: composerState.setActiveSkillIndex, selectSkill: composerState.selectSkill, focusQuickAction: composerState.focusQuickAction }}
-            actions={{ send: composerState.send, onCancel, onChange: composerState.onChange, onKeyDown: composerState.onKeyDown, shortcutOverrides }} />
+            actions={{ send: composerState.send, onCancel, onChange: composerState.onChange, onKeyDown: composerState.onKeyDown, shortcutOverrides, setEditMode }} />
         {checkpointPreview && restoreCheckpoint && closeCheckpoint && <AssistantCheckpointDialog preview={checkpointPreview} replacingComposer={Boolean(composerState.guidance || composerState.selectedSkill)} close={closeCheckpointAndRestoreFocus} restore={restoreCheckpoint} />}
     </aside>;
 }

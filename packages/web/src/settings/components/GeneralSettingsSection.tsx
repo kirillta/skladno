@@ -6,8 +6,6 @@ import { Select, Button } from "../../ui/primitives.js";
 import { SettingRow } from "./SettingRow.js";
 import { TelemetrySettingsGroup } from "./TelemetrySettingsGroup.js";
 
-const assistantRequestTimeoutOptions = [1, 2, 3, 5, 10, 15, 30] as const;
-
 
 function formatExample(general: GeneralSettings): string {
     return formatDateTime(new Date(), general.interfaceLocale, general.dateFormat, general.timeFormat, general.timeZone);
@@ -94,14 +92,5 @@ export function GeneralSettingsSection({ general, save, applyTheme, telemetry }:
             </SettingRow>
         </section>
         {telemetry && <TelemetrySettingsGroup client={telemetry} />}
-        <section className="mt-8 pt-8" aria-labelledby="settings-assistant">
-            <h2 id="settings-assistant" className="text-base font-semibold">{intl.formatMessage({ id: "assistant.heading" })}</h2>
-            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.assistantRequestTimeout" })} hint={intl.formatMessage({ id: "settings.assistantRequestTimeoutHint" })}>
-                <Select aria-label={intl.formatMessage({ id: "settings.assistantRequestTimeout" })} value={general.assistantRequestTimeoutMinutes} onChange={(event) => void save({ ...general, assistantRequestTimeoutMinutes: event.target.value === "unlimited" ? "unlimited" : Number(event.target.value) })}>
-                    {assistantRequestTimeoutOptions.map((minutes) => <option key={minutes} value={minutes}>{intl.formatMessage({ id: "settings.requestTimeoutMinutes" }, { minutes })}</option>)}
-                    <option value="unlimited">{intl.formatMessage({ id: "settings.requestTimeoutUnlimited" })}</option>
-                </Select>
-            </SettingRow>
-        </section>
     </>;
 }

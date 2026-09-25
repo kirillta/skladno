@@ -1,9 +1,9 @@
 import { BUILT_IN_SKILL, isBuiltInSkillId, type AssistantMessage, type FactCheckClaimPreview, type GeneralSettings } from "@skladno/shared";
-import { IconButton } from "../../../ui/primitives.js";
+import { Button, IconButton } from "../../../ui/primitives.js";
 import { ArticleIcon, FolderIcon, StatusIcon, UndoIcon, UpdateIcon } from "../../../ui/icons.js";
 import { formatDateTime } from "../../../i18n/formatting.js";
 import { useIntl } from "react-intl";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { getSelectionPreview, responseMessages, skillMessages } from "./assistant-messages.js";
 import { FactCheckClaims } from "./FactCheckClaims.js";
 import { AssistantMarkdown } from "./AssistantMarkdown.js";
@@ -61,6 +61,8 @@ function resolveMessageContent(message: AssistantMessage, intl: Intl): string | 
             return intl.formatMessage({ id: "assistant.requestFailed" });
         case "profile_rebuilt":
             return intl.formatMessage({ id: "assistant.profileRebuilt" }, { count: Number(message.content) });
+        case "edit_applied":
+            return intl.formatMessage({ id: "assistant.response.editApplied" });
         default:
             return message.content;
     }
@@ -137,6 +139,27 @@ function AuthorMessageContent({ visible, content, selectionText, skillOffset, sk
 }
 
 
+function AssistantApplyButton({ message, applyEdit, intl }: { message: AssistantMessage; applyEdit: (messageId: string) => Promise<void>; intl: Intl }) {
+    const [applying, setApplying] = useState(false);
+
+    return <Button compact variant="secondary" disabled={applying} onClick={() => {
+        setApplying(true);
+        void applyEdit(message.id).finally(() => setApplying(false));
+    }}>{intl.formatMessage({ id: message.editCandidate?.target === "selection" ? "assistant.applySelection" : "assistant.applyArticle" })}
+    </Button>;
+}
+
+
+function getAvailableMessageActions(message: AssistantMessage, skillId: string | undefined, view: AssistantView | undefined, openSkillFolder: ((requestId: string) => void) | undefined, onRetry: ((requestId: string) => void) | undefined, applyEdit: ((messageId: string) => Promise<void>) | undefined) {
+    return {
+        review: Boolean(view && message.status !== "rejected"),
+        folder: Boolean(message.role !== "author" && skillId === BUILT_IN_SKILL.SKILL_CREATOR && message.status === "completed" && message.requestId && openSkillFolder),
+        retry: Boolean((message.status === "failed" || message.status === "cancelled") && message.requestId && onRetry),
+        apply: Boolean(message.status === "completed" && message.editCandidate && !message.appliedEdit && applyEdit),
+    };
+}
+
+
 function AssistantMessageContent({ message, visible, content, handoffOwnsContent }: { message: AssistantMessage; visible: boolean; content: string; handoffOwnsContent: boolean }) {
     if (!visible || !content || handoffOwnsContent)
         return null;
@@ -148,17 +171,17 @@ function AssistantMessageContent({ message, visible, content, handoffOwnsContent
 }
 
 
-function AssistantMessageActions({ message, skillId, view, openView, openSkillFolder, onRetry, intl }: { message: AssistantMessage; skillId: string | undefined; view: AssistantView | undefined; openView?: AssistantViewHandler; openSkillFolder?: (requestId: string) => void; onRetry?: (requestId: string) => void; intl: Intl }) {
-    const canReview = Boolean(view && message.status !== "rejected");
-    const canOpenFolder = Boolean(message.role !== "author" && skillId === BUILT_IN_SKILL.SKILL_CREATOR && message.status === "completed" && message.requestId && openSkillFolder);
-    const canRetry = Boolean((message.status === "failed" || message.status === "cancelled") && message.requestId && onRetry);
-    if (!canReview && !canOpenFolder && !canRetry)
+function AssistantMessageActions({ message, skillId, view, openView, openSkillFolder, onRetry, applyEdit, intl }: { message: AssistantMessage; skillId: string | undefined; view: AssistantView | undefined; openView?: AssistantViewHandler; openSkillFolder?: (requestId: string) => void; onRetry?: (requestId: string) => void; applyEdit?: (messageId: string) => Promise<void>; intl: Intl }) {
+    const available = getAvailableMessageActions(message, skillId, view, openSkillFolder, onRetry, applyEdit);
+    if (!Object.values(available).some(Boolean) && !message.appliedEdit)
         return null;
 
     return <div className="flex shrink-0 gap-1">
-        {canReview && view && <IconButton className="!size-6" variant="secondary" label={getViewLabel(view, intl)} title={getViewLabel(view, intl)} onClick={() => openView?.(view)}><ArticleIcon className="size-3" /></IconButton>}
-        {canOpenFolder && message.requestId && <IconButton className="!size-6" variant="secondary" label={intl.formatMessage({ id: "assistant.openSkillFolder" })} title={intl.formatMessage({ id: "assistant.openSkillFolder" })} onClick={() => openSkillFolder?.(message.requestId!)}><FolderIcon className="size-3" /></IconButton>}
-        {canRetry && message.requestId && <IconButton className="!size-6" variant="secondary" label={intl.formatMessage({ id: "assistant.retry" })} title={intl.formatMessage({ id: "assistant.retry" })} onClick={() => onRetry?.(message.requestId!)}><UpdateIcon className="size-3" /></IconButton>}
+        {available.review && view && <IconButton className="!size-6" variant="secondary" label={getViewLabel(view, intl)} title={getViewLabel(view, intl)} onClick={() => openView?.(view)}><ArticleIcon className="size-3" /></IconButton>}
+        {available.folder && message.requestId && <IconButton className="!size-6" variant="secondary" label={intl.formatMessage({ id: "assistant.openSkillFolder" })} title={intl.formatMessage({ id: "assistant.openSkillFolder" })} onClick={() => openSkillFolder?.(message.requestId!)}><FolderIcon className="size-3" /></IconButton>}
+        {available.retry && message.requestId && <IconButton className="!size-6" variant="secondary" label={intl.formatMessage({ id: "assistant.retry" })} title={intl.formatMessage({ id: "assistant.retry" })} onClick={() => onRetry?.(message.requestId!)}><UpdateIcon className="size-3" /></IconButton>}
+        {available.apply && applyEdit && <AssistantApplyButton message={message} applyEdit={applyEdit} intl={intl} />}
+        {message.appliedEdit && <span className="text-xs text-muted" role="status">{intl.formatMessage({ id: "assistant.appliedEdit" })}</span>}
     </div>;
 }
 
@@ -209,7 +232,7 @@ function getMessagePresentation(message: AssistantMessage, generalSettings: Gene
 }
 
 
-export function AssistantTimelineMessage({ message, factCheckClaims, openView, openSkillFolder, onRetry, onCheckpoint, generalSettings, skillByRequest, skillNames = new Map() }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: AssistantViewHandler; openSkillFolder?: (requestId: string) => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, string>; skillNames?: ReadonlyMap<string, string> }) {
+export function AssistantTimelineMessage({ message, factCheckClaims, openView, openSkillFolder, onRetry, onCheckpoint, applyEdit, generalSettings, skillByRequest, skillNames = new Map() }: { message: AssistantMessage; factCheckClaims?: FactCheckClaimPreview[]; openView?: AssistantViewHandler; openSkillFolder?: (requestId: string) => void; onRetry?: (requestId: string) => void; onCheckpoint?: (messageId: string) => void; applyEdit?: (messageId: string) => Promise<void>; generalSettings: GeneralSettings; skillByRequest: ReadonlyMap<string, string>; skillNames?: ReadonlyMap<string, string> }) {
     const intl = useIntl();
     const { authorMessage, skillId, label, messageContent, skillOffset, selectionText, view, handoffOwnsContent, dateTime } = getMessagePresentation(message, generalSettings, skillByRequest, skillNames, intl);
 
@@ -218,8 +241,10 @@ export function AssistantTimelineMessage({ message, factCheckClaims, openView, o
             {!authorMessage && <p className="text-xs font-semibold text-muted">{label}</p>}
             <AuthorMessageContent visible={authorMessage} content={messageContent} selectionText={selectionText} skillOffset={skillOffset} skillId={skillId} skillNames={skillNames} intl={intl} />
             <AssistantMessageContent message={message} visible={!authorMessage} content={messageContent} handoffOwnsContent={handoffOwnsContent} />
+            {message.editCandidate?.target === "selection" && <div className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "assistant.editOriginal" })}<pre className="max-h-32 overflow-auto whitespace-pre-wrap text-sm text-ink">{message.editCandidate.original}</pre></div>}
+            {message.editCandidate && <div className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "assistant.editReplacement" })}<pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-control border border-border bg-surface-raised p-2 text-sm text-ink">{message.editCandidate.replacement}</pre></div>}
             {factCheckClaims?.length ? <FactCheckClaims claims={factCheckClaims} embedded className="mt-3" /> : null}
         </div>
-        <AssistantMessageMetadata message={message} dateTime={dateTime} skillId={skillId} skillNames={skillNames} intl={intl} onCheckpoint={onCheckpoint} actions={<AssistantMessageActions message={message} skillId={skillId} view={view} openView={openView} openSkillFolder={openSkillFolder} onRetry={onRetry} intl={intl} />} />
+        <AssistantMessageMetadata message={message} dateTime={dateTime} skillId={skillId} skillNames={skillNames} intl={intl} onCheckpoint={onCheckpoint} actions={<AssistantMessageActions message={message} skillId={skillId} view={view} openView={openView} openSkillFolder={openSkillFolder} onRetry={onRetry} applyEdit={applyEdit} intl={intl} />} />
     </article>;
 }

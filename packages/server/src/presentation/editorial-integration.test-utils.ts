@@ -11,6 +11,7 @@ import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editoria
 import type { EditorialEngineRequest } from "../application/editorial/engine/editorial-engine-request.js";
 import type { EditorialAssistantRequest } from "../application/editorial/engine/editorial-assistant-request.js";
 import type { AssistantActionIntentVerifier } from "../application/editorial/assistant-action-intent-verifier.js";
+import type { RevisionDescriptionGenerator } from "../application/editorial/revision-description-generator.js";
 import type { TelemetryObserver } from "../application/telemetry/telemetry-observer.js";
 import { EditorialService } from "../application/editorial/editorial-service.js";
 import { createLocalService } from "./server.js";
@@ -66,11 +67,11 @@ export class CapabilityFixtureEngine extends FixtureEngine {
 }
 
 
-export async function withService(engine: EditorialEngine | undefined, run: (baseUrl: string, persistence: TestPersistence, services: ApplicationServices) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier, telemetry?: TelemetryObserver): Promise<void> {
+export async function withService(engine: EditorialEngine | undefined, run: (baseUrl: string, persistence: TestPersistence, services: ApplicationServices) => Promise<void>, storeResponses = true, actionVerifier?: AssistantActionIntentVerifier, telemetry?: TelemetryObserver, revisionDescriptions?: RevisionDescriptionGenerator): Promise<void> {
     const directory = mkdtempSync(join(tmpdir(), "skladno-editorial-"));
     const database = openDatabase(join(directory, "skladno.sqlite"));
     const persistence = createTestPersistence(database);
-    const engines: EditorialEngineResolver = { resolve: () => engine, resolveAssistant: () => engine, resolveAssistantActionIntentVerifier: () => actionVerifier };
+    const engines: EditorialEngineResolver = { resolve: () => engine, resolveAssistant: () => engine, resolveAssistantActionIntentVerifier: () => actionVerifier, resolveRevisionDescriptionGenerator: () => revisionDescriptions };
 
     const config = {
         host: "127.0.0.1",

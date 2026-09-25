@@ -163,6 +163,8 @@ export function ApplicationSettings(props: { client: EditorialWorkspaceClient; b
         case "ai":
             sectionContent = <AiSettingsSection
                 settings={settings!}
+                general={general}
+                saveGeneral={saveGeneral}
                 preferences={preferences}
                 appModel={appModel}
                 models={ai.models}

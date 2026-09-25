@@ -1,9 +1,10 @@
-import { REVISION_PROVENANCE_KIND, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantMessage, type AssistantRequest, type AssistantRequestScope, type AssistantResponseKind, type AssistantSkillSource, type RestoreAssistantCheckpointResult } from "@skladno/shared";
+import { REVISION_PROVENANCE_KIND, type ArticleRevision, type AssistantCheckpointDraftMode, type AssistantCheckpointPreview, type AssistantEditCandidate, type AssistantEditMode, type AssistantMessage, type AssistantRequest, type AssistantRequestScope, type AssistantResponseKind, type AssistantSkillSource, type RestoreAssistantCheckpointResult } from "@skladno/shared";
 
 import type { SqliteDatabase } from "../database.js";
 import { createId, getCurrentTimestamp, type Row } from "./repository-utils.js";
 import { articleSelect, mapArticleFromRow } from "./article-record-mappers.js";
 import { insertArticleRevision } from "./article-revision-queries.js";
+import { applyAssistantEdit, previewAssistantEdit } from "./assistant-edit-queries.js";
 import { AssistantCheckpointError } from "../../../application/assistant/assistant-store.js";
 import { createCheckpointPreview, getCheckpointAnchor, getCheckpointTail } from "./assistant-checkpoint-queries.js";
 import { getProposalAcceptances, mapAssistantMessageFromRow } from "./assistant-record-mappers.js";
@@ -81,6 +82,35 @@ export class AssistantRepository {
 
 
     constructor(private readonly database: SqliteDatabase) { }
+
+
+    getEditMode(articleId: string, defaultMode: AssistantEditMode): AssistantEditMode {
+        const saved = this.database.prepare("SELECT mode FROM assistant_conversation_modes WHERE article_id = ?").get(articleId) as Row | undefined;
+        if (saved)
+            return String(saved.mode) === "direct" ? "direct" : "review";
+
+        const existing = this.database.prepare("SELECT 1 FROM assistant_requests WHERE article_id = ? LIMIT 1").get(articleId);
+        const mode = existing ? "review" : defaultMode;
+        this.database.prepare("INSERT INTO assistant_conversation_modes (article_id, mode) VALUES (?, ?)").run(articleId, mode);
+
+        return mode;
+    }
+
+
+    setEditMode(articleId: string, mode: AssistantEditMode): AssistantEditMode {
+        this.database.prepare("INSERT INTO assistant_conversation_modes (article_id, mode) VALUES (?, ?) ON CONFLICT(article_id) DO UPDATE SET mode = excluded.mode").run(articleId, mode);
+        return mode;
+    }
+
+
+    previewEdit(articleId: string, messageId: string): { previousContent: string; content: string } | undefined {
+        return previewAssistantEdit(this.database, articleId, messageId);
+    }
+
+
+    applyEdit(articleId: string, messageId: string, description?: string): ArticleRevision {
+        return this.completeRun(() => applyAssistantEdit(this.database, articleId, messageId, description));
+    }
 
 
     ensureGreeting(articleId: string): void {
@@ -189,13 +219,16 @@ export class AssistantRepository {
     }
 
 
-    completeRequest(input: { requestId: string; articleId: string; skillId?: string; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string }): AssistantMessage {
+    completeRequest(input: { requestId: string; articleId: string; skillId?: string; responseKind: AssistantResponseKind; content: string; proposalContent?: string; editorialArtifactId?: string; editCandidate?: AssistantEditCandidate; directEdit?: boolean; editDescription?: string }): AssistantMessage {
         const timestamp = getCurrentTimestamp();
         const messageId = createId();
         return this.completeRun(() => {
-            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, proposal_content, skill_id, response_kind, editorial_artifact_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .run(messageId, input.articleId, input.requestId, "assistant", "response", "completed", input.content, input.proposalContent ?? null, input.skillId ?? null, input.responseKind, input.editorialArtifactId ?? null, timestamp, timestamp);
+            this.database.prepare("INSERT INTO assistant_messages (id, article_id, request_id, role, kind, status, content, proposal_content, skill_id, response_kind, editorial_artifact_id, edit_candidate_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                .run(messageId, input.articleId, input.requestId, "assistant", "response", "completed", input.content, input.proposalContent ?? null, input.skillId ?? null, input.responseKind, input.editorialArtifactId ?? null, input.editCandidate ? JSON.stringify(input.editCandidate) : null, timestamp, timestamp);
             this.database.prepare("UPDATE assistant_requests SET status = 'completed', updated_at = ? WHERE id = ?").run(timestamp, input.requestId);
+            if (input.directEdit && input.editCandidate)
+                this.applyEdit(input.articleId, messageId, input.editDescription);
+
             return mapAssistantMessageFromRow(this.database.prepare("SELECT * FROM assistant_messages WHERE id = ?").get(messageId) as Row);
         });
     }

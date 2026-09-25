@@ -42,8 +42,8 @@ export function useAssistantStreamEvents({ articleId, workspace, store, onResult
         if (event.type === ASSISTANT_EVENT.COMPLETED && event.result) {
             const result = event.result;
             onResult(id, revisionId, result, event.editorialArtifactId);
-            if (result.metadataChanged)
-                void workspace.refreshArticle(id).catch(() => undefined);
+            if (result.metadataChanged || result.articleChanged)
+                void workspace.refreshArticle(id, Boolean(result.articleChanged)).catch(() => undefined);
 
             if (result.factCheck) {
                 const { factCheck } = result;

@@ -8,7 +8,7 @@ export function getCharacterCount(content: string): number {
 }
 
 
-export function getProvenanceMessageId(revision: Pick<ArticleRevision, "provenance" | "restoredFromRevisionId"> & Partial<Pick<ArticleRevision, "id">>, revisions?: readonly ArticleRevision[]): "revisions.empty" | "revisions.initial" | "revisions.author" | "revisions.acceptedProposal" | "revisions.restored" | "revisions.saved" {
+export function getProvenanceMessageId(revision: Pick<ArticleRevision, "provenance" | "restoredFromRevisionId"> & Partial<Pick<ArticleRevision, "id">>, revisions?: readonly ArticleRevision[]): "revisions.empty" | "revisions.initial" | "revisions.author" | "revisions.acceptedProposal" | "revisions.assistantEdit" | "revisions.restored" | "revisions.saved" {
     if (revisions?.[0]?.provenance.kind === REVISION_PROVENANCE_KIND.INITIAL && revisions[0].content.length === 0) {
         if (revision.id === revisions[0].id)
             return "revisions.empty";
@@ -28,6 +28,9 @@ export function getProvenanceMessageId(revision: Pick<ArticleRevision, "provenan
 
     if (revision.provenance.kind === REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL)
         return "revisions.acceptedProposal";
+
+    if (revision.provenance.kind === REVISION_PROVENANCE_KIND.ASSISTANT_EDIT)
+        return "revisions.assistantEdit";
 
     return "revisions.saved";
 }
@@ -64,7 +67,7 @@ export function getTimelineKind(revision: ArticleRevision, revisions?: readonly 
     if (getProvenanceMessageId(revision, revisions) === "revisions.initial")
         return "initial";
 
-    if (revision.provenance.kind === REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL)
+    if (revision.provenance.kind === REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL || revision.provenance.kind === REVISION_PROVENANCE_KIND.ASSISTANT_EDIT)
         return "ai";
 
     return "manual";

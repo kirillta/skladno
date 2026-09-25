@@ -1,12 +1,124 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HTTP_METHOD } from "@skladno/shared";
+import { EDITORIAL_OPERATION, HTTP_METHOD } from "@skladno/shared";
 import type { AssistantActionIntentVerifier } from "../application/editorial/assistant-action-intent-verifier.js";
 import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
 import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
+import type { EditorialAssistantRequest } from "../application/editorial/engine/editorial-assistant-request.js";
+import type { RevisionDescriptionGenerator } from "../application/editorial/revision-description-generator.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
 import { EditorialEngineError } from "../application/editorial/engine/editorial-engine-error.js";
 import { CapabilityFixtureEngine, FixtureEngine, createEmptyConversationStream, withService } from "./editorial-integration.test-utils.js";
+
+
+// Product scenarios: workspace.assistant.conversational-direct-edit, history-and-publishing.assistant-edit-descriptions
+test("an untagged selected edit uses the Article selection instead of asking for text", async () => {
+    const engine: EditorialEngine = {
+        async *stream(): AsyncIterable<EditorialEngineEvent> {
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "replacement", text: "еще., потом" };
+        },
+        async *streamConversation(): AsyncIterable<EditorialEngineEvent> {
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "conversation", text: "Conversation" };
+        },
+        async *streamAssistant(request: EditorialAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+            if (!request.initialActiveCapabilities?.includes("generate_proposal")) {
+                yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "conversation", text: "Please provide the Article text." };
+                return;
+            }
+
+            await request.tools.find((tool) => tool.capability === "generate_proposal")?.execute({ operation: EDITORIAL_OPERATION.FLOW_REVISION }, signal);
+            yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Intermediate model summary.\n\n" };
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "edit", text: "Edit prepared." };
+        },
+    };
+    const verifier: AssistantActionIntentVerifier = {
+        verify: async (message, action, input) => message === "Change ё to е" && action === "apply_article_edit" && (input.target === "selection" || input.target === "article"),
+        verifyReplacement: async () => false,
+    };
+    const descriptions: RevisionDescriptionGenerator = { generate: async (before, after, locale) => {
+        assert.equal(before, "ещё, потом");
+        assert.equal(after, "еще, потом");
+        assert.equal(locale, "ru");
+        return "Changed ё to е";
+    } };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Edit", content: "ещё, потом" });
+        await fetch(`${baseUrl}/api/articles/${article.id}/assistant/messages/edit-mode`, { method: HTTP_METHOD.PUT, headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "direct" }) });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId: "selected-letter", authorMessage: "Change ё to е", interfaceLocale: "ru", scope: { kind: "selection", baseRevisionId: article.currentRevisionId, startOffset: 0, endOffset: 10 } }) });
+
+        const events = await response.text();
+        assert.match(events, /"responseKind":"edit_applied"/);
+        assert.doesNotMatch(events, /"type":"text_delta"/);
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "еще, потом");
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.description, "Changed ё to е");
+
+        const protectedArticle = repositories.articleService.createArticle({ title: "Code", content: "Use `ё` here." });
+        await fetch(`${baseUrl}/api/articles/${protectedArticle.id}/assistant/messages/edit-mode`, { method: HTTP_METHOD.PUT, headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "direct" }) });
+        const protectedResponse = await fetch(`${baseUrl}/api/articles/${protectedArticle.id}/assistant/requests`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId: "protected-letter", authorMessage: "Change ё to е", scope: { kind: "article", baseRevisionId: protectedArticle.currentRevisionId } }) });
+        assert.match(await protectedResponse.text(), /assistant_edit_invalid/);
+        assert.equal(repositories.articles.getArticle(protectedArticle.id)?.currentRevision.content, "Use `ё` here.");
+    }, true, verifier, undefined, descriptions);
+});
+
+// Product scenarios: workspace.assistant.conversational-selection-edit, history-and-publishing.assistant-edit-descriptions
+test("completed selection reply applies exact text through one Author click", async () => {
+    const engine = new FixtureEngine([{ type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "edit", text: "improved" }]);
+    const verifier: AssistantActionIntentVerifier = { verify: async () => false, verifyReplacement: async () => true };
+    const descriptions: RevisionDescriptionGenerator = { generate: async (before, after, locale) => {
+        assert.equal(before, "Before selected after");
+        assert.equal(after, "Before improved after");
+        assert.equal(locale, "en");
+        return "Improved selected passage";
+    } };
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Edit", content: "Before selected after" });
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId: "edit-request", authorMessage: "Rephrase this selection.", explicitSkillId: "flow_and_clarity", scope: { kind: "selection", baseRevisionId: article.currentRevisionId, startOffset: 7, endOffset: 15 } }),
+        });
+        assert.equal(response.status, 200);
+        const reply = repositories.assistant.listMessages(article.id).find((message) => message.requestId === "edit-request" && message.role === "assistant")!;
+        assert.deepEqual(reply.editCandidate, { target: "selection", original: "selected", replacement: "improved" });
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Before selected after");
+        const applied = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/messages/${reply.id}/apply-edit`, { method: HTTP_METHOD.POST });
+        assert.equal(applied.status, 200);
+        assert.equal((await applied.json()).content, "Before improved after");
+        assert.equal(repositories.assistant.listMessages(article.id).find((message) => message.id === reply.id)?.appliedEdit?.revisionId, repositories.articles.getArticle(article.id)?.currentRevisionId);
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.description, "Improved selected passage");
+        const repeated = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/messages/${reply.id}/apply-edit`, { method: HTTP_METHOD.POST });
+        assert.equal((await repeated.json()).id, repositories.articles.getArticle(article.id)?.currentRevisionId);
+        assert.equal(repositories.articles.listRevisions(article.id).length, 2);
+    }, true, verifier, undefined, descriptions);
+});
+
+
+// Product scenario: workspace.assistant.conversational-direct-edit
+test("direct mode applies only an explicitly authorized whole-Article edit", async () => {
+    const engine = new FixtureEngine([{ type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "edit", text: "After" }]);
+    let authorized = false;
+    const verifier: AssistantActionIntentVerifier = { verify: async () => authorized, verifyReplacement: async () => true };
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Direct", content: "Before" });
+        const mode = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/messages/edit-mode`, { method: HTTP_METHOD.PUT, headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "direct" }) });
+        assert.equal(await mode.json(), "direct");
+        await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId: "unauthorized", authorMessage: "Discuss a rewrite.", explicitSkillId: "flow_and_clarity", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }) });
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Before");
+        assert.deepEqual(repositories.assistant.listMessages(article.id).find((message) => message.requestId === "unauthorized" && message.role === "assistant")?.editCandidate, { target: "article", replacement: "After" });
+
+        authorized = true;
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId: "authorized", authorMessage: "Replace the Article with the improved wording.", explicitSkillId: "flow_and_clarity", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }) });
+        assert.match(await response.text(), /"responseKind":"edit_applied"/);
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "After");
+        assert.equal(repositories.assistant.listMessages(article.id).find((message) => message.requestId === "authorized" && message.role === "assistant")?.appliedEdit?.revisionId, repositories.articles.getArticle(article.id)?.currentRevisionId);
+
+        const invalid = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, { method: HTTP_METHOD.POST, headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId: "invalid-direct-edit", authorMessage: "Replace the Article with better wording.", explicitSkillId: "flow_and_clarity", scope: { kind: "article", baseRevisionId: repositories.articles.getArticle(article.id)!.currentRevisionId } }) });
+        assert.match(await invalid.text(), /assistant_edit_invalid/);
+        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "After");
+        assert.equal(repositories.assistant.listMessages(article.id).find((message) => message.requestId === "invalid-direct-edit" && message.role === "assistant")?.status, "failed");
+    }, true, verifier);
+});
 
 // Product scenarios: editorial-workflows.assistant-request-proposal, editorial-workflows.proposal-operations-remain-separate, editorial-workflows.author-skill-creation
 test("assistant requests persist a revision-bound proposal and splice only the selected Markdown", async () => {
@@ -48,62 +160,6 @@ test("assistant requests persist a revision-bound proposal and splice only the s
         assert.equal(proposalMessage?.baseRevisionContent, "before selected after");
     });
 });
-
-test("the live Assistant tool loop stages one catalog Proposal before completion", async () => {
-    const engine = new CapabilityFixtureEngine([
-        { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "catalog-proposal", text: "Improved Article" },
-    ]);
-
-    await withService(engine, async (baseUrl, repositories) => {
-        const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
-        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
-            method: HTTP_METHOD.POST,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-                requestId: "assistant-tool-loop-request",
-                authorMessage: "Improve the flow.",
-                scope: { kind: "article", baseRevisionId: article.currentRevisionId },
-            }),
-        });
-        const body = await response.text();
-        const artifact = repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!;
-
-        assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
-        assert.equal(JSON.parse(artifact.content).capability, "generate_proposal");
-        assert.equal(JSON.parse(artifact.content).proposal, "Improved Article");
-        assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Original Article");
-    });
-});
-
-
-test("proposal Skills create revision-bound Proposals and review handoffs", async () => {
-    for (const skillId of ["talking_points", "narrative_draft", "flow_and_clarity"]) {
-        const engine = new CapabilityFixtureEngine([
-            { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: skillId, text: `Proposal from ${skillId}` },
-        ], "generate_proposal", { operation: skillId === "flow_and_clarity" ? "flow_revision" : "thesis_to_narrative" }, "generate_proposal");
-
-        await withService(engine, async (baseUrl, repositories) => {
-            const article = repositories.articleService.createArticle({ title: "Draft", content: "Original Article" });
-            const requestId = `assistant-${skillId}`;
-            const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
-                method: HTTP_METHOD.POST,
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ requestId, authorMessage: "", explicitSkillId: skillId, scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
-            });
-            const body = await response.text();
-            const artifact = repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]!;
-            const message = repositories.assistant.listMessages(article.id).find((item) => item.requestId === requestId && item.role === "assistant");
-
-            assert.match(body, /"type":"completed".*"responseKind":"proposal_prepared"/);
-            assert.equal(JSON.parse(artifact.content).proposal, `Proposal from ${skillId}`);
-            assert.equal(artifact.revisionId, article.currentRevisionId);
-            assert.equal(message?.responseKind, "proposal_prepared");
-            assert.equal(message?.editorialArtifactId, artifact.id);
-            assert.equal(repositories.articles.getArticle(article.id)?.currentRevision.content, "Original Article");
-        });
-    }
-});
-
 
 test("the capability loop does not infer a Style Review from conversational tone", async () => {
     const engine = new CapabilityFixtureEngine([

@@ -1,4 +1,5 @@
 import { APPLICATION_ERROR, BUILT_IN_SKILL, HTTP_STATUS, isBuiltInSkillId } from "@skladno/shared";
+import { randomUUID } from "node:crypto";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
 import { EDITORIAL_ENGINE_EVENT } from "../../editorial/engine/editorial-engine-events.js";
@@ -25,6 +26,19 @@ function isTransientReadFailure(error: unknown): boolean {
 }
 
 
+function getExactCharacterReplacement(request: PreparedAssistantRequest, source: string): string | undefined {
+    if (!request.editIntentAuthorized)
+        return undefined;
+
+    // ponytail: Handles explicit single-character substitutions; use structured parsing if longer literal edits need this path.
+    const match = /^(?:change|replace)\s+(\S)\s+(?:to|with)\s+(\S)$/iu.exec(request.authorMessage.trim());
+    const from = match?.[1];
+    const to = match?.[2];
+
+    return from && to && from !== to && source.includes(from) ? source.replaceAll(from, to) : undefined;
+}
+
+
 export class AssistantCapabilityLoop {
     private readonly authorSkillActions?: AuthorSkillChatActions;
 
@@ -42,6 +56,38 @@ export class AssistantCapabilityLoop {
     }
 
 
+    async qualifiesReplacement(request: PreparedAssistantRequest, replacement: string, signal: AbortSignal): Promise<boolean> {
+        const verifier = this.dependencies.engines.resolveAssistantActionIntentVerifier?.();
+        try {
+            const source = request.scope.kind === "selection"
+                ? request.articleContent.slice(request.scope.startOffset, request.scope.endOffset)
+                : request.articleContent;
+            if (replacement === getExactCharacterReplacement(request, source))
+                return true;
+
+            if (!verifier?.verifyReplacement)
+                return false;
+
+            return verifier.verifyReplacement(request.authorMessage, source, replacement, request.scope.kind, signal);
+        } catch {
+            return false;
+        }
+    }
+
+
+    async authorizesArticleEditIntent(request: PreparedAssistantRequest, signal: AbortSignal): Promise<boolean> {
+        const verifier = this.dependencies.engines.resolveAssistantActionIntentVerifier?.();
+        if (!verifier)
+            return false;
+
+        try {
+            return verifier.verify(request.authorMessage, "apply_article_edit", { target: request.scope.kind }, signal);
+        } catch {
+            return false;
+        }
+    }
+
+
     async *stream(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
         if (!request.engine.streamAssistant || !this.dependencies.capabilities)
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
@@ -52,6 +98,8 @@ export class AssistantCapabilityLoop {
         const selectedSkills = request.resolvedSkillId
             ? skills.filter((skill) => skill.reference.id === request.resolvedSkillId)
             : [];
+        const initialActiveCapabilities = await this.getRequestCapabilities(request, signal);
+
         const authorContext = !isBuiltInSkillId(request.resolvedSkillId ?? "")
             ? [request.authorMessage, ...selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])])].filter(Boolean).join("\n\n")
             : request.authorMessage;
@@ -67,28 +115,43 @@ export class AssistantCapabilityLoop {
             scope: request.scope.kind,
             instructions: selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])]),
             history: this.dependencies.conversationHistory(request.articleId, 12),
-            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: [skill.instructions, ...(skill.references ?? [])].join("\n\n"), capabilities: this.initialCapabilities(skill.reference.id, request.scope.kind) })),
+            skills: skills.map((skill) => ({ id: skill.reference.id, name: skill.name, description: skill.description, instructions: [skill.instructions, ...(skill.references ?? [])].join("\n\n"), capabilities: this.getInitialCapabilities(skill.reference.id, request.scope.kind) })),
             tools,
-            ...(request.resolvedSkillId ? { initialActiveCapabilities: this.initialCapabilities(request.resolvedSkillId, request.scope.kind) } : {}),
+            ...(initialActiveCapabilities ? { initialActiveCapabilities } : {}),
         };
 
         const stream = request.engine.streamAssistant(editorialRequest, signal);
         for await (const event of stream) {
-            if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED) {
-                yield event;
-                continue;
-            }
-
-            if (primary) {
-                yield primary;
-                continue;
-            }
-
-            if (request.operation || (request.resolvedSkillId && !isBuiltInSkillId(request.resolvedSkillId)))
-                throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
-
-            yield event;
+            const resolved = this.resolveStreamEvent(request, event, primary);
+            if (resolved)
+                yield resolved;
         }
+    }
+
+
+    private async getRequestCapabilities(request: PreparedAssistantRequest, signal: AbortSignal): Promise<readonly string[] | undefined> {
+        if (request.resolvedSkillId)
+            return this.getInitialCapabilities(request.resolvedSkillId, request.scope.kind);
+
+        request.editIntentAuthorized = await this.authorizesArticleEditIntent(request, signal);
+        return request.editIntentAuthorized ? [EDITORIAL_CAPABILITY.GENERATE_PROPOSAL] : undefined;
+    }
+
+
+    private resolveStreamEvent(request: PreparedAssistantRequest, event: EditorialEngineEvent, primary?: CompletionEvent): EditorialEngineEvent | undefined {
+        if (event.type === EDITORIAL_ENGINE_EVENT.TEXT_DELTA && (primary || request.editIntentAuthorized))
+            return undefined;
+
+        if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED)
+            return event;
+
+        if (primary)
+            return primary;
+
+        if (request.operation || (request.resolvedSkillId && !isBuiltInSkillId(request.resolvedSkillId)))
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
+        return event;
     }
 
 
@@ -99,7 +162,7 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private initialCapabilities(skill: string, scope: "article" | "selection"): readonly string[] {
+    private getInitialCapabilities(skill: string, scope: "article" | "selection"): readonly string[] {
         if (!isBuiltInSkillId(skill))
             return scope === "article"
                 ? [EDITORIAL_CAPABILITY.INSPECT_ARTICLE, EDITORIAL_CAPABILITY.GENERATE_PROPOSAL]
@@ -223,20 +286,16 @@ export class AssistantCapabilityLoop {
 
 
     private async streamArtifactCapability(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<{ status: "prepared" }> {
-        const streamContext = {
-            capability: definition.id as StreamContext["capability"],
-            context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
-            requestId: request.requestId,
-            authorContext,
-            ...(request.resolvedSkillId && isBuiltInSkillId(request.resolvedSkillId) ? { skillId: request.resolvedSkillId } : {}),
-            ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
-            ...(input.operation ? { operation: input.operation as StreamContext["operation"] } : {}),
-            ...(input.targetLanguage ? { targetLanguage: input.targetLanguage } : {}),
-            ...(input.findingIds ? { findingIds: input.findingIds } : {}),
-            ...(request.scope.kind === "selection" ? { articleContent: excerpt, articleSelection: true, surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
-        };
+        const exactReplacement = definition.id === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL ? getExactCharacterReplacement(request, excerpt) : undefined;
+        if (exactReplacement) {
+            request.completedCapability = definition.id;
+            setPrimary({ type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: randomUUID(), text: exactReplacement });
+            this.completeCapability(request, definition);
 
-        const stream = this.dependencies.capabilities!.stream(streamContext, signal, true);
+            return { status: "prepared" };
+        }
+
+        const stream = this.dependencies.capabilities!.stream(this.createStreamContext(request, excerpt, authorContext, definition, input), signal, true);
         for await (const event of stream) {
             signal.throwIfAborted();
             if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED)
@@ -252,6 +311,22 @@ export class AssistantCapabilityLoop {
         signal.throwIfAborted();
         this.completeCapability(request, definition);
         return { status: "prepared" };
+    }
+
+
+    private createStreamContext(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>): StreamContext {
+        return {
+            capability: definition.id as StreamContext["capability"],
+            context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
+            requestId: request.requestId,
+            authorContext,
+            ...(request.resolvedSkillId && isBuiltInSkillId(request.resolvedSkillId) ? { skillId: request.resolvedSkillId } : {}),
+            ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),
+            ...(input.operation ? { operation: input.operation as StreamContext["operation"] } : {}),
+            ...(input.targetLanguage ? { targetLanguage: input.targetLanguage } : {}),
+            ...(input.findingIds ? { findingIds: input.findingIds } : {}),
+            ...(request.scope.kind === "selection" ? { articleContent: excerpt, articleSelection: true, surroundingArticleCharacterCount: request.articleContent.length - excerpt.length } : {}),
+        };
     }
 
 

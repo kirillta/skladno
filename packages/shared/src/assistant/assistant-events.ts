@@ -31,6 +31,7 @@ export type AssistantEvent =
 
 const assistantResponseKinds: readonly AssistantResponseKind[] = [
     "editorial_conversation",
+    "edit_applied",
     "skill_response",
     "proposal_prepared",
     "findings_prepared",

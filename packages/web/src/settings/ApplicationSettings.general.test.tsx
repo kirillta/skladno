@@ -17,13 +17,32 @@ import { resetApplicationSettingsTestEnvironment, settingsSnapshot } from "./App
 describe("ApplicationSettings general", () => {
     afterEach(resetApplicationSettingsTestEnvironment);
 
+    // Product scenario: settings.default-assistant-edit-mode
+    it("saves the default Assistant edit mode", async () => {
+        const user = userEvent.setup();
+        const updateGeneralSettings = vi.fn().mockResolvedValue({ ...defaultGeneralSettings, defaultAssistantEditMode: "direct" });
+        const client = { getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()), updateGeneralSettings, getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }) } as unknown as EditorialWorkspaceClient;
+        render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
+        await screen.findByRole("button", { name: getMessage("settings.ai") });
+        expect(screen.queryByRole("combobox", { name: getMessage("settings.defaultAssistantEditMode") })).toBeNull();
+        await user.click(screen.getByRole("button", { name: getMessage("settings.ai") }));
+        const select = screen.getByRole("combobox", { name: getMessage("settings.defaultAssistantEditMode") });
+        expect((select as HTMLSelectElement).value).toBe("review");
+        expect(select.getAttribute("aria-describedby")).toBeTruthy();
+        await user.selectOptions(select, "direct");
+        await waitFor(() => expect(updateGeneralSettings).toHaveBeenCalledWith({ ...defaultGeneralSettings, defaultAssistantEditMode: "direct" }));
+    });
+
     // Product scenario: settings.assistant-request-timeout
     it("defaults to two minutes and saves an accessible Assistant request time limit", async () => {
         const user = userEvent.setup();
         const updateGeneralSettings = vi.fn().mockResolvedValue({ ...defaultGeneralSettings, assistantRequestTimeoutMinutes: 5 });
         const client = { getApplicationSettings: vi.fn().mockResolvedValue(settingsSnapshot()), updateGeneralSettings, getPublishingSettings: vi.fn().mockResolvedValue({ defaultProfileId: "default", customProfiles: [] }) } as unknown as EditorialWorkspaceClient;
         render(<IntlProvider locale="en" messages={messages}><NotificationProvider><ApplicationSettings client={client} back={vi.fn()} /></NotificationProvider></IntlProvider>);
-        const select = await screen.findByRole("combobox", { name: getMessage("settings.assistantRequestTimeout") });
+        await screen.findByRole("button", { name: getMessage("settings.ai") });
+        expect(screen.queryByRole("combobox", { name: getMessage("settings.assistantRequestTimeout") })).toBeNull();
+        await user.click(screen.getByRole("button", { name: getMessage("settings.ai") }));
+        const select = screen.getByRole("combobox", { name: getMessage("settings.assistantRequestTimeout") });
         expect((select as HTMLSelectElement).value).toBe("2");
         expect([...select.querySelectorAll("option")].map((option) => option.value)).toEqual(["1", "2", "3", "5", "10", "15", "30", "unlimited"]);
         expect(select.getAttribute("aria-describedby")).toBeTruthy();

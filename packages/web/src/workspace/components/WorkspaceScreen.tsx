@@ -104,11 +104,12 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
                     assistantMessages: assistant.messages,
                     selection: assistantSelection,
                     generalSettings,
+                    editMode: assistant.editMode,
                     checkpointPreview: assistant.checkpointPreview,
                     restoredComposer: assistant.restoredComposer,
                     authorSkills,
                 }}
-                actions={{ onRequest: assistant.request, onCancel: assistant.cancel, onRetry: assistant.retry, loadAuthorSkills, dispatcher, shortcutOverrides, openView: layout.setView, openSkillFolder: desktop?.revealCreatedSkillDirectory ? (requestId) => void desktop.revealCreatedSkillDirectory?.(requestId) : undefined, openSettings, clearSelection: clearAssistantSelection, previewCheckpoint: assistant.previewCheckpoint, restoreCheckpoint: assistant.restoreCheckpoint, closeCheckpoint: assistant.closeCheckpoint }}
+                actions={{ onRequest: assistant.request, onCancel: assistant.cancel, onRetry: assistant.retry, setEditMode: assistant.setEditMode, applyEdit: assistant.applyEdit, loadAuthorSkills, dispatcher, shortcutOverrides, openView: layout.setView, openSkillFolder: desktop?.revealCreatedSkillDirectory ? (requestId) => void desktop.revealCreatedSkillDirectory?.(requestId) : undefined, openSettings, clearSelection: clearAssistantSelection, previewCheckpoint: assistant.previewCheckpoint, restoreCheckpoint: assistant.restoreCheckpoint, closeCheckpoint: assistant.closeCheckpoint }}
                 layout={{ collapsed: layout.assistantCollapsed, setCollapsed: layout.setAssistantCollapsed }} />,
             children: <>
                 {hasUsableAiConnection === false && <AiConnectionWarning openModelSettings={openModelSettings} />}

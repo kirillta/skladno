@@ -11,6 +11,7 @@ import type { EditorialEngine } from "../application/editorial/engine/editorial-
 import type { EditorialEngineEvent } from "../application/editorial/engine/editorial-engine-event.js";
 import type { EditorialEngineRequest } from "../application/editorial/engine/editorial-engine-request.js";
 import type { EditorialEngineResolver } from "../application/editorial/engine/editorial-engine-resolver.js";
+import type { AssistantActionIntentVerifier } from "../application/editorial/assistant-action-intent-verifier.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
 import { loadServerConfig } from "../infrastructure/configuration/config.js";
 import { ArticlesRepository, AssistantRepository, EditorialArtifactsRepository, EditorialSessionsRepository, FactChecksRepository, SettingsRepository, StyleCorpusRepository, openDatabase } from "../infrastructure/persistence/index.js";
@@ -26,6 +27,11 @@ class E2eFixtureEngine implements EditorialEngine {
         if (request.authorContext === "wait") {
             yield { type: EDITORIAL_ENGINE_EVENT.TEXT_DELTA, delta: "Partial fixture response" };
             await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+            return;
+        }
+
+        if (request.authorContext.startsWith("E2E edit")) {
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "e2e-edit", text: request.article === "Original fixture Article." ? "Improved fixture Article." : "Original fixture Article. Improved." };
             return;
         }
 
@@ -106,7 +112,11 @@ const settings = new SettingsRepository(database);
 const sessions = new EditorialSessionsRepository(database, (articleId) => Boolean(articles.getArticle(articleId)));
 const styleCorpus = new StyleCorpusRepository(database);
 const assistant = new AssistantRepository(database);
-const engines: EditorialEngineResolver = { resolve: () => new E2eFixtureEngine() };
+const editVerifier: AssistantActionIntentVerifier = {
+    verify: async (message) => message === "E2E edit and apply",
+    verifyReplacement: async (message) => message.startsWith("E2E edit"),
+};
+const engines: EditorialEngineResolver = { resolve: () => new E2eFixtureEngine(), resolveAssistantActionIntentVerifier: () => editVerifier };
 
 assistant.seedGreetings();
 const services = createApplicationServices({

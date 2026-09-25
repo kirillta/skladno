@@ -31,6 +31,7 @@ interface AssistantTimelineActions {
     onRetry?: (requestId: string) => void;
     openSettings?: () => void;
     onCheckpoint?: (messageId: string) => void;
+    applyEdit?: (messageId: string) => Promise<void>;
 }
 
 
@@ -142,11 +143,11 @@ function AssistantTimelineMessages({ data, actions, greeting, lastMessage, compl
     skillNames: ReadonlyMap<string, string>;
 }) {
     const { assistantMessages, factCheckClaims, streamedMessage, generalSettings } = data;
-    const { openView, openSkillFolder, onRetry, onCheckpoint } = actions;
+    const { openView, openSkillFolder, onRetry, onCheckpoint, applyEdit } = actions;
     const intl = useIntl();
     return <>
         {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />}
-        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={onCheckpoint} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />)}
+        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={onCheckpoint} applyEdit={applyEdit} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />)}
         {streamedMessage?.responseKind
             ? <AssistantTimelineMessage message={{ id: streamedMessage.id, articleId: streamedMessage.articleId, role: "assistant", kind: "response", status: streamedMessage.status, responseKind: streamedMessage.responseKind, createdAt: streamedMessage.createdAt, updatedAt: streamedMessage.createdAt }} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />
             : streamedMessage?.blocks.length ? <article className="p-0"><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "assistant.heading" })}</p>{streamedMessage.blocks.map((block, index) => <AssistantMarkdown key={`${streamedMessage.id}-${index}`} content={block} />)}</article> : null}

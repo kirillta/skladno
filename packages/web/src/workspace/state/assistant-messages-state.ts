@@ -8,6 +8,7 @@ import { useAssistantMessageHistory } from "./assistant-message-history-state.js
 import { useAssistantRequestActions, useAssistantRequestStore } from "./assistant-request-state.js";
 import { useAssistantStreamEvents } from "./assistant-stream-events-state.js";
 import { useNotifications } from "../../notifications/NotificationProvider.js";
+import { useAssistantEdits } from "./assistant-edit-state.js";
 
 export { getAssistantSelectionScope, requestedTranslationLanguages, type AssistantSelectionScope } from "./assistant-selection.js";
 export type { StreamedAssistantMessage } from "./assistant-streaming.js";
@@ -23,6 +24,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const { request, retry } = useAssistantRequestActions({ client, workspace, selection, intl, store, reload, clearStream, handleAssistantEvent });
     const [checkpointPreview, setCheckpointPreview] = useState<AssistantCheckpointPreview>();
     const [restoredComposer, setRestoredComposer] = useState<RestoreAssistantCheckpointResult["composer"]>();
+    const edits = useAssistantEdits(client, workspace, article?.id, reload);
     const previewCheckpoint = useCallback(async (messageId: string) => {
         if (!article)
             return;
@@ -65,6 +67,7 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         streamedMessage: article ? store.streamedMessagesByArticle[article.id] : undefined,
         factCheckClaims: article ? store.factCheckClaimsByArticle[article.id] : undefined,
         request, retry, checkpointPreview, previewCheckpoint, restoreCheckpoint, closeCheckpoint: () => setCheckpointPreview(undefined), restoredComposer,
+        ...edits,
         reload,
         cancel: () => store.controller.current?.abort(),
     };

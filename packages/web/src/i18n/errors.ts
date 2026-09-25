@@ -37,6 +37,8 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     assistant_request_conflict: "errors.assistantRequestConflict",
     assistant_checkpoint_conflict: "errors.assistantCheckpointConflict",
     assistant_checkpoint_invalid: "errors.assistantCheckpointInvalid",
+    assistant_edit_conflict: "errors.assistantEditConflict",
+    assistant_edit_invalid: "errors.assistantEditInvalid",
     assistant_retry_invalid: "errors.assistantRetryInvalid",
     assistant_coordinator_failed: "errors.assistantCoordinatorFailed",
     skill_invalid_frontmatter: "skills.validation.invalid_frontmatter",

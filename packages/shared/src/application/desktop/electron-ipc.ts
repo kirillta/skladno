@@ -52,6 +52,9 @@ export interface ElectronApplicationOperationMap {
     restoreRevision: { args: [string, string]; result: ArticleRevision };
     listAssistantSkills: { args: []; result: AssistantSkillSummary[] };
     listAssistantMessages: { args: [string]; result: import("../../assistant/assistant.js").AssistantMessage[] };
+    getAssistantEditMode: { args: [string]; result: import("../../assistant/assistant.js").AssistantEditMode };
+    setAssistantEditMode: { args: [string, import("../../assistant/assistant.js").AssistantEditMode]; result: import("../../assistant/assistant.js").AssistantEditMode };
+    applyAssistantEdit: { args: [string, string]; result: ArticleRevision };
     rejectTranslation: { args: [string, string]; result: void };
     previewAssistantCheckpoint: { args: [string, string]; result: import("../../assistant/assistant.js").AssistantCheckpointPreview };
     restoreAssistantCheckpoint: { args: [string, string, import("../../assistant/assistant.js").RestoreAssistantCheckpointInput]; result: import("../../assistant/assistant.js").RestoreAssistantCheckpointResult };
@@ -103,6 +106,9 @@ export const ELECTRON_APPLICATION_METHOD = {
     restoreRevision: "restoreRevision",
     listAssistantSkills: "listAssistantSkills",
     listAssistantMessages: "listAssistantMessages",
+    getAssistantEditMode: "getAssistantEditMode",
+    setAssistantEditMode: "setAssistantEditMode",
+    applyAssistantEdit: "applyAssistantEdit",
     rejectTranslation: "rejectTranslation",
     previewAssistantCheckpoint: "previewAssistantCheckpoint",
     restoreAssistantCheckpoint: "restoreAssistantCheckpoint",

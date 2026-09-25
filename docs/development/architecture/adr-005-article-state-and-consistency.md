@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-21
+- Updated: 2026-09-24
 - Scope: Article, Draft, Revision, Proposal, Finding, and translation state
 - Depends on: [ADR-001](adr-001-three-layer-server-and-electron.md), [ADR-002](adr-002-shared-contract-organization.md)
 
@@ -16,6 +17,8 @@ An Article points to its current immutable Revision. Editing creates a mutable D
 AI-generated Proposals and advisory Findings record their base Revision. They become stale when the Article's current Revision changes. Stale output cannot change Article content. Accepting a valid Proposal creates one new Revision; rejecting or resolving advisory output creates none.
 
 Restoring an earlier Revision appends a new Revision whose provenance identifies the source. History is never rewritten. A conflicting or retained Draft remains recoverable until the author explicitly chooses which text to use.
+
+A completed Assistant reply may carry one separately validated exact replacement for its captured selection or the whole Article. The Author can apply that reply once; an opt-in conversation mode can apply it at completion only after a separate check of the Author's exact edit instruction. Both paths generate a concise Revision description from the changed context before persistence, with the same local fallback used for other content Revisions. They reject a stale base Revision and any current Draft, then atomically append an Assistant-attributed Revision and record the applied reply. An ordinary Proposal still uses Proposal Review. A failed or incomplete request never changes Article content.
 
 Translations are linked Articles with their own Drafts and Revisions. Their source Article and source Revision remain recorded so stale source relationships are visible.
 
