@@ -84,7 +84,9 @@ test("packaged Electron Assistant failure preserves the Article and its Revision
         console.log("Packaged Electron launched");
         let page = app.page;
         await page.addInitScript(() => localStorage.setItem("skladno.quick-start.v1", "complete"));
-        await page.reload();
+        console.log("Reloading packaged renderer");
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 10_000 });
+        console.log("Packaged renderer reloaded");
         await expect(page.evaluate(() => "skladno" in window)).resolves.toBe(true);
 
         const create = page.getByRole("button", { name: "Create" });
@@ -93,16 +95,19 @@ test("packaged Electron Assistant failure preserves the Article and its Revision
         else
             await page.getByRole("button", { name: "New article" }).click();
 
+        console.log("Article created");
         const editor = page.getByRole("textbox", { name: "Article draft" });
         await editor.pressSequentially("Electron fixture Article.");
         await page.getByRole("button", { name: "Save revision" }).click();
         await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
 
+        console.log("Revision saved");
         await page.getByRole("combobox", { name: "Editorial guidance" }).fill("Improve flow");
         await page.getByRole("button", { name: "Send editorial request" }).click();
         await expect(page.getByRole("alert")).toBeVisible();
         await expect(editor).toContainText("Electron fixture Article.");
 
+        console.log("Assistant request failed as expected");
         console.log("Restarting packaged Electron");
         await closePackaged(app);
         app = undefined;
