@@ -102,8 +102,11 @@ test("packaged Electron Assistant failure preserves the Article and its Revision
         await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
 
         console.log("Revision saved");
+        console.log("Filling editorial guidance");
         await page.getByRole("combobox", { name: "Editorial guidance" }).fill("Improve flow");
+        console.log("Sending editorial request");
         await page.getByRole("button", { name: "Send editorial request" }).click();
+        console.log("Waiting for Assistant error");
         await expect(page.getByRole("alert")).toBeVisible();
         await expect(editor).toContainText("Electron fixture Article.");
 
