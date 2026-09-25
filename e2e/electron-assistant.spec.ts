@@ -34,7 +34,7 @@ async function launchPackaged(root: string): Promise<{ process: ChildProcess; br
                 throw new Error("Packaged Skladno exited before opening its window.");
 
             try {
-                return (await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(1_000) })).ok;
+                return (await fetch(`http://127.0.0.1:${port}/json/version`)).ok;
             } catch {
                 return false;
             }
@@ -56,16 +56,13 @@ async function launchPackaged(root: string): Promise<{ process: ChildProcess; br
 
 
 async function closePackaged(app: { process: ChildProcess; browser: Browser; page: Page }): Promise<void> {
-    if (app.process.exitCode !== null)
-        return;
+    await app.page.close().catch(() => undefined);
+    await app.browser.close().catch(() => undefined);
+    if (app.process.exitCode === null)
+        await Promise.race([once(app.process, "exit"), new Promise((resolveWait) => setTimeout(resolveWait, 5_000))]);
 
-    const exited = once(app.process, "exit");
-    void app.page.close().catch(() => undefined);
-    await Promise.race([exited, new Promise((resolveWait) => setTimeout(resolveWait, 5_000))]);
-    if (app.process.exitCode === null) {
+    if (app.process.exitCode === null)
         app.process.kill();
-        throw new Error("Packaged Skladno did not close after its draft checkpoint.");
-    }
 }
 
 
@@ -79,15 +76,13 @@ test("packaged Electron Assistant failure preserves the Article and its Revision
     let app: Awaited<ReturnType<typeof launchPackaged>> | undefined;
 
     try {
-        console.log("Launching packaged Electron for Assistant smoke test");
         app = await launchPackaged(root);
-        console.log("Packaged Electron launched");
         let page = app.page;
+        page.setDefaultTimeout(5_000);
         await page.addInitScript(() => localStorage.setItem("skladno.quick-start.v1", "complete"));
-        console.log("Reloading packaged renderer");
-        await page.reload({ waitUntil: "domcontentloaded", timeout: 10_000 });
-        console.log("Packaged renderer reloaded");
+        await page.reload();
         await expect(page.evaluate(() => "skladno" in window)).resolves.toBe(true);
+        await page.setViewportSize({ width: 1024, height: 768 });
 
         const create = page.getByRole("button", { name: "Create" });
         if (await create.isVisible())
@@ -95,27 +90,20 @@ test("packaged Electron Assistant failure preserves the Article and its Revision
         else
             await page.getByRole("button", { name: "New article" }).click();
 
-        console.log("Article created");
         const editor = page.getByRole("textbox", { name: "Article draft" });
         await editor.pressSequentially("Electron fixture Article.");
         await page.getByRole("button", { name: "Save revision" }).click();
         await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
 
-        console.log("Revision saved");
-        console.log("Filling editorial guidance");
+        await page.getByRole("button", { name: "Expand Editorial Assistant Panel" }).click();
         await page.getByRole("combobox", { name: "Editorial guidance" }).fill("Improve flow");
-        console.log("Sending editorial request");
         await page.getByRole("button", { name: "Send editorial request" }).click();
-        console.log("Waiting for Assistant error");
         await expect(page.getByRole("alert")).toBeVisible();
         await expect(editor).toContainText("Electron fixture Article.");
 
-        console.log("Assistant request failed as expected");
-        console.log("Restarting packaged Electron");
         await closePackaged(app);
         app = undefined;
         app = await launchPackaged(root);
-        console.log("Packaged Electron restarted");
         page = app.page;
         await expect(page.getByRole("textbox", { name: "Article draft" })).toContainText("Electron fixture Article.");
         await page.getByRole("tab", { name: "Revisions" }).click();

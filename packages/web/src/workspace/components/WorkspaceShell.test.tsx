@@ -65,11 +65,11 @@ function renderShell(props: Partial<Parameters<typeof WorkspaceShell>[0]> = {}) 
 }
 
 
-function InteractiveAssistant({ collapsed, setCollapsed }: { collapsed?: boolean; setCollapsed?: (collapsed: boolean) => void }) {
+function InteractiveAssistant({ layout }: { layout?: { collapsed: boolean; setCollapsed: (collapsed: boolean) => void } }) {
     return <aside aria-label="Editorial Assistant Panel">
-        {collapsed
-            ? <button onClick={() => setCollapsed?.(false)}>Expand Assistant</button>
-            : <button onClick={() => setCollapsed?.(true)}>Collapse Assistant</button>}
+        {layout?.collapsed
+            ? <button onClick={() => layout.setCollapsed(false)}>Expand Assistant</button>
+            : <button onClick={() => layout?.setCollapsed(true)}>Collapse Assistant</button>}
     </aside>;
 }
 
