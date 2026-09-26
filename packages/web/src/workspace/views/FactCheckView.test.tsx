@@ -10,8 +10,8 @@ type FactCheckViewTestProps = Parameters<typeof RenderFactCheckView>[0]["data"] 
 
 
 function FactCheckView(props: FactCheckViewTestProps) {
-    const { factCheck, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, runAgain, selectRun, resolve, proposeCorrections } = props;
-    return <RenderFactCheckView data={{ factCheck, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical }} actions={{ runAgain, selectRun, resolve, proposeCorrections }} />;
+    const { factCheck, currentRevisionId, revisions, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, runAgain, selectRun, resolve, proposeCorrections } = props;
+    return <RenderFactCheckView data={{ factCheck, currentRevisionId, revisions, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical }} actions={{ runAgain, selectRun, resolve, proposeCorrections }} />;
 }
 
 
@@ -107,11 +107,12 @@ describe("FactCheckView", () => {
     it("offers retained runs when the current Revision has no Fact Check", async () => {
         const user = userEvent.setup();
         const selectRun = vi.fn();
-        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={undefined} runs={[{ ...factCheck, createdAt: "2026-01-02T12:00:00.000Z" }]} reusedRevisionNumbers={{ "revision-1": 1 }} stale={false} runAgain={vi.fn()} selectRun={selectRun} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+        const revisions = [{ id: "revision-1", articleId: "article-1", content: "Draft", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" as const } }, { id: "revision-2", articleId: "article-1", content: "Updated", createdAt: "2026-01-02T00:00:00.000Z", description: "Updated opening", provenance: { kind: "author-draft" as const } }];
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={undefined} currentRevisionId="revision-2" revisions={revisions} runs={[{ ...factCheck, createdAt: "2026-01-02T12:00:00.000Z" }]} reusedRevisionNumbers={{ "revision-1": 1 }} stale={false} runAgain={vi.fn()} selectRun={selectRun} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
-        expect(screen.getByRole("option", { name: "Current Revision" })).toBeTruthy();
-        expect(screen.getByRole("option", { name: /Revision v1, checked/ })).toBeTruthy();
-        await user.selectOptions(screen.getByRole("combobox", { name: "Fact Check history" }), "0");
+        await user.click(screen.getByRole("button", { name: "Fact Check history" }));
+        expect(screen.getAllByText("v2 · Updated opening")).toHaveLength(2);
+        await user.click(screen.getByRole("menuitemradio", { name: /v1/ }));
         expect(selectRun).toHaveBeenCalledWith(0);
     });
 
