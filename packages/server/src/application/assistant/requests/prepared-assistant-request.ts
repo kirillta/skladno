@@ -1,4 +1,4 @@
-import type { AssistantAuthorizedAction, AssistantEditMode, EditorialOperation } from "@skladno/shared";
+import type { AssistantAuthorizedAction, AssistantEditMode, EditorialOperation, FactCheck } from "@skladno/shared";
 
 import type { EditorialEngine } from "../../editorial/engine/editorial-engine.js";
 import type { ActionCapability } from "../capabilities/action-capability.js";
@@ -21,6 +21,7 @@ export interface PreparedAssistantRequest extends ReplayedAssistantRequest {
     engine: EditorialEngine;
     usesCapabilityLoop: boolean;
     completedCapability?: string;
+    partialFactCheck?: FactCheck;
     capabilityActivities: { summary: string; status: "started" | "completed" }[];
     pendingActions: { capability: ActionCapability; input: Readonly<Record<string, string>> }[];
     pendingSkillChange?: AuthorSkillChange;

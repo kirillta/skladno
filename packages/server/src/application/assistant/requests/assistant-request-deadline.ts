@@ -2,6 +2,14 @@ import { APPLICATION_ERROR, HTTP_STATUS } from "@skladno/shared";
 
 import { ApplicationServiceError } from "../../errors/application-service-error.js";
 import type { EditorialEngineEvent } from "../../editorial/engine/editorial-engine-event.js";
+import { normalizeGeneralSettings } from "../../settings/application-settings-normalizers.js";
+import type { SettingsStore } from "../../settings/settings-store.js";
+
+
+export function getAssistantRequestTimeoutMs(settings: SettingsStore): number | undefined {
+    const timeout = normalizeGeneralSettings(settings.getSetting("application-general")?.value).assistantRequestTimeoutMinutes;
+    return timeout === "unlimited" ? undefined : timeout * 60000;
+}
 
 
 export async function* streamWithAssistantDeadline(

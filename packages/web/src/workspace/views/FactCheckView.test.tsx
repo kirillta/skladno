@@ -22,6 +22,15 @@ const factCheck = { reviewedRevisionId: "revision-1", findings: [{ factId: "fact
 afterEach(cleanup);
 
 describe("FactCheckView", () => {
+    // Product scenario: workspace.findings.incomplete-timeout
+    it("labels timed-out findings as incomplete", () => {
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, incomplete: true }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getByText(getMessage("views.factCheckIncomplete"))).toBeTruthy();
+        expect(screen.getAllByText("A claim that needs evidence.")).toHaveLength(2);
+        expect(screen.getByRole("button", { name: getMessage("views.runFactCheckAgain") })).toBeTruthy();
+    });
+
     it("shows evidence reuse provenance and the original check time", () => {
         const finding = { ...factCheck.findings[0]!, reusedFromRevisionId: "revision-1", checkedAt: "2026-01-01T12:00:00.000Z" };
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings: [finding] }} reusedRevisionNumbers={{ "revision-1": 1 }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);

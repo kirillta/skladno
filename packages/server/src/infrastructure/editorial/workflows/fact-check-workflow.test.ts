@@ -4,6 +4,7 @@ import type { FactCheck, FactCheckFinding } from "@skladno/shared";
 
 import { streamFactCheck } from "./fact-check-workflow.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
+import type { EditorialEngineEvent } from "../../../application/editorial/engine/editorial-engine-event.js";
 
 
 async function run(claim: string, prior: FactCheckFinding, matches: { claimIndex: number; factId: string }[] = []) {
@@ -77,4 +78,45 @@ test("supported and disputed evidence can be reused without changing classificat
         assert.equal(researchCalls, 0);
         assert.equal(finding.status, status);
     }
+});
+
+
+test("checks three claims concurrently and reports each completed claim before the final result", async () => {
+    const claims = ["first", "second", "third", "fourth"];
+    const started: string[] = [];
+    const finish = new Map<string, () => void>();
+    const events: EditorialEngineEvent[] = [];
+    const provider: FactCheckProvider = {
+        researchStage: "web_research",
+        extractClaims: async () => ({ responseId: "extracted", claims: claims.map((claim) => ({ claim })) }),
+        researchClaims: async (items) => {
+            const claim = items[0]!.claim;
+            started.push(claim);
+            await new Promise<void>((resolve) => {
+                finish.set(claim, resolve);
+            });
+            return [{ claim, evidence: "Evidence", sources: [] }];
+        },
+        evaluateClaims: async (items) => {
+            const claim = items[0]!.claim;
+            return { responseId: claim, findings: [{ claim, status: "supported", rationale: "Evidence", uncertainty: "Low", sources: [] }] };
+        },
+    };
+    const run = (async () => {
+        for await (const event of streamFactCheck({ request: { article: "Article", instructions: "Check" }, signal: new AbortController().signal, provider }))
+            events.push(event);
+    })();
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(started, ["first", "second", "third"]);
+    finish.get("second")!();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(events.filter((event) => event.type === "fact_check_progress").at(-1)?.factCheck.findings.map(({ claim }) => claim), ["second"]);
+    finish.get("first")!();
+    finish.get("third")!();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(started, claims);
+    finish.get("fourth")!();
+    await run;
+    assert.deepEqual(events.find((event) => event.type === "completed")?.factCheck?.findings.map(({ claim }) => claim), claims);
 });

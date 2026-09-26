@@ -49,7 +49,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
     const lastMessage = assistantMessages?.at(-1);
     const skillByRequest = new Map(assistantMessages?.flatMap((item) => item.requestId && item.skillId ? [[item.requestId, item.skillId] as const] : []));
     const skillNames = new Map(authorSkills.map((skill) => [skill.reference.id, skill.name] as const));
-    const completedFactCheck = state === "idle" ? [...(assistantMessages ?? [])].reverse().find((item) => item.responseKind === "findings_prepared") : undefined;
+    const completedFactCheck = state === "idle" ? [...(assistantMessages ?? [])].reverse().find((item) => item.responseKind === "findings_prepared" || item.responseKind === "findings_partial") : undefined;
 
     useLayoutEffect(() => {
         if (collapsed)

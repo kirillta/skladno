@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
@@ -99,6 +99,14 @@ describe("AssistantTimeline", () => {
 
         expect(screen.getByRole("region", { name: getMessage("assistant.factCheckClaimsChecked") })).toBeTruthy();
         expect(screen.getByText("HTTP was standardized in 1999.")).toBeTruthy();
+    });
+
+
+    it("links a partial Fact Check result to its findings", () => {
+        const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={[{ id: "partial", articleId: "article", role: "assistant", kind: "response", status: "completed", responseKind: "findings_partial", createdAt: "2026-08-13T20:30:00.000Z", updatedAt: "2026-08-13T20:30:00.000Z" }]} factCheckClaims={[{ claim: "The RFC was published in 1999.", checked: true }]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+
+        expect(within(view.container).getByText(getMessage("assistant.response.partialFindings"))).toBeTruthy();
+        expect(within(view.container).getByRole("region", { name: getMessage("assistant.factCheckClaimsChecked") })).toBeTruthy();
     });
 
 

@@ -82,6 +82,40 @@ export class AssistantCompletion {
     }
 
 
+    persistPartialFactCheck(request: PreparedAssistantRequest, completedFindings: FactCheck): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
+        return this.dependencies.assistant.completeRun(() => {
+            const article = this.dependencies.articles.getArticle(request.articleId);
+            if (!article || article.currentRevisionId !== request.scope.baseRevisionId)
+                throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
+
+            const incomplete = request.completedCapability !== EDITORIAL_CAPABILITY.FACT_CHECK;
+            const responseKind = incomplete ? "findings_partial" : "findings_prepared";
+            const factCheck = { ...completedFindings, ...(incomplete ? { incomplete: true } : {}) };
+            const persisted = persistFactCheckArtifact({
+                artifacts: this.dependencies.artifacts,
+                factChecks: this.dependencies.factChecks,
+                articleId: request.articleId,
+                revisionId: request.scope.baseRevisionId,
+                metadata: { requestId: request.requestId, partial: incomplete },
+                factCheck,
+            });
+            const message = this.dependencies.assistant.completeRequest({
+                requestId: request.requestId,
+                articleId: request.articleId,
+                ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId } : {}),
+                responseKind,
+                content: "",
+                editorialArtifactId: persisted.artifactId,
+            });
+
+            if (request.usesCapabilityLoop && incomplete)
+                this.dependencies.assistant.setExecution(request.requestId, EDITORIAL_CAPABILITY.FACT_CHECK, "failed");
+
+            return { responseKind, messageId: message.id, editorialArtifactId: persisted.artifactId, result: { factCheck: persisted.factCheck } };
+        });
+    }
+
+
     private persistInTransaction(request: PreparedAssistantRequest, event: CompletionEvent): Omit<Extract<AssistantEvent, { type: typeof ASSISTANT_EVENT.COMPLETED }>, "type" | "requestId"> {
         const article = this.dependencies.articles.getArticle(request.articleId);
         if (!article || article.currentRevisionId !== request.scope.baseRevisionId)

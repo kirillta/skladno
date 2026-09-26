@@ -298,11 +298,17 @@ export class AssistantCapabilityLoop {
         const stream = this.dependencies.capabilities!.stream(this.createStreamContext(request, excerpt, authorContext, definition, input), signal, true);
         for await (const event of stream) {
             signal.throwIfAborted();
+            if (definition.id === EDITORIAL_CAPABILITY.FACT_CHECK && event.type === EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS)
+                request.partialFactCheck = event.factCheck;
+
             if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED)
                 continue;
 
             if (primary())
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
+            if (definition.id === EDITORIAL_CAPABILITY.FACT_CHECK && event.factCheck)
+                request.partialFactCheck = event.factCheck;
 
             request.completedCapability = definition.id;
             setPrimary(event);

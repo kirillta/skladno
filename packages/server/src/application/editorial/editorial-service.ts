@@ -248,18 +248,24 @@ export class EditorialService {
     ) { }
 
 
-    async *stream(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+    async *stream(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<Exclude<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS }>> {
         const observed = beginTimedTelemetryCapture(this.telemetry);
 
         try {
             const context = prepareEditorialStream(this.stores.articles, this.stores.sessions, this.stores.styleCorpus, this.stores.factChecks, this.runtime.engines, this.runtime.sessionContinuationEnabled, request);
-            yield* streamEditorialOperation(
+            const events = streamEditorialOperation(
                 request,
                 context,
                 this.stores.factChecks,
                 signal,
                 (event) => persistCompletedEditorialOutput(this.stores.sessions, this.stores.artifacts, this.stores.factChecks, request, context, this.runtime.sessionContinuationEnabled, event),
             );
+
+            for await (const event of events) {
+                if (event.type !== EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS)
+                    yield event;
+            }
+
             observed.capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "completed", elapsedMs: observed.elapsedMs(), ...(signal.aborted ? { failure: "cancelled" as const } : {}) });
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)

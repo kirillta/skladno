@@ -122,6 +122,7 @@ export interface FactCheckFinding {
 export interface FactCheck {
     reviewedRevisionId?: string;
     createdAt?: string;
+    incomplete?: boolean;
     findings: FactCheckFinding[];
 }
 

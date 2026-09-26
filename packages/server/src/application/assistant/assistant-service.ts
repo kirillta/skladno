@@ -14,7 +14,9 @@ import { EditorialEngineError } from "../editorial/engine/editorial-engine-error
 import type { EditorialEngineEvent } from "../editorial/engine/editorial-engine-event.js";
 import type { StyleCorpusStore } from "../editorial/style/style-corpus-store.js";
 import type { TelemetryObserver } from "../telemetry/telemetry-observer.js";
-import { streamWithAssistantDeadline } from "./requests/assistant-request-deadline.js";
+import { getAssistantRequestTimeoutMs, streamWithAssistantDeadline } from "./requests/assistant-request-deadline.js";
+import { persistTimedOutFactCheck } from "./requests/timed-out-fact-check.js";
+import { getAssistantRequestErrorCode } from "./requests/assistant-request-error-code.js";
 import { normalizeGeneralSettings } from "../settings/application-settings-normalizers.js";
 import type { SettingsStore } from "../settings/settings-store.js";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
@@ -149,25 +151,36 @@ export class AssistantService {
 
             this.captureStreamOutcome(observed, "completed");
         } catch (error) {
+            let partial: ReturnType<AssistantCompletion["persistPartialFactCheck"]> | undefined;
+            try {
+                if (initialized)
+                    partial = persistTimedOutFactCheck(error, request, signal, this.completion);
+            } catch (persistenceError) {
+                this.handleStreamFailure(request, signal, observed, initialized, persistenceError);
+                throw persistenceError;
+            }
+
+            if (partial) {
+                this.captureStreamOutcome(observed, "completed");
+                yield { type: ASSISTANT_EVENT.COMPLETED, requestId: request.requestId, ...partial };
+                return;
+            }
+
             this.handleStreamFailure(request, signal, observed, initialized, error);
             throw error;
         }
     }
 
 
-    private getRequestTimeoutMs(): number | undefined {
-        const timeout = normalizeGeneralSettings(this.stores.settings.getSetting("application-general")?.value).assistantRequestTimeoutMinutes;
-        return timeout === "unlimited" ? undefined : timeout * 60000;
-    }
-
-
     private async *consumeEditorialEvents(request: PreparedAssistantRequest, signal: AbortSignal): AsyncGenerator<AssistantEvent, EditorialEngineEvent | undefined> {
         let completedEvent: EditorialEngineEvent | undefined;
-        const timeoutMs = this.getRequestTimeoutMs();
+        const timeoutMs = getAssistantRequestTimeoutMs(this.stores.settings);
         const events = streamWithAssistantDeadline((requestSignal) => this.streamEditorialEvents(request, requestSignal), signal, timeoutMs);
         for await (const event of events) {
             if (event.type === EDITORIAL_ENGINE_EVENT.COMPLETED)
                 completedEvent = event;
+            else if (event.type === EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS)
+                request.partialFactCheck = event.factCheck;
             else
                 yield* this.streamAssistantEvents(request, event, signal);
         }
@@ -190,7 +203,7 @@ export class AssistantService {
     private handleStreamFailure(request: PreparedAssistantRequest, signal: AbortSignal, observed: TimedTelemetryCapture, initialized: boolean, error: unknown): void {
         const cancelled = signal.aborted;
         if (initialized)
-            this.stores.assistant.failRequest(request.requestId, cancelled ? "cancelled" : "failed", cancelled ? "request_cancelled" : this.getErrorCode(error));
+            this.stores.assistant.failRequest(request.requestId, cancelled ? "cancelled" : "failed", cancelled ? "request_cancelled" : getAssistantRequestErrorCode(error));
 
         this.captureStreamOutcome(observed, cancelled ? "cancelled" : "failed", cancelled ? "cancelled" : "unknown");
     }
@@ -328,12 +341,4 @@ export class AssistantService {
     }
 
 
-    private getErrorCode(error: unknown) {
-        if (error instanceof ApplicationServiceError)
-            return error.code;
-
-        return error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.INCOMPLETE_STREAM
-            ? APPLICATION_ERROR.EDITORIAL_STREAM_INCOMPLETE
-            : APPLICATION_ERROR.EDITORIAL_PROVIDER_FAILED;
-    }
 }

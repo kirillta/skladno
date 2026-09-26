@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { APPLICATION_ERROR } from "@skladno/shared";
+import { APPLICATION_ERROR, type AssistantEvent } from "@skladno/shared";
 
 import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
 import { withService } from "./editorial-integration.test-utils.js";
@@ -69,3 +69,109 @@ for (const minutes of [undefined, 3]) {
         });
     });
 }
+
+
+// Product scenario: editorial-workflows.assistant-request-timeout
+test("Assistant returns completed Fact Check findings when later claims time out", async (context) => {
+    let release: () => void = () => undefined;
+    let started: () => void = () => undefined;
+    const pending = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    const entered = new Promise<void>((resolve) => {
+        started = resolve;
+    });
+    const finding = { claim: "The RFC was published in 1999.", status: "supported" as const, rationale: "Primary source", uncertainty: "Low", sources: [] };
+    const engine: EditorialEngine = {
+        async *stream(_request, signal) {
+            yield { type: "fact_check_progress", factCheck: { findings: [finding] } };
+            started();
+            await pending;
+            signal.throwIfAborted();
+            yield { type: "completed", responseId: "late", text: "", factCheck: { findings: [finding, finding] } };
+        },
+        async *streamConversation() {
+            yield* [];
+        },
+        async *streamAssistant(request, signal) {
+            const check = request.tools.find((tool) => tool.capability === "fact_check");
+            assert.ok(check);
+            await check.execute({}, signal);
+            yield { type: "completed", responseId: "assistant", text: "Ready" };
+        },
+    };
+    await withService(engine, async (_url, persistence, services) => {
+        const article = services.articles.createArticle({ title: "Test", content: "The RFC was published in 1999." });
+        const request = services.assistant.prepare({ kind: "new", requestId: "partial-fact-check", articleId: article.id, authorMessage: "Fact check", explicitSkillId: "fact_checking", scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+        context.mock.timers.enable({ apis: ["setTimeout"] });
+        const events: AssistantEvent[] = [];
+        const completion = (async () => {
+            for await (const event of services.assistant.stream(request, new AbortController().signal))
+                events.push(event);
+        })();
+        await entered;
+        context.mock.timers.tick(120_000);
+        await completion;
+        const completed = events.find((event) => event.type === "completed");
+        assert.equal(completed?.responseKind, "findings_partial");
+        assert.equal(completed?.result?.factCheck?.incomplete, true);
+        assert.deepEqual(completed?.result?.factCheck?.findings.map(({ claim }) => claim), [finding.claim]);
+        assert.equal(persistence.assistant.getRequest(request.requestId)?.status, "completed");
+        assert.equal(persistence.assistant.getRequest(request.requestId)?.executions?.[0]?.status, "failed");
+        assert.equal(persistence.factChecks.listFactChecks(article.id)[0]?.incomplete, true);
+        assert.equal(services.articles.getArticle(article.id)?.currentRevisionId, article.currentRevisionId);
+        release();
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.equal(persistence.factChecks.listFactChecks(article.id)[0]?.findings.length, 1);
+        context.mock.timers.reset();
+    });
+});
+
+
+test("Assistant retains a finished Fact Check if its final reply times out", async (context) => {
+    let release: () => void = () => undefined;
+    let started: () => void = () => undefined;
+    const pending = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    const entered = new Promise<void>((resolve) => {
+        started = resolve;
+    });
+    const finding = { claim: "The RFC was published in 1999.", status: "supported" as const, rationale: "Primary source", uncertainty: "Low", sources: [] };
+    const engine: EditorialEngine = {
+        async *stream() {
+            yield { type: "completed", responseId: "checked", text: "", factCheck: { findings: [finding] } };
+        },
+        async *streamConversation() {
+            yield* [];
+        },
+        async *streamAssistant(request, signal) {
+            const check = request.tools.find((tool) => tool.capability === "fact_check");
+            assert.ok(check);
+            await check.execute({}, signal);
+            started();
+            await pending;
+            signal.throwIfAborted();
+            yield { type: "completed", responseId: "assistant", text: "Ready" };
+        },
+    };
+    await withService(engine, async (_url, persistence, services) => {
+        const article = services.articles.createArticle({ title: "Test", content: finding.claim });
+        const request = services.assistant.prepare({ kind: "new", requestId: "finished-fact-check", articleId: article.id, authorMessage: "Fact check", explicitSkillId: "fact_checking", scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+        context.mock.timers.enable({ apis: ["setTimeout"] });
+        const events: AssistantEvent[] = [];
+        const completion = (async () => {
+            for await (const event of services.assistant.stream(request, new AbortController().signal))
+                events.push(event);
+        })();
+        await entered;
+        context.mock.timers.tick(120_000);
+        await completion;
+        const completed = events.find((event) => event.type === "completed");
+        assert.equal(completed?.responseKind, "findings_prepared");
+        assert.equal(completed?.result?.factCheck?.incomplete, undefined);
+        assert.equal(persistence.factChecks.listFactChecks(article.id)[0]?.findings.length, 1);
+        release();
+        context.mock.timers.reset();
+    });
+});

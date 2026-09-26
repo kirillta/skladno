@@ -53,7 +53,7 @@
             "title": "Fact-check request",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/editorial/engines/create-editorial-engine.ts", "packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "An explicit Fact Check or Assistant request creates advisory findings. Exact or conservatively matched rewritten Facts can reuse sourced evidence; changed or uncertain claims are researched again. Accepted decisions follow unchanged Facts, while corrected or removed claims are rechecked if they reappear. A correction request verifies selected unresolved disputed or unverifiable occurrences against the current Revision on the server before generation and creates one reviewable Proposal.",
+            "contract": "An explicit Fact Check or Assistant request creates advisory findings. Up to three claims are researched and evaluated concurrently. If an Assistant time limit expires during checking, completed claim findings are returned as an incomplete Fact Check; unfinished claims are excluded. A fully checked Fact Check survives a timeout in the Assistant's final reply. Exact or conservatively matched rewritten Facts can reuse sourced evidence; changed or uncertain claims are researched again. Accepted decisions follow unchanged Facts, while corrected or removed claims are rechecked if they reappear. A correction request verifies selected unresolved disputed or unverifiable occurrences against the current Revision on the server before generation and creates one reviewable Proposal.",
             "persistence": "Durable Facts, separate Revision occurrences, findings, citations, checked times, and resolutions are stored locally without changing Article text."
         },
         {
@@ -119,10 +119,10 @@
             "id": "editorial-workflows.assistant-request-timeout",
             "title": "Assistant requests stop at their configured deadline",
             "capabilityIds": ["editorial-workflows.assistant-panel-streaming"],
-            "preconditions": ["A translation capability does not finish before the request time limit."],
+            "preconditions": ["A translation or Fact Check capability does not finish before the request time limit."],
             "event": "The default or configured deadline expires.",
-            "expected": ["The provider signal is aborted and the request and outstanding capability executions become failed."],
-            "forbidden": ["Late provider completion persists an artifact or changes the Article."],
+            "expected": ["The provider signal is aborted. Translation and other unfinished operations fail without an artifact. A Fact Check with completed claim findings returns only those findings in a durable run marked incomplete; a fully checked Fact Check remains complete if only the Assistant reply times out."],
+            "forbidden": ["Late provider completion persists additional findings or changes the Article."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.timeout.test.ts" }
         },
         {

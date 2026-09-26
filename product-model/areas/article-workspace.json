@@ -208,8 +208,8 @@
                 "packages/web/src/workspace/views/FactCheckView.tsx",
                 "packages/web/src/workspace/views/StyleProfileView.tsx"
             ],
-            "contract": "Findings never modify Article text. Fact Check defaults to the current Revision, offers retained runs for historical review, and keeps stale or superseded runs read-only. Unchanged Facts and accepted findings survive Revision updates; changed unresolved Facts become stale. Raw style samples remain local and Article rules remain metadata outside Revision text. Style Profile identifies contributors, rebuild time, applied-rule evidence, and grounded findings.",
-            "persistence": "Completed Editorial artifacts and local Style corpus.",
+            "contract": "Findings never modify Article text. Fact Check defaults to the current Revision, offers retained runs for historical review, labels timed-out partial runs as incomplete, and keeps stale or superseded runs read-only. Unchanged Facts and accepted findings survive Revision updates; changed unresolved Facts become stale. Raw style samples remain local and Article rules remain metadata outside Revision text. Style Profile identifies contributors, rebuild time, applied-rule evidence, and grounded findings.",
+            "persistence": "Completed Editorial artifacts, explicitly incomplete timed-out Fact Check runs, and local Style corpus.",
             "relatedCapabilityIds": ["history-and-publishing.fact-check-findings", "history-and-publishing.style-corpus"]
         },
         {
@@ -712,6 +712,16 @@
                 "kind": "automated",
                 "path": "packages/server/src/presentation/editorial-integration.findings.test.ts"
             }
+        },
+        {
+            "id": "workspace.findings.incomplete-timeout",
+            "title": "Timed-out Fact Check identifies incomplete coverage",
+            "capabilityIds": ["workspace.findings.advisory-results"],
+            "preconditions": ["A timed-out Assistant Fact Check retains completed findings."],
+            "event": "The Author opens Fact Check.",
+            "expected": ["Completed findings remain readable with an incomplete-run warning and a recheck action."],
+            "forbidden": ["Unfinished claims presented as checked findings."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/FactCheckView.test.tsx" }
         },
         {
             "id": "workspace.translations.stale-source",

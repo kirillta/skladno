@@ -35,6 +35,7 @@ const assistantResponseKinds: readonly AssistantResponseKind[] = [
     "skill_response",
     "proposal_prepared",
     "findings_prepared",
+    "findings_partial",
     "proposal_and_findings_prepared",
     "translation_proposal_prepared",
     "request_cancelled",

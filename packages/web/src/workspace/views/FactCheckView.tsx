@@ -99,6 +99,7 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
             </div>
         </div>
         {stale && <Banner className="mt-4" tone="warning"><span>{intl.formatMessage({ id: "views.factCheckStale" })}</span></Banner>}
+        {factCheck.incomplete && <Banner className="mt-4" tone="warning"><span>{intl.formatMessage({ id: "views.factCheckIncomplete" })}</span></Banner>}
         {!stale && historical && <Banner className="mt-4" tone="warning">
             <span>{intl.formatMessage({ id: "views.factCheckHistorical" })}</span>
         </Banner>}
@@ -126,9 +127,9 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
                             && !isStale(finding)
                             && finding.occurrenceId && <div className="flex flex-wrap gap-2">{(finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE)
                                 && <Button onClick={() => proposeCorrections([finding])}>{intl.formatMessage({ id: "views.proposeFactCorrection" })}</Button>}
-                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
-                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
-                            </div>
+                        <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
+                        <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
+                        </div>
                         }
                     </div>
                     {finding.reusedFromRevisionId && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factEvidenceReused" }, { revision: revisionLabel(finding.reusedFromRevisionId) })}</p>}
