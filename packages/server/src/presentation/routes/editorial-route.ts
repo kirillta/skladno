@@ -24,6 +24,9 @@ function writeEditorialEvent(response: ServerResponse, event: EditorialEvent): v
 async function readEditorialRequest(request: IncomingMessage, articleId: string): Promise<EditorialServiceRequest> {
     const body = parseObject(await readJson(request));
     const operation = parseString(body.operation, "operation");
+    const selection = body.correctionSelection === undefined ? undefined : parseObject(body.correctionSelection);
+    if (selection && (!Array.isArray(selection.occurrenceIds) || selection.occurrenceIds.some((id: unknown) => typeof id !== "string")))
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
     return {
         articleId,
@@ -31,6 +34,7 @@ async function readEditorialRequest(request: IncomingMessage, articleId: string)
         operation: operation as EditorialOperation,
         authorContext: body.authorContext === undefined ? "" : parseString(body.authorContext, "authorContext"),
         ...(body.targetLanguage === undefined ? {} : { targetLanguage: parseString(body.targetLanguage, "targetLanguage") }),
+        ...(selection ? { correctionSelection: { expectedRevisionId: parseString(selection.expectedRevisionId, "expectedRevisionId"), occurrenceIds: selection.occurrenceIds as string[] } } : {}),
     };
 }
 
@@ -68,6 +72,9 @@ function rejectMissingTargetLanguage(response: ServerResponse, request: Editoria
 
 
 function createEditorialError(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
+    if (error instanceof ApplicationServiceError && (error.code === APPLICATION_ERROR.INVALID_REQUEST || error.code === APPLICATION_ERROR.REVISION_CONFLICT || error.code === APPLICATION_ERROR.FACT_CORRECTION_SELECTION_INVALID))
+        return { category: EDITORIAL_ERROR_CATEGORY.INVALID_OUTPUT, errorCode: error.code };
+
     if (error instanceof ApplicationServiceError && error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING)
         return { category: EDITORIAL_ERROR_CATEGORY.CONFIGURATION, errorCode: error.code };
 

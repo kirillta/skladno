@@ -41,7 +41,7 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
             <Button onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheck" })}</Button>
         </EmptyState>;
 
-    const isStale = (finding: FactCheckFinding) => stale && finding.stale !== false;
+    const isStale = (finding: FactCheckFinding) => stale || finding.stale === true;
     const eligible = factCheck.findings.filter((finding) => !isStale(finding)
         && !finding.resolution
         && (finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE)

@@ -20,6 +20,7 @@ export interface StartEditorialRequest {
     operation: EditorialOperation;
     authorContext?: string;
     targetLanguage?: string;
+    correctionSelection?: { expectedRevisionId: string; occurrenceIds: string[] };
 }
 
 

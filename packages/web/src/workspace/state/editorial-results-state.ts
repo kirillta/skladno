@@ -37,8 +37,6 @@ export function withFindingFreshness(factCheck: FactCheck, revisionId: string, c
 
 
 function useFactCheckResults(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState) {
-    const intl = useIntl();
-    const { notifyError } = useNotifications();
     const [factCheckResult, setFactCheckResult] = useState<EditorialResult<FactCheck>>();
 
     const loadFactChecks = useCallback(async () => {
@@ -59,19 +57,7 @@ function useFactCheckResults(client: EditorialWorkspaceClient, workspace: Articl
     const factCheck = factCheckResult && factCheckResult.articleId === workspace.selectedArticle?.id && workspace.selectedArticle
         ? withFindingFreshness(factCheckResult.value, workspace.selectedArticle.currentRevisionId, workspace.selectedArticle.currentRevision.content)
         : undefined;
-    const factCheckStale = factCheck?.findings.some((finding) => finding.stale) ?? false;
-
-    const markCorrectedFindings = useCallback(async (articleId: string, findingIds: string[]) => {
-        if (!client.resolveFactCheckFinding)
-            return;
-
-        try {
-            await Promise.all(findingIds.map((findingId) => client.resolveFactCheckFinding!(articleId, findingId, "corrected_or_removed")));
-            setFactCheckResult((current) => current?.articleId === articleId ? { ...current, value: { ...current.value, findings: current.value.findings.map((finding) => findingIds.includes(finding.occurrenceId ?? "") ? { ...finding, resolution: "corrected_or_removed" } : finding) } } : current);
-        } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.resolveFindingFailed" }) });
-        }
-    }, [client, intl, notifyError]);
+    const factCheckStale = Boolean(factCheck && factCheck.reviewedRevisionId !== workspace.selectedArticle?.currentRevisionId);
 
     const resolveFactCheck = useCallback(async (findingId: string, resolution: NonNullable<FactCheck["findings"][number]["resolution"]>) => {
         const article = workspace.selectedArticle;
@@ -84,7 +70,7 @@ function useFactCheckResults(client: EditorialWorkspaceClient, workspace: Articl
 
     const setFactCheck = useCallback((result: EditorialResult<FactCheck>) => setFactCheckResult(result), []);
 
-    return { factCheck, factCheckStale, loadFactChecks, markCorrectedFindings, resolveFactCheck, setFactCheck };
+    return { factCheck, factCheckStale, loadFactChecks, resolveFactCheck, setFactCheck };
 }
 
 

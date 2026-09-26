@@ -85,6 +85,6 @@ function normalizeClaim(claim: string): string {
 function sameMaterialAnchors(current: string, previous: string): boolean {
     const numbers = (text: string) => [...text.matchAll(/\b\d+(?:[.,]\d+)*%?\b/g)].map(([value]) => value).sort().join("|");
     const negated = (text: string) => /\b(?:not|no|never|none|without|cannot|can't|won't|isn't|wasn't|doesn't|didn't)\b/i.test(text);
-    
+
     return numbers(current) === numbers(previous) && negated(current) === negated(previous);
 }

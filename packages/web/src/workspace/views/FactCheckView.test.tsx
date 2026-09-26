@@ -43,7 +43,7 @@ describe("FactCheckView", () => {
     });
 
 
-    it("keeps unchanged and accepted findings active after a Revision update", () => {
+    it("keeps earlier findings readable but blocks corrections until a current Fact Check", () => {
         const findings = [
             { ...factCheck.findings[0], stale: true },
             { ...factCheck.findings[0], occurrenceId: "revision-1:fact-2", claim: "An unchanged claim.", stale: false },
@@ -51,7 +51,8 @@ describe("FactCheckView", () => {
         ];
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings }} stale runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
-        expect(screen.getAllByRole("button", { name: getMessage("views.proposeFactCorrection") })).toHaveLength(1);
+        expect(screen.queryByRole("button", { name: getMessage("views.proposeFactCorrection") })).toBeNull();
+        expect(screen.getAllByText("An unchanged claim.")).toHaveLength(2);
         expect(screen.getByText("Corrected or removed")).toBeTruthy();
     });
 

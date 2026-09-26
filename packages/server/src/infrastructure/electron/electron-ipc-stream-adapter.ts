@@ -55,7 +55,11 @@ function isValidEditorialRequest(value: unknown): value is Extract<ElectronStrea
         && typeof value.operation === "string"
         && isEditorialOperation(value.operation)
         && (value.authorContext === undefined || typeof value.authorContext === "string")
-        && (value.targetLanguage === undefined || typeof value.targetLanguage === "string");
+        && (value.targetLanguage === undefined || typeof value.targetLanguage === "string")
+        && (value.correctionSelection === undefined || isRecord(value.correctionSelection)
+            && typeof value.correctionSelection.expectedRevisionId === "string"
+            && Array.isArray(value.correctionSelection.occurrenceIds)
+            && value.correctionSelection.occurrenceIds.every((id: unknown) => typeof id === "string"));
 }
 
 
@@ -89,6 +93,9 @@ function getAssistantErrorCode(error: unknown) {
 
 
 function createEditorialFailure(error: unknown): { category: Extract<EditorialEvent, { type: "error" }>["code"]; errorCode: ApplicationErrorCode } {
+    if (error instanceof ApplicationServiceError && (error.code === APPLICATION_ERROR.INVALID_REQUEST || error.code === APPLICATION_ERROR.REVISION_CONFLICT || error.code === APPLICATION_ERROR.FACT_CORRECTION_SELECTION_INVALID))
+        return { category: EDITORIAL_ERROR_CATEGORY.INVALID_OUTPUT, errorCode: error.code };
+
     if (error instanceof ApplicationServiceError && error.code === APPLICATION_ERROR.EDITORIAL_CONFIGURATION_MISSING)
         return { category: EDITORIAL_ERROR_CATEGORY.CONFIGURATION, errorCode: error.code };
 

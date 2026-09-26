@@ -13,6 +13,8 @@ import type { EditorialCapabilityContext } from "./editorial-capability-context.
 import type { EditorialCapabilityDefinition } from "./editorial-capability-definition.js";
 import type { EditorialCapabilityDiscoveryResult } from "./editorial-capability-discovery-result.js";
 import type { EditorialCapabilityId } from "./editorial-capability-id.js";
+import type { ReadCapability } from "./read-capability.js";
+import type { ActionCapability } from "./action-capability.js";
 import type { EditorialOperationClassification } from "./editorial-operation-classification.js";
 import type { StreamContext } from "./editorial-stream-context.js";
 import { editorialCapabilityDefinitions as definitions, editorialOperationClassifications as classifications } from "./editorial-capability-registry.js";
@@ -92,12 +94,16 @@ function getStreamToolInput(input: StreamContext): Readonly<Record<string, strin
 }
 
 
-function createEditorialRequest(input: StreamContext, operation: EditorialOperation, corrections: string) {
+function createEditorialRequest(input: StreamContext, operation: EditorialOperation) {
     return {
         articleId: input.context.articleId,
         requestId: input.requestId,
         operation,
-        authorContext: corrections || input.authorContext,
+        authorContext: input.authorContext,
+        ...(input.capability === EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS
+            ? { correctionSelection: { expectedRevisionId: input.context.baseRevisionId, occurrenceIds: input.findingIds!.split(",").map((id) => id.trim()) } }
+            : {}
+        ),
         ...(input.skillId ? { skillId: input.skillId } : {}),
         ...(input.targetArticleCharacterLimit ? { targetArticleCharacterLimit: input.targetArticleCharacterLimit } : {}),
         ...(input.targetLanguage?.trim() ? { targetLanguage: input.targetLanguage.trim() } : {}),
@@ -151,13 +157,13 @@ export class EditorialCapabilityCatalog {
     }
 
 
-    read(input: { capability: Extract<EditorialCapabilityId, "inspect_article" | "inspect_linked_articles" | "inspect_revisions" | "inspect_draft" | "inspect_artifacts" | "inspect_proposal_summary" | "inspect_fact_checks" | "inspect_publishing_guidance" | "inspect_style_corpus" | "inspect_article_style_rules" | "inspect_translations">; context: EditorialCapabilityContext; input?: Readonly<Record<string, string>> }): unknown;
+    read(input: { capability: ReadCapability; context: EditorialCapabilityContext; input?: Readonly<Record<string, string>> }): unknown;
 
 
-    read(capability: Extract<EditorialCapabilityId, "inspect_article" | "inspect_linked_articles" | "inspect_revisions" | "inspect_draft" | "inspect_artifacts" | "inspect_proposal_summary" | "inspect_fact_checks" | "inspect_publishing_guidance" | "inspect_style_corpus" | "inspect_article_style_rules" | "inspect_translations">, context: EditorialCapabilityContext, input?: Readonly<Record<string, string>>): unknown;
+    read(capability: ReadCapability, context: EditorialCapabilityContext, input?: Readonly<Record<string, string>>): unknown;
 
 
-    read(capabilityOrInput: Extract<EditorialCapabilityId, "inspect_article" | "inspect_linked_articles" | "inspect_revisions" | "inspect_draft" | "inspect_artifacts" | "inspect_proposal_summary" | "inspect_fact_checks" | "inspect_publishing_guidance" | "inspect_style_corpus" | "inspect_article_style_rules" | "inspect_translations"> | { capability: Extract<EditorialCapabilityId, "inspect_article" | "inspect_linked_articles" | "inspect_revisions" | "inspect_draft" | "inspect_artifacts" | "inspect_proposal_summary" | "inspect_fact_checks" | "inspect_publishing_guidance" | "inspect_style_corpus" | "inspect_article_style_rules" | "inspect_translations">; context: EditorialCapabilityContext; input?: Readonly<Record<string, string>> }, suppliedContext?: EditorialCapabilityContext, suppliedInput: Readonly<Record<string, string>> = {}): unknown {
+    read(capabilityOrInput: ReadCapability | { capability: ReadCapability; context: EditorialCapabilityContext; input?: Readonly<Record<string, string>> }, suppliedContext?: EditorialCapabilityContext, suppliedInput: Readonly<Record<string, string>> = {}): unknown {
         const capability = typeof capabilityOrInput === "string" ? capabilityOrInput : capabilityOrInput.capability;
         const context = typeof capabilityOrInput === "string" ? suppliedContext : capabilityOrInput.context;
         const input = typeof capabilityOrInput === "string" ? suppliedInput : capabilityOrInput.input ?? {};
@@ -183,10 +189,10 @@ export class EditorialCapabilityCatalog {
     executeAction(capability: Extract<EditorialCapabilityId, "add_revision_to_style_corpus" | "rebuild_style_profile">, context: EditorialCapabilityContext): StyleCorpus;
 
 
-    executeAction(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile" | "reject_translation">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>>): Article | { rules: string } | StyleCorpus | { rejected: true };
+    executeAction(capability: ActionCapability, context: EditorialCapabilityContext, input: Readonly<Record<string, string>>): Article | { rules: string } | StyleCorpus | { rejected: true };
 
 
-    executeAction(capability: Extract<EditorialCapabilityId, "rename_article" | "change_article_language" | "assign_publishing_profile" | "set_article_style_rules" | "add_revision_to_style_corpus" | "rebuild_style_profile" | "reject_translation">, context: EditorialCapabilityContext, input: Readonly<Record<string, string>> = {}): Article | { rules: string } | StyleCorpus | { rejected: true } {
+    executeAction(capability: ActionCapability, context: EditorialCapabilityContext, input: Readonly<Record<string, string>> = {}): Article | { rules: string } | StyleCorpus | { rejected: true } {
         if (!context.authorizedActions?.includes(capability) || !isValidatedEditorialCapabilityCall(capability, input))
             throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
@@ -225,11 +231,7 @@ export class EditorialCapabilityCatalog {
 
         getCurrentArticle(this.articles, input.context);
         const operation = getEditorialOperationFor(input);
-        const corrections = input.capability === EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS
-            ? this.createCorrectionContext(input.context.articleId, input.findingIds!)
-            : "";
-
-        const request = createEditorialRequest(input, operation, corrections);
+        const request = createEditorialRequest(input, operation);
 
         return staged
             ? this.editorial.streamStaged(request, signal)
@@ -237,12 +239,4 @@ export class EditorialCapabilityCatalog {
     }
 
 
-    private createCorrectionContext(articleId: string, findingIds: string): string {
-        const selected = new Set(findingIds.split(",").map((id) => id.trim()));
-        const findings = this.factChecks.listFactChecks(articleId).flatMap((check) => check.findings).filter((finding) => finding.occurrenceId && selected.has(finding.occurrenceId));
-        if (findings.length !== selected.size)
-            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
-
-        return `Prepare a correction Proposal only for these explicitly selected advisory Findings. Preserve unrelated claims, numbers, URLs, code, technical terms, and author voice. Findings:\n${findings.map((finding) => `- ${finding.claim}: ${finding.rationale} Sources: ${finding.sources.map((source) => source.url).join(", ")}`).join("\n")}`;
-    }
 }

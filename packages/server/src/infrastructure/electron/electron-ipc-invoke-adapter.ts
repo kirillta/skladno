@@ -7,7 +7,7 @@ import { ApplicationServiceError } from "../../application/errors/application-se
 
 
 function isFactCheckResolution(value: unknown): value is NonNullable<import("@skladno/shared").FactCheckFinding["resolution"]> {
-    return value === "corrected_or_removed" || value === "accepted_as_written" || value === "evidence_accepted";
+    return value === "accepted_as_written" || value === "evidence_accepted";
 }
 
 

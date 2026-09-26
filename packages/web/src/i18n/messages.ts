@@ -776,6 +776,7 @@ export const messages = {
     "settings.removeCustomDefaultDescription": "Remove <profile>{name}</profile>? The default publishing profile will revert to Default.",
     "errors.generic": "Couldn't finish that action. Your Article was not changed. Try again.",
     "errors.invalidRequest": "Couldn't finish that action because some information was invalid. Check it and try again.",
+    "errors.factCorrectionSelectionInvalid": "Couldn't prepare corrections because the selected Findings are no longer current or need review. Run Fact Check again, then select unresolved disputed or unverifiable Findings.",
     "errors.requestTooLarge": "Couldn't finish that action because the selected content is too large. Reduce it and try again.",
     "errors.invalidJson": "Couldn't finish that action because some information was invalid. Check it and try again.",
     "errors.originNotPermitted": "Couldn't finish that action in this app window. Reopen Skladno and try again.",

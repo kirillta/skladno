@@ -5,7 +5,7 @@ import type { ArticleService } from "../../articles/article-service.js";
 import type { PublishingService } from "../../publishing/publishing-service.js";
 import type { StyleCorpusService } from "../../editorial/style/style-corpus-service.js";
 import { EDITORIAL_CAPABILITY } from "./editorial-capability-id.js";
-import type { EditorialCapabilityId } from "./editorial-capability-id.js";
+import type { ReadCapability } from "./read-capability.js";
 
 
 export interface ArtifactStore { listEditorialArtifacts(articleId: string): EditorialArtifact[]; getEditorialArtifact(artifactId: string, articleId: string): EditorialArtifact | undefined; }
@@ -25,7 +25,7 @@ export interface EditorialCapabilityReadDependencies {
 
 export function readEditorialCapability(
     dependencies: EditorialCapabilityReadDependencies,
-    capability: Extract<EditorialCapabilityId, "inspect_article" | "inspect_linked_articles" | "inspect_revisions" | "inspect_draft" | "inspect_artifacts" | "inspect_proposal_summary" | "inspect_fact_checks" | "inspect_publishing_guidance" | "inspect_style_corpus" | "inspect_article_style_rules" | "inspect_translations">,
+    capability: ReadCapability,
     article: Article,
     input: Readonly<Record<string, string>>,
 ): unknown {

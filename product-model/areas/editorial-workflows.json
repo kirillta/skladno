@@ -53,7 +53,7 @@
             "title": "Fact-check request",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/editorial/engines/create-editorial-engine.ts", "packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "An explicit Fact Check or Assistant request creates advisory findings. Exact or conservatively matched rewritten Facts can reuse sourced evidence; changed or uncertain claims are researched again. Accepted decisions follow unchanged Facts, while corrected or removed claims are rechecked if they reappear.",
+            "contract": "An explicit Fact Check or Assistant request creates advisory findings. Exact or conservatively matched rewritten Facts can reuse sourced evidence; changed or uncertain claims are researched again. Accepted decisions follow unchanged Facts, while corrected or removed claims are rechecked if they reappear. A correction request verifies selected unresolved disputed or unverifiable occurrences against the current Revision on the server before generation and creates one reviewable Proposal.",
             "persistence": "Durable Facts, separate Revision occurrences, findings, citations, checked times, and resolutions are stored locally without changing Article text."
         },
         {
@@ -214,6 +214,16 @@
             "expected": ["A reviewable Proposal is produced with the source Article unchanged."],
             "forbidden": ["Applying generated text without author approval."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.assistant.test.ts" }
+        },
+        {
+            "id": "editorial-workflows.fact-correction-proposal",
+            "title": "Selected Fact corrections require review and a current Revision",
+            "capabilityIds": ["editorial-workflows.fact-check-request", "editorial-workflows.proposal-lifecycle"],
+            "preconditions": ["A current Fact Check has disputed or unverifiable occurrences."],
+            "event": "The Author selects occurrences, reviews the correction Proposal, and accepts or dismisses it.",
+            "expected": ["The server rejects missing, resolved, or stale selections before model invocation; one completed Proposal retains the selected occurrence IDs; accepting the whole Proposal appends a Revision and resolves only its selected occurrences in one transaction."],
+            "forbidden": ["Generation from unverified findings, direct Article changes, resolution on dismissal, or resolution after a Revision conflict."],
+            "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.corrections.test.ts" }
         },
         {
             "id": "editorial-workflows.finding-operations-preserve-article",

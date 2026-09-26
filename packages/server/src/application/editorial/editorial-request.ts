@@ -12,4 +12,5 @@ export interface EditorialServiceRequest {
     articleContent?: string;
     articleSelection?: boolean;
     surroundingArticleCharacterCount?: number;
+    correctionSelection?: { expectedRevisionId: string; occurrenceIds: string[] };
 }
