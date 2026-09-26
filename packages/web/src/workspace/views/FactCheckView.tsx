@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding, type GeneralSettings } from "@skladno/shared";
-import { Badge, Banner, Button, EmptyState, Status } from "../../ui/primitives.js";
+import { Badge, Banner, Button, EmptyState, Select, Status } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
 import { formatDateTime } from "../../i18n/formatting.js";
 
@@ -14,34 +14,50 @@ const quietScrollbar = "[scrollbar-color:var(--color-border-strong)_transparent]
 
 interface FactCheckData {
     factCheck: FactCheck | undefined;
+    runs?: FactCheck[];
+    selectedRun?: number;
     revisionNumber?: number;
     reusedRevisionNumbers?: Record<string, number>;
     stale: boolean;
+    historical?: boolean;
     generalSettings?: GeneralSettings;
 }
 
 
 interface FactCheckActions {
     runAgain: () => void;
+    selectRun?: (index: number | undefined) => void;
     resolve: (findingId: string, resolution: NonNullable<FactCheckFinding["resolution"]>) => Promise<void>;
     proposeCorrections: (findings: FactCheckFinding[]) => void;
 }
 
 
 export function FactCheckView({ data, actions }: { data: FactCheckData; actions: FactCheckActions }) {
-    const { factCheck, revisionNumber, reusedRevisionNumbers, stale, generalSettings } = data;
-    const { runAgain, resolve, proposeCorrections } = actions;
+    const { factCheck, runs = [], selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, generalSettings } = data;
+    const { runAgain, selectRun, resolve, proposeCorrections } = actions;
     const intl = useIntl();
     const [selected, setSelected] = useState(new Set<string>());
     const [activeFindingId, setActiveFindingId] = useState<string>();
     const findingElements = useRef<Record<string, HTMLElement | null>>({});
     const findingDetails = useRef<HTMLDivElement>(null);
-    if (!factCheck)
-        return <EmptyState title={intl.formatMessage({ id: "views.factCheckEmptyTitle" })}>{intl.formatMessage({ id: "views.factCheckEmpty" })}
-            <Button onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheck" })}</Button>
-        </EmptyState>;
+    const revisionLabel = (revisionId: string) => intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: reusedRevisionNumbers?.[revisionId] ?? revisionNumber ?? "—" });
+    const formatCheckedAt = (checkedAt: string) => generalSettings
+        ? formatDateTime(checkedAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)
+        : intl.formatDate(new Date(checkedAt), { dateStyle: "medium", timeStyle: "short" });
+    const runSelector = runs.length > 0 && selectRun && <Select className="max-w-xs" aria-label={intl.formatMessage({ id: "views.factCheckHistory" })} value={selectedRun === undefined ? "current" : String(selectedRun)} onChange={(event) => selectRun(event.target.value === "current" ? undefined : Number(event.target.value))}>
+        <option value="current">{intl.formatMessage({ id: "views.factCheckCurrent" })}</option>
+        {runs.map((run, index) => <option key={index} value={index}>{intl.formatMessage({ id: "views.factCheckRunOption" }, { revision: revisionLabel(run.reviewedRevisionId ?? ""), dateTime: run.createdAt ? formatCheckedAt(run.createdAt) : "—" })}</option>)}
+    </Select>;
 
-    const isStale = (finding: FactCheckFinding) => stale || finding.stale === true;
+    if (!factCheck)
+        return <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col gap-4">
+            {runSelector}
+            <EmptyState title={intl.formatMessage({ id: "views.factCheckEmptyTitle" })}>{intl.formatMessage({ id: "views.factCheckEmpty" })}
+                <Button onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheck" })}</Button>
+            </EmptyState>
+        </div>;
+
+    const isStale = (finding: FactCheckFinding) => stale || historical || finding.stale === true;
     const eligible = factCheck.findings.filter((finding) => !isStale(finding)
         && !finding.resolution
         && (finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE)
@@ -68,15 +84,14 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
             toggle(finding.occurrenceId);
     };
     const getResolutionMessage = (resolution: NonNullable<FactCheckFinding["resolution"]>) => intl.formatMessage({ id: `views.factResolution.${resolution}` as never });
-    const revisionLabel = (revisionId: string) => intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: reusedRevisionNumbers?.[revisionId] ?? revisionNumber ?? "—" });
-
     return <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col">
         <div className="shrink-0 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.factCheck" })}</h2>
                 <p className="text-xs text-muted">{intl.formatMessage({ id: "views.factCheckRevision" }, { revision: revisionNumber === undefined ? "—" : revisionLabel(factCheck.reviewedRevisionId ?? "") })}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+                {runSelector}
                 <Button variant="secondary" onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheckAgain" })}</Button>
                 {eligible.length > 0 && <><Button variant="secondary" onClick={() => setSelected(new Set(eligible.map((finding) => finding.occurrenceId!)))}>{intl.formatMessage({ id: "views.selectAllNeedingReview" })}</Button>
                     <Button disabled={selectedFindings.length === 0} onClick={() => proposeCorrections(selectedFindings)}>{intl.formatMessage({ id: "views.proposeFactCorrections" }, { count: selectedFindings.length })}</Button>
@@ -84,6 +99,10 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
             </div>
         </div>
         {stale && <Banner className="mt-4" tone="warning"><span>{intl.formatMessage({ id: "views.factCheckStale" })}</span></Banner>}
+        {!stale && historical && <Banner className="mt-4" tone="warning">
+            <span>{intl.formatMessage({ id: "views.factCheckHistorical" })}</span>
+        </Banner>}
+        {factCheck.findings.some((finding) => finding.checkedAt || finding.sources.some((source) => source.publishedAt)) && <p className="mt-2 text-xs text-muted">{intl.formatMessage({ id: "views.factEvidenceFreshness" })}</p>}
         <div className="mt-4 grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)]">
             <aside aria-label={intl.formatMessage({ id: "views.factCheckFindings" })} className={`divide-y divide-border overflow-y-auto rounded-panel border border-border ${quietScrollbar}`}>{factCheck.findings.map((finding) => {
                 const id = finding.occurrenceId ?? finding.claim;
@@ -107,15 +126,13 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
                             && !isStale(finding)
                             && finding.occurrenceId && <div className="flex flex-wrap gap-2">{(finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE)
                                 && <Button onClick={() => proposeCorrections([finding])}>{intl.formatMessage({ id: "views.proposeFactCorrection" })}</Button>}
-                        <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
-                        <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
-                        </div>
+                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
+                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
+                            </div>
                         }
                     </div>
                     {finding.reusedFromRevisionId && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factEvidenceReused" }, { revision: revisionLabel(finding.reusedFromRevisionId) })}</p>}
-                    {finding.checkedAt && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factCheckedAt" }, { dateTime: generalSettings
-                        ? formatDateTime(finding.checkedAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)
-                        : intl.formatDate(new Date(finding.checkedAt), { dateStyle: "medium", timeStyle: "short" }) })}</p>}
+                    {finding.checkedAt && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factCheckedAt" }, { dateTime: formatCheckedAt(finding.checkedAt) })}</p>}
                     <h3 className="mt-4 font-editor text-lg">{finding.claim}</h3>
                     <p className="mt-3">{finding.rationale}</p>
                     <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.uncertainty" }, { value: finding.uncertainty })}</p>

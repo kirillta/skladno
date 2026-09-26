@@ -44,7 +44,11 @@ test("Fact identity, separate occurrences, evidence provenance, and inherited re
         articles = new ArticlesRepository(database);
         artifacts = new EditorialArtifactsRepository(database);
         checks = new FactChecksRepository(database);
-        const restored = checks.listFactChecks(article.id)[0]!.findings[0]!;
+        const history = checks.listFactChecks(article.id);
+        assert.deepEqual(history.map((run) => run.reviewedRevisionId), [revision.id, article.currentRevisionId]);
+        assert.equal(history[0]!.findings[0]!.claim, "In 1999, the RFC was published.");
+        assert.equal(history[1]!.findings[0]!.claim, "The RFC was published in 1999.");
+        const restored = history[0]!.findings[0]!;
         assert.equal(restored.factId, first.factId);
         assert.equal(restored.resolution, "evidence_accepted");
         assert.equal(restored.checkedAt, first.checkedAt);
