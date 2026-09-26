@@ -22,6 +22,15 @@ const factCheck = { reviewedRevisionId: "revision-1", findings: [{ factId: "fact
 afterEach(cleanup);
 
 describe("FactCheckView", () => {
+    it("shows evidence reuse provenance and the original check time", () => {
+        const finding = { ...factCheck.findings[0]!, reusedFromRevisionId: "revision-1", checkedAt: "2026-01-01T12:00:00.000Z" };
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings: [finding] }} reusedRevisionNumbers={{ "revision-1": 1 }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getByText("Evidence reused from Revision v1.")).toBeTruthy();
+        expect(screen.getByText(/^Checked /)).toBeTruthy();
+        expect(screen.getByRole("link", { name: /Primary source/ }).textContent).toContain("2026-01-01");
+    });
+
     it("keeps stale findings readable but blocks correction selection", async () => {
         const user = userEvent.setup();
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={factCheck} stale runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);

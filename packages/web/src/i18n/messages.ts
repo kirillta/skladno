@@ -345,6 +345,7 @@ export const messages = {
     "views.factStatus.unverifiable": "Unverifiable",
     "views.factImportance": "{importance} importance",
     "views.factEvidenceReused": "Evidence reused from Revision {revision}.",
+    "views.factCheckedAt": "Checked {dateTime}.",
     "views.acceptFactAsWritten": "Accept as written",
     "views.acceptFactEvidence": "Accept evidence",
     "views.factResolution": "Resolution: {resolution}",

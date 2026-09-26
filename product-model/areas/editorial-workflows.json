@@ -53,8 +53,8 @@
             "title": "Fact-check request",
             "status": "implemented",
             "owners": ["packages/server/src/infrastructure/editorial/engines/create-editorial-engine.ts", "packages/server/src/application/editorial", "packages/server/src/index.ts", "packages/server/src/presentation/routes/editorial-route.ts"],
-            "contract": "A fixed server-side fact-check workflow creates advisory findings with per-Fact freshness across Revisions; unchanged Facts and accepted findings remain active.",
-            "persistence": "Findings and citations are stored locally without changing Article text."
+            "contract": "An explicit Fact Check or Assistant request creates advisory findings. Exact or conservatively matched rewritten Facts can reuse sourced evidence; changed or uncertain claims are researched again. Accepted decisions follow unchanged Facts, while corrected or removed claims are rechecked if they reappear.",
+            "persistence": "Durable Facts, separate Revision occurrences, findings, citations, checked times, and resolutions are stored locally without changing Article text."
         },
         {
             "id": "editorial-workflows.style-review",

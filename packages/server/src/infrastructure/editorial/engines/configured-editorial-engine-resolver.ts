@@ -1,4 +1,4 @@
-import { AI_PROVIDER, editorialOperationSkillMap, parseAiModelPreferenceId, type AiConnection, type AiProvider, type AppModelPreference, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
+import { AI_PROVIDER, EDITORIAL_OPERATION, editorialOperationSkillMap, parseAiModelPreferenceId, type AiConnection, type AiProvider, type AppModelPreference, type BuiltInSkillId, type EditorialOperation, type ModelPreferences, type ReasoningEffort } from "@skladno/shared";
 
 import type { EditorialEngineResolver } from "../../../application/editorial/engine/editorial-engine-resolver.js";
 import type { EditorialEngine } from "../../../application/editorial/engine/editorial-engine.js";
@@ -54,11 +54,13 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
         if (!this.modelCapabilities.supportsOperation(connection.provider, model, operation))
             return undefined;
 
+        const matchConfiguration = operation === EDITORIAL_OPERATION.FACT_CHECK ? this.resolveAppModelConnection() : undefined;
         return createEditorialEngine({
             ...connection,
             model,
             storeResponses: this.config.aiSessionContinuationEnabled,
             sourcedResearch: this.modelCapabilities.getCapabilities(connection.provider, model).sourcedResearch,
+            ...(matchConfiguration ? { matchModel: createProviderModel(matchConfiguration) } : {}),
             ...(reasoningEffort ? { reasoningEffort } : {})
         });
     }
@@ -74,6 +76,7 @@ export class ConfiguredEditorialEngineResolver implements EditorialEngineResolve
             ...configuration,
             storeResponses: this.config.aiSessionContinuationEnabled,
             sourcedResearch: capabilities.sourcedResearch,
+            matchModel: createProviderModel(configuration),
         });
     }
 

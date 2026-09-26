@@ -11,6 +11,7 @@ import { StyleCorpusService } from "./editorial/style/style-corpus-service.js";
 import { ApplicationSettingsService } from "./settings/application-settings-service.js";
 import { ProposalSummaryService } from "./editorial/proposals/proposal-summary-service.js";
 import { FactCheckService } from "./editorial/fact-checking/fact-check-service.js";
+import type { FactCheckRunStore } from "./editorial/fact-checking/fact-check-run-store.js";
 import type { ArticleStore } from "./articles/article-store.js";
 import type { SettingsStore } from "./settings/settings-store.js";
 import type { StyleCorpusStore } from "./editorial/style/style-corpus-store.js";
@@ -39,7 +40,7 @@ export interface ApplicationServiceStores {
     assistant: AssistantStore;
     artifacts: AssistantArtifactStore;
     engines: EditorialEngineResolver;
-    factChecks?: ConstructorParameters<typeof FactCheckService>[0] & { saveFactCheckRun(artifactId: string, articleId: string, revisionId: string): void };
+    factChecks?: ConstructorParameters<typeof FactCheckService>[0] & FactCheckRunStore;
 }
 
 

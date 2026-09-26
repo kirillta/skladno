@@ -64,7 +64,7 @@ export function WorkspaceViewRouter({ content, actions, navigation }: { content:
     if (view === "fact-check") {
         const revisionNumber = revisions.revisions.findIndex((revision) => revision.id === editorial.factCheck?.reviewedRevisionId);
         const reusedRevisionNumbers = Object.fromEntries(revisions.revisions.map((revision, index) => [revision.id, index + 1]));
-        return renderPanel(<FactCheckView data={{ factCheck: editorial.factCheck, revisionNumber: revisionNumber < 0 ? undefined : revisionNumber + 1, reusedRevisionNumbers, stale: editorial.factCheckStale }} actions={{ runAgain: runFactCheck, resolve: editorial.resolveFactCheck, proposeCorrections: editorial.proposeFactCorrections }} />);
+        return renderPanel(<FactCheckView data={{ factCheck: editorial.factCheck, revisionNumber: revisionNumber < 0 ? undefined : revisionNumber + 1, reusedRevisionNumbers, stale: editorial.factCheckStale, generalSettings }} actions={{ runAgain: runFactCheck, resolve: editorial.resolveFactCheck, proposeCorrections: editorial.proposeFactCorrections }} />);
     }
 
     if (view === "style-profile")

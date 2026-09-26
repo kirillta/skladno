@@ -35,8 +35,8 @@
             "title": "Revision-tied findings, citations, uncertainty, and stale indication",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/FactCheckView.tsx", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/infrastructure/editorial/engines/ai-sdk-editorial-engine.ts", "packages/server/src/infrastructure/persistence/repositories/fact-checks-repository.ts"],
-            "contract": "Findings remain advisory, Revision-tied, cited, uncertain, stale-aware, and actionable from Fact Check or Assistant. Fact Check shows status badges, selected-finding navigation, concise Revision numbers, and independently scrolling navigation and detail panes. Accepting a finding records only local advisory resolution and creates no Revision. Accepting a correction Proposal marks covered findings corrected or removed; remaining findings become stale with the new Revision.",
-            "persistence": "Findings and citations persist locally without modifying Article text; focused updates to other editorial artifacts do not replace or detach their citations."
+            "contract": "Findings remain advisory, Revision-tied, cited, uncertain, stale-aware, and actionable from Fact Check or Assistant. Fact Check shows status badges, selected-finding navigation, original checked Revision and time for reused evidence, source dates, and independently scrolling navigation and detail panes. Accepting a finding records only local advisory resolution and creates no Revision. Accepting a correction Proposal marks covered findings corrected or removed; remaining findings become stale with the new Revision.",
+            "persistence": "Durable Facts, separate occurrences, findings, citations, and resolutions persist locally without modifying Article text; focused updates to other editorial artifacts do not replace or detach their citations."
         },
         {
             "id": "history-and-publishing.translations",

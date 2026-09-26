@@ -21,6 +21,7 @@ import type { EditorialServiceRequest } from "./editorial-request.js";
 import { getReusableFactFindings } from "./fact-checking/reusable-fact-findings.js";
 import { persistFactCheckArtifact } from "./fact-checking/persist-fact-check-artifact.js";
 import type { FactCheckArtifactStore } from "./fact-checking/fact-check-artifact-store.js";
+import type { FactCheckRunStore } from "./fact-checking/fact-check-run-store.js";
 import type { TelemetryObserver } from "../telemetry/telemetry-observer.js";
 
 
@@ -59,7 +60,7 @@ interface EditorialArtifactsStore extends FactCheckArtifactStore {
 }
 
 
-interface FactChecksStore { listFactChecks(articleId: string): FactCheck[]; saveFactCheckRun(artifactId: string, articleId: string, revisionId: string): void; }
+interface FactChecksStore extends FactCheckRunStore { listFactChecks(articleId: string): FactCheck[]; }
 
 
 interface EditorialServiceStores {

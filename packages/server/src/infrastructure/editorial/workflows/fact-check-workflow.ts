@@ -1,9 +1,10 @@
-import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding } from "@skladno/shared";
+import type { FactCheck } from "@skladno/shared";
 
 import type { EditorialEngineEvent } from "../../../application/editorial/engine/editorial-engine-event.js";
 import { EDITORIAL_ENGINE_EVENT } from "../../../application/editorial/engine/editorial-engine-events.js";
 import type { FactCheckRequest } from "../models/fact-check-request.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
+import { inheritFactIdentity, matchFactCandidates, partitionFactClaims } from "./fact-claim-matching.js";
 
 
 export async function* streamFactCheck({ request, signal, provider }: { request: FactCheckRequest; signal: AbortSignal; provider: FactCheckProvider }): AsyncIterable<EditorialEngineEvent> {
@@ -12,22 +13,8 @@ export async function* streamFactCheck({ request, signal, provider }: { request:
         yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool, status: "started" };
 
     const extraction = await provider.extractClaims(request.article, request.instructions, signal);
-    const reusableByClaim = new Map<string, FactCheckFinding>();
-    for (const finding of request.reusableFactFindings ?? []) {
-        const key = normalizeClaim(finding.claim);
-        if (finding.status === FACT_CHECK_STATUS.SUPPORTED && !reusableByClaim.has(key))
-            reusableByClaim.set(key, finding);
-    }
-
-    const reusedFindings: FactCheckFinding[] = [];
-    const claimsToCheck = extraction.claims.filter(({ claim }) => {
-        const reusable = reusableByClaim.get(normalizeClaim(claim));
-        if (!reusable)
-            return true;
-
-        reusedFindings.push({ ...reusable, claim });
-        return false;
-    });
+    const matched = await matchFactCandidates(extraction.claims, request.reusableFactFindings ?? [], provider, signal);
+    const { reusedFindings, claimsToCheck } = partitionFactClaims(extraction.claims, matched);
 
     yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "completed", claims: [
         ...reusedFindings.map(({ claim }) => ({ claim, checked: true })),
@@ -45,6 +32,7 @@ export async function* streamFactCheck({ request, signal, provider }: { request:
     const factCheck: FactCheck = {
         findings: [...reusedFindings, ...evaluation.findings.map((finding) => ({
             ...finding,
+            ...inheritFactIdentity(finding.claim, extraction.claims, matched),
             sources: finding.sources
                 .filter((source) => /^https:\/\//.test(source.url))
                 .map(({ excerpt, publishedAt, ...source }) => ({
@@ -57,11 +45,6 @@ export async function* streamFactCheck({ request, signal, provider }: { request:
 
     yield* completeStages(stages);
     yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: evaluation.responseId, text: "", factCheck };
-}
-
-
-function normalizeClaim(claim: string): string {
-    return claim.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 

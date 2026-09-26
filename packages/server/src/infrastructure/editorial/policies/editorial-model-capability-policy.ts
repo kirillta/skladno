@@ -15,7 +15,7 @@ export class EditorialModelCapabilityPolicy {
         return {
             basicTextGeneration: Boolean(model.trim()),
             structuredOutput,
-            sourcedResearch: provider === AI_PROVIDER.OPENAI && structuredOutput,
+            sourcedResearch: structuredOutput && (provider === AI_PROVIDER.OPENAI || provider === AI_PROVIDER.ANTHROPIC || provider === AI_PROVIDER.GOOGLE || provider === AI_PROVIDER.XAI),
         };
     }
 

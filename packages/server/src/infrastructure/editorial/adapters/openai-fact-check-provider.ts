@@ -1,7 +1,6 @@
 import { generateText, Output } from "ai";
 import type { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
-import { FACT_CHECK_STATUS } from "@skladno/shared";
 
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
@@ -10,27 +9,7 @@ import { getOpenAiResponseId, getOpenAiResponsesProviderOptions } from "./openai
 import type { FactCheckResearch } from "../models/fact-check-research.js";
 import type { FactCheckFindingDraft } from "../models/fact-check-finding-draft.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
-
-
-const claimSchema = z.object({ claim: z.string().min(1) });
-
-
-const sourceUrlSchema = z.string().min(1).refine((value) => URL.canParse(value), "Expected a URL");
-
-
-const findingSchema = z.object({
-    claim: z.string().min(1),
-    status: z.enum([FACT_CHECK_STATUS.SUPPORTED, FACT_CHECK_STATUS.DISPUTED, FACT_CHECK_STATUS.UNVERIFIABLE]),
-    rationale: z.string().min(1),
-    uncertainty: z.string().min(1),
-    sources: z.array(z.object({
-        url: sourceUrlSchema,
-        title: z.string().min(1),
-        excerpt: z.string().min(1).nullable(),
-        quality: z.enum(["primary", "credible", "secondary", "unknown"]),
-        publishedAt: z.string().nullable(),
-    })).max(5),
-});
+import { claimSchema, findingSchema } from "../models/fact-check-schemas.js";
 
 
 interface OpenAIFactCheckProviderOptions {

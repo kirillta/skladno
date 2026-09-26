@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding } from "@skladno/shared";
+import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding, type GeneralSettings } from "@skladno/shared";
 import { Badge, Banner, Button, EmptyState, Status } from "../../ui/primitives.js";
 import { useIntl } from "react-intl";
+import { formatDateTime } from "../../i18n/formatting.js";
 
 const tone = {
     [FACT_CHECK_STATUS.SUPPORTED]: "success",
@@ -16,6 +17,7 @@ interface FactCheckData {
     revisionNumber?: number;
     reusedRevisionNumbers?: Record<string, number>;
     stale: boolean;
+    generalSettings?: GeneralSettings;
 }
 
 
@@ -27,7 +29,7 @@ interface FactCheckActions {
 
 
 export function FactCheckView({ data, actions }: { data: FactCheckData; actions: FactCheckActions }) {
-    const { factCheck, revisionNumber, reusedRevisionNumbers, stale } = data;
+    const { factCheck, revisionNumber, reusedRevisionNumbers, stale, generalSettings } = data;
     const { runAgain, resolve, proposeCorrections } = actions;
     const intl = useIntl();
     const [selected, setSelected] = useState(new Set<string>());
@@ -111,6 +113,9 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
                         }
                     </div>
                     {finding.reusedFromRevisionId && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factEvidenceReused" }, { revision: revisionLabel(finding.reusedFromRevisionId) })}</p>}
+                    {finding.checkedAt && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factCheckedAt" }, { dateTime: generalSettings
+                        ? formatDateTime(finding.checkedAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)
+                        : intl.formatDate(new Date(finding.checkedAt), { dateStyle: "medium", timeStyle: "short" }) })}</p>}
                     <h3 className="mt-4 font-editor text-lg">{finding.claim}</h3>
                     <p className="mt-3">{finding.rationale}</p>
                     <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.uncertainty" }, { value: finding.uncertainty })}</p>
