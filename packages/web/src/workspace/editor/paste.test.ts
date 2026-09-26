@@ -134,4 +134,16 @@ describe("Word and rich-text paste", () => {
         expect(markdown).toContain("Line one\nline two");
         expect(normalizeMarkdown(markdown)).toBe(markdown);
     });
+
+    test("preserves a pasted link whose URL contains parentheses after reload", () => {
+        const markdown = importHtmlAsMarkdown('<p><a href="https://ru.wikipedia.org/wiki/Example_(person)">Двое исследователей</a> согласились</p>');
+        const normalized = normalizeMarkdown(markdown);
+        expect(normalized).toBe("[Двое исследователей](https://ru.wikipedia.org/wiki/Example_%28person%29) согласились");
+        expect(normalizeMarkdown(normalized)).toBe(normalized);
+    });
+
+    test("keeps neighboring links and code separate while normalizing destinations", () => {
+        const markdown = "[One](https://example.com/a_(b)) [Two](https://example.com/c_(d))\n`[Code](https://example.com/e_(f))`";
+        expect(normalizeMarkdown(markdown)).toBe("[One](https://example.com/a_%28b%29) [Two](https://example.com/c_%28d%29)\n`[Code](https://example.com/e_(f))`");
+    });
 });
