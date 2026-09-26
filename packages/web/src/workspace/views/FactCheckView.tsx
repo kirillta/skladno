@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { FACT_CHECK_STATUS, type FactCheck, type FactCheckFinding, type GeneralSettings } from "@skladno/shared";
-import { Badge, Banner, Button, EmptyState, Select, Status } from "../../ui/primitives.js";
+import { Badge, Banner, Button, EmptyState, IconButton, Select, Status } from "../../ui/primitives.js";
+import { ChevronRightIcon } from "../../ui/icons.js";
 import { useIntl } from "react-intl";
 import { formatDateTime } from "../../i18n/formatting.js";
 
@@ -40,6 +41,7 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
     const [activeFindingId, setActiveFindingId] = useState<string>();
     const findingElements = useRef<Record<string, HTMLElement | null>>({});
     const findingDetails = useRef<HTMLDivElement>(null);
+    const findingNavigation = useRef<(HTMLElement | null)[]>([]);
     const revisionLabel = (revisionId: string) => intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: reusedRevisionNumbers?.[revisionId] ?? revisionNumber ?? "—" });
     const formatCheckedAt = (checkedAt: string) => generalSettings
         ? formatDateTime(checkedAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)
@@ -73,31 +75,48 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
         return next;
     });
     const selectedFindings = eligible.filter((finding) => selected.has(finding.occurrenceId!));
-    const selectFinding = (finding: FactCheckFinding) => {
+    const selectFinding = (finding: FactCheckFinding, toggleSelection = true) => {
         const id = finding.occurrenceId ?? finding.claim;
         setActiveFindingId(id);
         const detail = findingElements.current[id];
         if (detail)
-            findingDetails.current?.scrollTo({ top: detail.offsetTop, behavior: "smooth" });
+            detail.scrollIntoView({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 
-        if (finding.occurrenceId && eligible.some((item) => item.occurrenceId === finding.occurrenceId))
+        if (toggleSelection && finding.occurrenceId && eligible.some((item) => item.occurrenceId === finding.occurrenceId))
             toggle(finding.occurrenceId);
+    };
+    const moveFinding = (direction: -1 | 1) => {
+        const currentIndex = factCheck.findings.findIndex((finding) => (finding.occurrenceId ?? finding.claim) === activeFindingId);
+        const nextIndex = currentIndex < 0 ? (direction === 1 ? 0 : factCheck.findings.length - 1) : (currentIndex + direction + factCheck.findings.length) % factCheck.findings.length;
+        const finding = factCheck.findings[nextIndex];
+        if (finding)
+            selectFinding(finding, false);
+        findingNavigation.current[nextIndex]?.focus({ preventScroll: true });
     };
     const getResolutionMessage = (resolution: NonNullable<FactCheckFinding["resolution"]>) => intl.formatMessage({ id: `views.factResolution.${resolution}` as never });
     return <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col">
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3">
+        <header className="shrink-0 border-b border-border bg-canvas">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-start justify-between gap-x-6 gap-y-3 px-5 py-4">
             <div>
                 <h2 className="text-base font-semibold">{intl.formatMessage({ id: "views.factCheck" })}</h2>
                 <p className="text-xs text-muted">{intl.formatMessage({ id: "views.factCheckRevision" }, { revision: revisionNumber === undefined ? "—" : revisionLabel(factCheck.reviewedRevisionId ?? "") })}</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-                {runSelector}
-                <Button variant="secondary" onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheckAgain" })}</Button>
-                {eligible.length > 0 && <><Button variant="secondary" onClick={() => setSelected(new Set(eligible.map((finding) => finding.occurrenceId!)))}>{intl.formatMessage({ id: "views.selectAllNeedingReview" })}</Button>
-                    <Button disabled={selectedFindings.length === 0} onClick={() => proposeCorrections(selectedFindings)}>{intl.formatMessage({ id: "views.proposeFactCorrections" }, { count: selectedFindings.length })}</Button>
-                </>}
+            <div className="flex min-w-0 flex-col items-end gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    {factCheck.findings.length > 1 && <nav className="flex gap-1" aria-label={intl.formatMessage({ id: "views.findingNavigation" })}>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.previousFinding" })} title={intl.formatMessage({ id: "views.previousFinding" })} onClick={() => moveFinding(-1)}><ChevronRightIcon className="size-4 rotate-180" /></IconButton>
+                        <IconButton variant="quiet" label={intl.formatMessage({ id: "views.nextFinding" })} title={intl.formatMessage({ id: "views.nextFinding" })} onClick={() => moveFinding(1)}><ChevronRightIcon className="size-4" /></IconButton>
+                    </nav>}
+                    <Button variant="secondary" onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheckAgain" })}</Button>
+                    {eligible.length > 0 && <>
+                        <Button variant="secondary" onClick={() => setSelected(new Set(eligible.map((finding) => finding.occurrenceId!)))}>{intl.formatMessage({ id: "views.selectAllNeedingReview" })}</Button>
+                        <Button disabled={selectedFindings.length === 0} onClick={() => proposeCorrections(selectedFindings)}>{intl.formatMessage({ id: "views.proposeFactCorrections" }, { count: selectedFindings.length })}</Button>
+                    </>}
+                </div>
+                {runSelector && <div className="w-48">{runSelector}</div>}
             </div>
         </div>
+        </header>
         {stale && <Banner className="mt-4" tone="warning"><span>{intl.formatMessage({ id: "views.factCheckStale" })}</span></Banner>}
         {factCheck.incomplete && <Banner className="mt-4" tone="warning"><span>{intl.formatMessage({ id: "views.factCheckIncomplete" })}</span></Banner>}
         {!stale && historical && <Banner className="mt-4" tone="warning">
@@ -113,10 +132,11 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
                     <Badge className="mt-2 !rounded-control border" tone={tone[finding.status]}>{intl.formatMessage({ id: `views.factStatus.${finding.status}` })}</Badge>
                 </button>;
             })}</aside>
-            <div ref={findingDetails} className={`space-y-3 overflow-y-auto pr-1 ${quietScrollbar}`}>{factCheck.findings.map((finding) => {
+            <div ref={findingDetails} className={`space-y-3 overflow-y-auto pr-1 ${quietScrollbar}`}>{factCheck.findings.map((finding, index) => {
                 const id = finding.occurrenceId ?? finding.claim;
-                return <article className="scroll-mt-4 rounded-panel border border-border bg-surface-raised p-4" key={id} ref={(element) => {
+                return <article className="scroll-mt-4 rounded-panel border border-border bg-surface-raised p-4" key={id} tabIndex={-1} ref={(element) => {
                     findingElements.current[id] = element;
+                    findingNavigation.current[index] = element;
                 }}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <Status compact label={intl.formatMessage({ id: `views.factStatus.${finding.status}` })} tone={tone[finding.status]}>
