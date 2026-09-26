@@ -4,7 +4,7 @@ Use the smallest check that can fail for the changed behavior, then run the appl
 
 ## Commands
 
-- `npm run verify` runs the product check, lint, typecheck, and full test suite.
+- `npm run verify` runs the product check, complexity check, lint, typecheck, and full test suite.
 - `npm test --workspace <workspace>` runs the selected workspace tests.
 - `npm run lint` checks import boundaries and ESLint rules.
 - `npm run complexity:check` fails at cognitive complexity 16 or higher and reports scores 10–15 for review.

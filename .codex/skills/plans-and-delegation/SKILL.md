@@ -1,26 +1,14 @@
 ---
 name: plans-and-delegation
-description: Create executable Skladno plans and coordinate their implementation. Use when creating or revising a plan, implementing a plan or incremental work, or delegating tasks in this repository.
+description: Create or implement durable Skladno plans, or coordinate explicitly requested agent delegation.
 ---
 
 # Plans and delegation
 
-Assume plans will almost always be executed by a less capable model. Write executable plans, not aspirational outlines: ground each step in the current codebase, name the affected files or symbols, specify the concrete change and dependencies, and give verification commands with expected results. Resolve design decisions during planning and make required context explicit so the executing model can proceed without reconstructing your reasoning.
+Create a repository plan when work needs a durable handoff. Ground each step in current code, name the owner files or symbols, settle design decisions, and give an applicable check with its expected result. Group steps by working capability, including its validation, errors, accessibility, localization, diagnostics, and tests where relevant. Planning alone does not authorize implementation.
 
-When planning or implementing incrementally, make each step self-contained within its business scope. Split work by business task or capability, and include all applicable application conventions in every step: i18n, exception handling, tracing and diagnostics, validation, accessibility, and required verification. A step is complete only when its behavior and these conventions are implemented together; never skip them or defer them to a later cleanup step.
+Use agents when the user or an applicable instruction requests delegation and the tasks have separate ownership. Record each task's owner, files, dependencies, deliverable, and verification. Keep shared files with one owner and integrate dependent edits in order. The main agent owns final verification.
 
-When creating a plan, assess complexity, dependencies, and opportunities for independent work. Record `solo` or `delegated` execution with a brief reason. Delegate only when parallel work is likely to save time or improve quality; complexity alone does not require subagents.
+Choose the least costly available model that can complete the assigned work. Start with GPT-6 Luna for narrow, settled tasks, GPT-6 Sol for coding and judgment across a feature, and GPT-6 Astra for unresolved architecture or demanding cross-layer work. Increase reasoning effort for a concrete difficulty, not by default. Keep the current session model unless the user asks to change it.
 
-For delegated work, use a short Markdown table recording each task's scope, owner, owned files or areas, dependencies, deliverable and verification, model, and reasoning level. Keep tightly coupled work with one owner and sequence edits to shared files.
-
-When asked to implement a plan, check these assignments against the current codebase, add missing metadata, and refresh stale assignments. Then launch eligible subagents according to the metadata without asking for confirmation again, respecting dependencies and available concurrency. If subagents are unavailable, proceed sequentially and report the limitation. Planning alone does not authorize implementation.
-
-Use these model defaults unless the user specifies otherwise:
-
-| Role or task | Model | Reasoning |
-| --- | --- | --- |
-| Main agent and general coding | `gpt-5.6-terra` | Medium |
-| Small, well-defined one-shots and repetitive work | `gpt-5.6-luna` | Medium |
-| Complex investigation, debugging, and difficult implementation | `gpt-5.6-sol` | Low |
-
-Terra Medium is the preferred main-session configuration; these instructions do not switch an already-running session's model. Apply the defaults when selecting subagents. The main agent coordinates assignments, integrates results, and owns final verification.
+When implementing an existing plan, first compare its assignments and assumptions with the current tree. Refresh stale paths or model names, then execute authorized steps and their checks. If a planned agent is unavailable, continue sequentially and report that limit.

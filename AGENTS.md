@@ -1,10 +1,6 @@
 # Skladno agent guide
 
-Skladno is a local-first AI editorial workspace. It assists authors; it never edits or publishes their work autonomously.
-
-Skladno is currently in beta.
-
-The Electron app is the primary product. The web app exists mainly for development, so prioritize Electron behavior and compatibility.
+Skladno is a beta, local-first AI editorial workspace. The Author controls accepted changes and publication. Electron is the primary product; the web app mainly supports development.
 
 ## Product decision criteria
 
@@ -12,22 +8,21 @@ Evaluate product, UX, and architecture decisions against these principles:
 
 - Build for Authors who should not need AI infrastructure expertise. Keep setup and everyday use approachable regardless of where the model runs.
 - Judge capabilities by their value to Authors and their writing work. Let Authors' needs guide the product's scope; treat current features as examples, never as a closed list of permitted capabilities.
-- Keep the Author in control of accepted changes and publication, with recoverable work and preserved history. Apply the guarantees in **Always preserve** below.
+- Keep accepted changes under Author control, with recoverable work and preserved history. Apply the guarantees below.
 - Preserve open-source usability and choice among supported providers and models. Make capability limits clear and keep generalized workflows provider-neutral.
 
-When proposing a change, identify its benefit to Authors and any tradeoff against these principles. Prefer the simplest option that meets the Author's need and preserves Author control.
+For product decisions, identify the Author benefit and any tradeoff against these principles.
 
-## Before changing code
+## Working on a change
 
-1. Treat the user-provided issue or task as the active scope. Do not infer another issue from repository history.
-2. When changing existing product behavior or its owner paths, run `npm run product:impact -- <affected paths>` and preserve every matched implemented capability unless the task changes it. Update `product-model/areas` only when capability, status, contract, persistence, or visible behavior changes.
-3. Read the matching references below before editing. Follow their dependencies when the change crosses those boundaries.
-4. For broad exploration, TypeScript or TSX work, or a second verification loop, follow the [context-efficient agent-work guide](docs/development/guides/context-efficient-agent-work.md).
-5. Read and apply the [refactoring skill](.codex/skills/refactoring/SKILL.md) when writing, modifying, reviewing, or planning code. It owns code structure, complexity, naming, and export rules; the ADRs below own project architecture.
+1. Use the user request as the scope. Check the implementation and read the references for the affected area below.
+2. When changing existing product behavior or its owner paths, run `npm run product:impact -- <affected paths>`. Preserve matched implemented capabilities unless the request changes them. Update `product-model/areas` only when capability, status, contract, persistence, or visible behavior changes.
+3. For broad discovery or multi-step coding, use the [agent-work guide](docs/development/guides/context-efficient-agent-work.md). For code structure, use the [refactoring skill](.codex/skills/refactoring/SKILL.md).
+4. Complete the requested change and its applicable checks. The [testing guide](docs/development/guides/testing.md) gives the checks for source, docs, product records, and Electron.
 
 ## Plans and delegation
 
-Read and apply the [plans and delegation skill](.codex/skills/plans-and-delegation/SKILL.md) when creating or revising a plan, implementing a plan or incremental work, or delegating tasks.
+Use the [plans and delegation skill](.codex/skills/plans-and-delegation/SKILL.md) when creating or implementing a durable plan, or for requested agent delegation.
 
 ## Read for the affected area
 
@@ -50,11 +45,11 @@ Read and apply the [plans and delegation skill](.codex/skills/plans-and-delegati
 
 ## Documentation ownership
 
-[README.md](README.md) covers setup. The [glossary](docs/user/Glossary.md), `packages/shared`, and the product model define domain terms. Use **Article**, not `document`, except for browser DOM APIs.
+[README.md](README.md) covers setup. The [glossary](docs/user/Glossary.md), `packages/shared`, and the product model define domain terms. Use **Article** for author content; reserve `document` for browser DOM APIs.
 
 Keep `docs/development/plans` for active work. Move lasting decisions from completed plans into an ADR or guide, then delete the plan. Generated product inventories are read-only; update `product-model/areas` and regenerate them.
 
-ADRs own architectural decisions; guides own working procedures. Plans describe remaining work, not implemented guarantees. Check implementation and canonical product records before claiming a plan or accepted ADR is fully implemented. When they disagree, report the mismatch and resolve it within the task's scope.
+ADRs own architecture; guides own procedures; plans describe remaining work. Verify implementation and product records before claiming a plan or ADR is fully implemented. Resolve mismatches within the request's scope.
 
 ## Always preserve
 
@@ -75,7 +70,5 @@ Validate transport and process boundaries. Keep credentials, private content, da
 
 ## Handoff
 
-- Before creating a GitHub issue, check whether an existing issue should be updated instead. Assign every new issue to an existing or newly created milestone.
-- Follow the [testing guide](docs/development/guides/testing.md) for source, documentation, product-model, and Electron checks.
-- After changing the product model, run `npm run product:docs` and `npm run product:check`.
+- Before creating a GitHub issue, check whether an existing issue covers it. Assign new issues to a milestone.
 - Report checks run and remaining manual verification.

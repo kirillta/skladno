@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-21
-- Updated: 2026-09-24
+- Updated: 2026-09-25
 - Scope: Article, Draft, Revision, Proposal, Finding, and translation state
 - Depends on: [ADR-001](adr-001-three-layer-server-and-electron.md), [ADR-002](adr-002-shared-contract-organization.md)
 
@@ -17,6 +17,8 @@ An Article points to its current immutable Revision. Editing creates a mutable D
 AI-generated Proposals and advisory Findings record their base Revision. They become stale when the Article's current Revision changes. Stale output cannot change Article content. Accepting a valid Proposal creates one new Revision; rejecting or resolving advisory output creates none.
 
 Restoring an earlier Revision appends a new Revision whose provenance identifies the source. History is never rewritten. A conflicting or retained Draft remains recoverable until the author explicitly chooses which text to use.
+
+Every persisted Author message anchors a conversation checkpoint. Restoring one rejects that message and the later active conversation and artifacts in one SQLite transaction. When the checkpoint links to a Revision, restoration appends a new restore Revision and leaves later Revisions accessible in history. A current Draft is promoted first by default or discarded only by explicit choice. A stale confirmation or failed transaction changes neither the conversation nor Article state. The renderer returns the rejected message to the Composer only after the transaction succeeds; it does not recreate an old Article selection.
 
 A completed Assistant reply may carry one separately validated exact replacement for its captured selection or the whole Article. The Author can apply that reply once; an opt-in conversation mode can apply it at completion only after a separate check of the Author's exact edit instruction. Both paths generate a concise Revision description from the changed context before persistence, with the same local fallback used for other content Revisions. They reject a stale base Revision and any current Draft, then atomically append an Assistant-attributed Revision and record the applied reply. An ordinary Proposal still uses Proposal Review. A failed or incomplete request never changes Article content.
 
