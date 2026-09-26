@@ -1,4 +1,4 @@
-import type { DesktopSettingsClient, DesktopShellClient, DesktopTelemetryClient, DesktopUpdateClient, ElectronApplicationBridge, EditorialWorkspaceClient } from "@skladno/shared";
+import { ApplicationClientError, type ApplicationErrorCode, type DesktopSettingsClient, type DesktopShellClient, type DesktopTelemetryClient, type DesktopUpdateClient, type ElectronApplicationBridge, type EditorialWorkspaceClient } from "@skladno/shared";
 import { HttpApplicationClient } from "./client.js";
 
 
@@ -18,11 +18,12 @@ export function createRendererApplicationClient(host: Pick<Window, "skladno"> = 
     if (!bridge)
         return new HttpApplicationClient();
 
-    const stream = <Event>(start: (streamId: string, onEvent: (event: Event) => void) => Promise<void>, onEvent: (event: Event) => void, signal?: AbortSignal) => {
+    const stream = <Event extends { type: string; errorCode?: ApplicationErrorCode }>(start: (streamId: string, onEvent: (event: Event) => void) => Promise<void>, onEvent: (event: Event) => void, signal?: AbortSignal) => {
         if (signal?.aborted)
             return Promise.reject(new DOMException("The Electron application request was aborted.", "AbortError"));
 
         const streamId = crypto.randomUUID();
+        let errorCode: ApplicationErrorCode | undefined;
         let rejectAborted: (error: Error) => void = () => undefined;
         const aborted = new Promise<void>((_resolve, reject) => {
             rejectAborted = reject;
@@ -33,7 +34,17 @@ export function createRendererApplicationClient(host: Pick<Window, "skladno"> = 
         };
         signal?.addEventListener("abort", abort, { once: true });
 
-        return Promise.race([start(streamId, onEvent), aborted]).finally(() => signal?.removeEventListener("abort", abort));
+        return Promise.race([start(streamId, (event) => {
+            if (event.type === "error")
+                errorCode = event.errorCode;
+
+            onEvent(event);
+        }), aborted]).catch((error: unknown) => {
+            if (errorCode && !signal?.aborted)
+                throw new ApplicationClientError(errorCode, undefined, 500);
+
+            throw error;
+        }).finally(() => signal?.removeEventListener("abort", abort));
     };
 
     return {

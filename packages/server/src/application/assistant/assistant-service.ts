@@ -15,7 +15,7 @@ import type { EditorialEngineEvent } from "../editorial/engine/editorial-engine-
 import type { StyleCorpusStore } from "../editorial/style/style-corpus-store.js";
 import type { TelemetryObserver } from "../telemetry/telemetry-observer.js";
 import { getAssistantRequestTimeoutMs, streamWithAssistantDeadline } from "./requests/assistant-request-deadline.js";
-import { persistTimedOutFactCheck } from "./requests/timed-out-fact-check.js";
+import { persistInterruptedFactCheck } from "./requests/interrupted-fact-check.js";
 import { getAssistantRequestErrorCode } from "./requests/assistant-request-error-code.js";
 import { normalizeGeneralSettings } from "../settings/application-settings-normalizers.js";
 import type { SettingsStore } from "../settings/settings-store.js";
@@ -154,7 +154,7 @@ export class AssistantService {
             let partial: ReturnType<AssistantCompletion["persistPartialFactCheck"]> | undefined;
             try {
                 if (initialized)
-                    partial = persistTimedOutFactCheck(error, request, signal, this.completion);
+                    partial = persistInterruptedFactCheck(error, request, signal, this.completion);
             } catch (persistenceError) {
                 this.handleStreamFailure(request, signal, observed, initialized, persistenceError);
                 throw persistenceError;

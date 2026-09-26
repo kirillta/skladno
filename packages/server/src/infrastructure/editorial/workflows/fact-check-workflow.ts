@@ -2,10 +2,10 @@ import type { FactCheck } from "@skladno/shared";
 
 import type { EditorialEngineEvent } from "../../../application/editorial/engine/editorial-engine-event.js";
 import { EDITORIAL_ENGINE_EVENT } from "../../../application/editorial/engine/editorial-engine-events.js";
-import type { FactCheckRequest } from "../models/fact-check-request.js";
-import type { FactCheckProvider } from "../models/fact-check-provider.js";
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
+import type { FactCheckRequest } from "../models/fact-check-request.js";
+import type { FactCheckProvider } from "../models/fact-check-provider.js";
 import { inheritFactIdentity, matchFactCandidates, partitionFactClaims } from "./fact-claim-matching.js";
 
 
@@ -37,16 +37,18 @@ export async function* streamFactCheck({ request, signal, provider }: { request:
     if (reusedFindings.length)
         yield { type: EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS, factCheck: { findings: reusedFindings } };
 
-    const pending = new Map<number, Promise<{ index: number; responseId: string; findings: FactCheck["findings"] }>>();
+    const pending = new Map<number, Promise<{ index: number; responseId: string; findings: FactCheck["findings"] } | { index: number; error: unknown }>>();
     const checked = new Map<number, FactCheck["findings"]>();
     let nextClaim = 0;
     let responseId = extraction.responseId;
     let findings = reusedFindings;
+    let failed = false;
+    let firstError: unknown;
     const startChecks = () => {
-        while (pending.size < concurrentChecks && nextClaim < claimsToCheck.length) {
+        while (!failed && pending.size < concurrentChecks && nextClaim < claimsToCheck.length) {
             const index = nextClaim++;
             pending.set(index, checkClaim(claimsToCheck[index]!, request.instructions, signal, provider, extraction.claims, matched)
-                .then((result) => ({ ...result, index })));
+                .then((result) => ({ ...result, index }), (error: unknown) => ({ index, error })));
         }
     };
 
@@ -56,17 +58,24 @@ export async function* streamFactCheck({ request, signal, provider }: { request:
         const result = await Promise.race(pending.values());
         signal.throwIfAborted();
         pending.delete(result.index);
-        checked.set(result.index, result.findings);
-        responseId = result.responseId;
-        findings = [...reusedFindings, ...[...checked].sort(([left], [right]) => left - right).flatMap(([, completed]) => completed)];
-
-        yield { type: EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS, factCheck: { findings } };
+        if ("error" in result) {
+            firstError ??= result.error;
+            failed = true;
+        } else {
+            checked.set(result.index, result.findings);
+            responseId = result.responseId;
+            findings = [...reusedFindings, ...[...checked].sort(([left], [right]) => left - right).flatMap(([, completed]) => completed)];
+            yield { type: EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS, factCheck: { findings } };
+        }
 
         startChecks();
     }
 
+    if (failed && !findings.length)
+        throw firstError;
+
     yield* completeStages(stages);
-    yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId, text: "", factCheck: { findings } };
+    yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId, text: "", factCheck: { findings, ...(failed ? { incomplete: true } : {}) } };
 }
 
 
@@ -76,15 +85,14 @@ async function checkClaim(claim: { claim: string }, instructions: string, signal
 
     const evaluation = await provider.evaluateClaims(research, instructions, signal);
     signal.throwIfAborted();
-    if (evaluation.findings.length !== 1)
+    if (!evaluation.findings.length)
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
     return {
         responseId: evaluation.responseId,
         findings: evaluation.findings.map((finding) => ({
             ...finding,
-            claim: claim.claim,
-            ...inheritFactIdentity(claim.claim, claims, matched),
+            ...inheritFactIdentity(finding.claim, claims, matched),
             sources: finding.sources
                 .filter((source) => /^https:\/\//.test(source.url))
                 .map(({ excerpt, publishedAt, ...source }) => ({

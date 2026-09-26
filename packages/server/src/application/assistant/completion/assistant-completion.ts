@@ -88,7 +88,7 @@ export class AssistantCompletion {
             if (!article || article.currentRevisionId !== request.scope.baseRevisionId)
                 throw new ApplicationServiceError(APPLICATION_ERROR.REVISION_CONFLICT, HTTP_STATUS.CONFLICT);
 
-            const incomplete = request.completedCapability !== EDITORIAL_CAPABILITY.FACT_CHECK;
+            const incomplete = request.completedCapability !== EDITORIAL_CAPABILITY.FACT_CHECK || Boolean(completedFindings.incomplete);
             const responseKind = incomplete ? "findings_partial" : "findings_prepared";
             const factCheck = { ...completedFindings, ...(incomplete ? { incomplete: true } : {}) };
             const persisted = persistFactCheckArtifact({
@@ -125,7 +125,8 @@ export class AssistantCompletion {
         const editCandidate = getEditCandidate(request, event);
         const directEdit = Boolean(editCandidate && request.editMode === "direct" && request.directEditAuthorized);
         const content = getCompletedContent(request, event.text);
-        const kind = directEdit ? "edit_applied" : getResponseKind(request.completedCapability);
+        const responseKind = event.factCheck?.incomplete ? "findings_partial" : getResponseKind(request.completedCapability);
+        const kind = directEdit ? "edit_applied" : responseKind;
         const artifact = directEdit ? {} : this.createCompletionArtifact(request, event, content);
 
         return this.persistResponse({ request, event, content, editCandidate, directEdit, kind, artifact, metadataChanged });

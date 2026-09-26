@@ -175,3 +175,32 @@ test("Assistant retains a finished Fact Check if its final reply times out", asy
         context.mock.timers.reset();
     });
 });
+
+
+test("Assistant retains a finished Fact Check if its final reply fails", async () => {
+    const finding = { claim: "The RFC was published in 1999.", status: "supported" as const, rationale: "Primary source", uncertainty: "Low", sources: [] };
+    const engine: EditorialEngine = {
+        async *stream() {
+            yield { type: "completed", responseId: "checked", text: "", factCheck: { findings: [finding] } };
+        },
+        async *streamConversation() {
+            yield* [];
+        },
+        async *streamAssistant(request, signal) {
+            const check = request.tools.find((tool) => tool.capability === "fact_check");
+            assert.ok(check);
+            await check.execute({}, signal);
+            throw new Error("provider failed");
+        },
+    };
+    await withService(engine, async (_url, persistence, services) => {
+        const article = services.articles.createArticle({ title: "Test", content: finding.claim });
+        const request = services.assistant.prepare({ kind: "new", requestId: "failed-final-reply", articleId: article.id, authorMessage: "Fact check", explicitSkillId: "fact_checking", scope: { kind: "article", baseRevisionId: article.currentRevisionId } });
+        const events: AssistantEvent[] = [];
+        for await (const event of services.assistant.stream(request, new AbortController().signal))
+            events.push(event);
+
+        assert.equal(events.find((event) => event.type === "completed")?.responseKind, "findings_prepared");
+        assert.equal(persistence.factChecks.listFactChecks(article.id)[0]?.findings.length, 1);
+    });
+});

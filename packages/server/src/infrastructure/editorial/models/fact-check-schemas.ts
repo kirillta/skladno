@@ -9,7 +9,8 @@ export const findingSchema = z.object({
     rationale: z.string().min(1),
     uncertainty: z.string().min(1),
     sources: z.array(z.object({
-        url: z.string().url(),
+        // Validate locally: provider structured output rejects JSON Schema's URI format.
+        url: z.string().refine((value) => URL.canParse(value), "Invalid URL"),
         title: z.string().min(1),
         excerpt: z.string().min(1).nullable(),
         quality: z.enum(["primary", "credible", "secondary", "unknown"]),

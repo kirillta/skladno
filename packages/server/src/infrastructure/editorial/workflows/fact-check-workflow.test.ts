@@ -120,3 +120,42 @@ test("checks three claims concurrently and reports each completed claim before t
     await run;
     assert.deepEqual(events.find((event) => event.type === "completed")?.factCheck?.findings.map(({ claim }) => claim), claims);
 });
+
+
+test("keeps finished findings when another claim fails", async () => {
+    const provider: FactCheckProvider = {
+        researchStage: "web_research",
+        extractClaims: async () => ({ responseId: "extracted", claims: [{ claim: "failed" }, { claim: "checked" }] }),
+        researchClaims: async ([claim]) => {
+            if (claim?.claim === "failed")
+                throw new Error("provider failed");
+
+            return [{ claim: claim!.claim, evidence: "Evidence", sources: [] }];
+        },
+        evaluateClaims: async ([research]) => ({ responseId: "evaluated", findings: [{ claim: research!.claim, status: "supported", rationale: "Evidence", uncertainty: "Low", sources: [] }] }),
+    };
+    const events: EditorialEngineEvent[] = [];
+    for await (const event of streamFactCheck({ request: { article: "Article", instructions: "Check" }, signal: new AbortController().signal, provider }))
+        events.push(event);
+
+    const completed = events.find((event) => event.type === "completed");
+    assert.equal(completed?.factCheck?.incomplete, true);
+    assert.deepEqual(completed?.factCheck?.findings.map(({ claim }) => claim), ["checked"]);
+});
+
+
+test("accepts multiple findings from one claim evaluation", async () => {
+    const provider: FactCheckProvider = {
+        researchStage: "web_research",
+        extractClaims: async () => ({ responseId: "extracted", claims: [{ claim: "combined claim" }] }),
+        researchClaims: async () => [{ claim: "combined claim", evidence: "Evidence", sources: [] }],
+        evaluateClaims: async () => ({ responseId: "evaluated", findings: ["first fact", "second fact"].map((claim) => ({ claim, status: "supported" as const, rationale: "Evidence", uncertainty: "Low", sources: [] })) }),
+    };
+    let completed: FactCheck | undefined;
+    for await (const event of streamFactCheck({ request: { article: "Article", instructions: "Check" }, signal: new AbortController().signal, provider })) {
+        if (event.type === "completed")
+            completed = event.factCheck;
+    }
+
+    assert.deepEqual(completed?.findings.map(({ claim }) => claim), ["first fact", "second fact"]);
+});
