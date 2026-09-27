@@ -1,6 +1,6 @@
 # Skladno visual atlas
 
-This atlas maps visual roles to Tailwind utilities and semantic tokens. `packages/web/src/styles.css` owns their values for every theme. Feature code uses the mapped utility or token and does not copy raw colors, shadows, radii, font sizes, or tracking values.
+This atlas maps visual roles to Tailwind utilities and semantic tokens. `packages/web/src/design-tokens.css` owns their values for every theme. Feature code uses the mapped utility or token and does not copy raw colors, shadows, radii, font sizes, or tracking values. The static site uses these same tokens; `npm run dev:site` and Amplify copy them into `site/` before serving or deployment.
 
 ## Typography roles
 
