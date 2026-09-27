@@ -89,13 +89,14 @@ describe("FactCheckView", () => {
 
     it("highlights and scrolls to a selected finding, and localizes its resolution", async () => {
         const user = userEvent.setup();
-        const scrollIntoView = vi.fn();
-        Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
+        const scrollTo = vi.fn();
+        Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: scrollTo });
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings: [{ ...factCheck.findings[0], resolution: "accepted_as_written" }] }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
         screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!.focus();
         await user.keyboard("{Enter}");
-        expect(scrollIntoView).toHaveBeenCalledOnce();
+        expect(scrollTo).toHaveBeenCalledOnce();
+        expect(scrollTo.mock.contexts[0]).toBe(screen.getByLabelText(getMessage("views.factCheckFindings")).nextElementSibling);
         expect(screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!.getAttribute("aria-current")).toBe("true");
         expect(screen.getByText("Accepted as written")).toBeTruthy();
     });

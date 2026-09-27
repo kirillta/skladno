@@ -80,8 +80,9 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
         const id = finding.occurrenceId ?? finding.claim;
         setActiveFindingId(id);
         const detail = findingElements.current[id];
-        if (detail)
-            detail.scrollIntoView({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+        const details = findingDetails.current;
+        if (detail && details)
+            details.scrollTo({ top: details.scrollTop + detail.getBoundingClientRect().top - details.getBoundingClientRect().top, behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 
         if (toggleSelection && finding.occurrenceId && eligible.some((item) => item.occurrenceId === finding.occurrenceId))
             toggle(finding.occurrenceId);
