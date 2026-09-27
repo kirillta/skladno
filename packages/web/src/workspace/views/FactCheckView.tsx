@@ -38,77 +38,19 @@ interface FactCheckActions {
 
 
 export function FactCheckView({ data, actions }: { data: FactCheckData; actions: FactCheckActions }) {
-    const { factCheck, currentRevisionId, revisions = [], runs = [], selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, generalSettings, checkingClaimCount } = data;
-    const { runAgain, selectRun, resolve, proposeCorrections } = actions;
+    const { factCheck, revisionNumber, reusedRevisionNumbers, stale, historical, generalSettings, checkingClaimCount } = data;
+    const { runAgain, resolve, proposeCorrections } = actions;
     const intl = useIntl();
     const [selected, setSelected] = useState(new Set<string>());
     const [activeFindingId, setActiveFindingId] = useState<string>();
-    const [historyOpen, setHistoryOpen] = useState(false);
-    const historyTrigger = useRef<HTMLButtonElement>(null);
-    const historyMenuId = useId();
     const findingElements = useRef<Record<string, HTMLElement | null>>({});
     const findingDetails = useRef<HTMLDivElement>(null);
+    const runSelector = data.runs?.length && actions.selectRun ? <FactCheckRunSelector data={data} selectRun={actions.selectRun} /> : null;
     const findingNavigation = useRef<(HTMLElement | null)[]>([]);
     const revisionLabel = (revisionId: string) => intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: reusedRevisionNumbers?.[revisionId] ?? revisionNumber ?? "—" });
-    const currentRevision = revisions.find((revision) => revision.id === currentRevisionId);
-    const currentRevisionLabel = currentRevision
-        ? `${intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: revisions.indexOf(currentRevision) + 1 })} · ${currentRevision.description ?? intl.formatMessage({ id: getProvenanceMessageId(currentRevision, revisions) })}`
-        : intl.formatMessage({ id: "views.factCheckCurrent" });
-    const currentRunIndex = currentRevisionId ? runs.findIndex((run) => run.reviewedRevisionId === currentRevisionId) : -1;
     const formatCheckedAt = (checkedAt: string) => generalSettings
         ? formatDateTime(checkedAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)
         : intl.formatDate(new Date(checkedAt), { dateStyle: "medium", timeStyle: "short" });
-    const runOptionLabel = (run: FactCheck) => intl.formatMessage({ id: "views.factCheckRunOption" }, { revision: revisionLabel(run.reviewedRevisionId ?? ""), dateTime: run.createdAt ? formatCheckedAt(run.createdAt) : "—" });
-    const selectedHistoryRun = selectedRun === undefined ? undefined : runs[selectedRun];
-    const selectRunOption = (index: number | undefined) => {
-        selectRun?.(index);
-        setHistoryOpen(false);
-        historyTrigger.current?.focus();
-    };
-    const focusHistoryOption = (last: boolean) => requestAnimationFrame(() => {
-        const items = document.getElementById(historyMenuId)?.querySelectorAll<HTMLButtonElement>("[role^=menuitem]");
-        items?.[last ? items.length - 1 : 0]?.focus();
-    });
-    const runSelector = runs.length > 0 && selectRun && <div className="relative flex max-w-full justify-end self-end">
-        <Button ref={historyTrigger} type="button" variant="secondary" compact className="!self-end inline-flex max-w-full items-center gap-2 !text-muted text-xs" aria-label={intl.formatMessage({ id: "views.factCheckHistory" })} aria-controls={historyOpen ? historyMenuId : undefined} aria-expanded={historyOpen} aria-haspopup="menu" onClick={() => setHistoryOpen((open) => !open)} onKeyDown={(event) => {
-            if (event.key === "Escape")
-                setHistoryOpen(false);
-
-            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                event.preventDefault();
-                setHistoryOpen(true);
-                focusHistoryOption(event.key === "ArrowUp");
-            }
-        }}>
-            <span className="truncate" title={selectedHistoryRun ? runOptionLabel(selectedHistoryRun) : currentRevisionLabel}>{selectedHistoryRun ? runOptionLabel(selectedHistoryRun) : currentRevisionLabel}</span>
-            <ChevronDownIcon className={`size-3 shrink-0 transition-transform duration-150 motion-reduce:transition-none ${historyOpen ? "rotate-180" : ""}`} />
-        </Button>
-        {historyOpen && <div id={historyMenuId} className="absolute right-0 top-full z-20 mt-1 max-h-72 w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "views.factCheckHistory" })} onKeyDown={(event) => {
-            const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("[role^=menuitem]")];
-            const index = document.activeElement instanceof HTMLButtonElement ? items.indexOf(document.activeElement) : -1;
-            const next = event.key === "ArrowDown" ? index + 1 : event.key === "ArrowUp" ? index - 1 : event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : undefined;
-            if (event.key === "Escape") {
-                event.preventDefault();
-                setHistoryOpen(false);
-                historyTrigger.current?.focus();
-            } else if (next !== undefined) {
-                event.preventDefault();
-                items[(next + items.length) % items.length]?.focus();
-            }
-        }}>
-            <button className="flex min-h-9 w-full items-center gap-2 rounded-control px-2 py-1 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" role="menuitemradio" aria-checked={selectedRun === undefined} onClick={() => selectRunOption(undefined)}>
-                <span className="grid size-5 shrink-0 place-items-center rounded-full border border-border bg-surface-raised text-brand"><UpdateIcon className="size-3" /></span>
-                <span className="min-w-0 flex-1 truncate" title={currentRevisionLabel}>{currentRevisionLabel}</span>
-                <span className="text-micro font-semibold text-muted">{intl.formatMessage({ id: "revisions.current" })}</span>
-            </button>
-            {runs.map((run, index) => index !== currentRunIndex && <button key={index} className="flex min-h-9 w-full items-center gap-2 rounded-control px-2 py-1 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" role="menuitemradio" aria-checked={selectedRun === index} onClick={() => selectRunOption(index)}>
-                <span className="grid size-5 shrink-0 place-items-center rounded-full border border-border bg-surface-raised text-brand"><UpdateIcon className="size-3" /></span>
-                <span className="font-semibold">{revisionLabel(run.reviewedRevisionId ?? "")}</span>
-                <span className="min-w-0 flex-1 truncate" title={runOptionLabel(run)}>{run.createdAt ? formatCheckedAt(run.createdAt) : "—"}</span>
-            </button>)}
-        </div>}
-    </div>;
-
     if (!factCheck)
         return <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col gap-4">
             {runSelector}
@@ -208,9 +150,9 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
                             && !isStale(finding)
                             && finding.occurrenceId && <div className="flex flex-wrap gap-2">{(finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE)
                                 && <Button onClick={() => proposeCorrections([finding])}>{intl.formatMessage({ id: "views.proposeFactCorrection" })}</Button>}
-                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
-                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
-                            </div>
+                        <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
+                        <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
+                        </div>
                         }
                     </div>
                     {finding.reusedFromRevisionId && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factEvidenceReused" }, { revision: revisionLabel(finding.reusedFromRevisionId) })}</p>}
@@ -228,6 +170,75 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
             })}</div>
         </div>
     </div>;
+}
+
+
+function FactCheckRunSelector({ data, selectRun }: { data: FactCheckData; selectRun: FactCheckActions["selectRun"] }) {
+    const { currentRevisionId, revisions = [], runs = [], selectedRun, revisionNumber, reusedRevisionNumbers, generalSettings } = data;
+    const intl = useIntl();
+    const [historyOpen, setHistoryOpen] = useState(false);
+    const historyTrigger = useRef<HTMLButtonElement>(null);
+    const historyMenuId = useId();
+    const revisionLabel = (revisionId: string) => intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: reusedRevisionNumbers?.[revisionId] ?? revisionNumber ?? "—" });
+    const currentRevision = revisions.find((revision) => revision.id === currentRevisionId);
+    const currentRevisionLabel = currentRevision
+        ? `${intl.formatMessage({ id: "views.revisionNumber" }, { revisionNumber: revisions.indexOf(currentRevision) + 1 })} · ${currentRevision.description ?? intl.formatMessage({ id: getProvenanceMessageId(currentRevision, revisions) })}`
+        : intl.formatMessage({ id: "views.factCheckCurrent" });
+    const currentRunIndex = currentRevisionId ? runs.findIndex((run) => run.reviewedRevisionId === currentRevisionId) : -1;
+    const formatCheckedAt = (checkedAt: string) => generalSettings
+        ? formatDateTime(checkedAt, generalSettings.interfaceLocale, generalSettings.dateFormat, generalSettings.timeFormat, generalSettings.timeZone)
+        : intl.formatDate(new Date(checkedAt), { dateStyle: "medium", timeStyle: "short" });
+    const runOptionLabel = (run: FactCheck) => intl.formatMessage({ id: "views.factCheckRunOption" }, { revision: revisionLabel(run.reviewedRevisionId ?? ""), dateTime: run.createdAt ? formatCheckedAt(run.createdAt) : "—" });
+    const selectedHistoryRun = selectedRun === undefined ? undefined : runs[selectedRun];
+    const selectRunOption = (index: number | undefined) => {
+        selectRun?.(index);
+        setHistoryOpen(false);
+        historyTrigger.current?.focus();
+    };
+    const focusHistoryOption = (last: boolean) => requestAnimationFrame(() => {
+        const items = document.getElementById(historyMenuId)?.querySelectorAll<HTMLButtonElement>("[role^=menuitem]");
+        items?.[last ? items.length - 1 : 0]?.focus();
+    });
+    return runs.length > 0 && selectRun ? <div className="relative flex max-w-full justify-end self-end">
+        <Button ref={historyTrigger} type="button" variant="secondary" compact className="!self-end inline-flex max-w-full items-center gap-2 !text-muted text-xs" aria-label={intl.formatMessage({ id: "views.factCheckHistory" })} aria-controls={historyOpen ? historyMenuId : undefined} aria-expanded={historyOpen} aria-haspopup="menu" onClick={() => setHistoryOpen((open) => !open)} onKeyDown={(event) => {
+            if (event.key === "Escape")
+                setHistoryOpen(false);
+
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                setHistoryOpen(true);
+                focusHistoryOption(event.key === "ArrowUp");
+            }
+        }}>
+            <span className="truncate" title={selectedHistoryRun ? runOptionLabel(selectedHistoryRun) : currentRevisionLabel}>{selectedHistoryRun ? runOptionLabel(selectedHistoryRun) : currentRevisionLabel}</span>
+            <ChevronDownIcon className={`size-3 shrink-0 transition-transform duration-150 motion-reduce:transition-none ${historyOpen ? "rotate-180" : ""}`} />
+        </Button>
+        {historyOpen && <div id={historyMenuId} className="absolute right-0 top-full z-20 mt-1 max-h-72 w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-control border border-border bg-surface-raised p-1 shadow-raised" role="menu" aria-label={intl.formatMessage({ id: "views.factCheckHistory" })} onKeyDown={(event) => {
+            const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("[role^=menuitem]")];
+            const index = document.activeElement instanceof HTMLButtonElement ? items.indexOf(document.activeElement) : -1;
+            const next = event.key === "ArrowDown" ? index + 1 : event.key === "ArrowUp" ? index - 1 : event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : undefined;
+            if (event.key === "Escape") {
+                event.preventDefault();
+                setHistoryOpen(false);
+                historyTrigger.current?.focus();
+            } else if (next !== undefined) {
+                event.preventDefault();
+                items[(next + items.length) % items.length]?.focus();
+            }
+        }}>
+            <button className="flex min-h-9 w-full items-center gap-2 rounded-control px-2 py-1 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" role="menuitemradio" aria-checked={selectedRun === undefined} onClick={() => selectRunOption(undefined)}>
+                <span className="grid size-5 shrink-0 place-items-center rounded-full border border-border bg-surface-raised text-brand"><UpdateIcon className="size-3" /></span>
+                <span className="min-w-0 flex-1 truncate" title={currentRevisionLabel}>{currentRevisionLabel}</span>
+                <span className="text-micro font-semibold text-muted">{intl.formatMessage({ id: "revisions.current" })}</span>
+            </button>
+            {runs.map((run, index) => index !== currentRunIndex && <button key={index} className="flex min-h-9 w-full items-center gap-2 rounded-control px-2 py-1 text-left text-xs text-ink hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" type="button" role="menuitemradio" aria-checked={selectedRun === index} onClick={() => selectRunOption(index)}>
+                <span className="grid size-5 shrink-0 place-items-center rounded-full border border-border bg-surface-raised text-brand"><UpdateIcon className="size-3" /></span>
+                <span className="font-semibold">{revisionLabel(run.reviewedRevisionId ?? "")}</span>
+                <span className="min-w-0 flex-1 truncate" title={runOptionLabel(run)}>{run.createdAt ? formatCheckedAt(run.createdAt) : "—"}</span>
+            </button>)}
+        </div>}
+    </div> : null;
+
 }
 
 
