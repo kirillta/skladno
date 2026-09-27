@@ -22,6 +22,7 @@ export interface PreparedAssistantRequest extends ReplayedAssistantRequest {
     usesCapabilityLoop: boolean;
     completedCapability?: string;
     partialFactCheck?: FactCheck;
+    skipFactCheckClaim?: (claim: string) => boolean;
     capabilityActivities: { summary: string; status: "started" | "completed" }[];
     pendingActions: { capability: ActionCapability; input: Readonly<Record<string, string>> }[];
     pendingSkillChange?: AuthorSkillChange;

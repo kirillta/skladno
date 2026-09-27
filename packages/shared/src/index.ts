@@ -199,6 +199,7 @@ export {
     assistantSkillsPath,
     createAssistantMessagesPath,
     createAssistantRequestsPath,
+    createAssistantClaimSelectionPath,
     createAssistantTranslationRejectionPath,
     createAssistantCheckpointPreviewPath,
     createAssistantCheckpointRestorePath,

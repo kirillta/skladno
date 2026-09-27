@@ -168,6 +168,7 @@ function createEngineRequest(request: EditorialServiceRequest, context: Editoria
         ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
         ...(context.previousResponseId ? { previousResponseId: context.previousResponseId } : {}),
         ...(context.factCheck ? { reusableFactFindings: getReusableFactFindings(factChecks, request.articleId) } : {}),
+        ...(context.factCheck ? { skipFactCheckClaim: request.skipFactCheckClaim } : {}),
     };
 }
 

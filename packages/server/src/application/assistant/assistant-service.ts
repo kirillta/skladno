@@ -6,7 +6,6 @@ import { AssistantRequestPreparation } from "./requests/assistant-request-prepar
 import type { FactChecksStore } from "./fact-checks-store.js";
 import type { PreparedAssistantRequest } from "./requests/prepared-assistant-request.js";
 import type { AssistantServiceRequest } from "./requests/assistant-service-request.js";
-import { getActivityForEditorialOperation } from "./capabilities/editorial-capability-catalog.js";
 import type { AssistantStore } from "./assistant-store.js";
 import { EDITORIAL_ENGINE_EVENT } from "../editorial/engine/editorial-engine-events.js";
 import { EDITORIAL_ENGINE_ERROR } from "../editorial/engine/editorial-engine-errors.js";
@@ -22,6 +21,9 @@ import type { SettingsStore } from "../settings/settings-store.js";
 import { ApplicationServiceError } from "../errors/application-service-error.js";
 import { AssistantEditError } from "./assistant-store.js";
 import { streamAssistantEngineEvents } from "./assistant-engine-request.js";
+import { AssistantClaimSelection } from "./requests/assistant-claim-selection.js";
+import { getAssistantInitialEvents } from "./requests/assistant-initial-events.js";
+import { getActivityForEditorialOperation } from "./capabilities/editorial-capability-catalog.js";
 import { AssistantEditService } from "./assistant-edit-service.js";
 
 
@@ -39,6 +41,9 @@ interface AssistantServiceStores {
 
 export class AssistantService {
     private readonly startedAt = new Map<string, TimedTelemetryCapture>();
+
+
+    private readonly claimSelection = new AssistantClaimSelection();
 
 
     private readonly preparation: AssistantRequestPreparation;
@@ -131,9 +136,10 @@ export class AssistantService {
         this.startedAt.delete(request.requestId);
         let initialized = false;
         try {
+            request.skipFactCheckClaim = this.claimSelection.start(request.articleId, request.requestId);
             this.initializeRequest(request);
             initialized = true;
-            yield* this.initialEvents(request);
+            yield* getAssistantInitialEvents(request);
 
             const completedEvent = yield* this.consumeEditorialEvents(request, signal);
 
@@ -153,6 +159,9 @@ export class AssistantService {
         } catch (error) {
             let partial: ReturnType<AssistantCompletion["persistPartialFactCheck"]> | undefined;
             try {
+                if (request.partialFactCheck && request.skipFactCheckClaim)
+                    request.partialFactCheck = { ...request.partialFactCheck, findings: request.partialFactCheck.findings.filter(({ claim }) => !request.skipFactCheckClaim?.(claim)) };
+
                 if (initialized)
                     partial = persistInterruptedFactCheck(error, request, signal, this.completion);
             } catch (persistenceError) {
@@ -168,7 +177,14 @@ export class AssistantService {
 
             this.handleStreamFailure(request, signal, observed, initialized, error);
             throw error;
+        } finally {
+            this.claimSelection.finish(request.requestId);
         }
+    }
+
+
+    setClaimSelected(articleId: string, requestId: string, claim: string, selected: boolean): void {
+        this.claimSelection.setSelected(articleId, requestId, claim, selected);
     }
 
 
@@ -224,30 +240,6 @@ export class AssistantService {
     }
 
 
-    private initialEvents(request: PreparedAssistantRequest): AssistantEvent[] {
-        return [
-            {
-                type: ASSISTANT_EVENT.ACCEPTED,
-                requestId: request.requestId
-            },
-            {
-                type: ASSISTANT_EVENT.SKILL_RESOLVED,
-                requestId: request.requestId,
-                ...(request.resolvedSkillId ? { skillId: request.resolvedSkillId, source: request.explicitSkillId ? "explicit" : "inferred" } : {})
-            },
-            ...(
-                !request.usesCapabilityLoop && request.operation
-                    ? [{
-                        type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY,
-                        requestId: request.requestId,
-                        activity: { summary: getActivityForEditorialOperation(request.operation), status: "started" as const }
-                    }]
-                    : []
-            )
-        ];
-    }
-
-
     private streamEditorialEvents(request: PreparedAssistantRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
         return request.usesCapabilityLoop ? this.capabilityLoop.stream(request, signal) : this.streamEngineEvents(request, signal);
     }
@@ -259,6 +251,9 @@ export class AssistantService {
                 yield { type: ASSISTANT_EVENT.TEXT_DELTA, requestId: request.requestId, delta: event.delta };
                 return;
             case EDITORIAL_ENGINE_EVENT.TOOL_STATUS:
+                if (event.claims)
+                    this.claimSelection.updateClaims(request.requestId, event.claims);
+
                 yield { type: ASSISTANT_EVENT.TOOL_STATUS, requestId: request.requestId, tool: event.tool, status: event.status, ...(event.claims ? { claims: event.claims } : {}) };
                 return;
             case EDITORIAL_ENGINE_EVENT.COMPLETED:
@@ -279,10 +274,18 @@ export class AssistantService {
         for (const activity of request.capabilityActivities)
             yield { type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: request.requestId, activity };
 
+        this.claimSelection.finish(request.requestId);
+        const selectedEvent = event.factCheck && request.skipFactCheckClaim
+            ? { ...event, factCheck: { ...event.factCheck, findings: event.factCheck.findings.filter(({ claim }) => !request.skipFactCheckClaim?.(claim)) } }
+            : event;
+
+        if (event.factCheck?.findings.length && !selectedEvent.factCheck?.findings.length)
+            throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
         yield { type: ASSISTANT_EVENT.STAGED_COMPLETION, requestId: request.requestId, completion: { responseKind: kind } };
         signal.throwIfAborted();
         const createdSkill = this.capabilityLoop.commitPendingSkill(request);
-        const completion = this.persistAssistantCompletion(request, event, createdSkill);
+        const completion = this.persistAssistantCompletion(request, selectedEvent, createdSkill);
 
         if (createdSkill)
             this.capabilityLoop.finishPendingSkill(request.requestId);

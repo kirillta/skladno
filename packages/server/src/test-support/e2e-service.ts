@@ -81,6 +81,11 @@ class E2eFixtureEngine implements EditorialEngine {
                 type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS,
                 tool: "claim_extraction", status: "started"
             };
+            if (request.authorContext === "inspect pending claims" || request.authorContext === "restore pending claims") {
+                yield* streamSelectableFixtureClaims(request, signal);
+                return;
+            }
+
             yield {
                 type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS,
                 tool: "claim_extraction",
@@ -138,6 +143,55 @@ class E2eFixtureEngine implements EditorialEngine {
     async *streamConversation(request: EditorialConversationRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
         yield* this.stream({ operation: EDITORIAL_OPERATION.FLOW_REVISION, article: request.article, authorContext: request.message }, signal);
     }
+}
+
+
+async function* streamSelectableFixtureClaims(request: EditorialEngineRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+    const first = "The first fixture claim.";
+    const second = "The second fixture claim.";
+    yield {
+        type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "completed", claims: [
+            { claim: first, checked: false }, { claim: second, checked: false },
+        ]
+    };
+
+    yield {
+        type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "completed", claims: [
+            { claim: first, checked: false, checking: true }, { claim: second, checked: false, checking: true },
+        ]
+    };
+
+    await waitForFixtureSelection(request, signal, first);
+    if (signal.aborted)
+        return;
+
+    const claims = request.authorContext === "restore pending claims" ? [first, second] : [second];
+    yield {
+        type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "e2e-fact-check", text: "", factCheck: {
+            findings: claims.map((claim) => ({
+                claim, status: FACT_CHECK_STATUS.SUPPORTED, rationale: "Fixture evidence.", uncertainty: "low", sources: [],
+            }))
+        }
+    };
+}
+
+
+function waitForFixtureSelection(request: EditorialEngineRequest, signal: AbortSignal, claim: string): Promise<void> {
+    return new Promise((resolve) => {
+        let skipped = false;
+        const interval = setInterval(() => {
+            skipped ||= Boolean(request.skipFactCheckClaim?.(claim));
+            if (signal.aborted || (skipped && (request.authorContext === "inspect pending claims" || !request.skipFactCheckClaim?.(claim)))) {
+                clearInterval(interval);
+                clearTimeout(timeout);
+                resolve();
+            }
+        }, 20);
+        const timeout = setTimeout(() => {
+            clearInterval(interval);
+            resolve();
+        }, 60_000);
+    });
 }
 
 

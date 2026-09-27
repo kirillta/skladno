@@ -224,7 +224,7 @@ test("the live Assistant tool loop runs no-input artifact capabilities", async (
         });
         const body = await response.text();
 
-        assert.match(body, /"summary":"Checking facts\."/);
+        assert.match(body, /"summary":"Preparing claims\."/);
         assert.match(body, /"type":"staged_completion"/);
         assert.match(body, /"responseKind":"findings_prepared"/);
         assert.equal(repositories.editorialArtifacts.listEditorialArtifacts(article.id)[0]?.kind, "fact-check");

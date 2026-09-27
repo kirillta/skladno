@@ -4,6 +4,7 @@ import type { BuiltInSkillId, EditorialOperation } from "@skladno/shared";
 export interface EditorialServiceRequest {
     articleId: string;
     requestId: string;
+    skipFactCheckClaim?: (claim: string) => boolean;
     operation: EditorialOperation;
     authorContext: string;
     skillId?: BuiltInSkillId;

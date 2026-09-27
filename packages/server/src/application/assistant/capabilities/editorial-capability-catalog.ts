@@ -98,6 +98,7 @@ function createEditorialRequest(input: StreamContext, operation: EditorialOperat
     return {
         articleId: input.context.articleId,
         requestId: input.requestId,
+        skipFactCheckClaim: input.skipFactCheckClaim,
         operation,
         authorContext: input.authorContext,
         ...(input.capability === EDITORIAL_CAPABILITY.GENERATE_FINDING_CORRECTIONS

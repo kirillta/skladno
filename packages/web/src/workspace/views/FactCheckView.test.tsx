@@ -10,8 +10,8 @@ type FactCheckViewTestProps = Parameters<typeof RenderFactCheckView>[0]["data"] 
 
 
 function FactCheckView(props: FactCheckViewTestProps) {
-    const { factCheck, currentRevisionId, revisions, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, runAgain, selectRun, resolve, proposeCorrections } = props;
-    return <RenderFactCheckView data={{ factCheck, currentRevisionId, revisions, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical }} actions={{ runAgain, selectRun, resolve, proposeCorrections }} />;
+    const { factCheck, currentRevisionId, revisions, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, checkingClaimCount, runAgain, selectRun, resolve, proposeCorrections } = props;
+    return <RenderFactCheckView data={{ factCheck, currentRevisionId, revisions, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, checkingClaimCount }} actions={{ runAgain, selectRun, resolve, proposeCorrections }} />;
 }
 
 
@@ -22,6 +22,12 @@ const factCheck = { reviewedRevisionId: "revision-1", findings: [{ factId: "fact
 afterEach(cleanup);
 
 describe("FactCheckView", () => {
+    it("distinguishes previous findings from claims in a running check", () => {
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={factCheck} checkingClaimCount={7} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getByText(/checking 7 claims/).textContent).toContain("previous completed check");
+    });
+
     // Product scenario: workspace.findings.incomplete-timeout
     it("labels timed-out findings as incomplete", () => {
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, incomplete: true }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
@@ -83,13 +89,13 @@ describe("FactCheckView", () => {
 
     it("highlights and scrolls to a selected finding, and localizes its resolution", async () => {
         const user = userEvent.setup();
-        const scrollTo = vi.fn();
-        Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: scrollTo });
+        const scrollIntoView = vi.fn();
+        Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings: [{ ...factCheck.findings[0], resolution: "accepted_as_written" }] }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
         screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!.focus();
         await user.keyboard("{Enter}");
-        expect(scrollTo).toHaveBeenCalledOnce();
+        expect(scrollIntoView).toHaveBeenCalledOnce();
         expect(screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!.getAttribute("aria-current")).toBe("true");
         expect(screen.getByText("Accepted as written")).toBeTruthy();
     });

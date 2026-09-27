@@ -22,19 +22,19 @@ interface OpenAIFactCheckProviderOptions {
 export function createOpenAIFactCheckProvider({ client, model, providerOptions }: OpenAIFactCheckProviderOptions): FactCheckProvider {
     return {
         researchStage: "openai_web_research",
-        extractClaims: (article, instructions, signal) => extractClaims(article, instructions, signal, client, model, providerOptions),
+        extractClaims: (article, instructions, signal, previousFindings) => extractClaims(article, instructions, signal, previousFindings ?? [], client, model, providerOptions),
         researchClaims: (claims, instructions, signal) => researchClaims(claims, instructions, signal, client, model, providerOptions),
         evaluateClaims: (research, instructions, signal) => evaluateClaims(research, instructions, signal, client, model, providerOptions),
     };
 }
 
 
-async function extractClaims(article: string, instructions: string, signal: AbortSignal, client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<{ responseId: string; claims: { claim: string }[] }> {
+async function extractClaims(article: string, instructions: string, signal: AbortSignal, previousFindings: { claim: string }[], client: OpenAIFactCheckProviderOptions["client"], model: string, providerOptions: OpenAIFactCheckProviderOptions["providerOptions"]): Promise<{ responseId: string; claims: { claim: string }[] }> {
     const result = await generateText({
         ...createAiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
         system: instructions,
-        prompt: `Phase: claim extraction\n\nArticle:\n${article}`,
-        output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12) }) }),
+        prompt: `Phase: claim extraction\n\nPreviously checked claims (include only if still stated in the Article):\n${JSON.stringify(previousFindings.map(({ claim }) => claim))}\n\nArticle:\n${article}`,
+        output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12 + previousFindings.length) }) }),
     });
     const completedResponseId = getOpenAiResponseId(result.providerMetadata);
     if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))

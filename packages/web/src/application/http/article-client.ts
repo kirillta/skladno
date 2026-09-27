@@ -12,6 +12,7 @@ import {
     createAssistantCheckpointPreviewPath,
     createAssistantCheckpointRestorePath,
     createAssistantRequestsPath,
+    createAssistantClaimSelectionPath,
     createAssistantTranslationRejectionPath,
     createEditorialPath,
     createFactCheckResolutionPath,
@@ -142,6 +143,11 @@ export abstract class HttpArticleClient extends HttpSettingsClient {
 
     async applyAssistantEdit(articleId: string, messageId: string): Promise<ArticleRevision> {
         return this.request<ArticleRevision>(createAssistantApplyEditPath(articleId, messageId), { method: HTTP_METHOD.POST });
+    }
+
+
+    async setAssistantClaimSelected(articleId: string, requestId: string, claim: string, selected: boolean): Promise<void> {
+        await this.request<void>(createAssistantClaimSelectionPath(articleId, requestId), { method: HTTP_METHOD.PUT, body: JSON.stringify({ claim, selected }) });
     }
 
 

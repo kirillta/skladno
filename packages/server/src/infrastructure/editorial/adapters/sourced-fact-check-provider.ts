@@ -13,12 +13,12 @@ import { claimSchema, findingSchema } from "../models/fact-check-schemas.js";
 export function createSourcedFactCheckProvider(model: LanguageModel, research: FactCheckProvider["researchClaims"]): FactCheckProvider {
     return {
         researchStage: "web_research",
-        async extractClaims(article, instructions, signal) {
+        async extractClaims(article, instructions, signal, previousFindings = []) {
             const result = await generateText({
                 ...createAiSdkGenerationOptions({ model, signal }),
                 system: instructions,
-                prompt: `Phase: claim extraction\n\nArticle:\n${article}`,
-                output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12) }) }),
+                prompt: `Phase: claim extraction\n\nPreviously checked claims (include only if still stated in the Article):\n${JSON.stringify(previousFindings.map(({ claim }) => claim))}\n\nArticle:\n${article}`,
+                output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12 + previousFindings.length) }) }),
             });
             if (!result.output || !isAcceptedFinish(result.finishReason))
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);

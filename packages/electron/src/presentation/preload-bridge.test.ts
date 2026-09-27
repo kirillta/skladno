@@ -6,6 +6,7 @@ import { createElectronApplicationClient, exposeElectronApplicationClient, type 
 
 test("preload exposes only the typed application client and completes streams", async () => {
     let streamListener: ((event: unknown, payload: ElectronStreamEvent) => void) | undefined;
+    let skippedClaim: ElectronInvokeRequest | undefined;
     const ipcRenderer: ElectronIpcRenderer = {
         invoke: (_channel: string, request: ElectronInvokeRequest) => {
             if (request.method === "getHealth")
@@ -19,6 +20,11 @@ test("preload exposes only the typed application client and completes streams", 
 
             if (request.method === "applyAssistantEdit")
                 return Promise.resolve({ ok: true, value: { id: "revision-2", articleId: "article-1", content: "After", createdAt: "2026-08-23T00:00:00.000Z", provenance: { kind: "assistant-edit" } } });
+
+            if (request.method === "setAssistantClaimSelected") {
+                skippedClaim = request;
+                return Promise.resolve({ ok: true, value: undefined });
+            }
 
             return Promise.resolve({ ok: true, value: [] });
         },
@@ -56,6 +62,8 @@ test("preload exposes only the typed application client and completes streams", 
     assert.equal(await client.getAssistantEditMode("article-1"), "review");
     assert.equal(await client.setAssistantEditMode("article-1", "direct"), "direct");
     assert.equal((await client.applyAssistantEdit("article-1", "reply-1")).id, "revision-2");
+    await client.setAssistantClaimSelected("article-1", "request-1", "Claim", false);
+    assert.deepEqual(skippedClaim?.args, ["article-1", "request-1", "Claim", false]);
     await client.streamAssistantRequest("article-1", {
         kind: "new",
         requestId: "request-1",

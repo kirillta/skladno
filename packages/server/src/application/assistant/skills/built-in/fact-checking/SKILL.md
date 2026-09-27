@@ -10,7 +10,7 @@ references:
 
 Check factual claims with sources. Keep uncertainty visible and never alter the Article. The current phase is supplied with the relevant Article, claim, or research evidence.
 
-For claim extraction, extract up to 12 externally verifiable factual claims from the Article. Exclude opinions and advice.
+For claim extraction, include every previously checked claim that is still stated in the Article, even if reworded. Extract up to 12 additional externally verifiable factual claims. Keep Article order, avoid duplicates, and exclude opinions and advice. Do not include claims no longer stated in the Article.
 
 For web research, research the factual claim using web search. Prefer primary sources, report source URLs, publication dates when available, and brief supporting or contradicting evidence. Do not infer missing evidence.
 

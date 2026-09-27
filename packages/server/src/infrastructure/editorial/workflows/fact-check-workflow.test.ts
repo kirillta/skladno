@@ -109,6 +109,10 @@ test("checks three claims concurrently and reports each completed claim before t
 
     await new Promise<void>((resolve) => setImmediate(resolve));
     assert.deepEqual(started, ["first", "second", "third"]);
+    const checking = events.filter((event) => event.type === "tool_status" && event.claims).at(-1);
+    assert.deepEqual(checking?.type === "tool_status" ? checking.claims?.map(({ claim, checking: active }) => [claim, Boolean(active)]) : [], [
+        ["first", true], ["second", true], ["third", true], ["fourth", false],
+    ]);
     finish.get("second")!();
     await new Promise<void>((resolve) => setImmediate(resolve));
     assert.deepEqual(events.filter((event) => event.type === "fact_check_progress").at(-1)?.factCheck.findings.map(({ claim }) => claim), ["second"]);
@@ -158,4 +162,93 @@ test("accepts multiple findings from one claim evaluation", async () => {
     }
 
     assert.deepEqual(completed?.findings.map(({ claim }) => claim), ["first fact", "second fact"]);
+});
+
+
+test("exposes extracted claims before research and skips a deselected claim", async () => {
+    const skipped = new Set<string>();
+    const researched: string[] = [];
+    const provider: FactCheckProvider = {
+        researchStage: "web_research",
+        extractClaims: async () => ({ responseId: "extracted", claims: [{ claim: "first" }, { claim: "second" }] }),
+        researchClaims: async ([item]) => {
+            researched.push(item!.claim);
+            return [{ claim: item!.claim, evidence: "Evidence", sources: [] }];
+        },
+        evaluateClaims: async ([item]) => ({ responseId: "evaluated", findings: [{ claim: item!.claim, status: "supported", rationale: "Evidence", uncertainty: "Low", sources: [] }] }),
+    };
+    const stream = streamFactCheck({ request: { article: "Article", instructions: "Check", skipFactCheckClaim: (claim) => skipped.has(claim) }, signal: new AbortController().signal, provider })[Symbol.asyncIterator]();
+    let preview: EditorialEngineEvent | undefined;
+    while (!preview || preview.type !== "tool_status" || !preview.claims)
+        preview = (await stream.next()).value;
+
+    assert.deepEqual(preview.claims?.map(({ claim }) => claim), ["first", "second"]);
+    assert.deepEqual(researched, []);
+    skipped.add("first");
+    let completed: FactCheck | undefined;
+    for (let step = await stream.next(); !step.done; step = await stream.next()) {
+        if (step.value.type === "completed")
+            completed = step.value.factCheck;
+    }
+
+    assert.deepEqual(researched, ["second"]);
+    assert.deepEqual(completed?.findings.map(({ claim }) => claim), ["second"]);
+});
+
+
+test("retains six existing claims alongside new claims omitted by extraction", async () => {
+    const existing = Array.from({ length: 6 }, (_, index) => `Established fact ${index + 1}.`);
+    const article = [...existing, "New fact one.", "New fact two."].join(" ");
+    const previous = existing.map((claim, index) => ({ ...base, factId: `fact-${index}`, claim }));
+    const provider: FactCheckProvider = {
+        researchStage: "web_research",
+        extractClaims: async () => ({ responseId: "extracted", claims: [{ claim: "New fact one." }, { claim: "New fact two." }] }),
+        researchClaims: async ([item]) => [{ claim: item!.claim, evidence: "Evidence", sources: [] }],
+        evaluateClaims: async ([item]) => ({ responseId: "evaluated", findings: [{ claim: item!.claim, status: "supported", rationale: "Evidence", uncertainty: "Low", sources: [] }] }),
+    };
+    const previews: string[][] = [];
+    let result: FactCheck | undefined;
+    for await (const event of streamFactCheck({ request: { article, instructions: "Check", reusableFactFindings: previous }, signal: new AbortController().signal, provider })) {
+        if (event.type === "tool_status" && event.claims)
+            previews.push(event.claims.map(({ claim }) => claim));
+
+        if (event.type === "completed")
+            result = event.factCheck;
+    }
+
+    const order = [...existing, "New fact one.", "New fact two."];
+    assert.deepEqual(result?.findings.map(({ claim }) => claim).sort(), [...order].sort());
+    assert.ok(previews.every((claims) => claims.join("|") === order.join("|")));
+});
+
+
+test("restores an in-flight claim before the Assistant finishes", async () => {
+    const skipped = new Set<string>();
+    const finish = new Map<string, () => void>();
+    const provider: FactCheckProvider = {
+        researchStage: "web_research",
+        extractClaims: async () => ({ responseId: "extracted", claims: [{ claim: "first" }, { claim: "second" }] }),
+        researchClaims: async ([item]) => {
+            const claim = item!.claim;
+            await new Promise<void>((resolve) => finish.set(claim, resolve));
+            return [{ claim, evidence: "Evidence", sources: [] }];
+        },
+        evaluateClaims: async ([item]) => ({ responseId: "evaluated", findings: [{ claim: item!.claim, status: "supported", rationale: "Evidence", uncertainty: "Low", sources: [] }] }),
+    };
+    let completed: FactCheck | undefined;
+    const run = (async () => {
+        for await (const event of streamFactCheck({ request: { article: "first second", instructions: "Check", skipFactCheckClaim: (claim) => skipped.has(claim) }, signal: new AbortController().signal, provider })) {
+            if (event.type === "completed")
+                completed = event.factCheck;
+        }
+    })();
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    skipped.add("first");
+    finish.get("first")!();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    skipped.delete("first");
+    finish.get("second")!();
+    await run;
+    assert.deepEqual(completed?.findings.map(({ claim }) => claim), ["first", "second"]);
 });

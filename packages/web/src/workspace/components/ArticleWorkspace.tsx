@@ -28,6 +28,7 @@ interface ArticleWorkspaceViewState {
     corpus: StyleCorpusState;
     publishing: PublishingState;
     generalSettings: GeneralSettings;
+    checkingClaimCount?: number;
 }
 
 
@@ -94,7 +95,7 @@ function addTranslationBadge(badges: Partial<Record<WorkspaceView, WorkspaceTabB
 
 
 export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceViewState; actions: ArticleWorkspaceActions }) {
-    const { workspace, layout, editorial, revisions, corpus, publishing, generalSettings } = state;
+    const { workspace, layout, editorial, revisions, corpus, publishing, generalSettings, checkingClaimCount } = state;
     const { createBlank, runFactCheck, runTranslation, rejectTranslation, shortcutOverrides, onSelectionChange, assistantSelection } = actions;
     const intl = useIntl();
     const { notifyError } = useNotifications();
@@ -135,7 +136,7 @@ export function ArticleWorkspace({ state, actions }: { state: ArticleWorkspaceVi
         </Banner>}
         <WorkspaceTabBar view={layout.view} setView={layout.setView} badges={badges} shortcutOverrides={shortcutOverrides} />
         <WorkspaceViewRouter
-            content={{ view: layout.view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile: publishing.profile, publishProfileLabel }}
+            content={{ view: layout.view, article, workspace, editorial, revisions, corpus, generalSettings, checkingClaimCount, publishProfile: publishing.profile, publishProfileLabel }}
             actions={{ runFactCheck, runTranslation, rejectTranslation, onSelectionChange, assistantSelection }}
             navigation={{
                 proposalWarningsDismissed: layout.proposalWarningsDismissed, dismissProposalWarnings: () => layout.setProposalWarningsDismissed(true), openWrite: () => layout.setView("write"), openAssistant: () => {

@@ -25,6 +25,7 @@ interface FactCheckData {
     stale: boolean;
     historical?: boolean;
     generalSettings?: GeneralSettings;
+    checkingClaimCount?: number;
 }
 
 
@@ -37,7 +38,7 @@ interface FactCheckActions {
 
 
 export function FactCheckView({ data, actions }: { data: FactCheckData; actions: FactCheckActions }) {
-    const { factCheck, currentRevisionId, revisions = [], runs = [], selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, generalSettings } = data;
+    const { factCheck, currentRevisionId, revisions = [], runs = [], selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, generalSettings, checkingClaimCount } = data;
     const { runAgain, selectRun, resolve, proposeCorrections } = actions;
     const intl = useIntl();
     const [selected, setSelected] = useState(new Set<string>());
@@ -111,6 +112,7 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
     if (!factCheck)
         return <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col gap-4">
             {runSelector}
+            <RunningFactCheckNotice count={checkingClaimCount} previous={false} />
             <EmptyState title={intl.formatMessage({ id: "views.factCheckEmptyTitle" })}>{intl.formatMessage({ id: "views.factCheckEmpty" })}
                 <Button onClick={runAgain}>{intl.formatMessage({ id: "views.runFactCheck" })}</Button>
             </EmptyState>
@@ -175,6 +177,7 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
                 </div>
             </div>
         </header>
+        <RunningFactCheckNotice count={checkingClaimCount} previous />
         {stale && <Banner className="mt-4" tone="warning"><span>{intl.formatMessage({ id: "views.factCheckStale" })}</span></Banner>}
         {factCheck.incomplete && <Banner className="mt-4" tone="warning"><span>{intl.formatMessage({ id: "views.factCheckIncomplete" })}</span></Banner>}
         {!stale && historical && <Banner className="mt-4" tone="warning">
@@ -205,9 +208,9 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
                             && !isStale(finding)
                             && finding.occurrenceId && <div className="flex flex-wrap gap-2">{(finding.status === FACT_CHECK_STATUS.DISPUTED || finding.status === FACT_CHECK_STATUS.UNVERIFIABLE)
                                 && <Button onClick={() => proposeCorrections([finding])}>{intl.formatMessage({ id: "views.proposeFactCorrection" })}</Button>}
-                        <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
-                        <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
-                        </div>
+                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "accepted_as_written")}>{intl.formatMessage({ id: "views.acceptFactAsWritten" })}</Button>
+                                <Button variant="secondary" onClick={() => void resolve(finding.occurrenceId!, "evidence_accepted")}>{intl.formatMessage({ id: "views.acceptFactEvidence" })}</Button>
+                            </div>
                         }
                     </div>
                     {finding.reusedFromRevisionId && <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "views.factEvidenceReused" }, { revision: revisionLabel(finding.reusedFromRevisionId) })}</p>}
@@ -225,4 +228,16 @@ export function FactCheckView({ data, actions }: { data: FactCheckData; actions:
             })}</div>
         </div>
     </div>;
+}
+
+
+function RunningFactCheckNotice({ count, previous }: { count: number | undefined; previous: boolean }) {
+    const intl = useIntl();
+    if (count === undefined)
+        return null;
+
+    const id = previous ? "views.factCheckRunningPrevious" : "views.factCheckRunningEmpty";
+    return <Banner className={previous ? "mt-4" : undefined} tone="info">
+        <span>{intl.formatMessage({ id }, { count })}</span>
+    </Banner>;
 }

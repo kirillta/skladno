@@ -46,6 +46,7 @@ interface EditorialAssistantData {
     errorDetails?: string;
     activity?: AssistantCapabilityActivity;
     factCheckClaims?: FactCheckClaimPreview[];
+    activeRequestId?: string;
     translationLanguages?: readonly string[];
     assistantMessages?: AssistantMessage[];
     streamedMessage?: StreamedAssistantMessage;
@@ -63,6 +64,7 @@ interface EditorialAssistantActions {
     onRequest: (authorMessage: string, skillId?: string, language?: string | readonly string[], skillOffset?: number) => Promise<void>;
     loadAuthorSkills?: () => Promise<void>;
     onCancel: () => void;
+    setClaimSelected?: (claim: string, selected: boolean) => Promise<void>;
     onRetry?: (requestId: string) => void;
     setEditMode?: (mode: AssistantEditMode) => Promise<void>;
     applyEdit?: (messageId: string) => Promise<void>;
@@ -85,8 +87,8 @@ interface EditorialAssistantLayout {
 
 
 export function EditorialAssistantPanel({ data, actions, layout }: { data: EditorialAssistantData; actions: EditorialAssistantActions; layout: EditorialAssistantLayout }) {
-    const { articleId, state, message, errorDetails, activity, factCheckClaims, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, editMode, hasUnavailableAiConnection, checkpointPreview, restoredComposer, authorSkills } = data;
-    const { onRequest, onCancel, onRetry, setEditMode, applyEdit, loadAuthorSkills, dispatcher, shortcutOverrides, openView, openSkillFolder, clearSelection, openSettings, previewCheckpoint, restoreCheckpoint, closeCheckpoint } = actions;
+    const { articleId, state, message, errorDetails, activity, factCheckClaims, activeRequestId, translationLanguages = [], assistantMessages, streamedMessage, selection, generalSettings = defaultGeneralSettings, editMode, hasUnavailableAiConnection, checkpointPreview, restoredComposer, authorSkills } = data;
+    const { onRequest, onCancel, onRetry, setClaimSelected, setEditMode, applyEdit, loadAuthorSkills, dispatcher, shortcutOverrides, openView, openSkillFolder, clearSelection, openSettings, previewCheckpoint, restoreCheckpoint, closeCheckpoint } = actions;
     const { collapsed, setCollapsed } = layout;
     const intl = useIntl();
     const composerState = useAssistantComposer({ articleId, intl, state, onRequest, onCancel, translationLanguages, authorSkills, loadAuthorSkills, dispatcher, selection, clearSelection, assistantSendMode: generalSettings.assistantSendMode, shortcutOverrides: shortcutOverrides ?? {}, restoredComposer });
@@ -114,7 +116,7 @@ export function EditorialAssistantPanel({ data, actions, layout }: { data: Edito
             <AssistantIcon className="size-5 shrink-0 text-brand" />
             <h2 className="text-base font-semibold text-brand">{intl.formatMessage({ id: "assistant.heading" })}</h2>
         </header>
-        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection, authorSkills }} actions={{ openView, openSkillFolder, onRetry, openSettings, onCheckpoint: openCheckpoint, applyEdit }} />
+        <AssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, activeRequestId, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection, authorSkills }} actions={{ openView, openSkillFolder, onRetry, openSettings, onCheckpoint: openCheckpoint, applyEdit, setClaimSelected }} />
         <AssistantComposer
             state={{ state, canSend: composerState.canSend, guidance: composerState.guidance, selectedSkill: composerState.selectedSkill, skillOffset: composerState.skillOffset, caretOffset: composerState.caretOffset, selection, clearSelection, incompatibleSelectionSkill: composerState.incompatibleSelectionSkill, editMode }}
             picker={{ quickActionsOpen: composerState.quickActionsOpen, availableSkills: composerState.availableSkills, activeSkillIndex: composerState.activeSkillIndex, setQuickActionsOpen: composerState.setQuickActionsOpen, setActiveSkillIndex: composerState.setActiveSkillIndex, selectSkill: composerState.selectSkill, focusQuickAction: composerState.focusQuickAction }}

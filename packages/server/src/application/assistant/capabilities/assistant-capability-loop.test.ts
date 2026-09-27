@@ -6,6 +6,7 @@ import test from "node:test";
 import { BUILT_IN_SKILL, type AssistantSkillReference, type AssistantSkillSummary } from "@skladno/shared";
 
 import { AssistantCapabilityLoop } from "./assistant-capability-loop.js";
+import { editorialCapabilityDefinitions } from "./editorial-capability-registry.js";
 import { AssistantSkillCatalog } from "../skills/assistant-skill-catalog.js";
 import type { AssistantSkillSource } from "../skills/assistant-skill-source.js";
 import { builtInSkillSource } from "../skills/built-in-skill-source.js";
@@ -60,6 +61,55 @@ test("Assistant execution loads Skills from its catalog", async () => {
 
     assert.deepEqual(received?.instructions, ["Catalog instructions."]);
     assert.deepEqual(received?.skills.map((skill) => skill.name), ["Catalog Skill"]);
+});
+
+
+test("streams extracted Fact Check claims while the capability is still running", async () => {
+    let finishResearch: () => void = () => undefined;
+    const research = new Promise<void>((resolve) => {
+        finishResearch = resolve;
+    });
+    const engine = {
+        async *stream() {
+            return;
+        },
+        async *streamConversation() {
+            return;
+        },
+        async *streamAssistant(request: EditorialAssistantRequest) {
+            const factCheck = request.tools.find((tool) => tool.capability === "fact_check");
+            assert.ok(factCheck);
+            await factCheck.execute({}, new AbortController().signal);
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant", text: "Done" } as const;
+        },
+    };
+    const request: PreparedAssistantRequest = {
+        kind: "new", requestId: "request", articleId: "article", authorMessage: "Check facts",
+        scope: { kind: "article", baseRevisionId: "revision" }, articleContent: "Article", articleTitle: "Title",
+        resolvedSkillId: BUILT_IN_SKILL.FACT_CHECKING, engine, usesCapabilityLoop: true,
+        capabilityActivities: [], pendingActions: [], authorizedActions: [],
+    };
+    const loop = new AssistantCapabilityLoop({
+        assistant: { setExecution: () => undefined }, engines: {},
+        capabilities: {
+            getDefinitions: () => editorialCapabilityDefinitions.filter((definition) => definition.id === "fact_check"),
+            discover: () => [], read: () => undefined, executeAction: () => ({ items: [], rules: "", status: "empty" }),
+            stream: async function* () {
+                yield { type: EDITORIAL_ENGINE_EVENT.TOOL_STATUS, tool: "claim_extraction", status: "completed", claims: [{ claim: "First claim", checked: false }] } as const;
+                await research;
+                yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "checked", text: "", factCheck: { findings: [] } } as const;
+            },
+        },
+        skills: new AssistantSkillCatalog([builtInSkillSource]), conversationHistory: () => [],
+    });
+    const stream = loop.stream(request, new AbortController().signal)[Symbol.asyncIterator]();
+    const preview = await stream.next();
+    assert.equal(preview.value?.type, EDITORIAL_ENGINE_EVENT.TOOL_STATUS);
+    if (preview.value?.type === EDITORIAL_ENGINE_EVENT.TOOL_STATUS)
+        assert.deepEqual(preview.value.claims, [{ claim: "First claim", checked: false }]);
+
+    finishResearch();
+    assert.equal((await stream.next()).value?.type, EDITORIAL_ENGINE_EVENT.COMPLETED);
 });
 
 
