@@ -25,6 +25,12 @@ import type { useEditorialResults } from "./editorial-results-state.js";
 
 type EditorialResultsState = ReturnType<typeof useEditorialResults>;
 
+
+function correctionSelection(revisionId: string, occurrenceIds?: string[]) {
+    return occurrenceIds?.length ? { expectedRevisionId: revisionId, occurrenceIds } : undefined;
+}
+
+
 export type ProposalDecision = "pending" | "accepted" | "rejected";
 
 
@@ -52,7 +58,7 @@ type ProposalActionsInput = ProposalSetters & {
         setProposalSummaries: Dispatch<SetStateAction<Record<string, string>>>;
         setProposalSummaryLocale: Dispatch<SetStateAction<string | undefined>>;
     };
-    results: Pick<EditorialResultsState, "applyResult" | "loadFactChecks" | "markCorrectedFindings" | "resolveFactCheck" | "createTranslation" | "rejectTranslation" | "setFactCheck" | "setStyleReview" | "retainTranslation" | "replaceTranslations">;
+    results: Pick<EditorialResultsState, "applyResult" | "loadFactChecks" | "resolveFactCheck" | "createTranslation" | "rejectTranslation" | "setFactCheck" | "setStyleReview" | "retainTranslation" | "replaceTranslations">;
     restoredArticleIds: { current: Set<string> };
     controller: { current: AbortController | undefined };
 };
@@ -99,7 +105,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
     const { notifyError } = useNotifications();
     const telemetry = getDesktopTelemetryClient();
     const { setProposal, setBase, setDecisions, setState, setMessage } = setters;
-    const { applyResult, loadFactChecks, markCorrectedFindings, resolveFactCheck, createTranslation, rejectTranslation, setFactCheck, setStyleReview, retainTranslation, replaceTranslations } = results;
+    const { applyResult, loadFactChecks, resolveFactCheck, createTranslation, rejectTranslation, setFactCheck, setStyleReview, retainTranslation, replaceTranslations } = results;
 
 
     async function request(operation: EditorialOperation, authorContext: string, targetLanguage?: string, correctedFindingIds?: string[]) {
@@ -125,7 +131,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
 
             const requestController = new AbortController();
             controller.current = requestController;
-            await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: getProviderLanguageName(targetLanguage) } : {}) }, (event) => handleEditorialEvent({ event, articleId: article.id, content, revisionId, operation, correctedFindingIds, setProposal, setBase, setState, setMessage, setFactCheck, loadFactChecks, setStyleReview, retainTranslation, intl }), requestController.signal);
+            await client.streamEditorial(article.id, { requestId: crypto.randomUUID(), operation, authorContext, ...(targetLanguage ? { targetLanguage: getProviderLanguageName(targetLanguage) } : {}), correctionSelection: correctionSelection(revisionId, correctedFindingIds) }, (event) => handleEditorialEvent({ event, articleId: article.id, content, revisionId, operation, correctedFindingIds, setProposal, setBase, setState, setMessage, setFactCheck, loadFactChecks, setStyleReview, retainTranslation, intl }), requestController.signal);
         } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {
                 setState("error");
@@ -143,9 +149,12 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
         if (!article || !base || !review || stale || accepted)
             return;
 
+        const completeCorrection = Boolean(base.correctedFindingIds?.length && acceptedChangeIds.size === review.changes.length);
+        const acceptWhole = wholeProposal || completeCorrection;
+
         const telemetryGeneration = await beginBestEffortTelemetryCapture(telemetry);
         const content = base.correctedFindingIds?.length
-            ? applyProposalChanges(review, wholeProposal ? new Set(review.changes.map((change) => change.id)) : acceptedChangeIds, true)
+            ? applyProposalChanges(review, acceptWhole ? new Set(review.changes.map((change) => change.id)) : acceptedChangeIds, true)
             : wholeProposal ? review.proposedContent : applyProposalChanges(review, acceptedChangeIds);
         try {
             const revision = await client.acceptProposal(article.id, {
@@ -156,7 +165,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
                     kind: REVISION_PROVENANCE_KIND.ACCEPTED_PROPOSAL,
                     baseRevisionId: base.revisionId,
                     ...(base.editorialArtifactId ? { editorialArtifactId: base.editorialArtifactId } : {}),
-                    ...(wholeProposal ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] })
+                    ...(acceptWhole ? { wholeProposal: true } : { acceptedChangeIds: [...acceptedChangeIds] })
                 }
             });
 
@@ -164,7 +173,7 @@ export function useProposalActions({ client, workspace, intl, proposal: { base, 
             workspace.setContent(content);
             captureBestEffortTelemetry(telemetry, { kind: "proposal_reviewed", decision: "accepted" }, telemetryGeneration);
             if (base.correctedFindingIds?.length)
-                await markCorrectedFindings(article.id, base.correctedFindingIds);
+                await loadFactChecks();
 
             setBase({ ...base, accepted: true });
             setDecisions(Object.fromEntries(review.changes.map((change) => [change.id, wholeProposal || acceptedChangeIds.has(change.id) ? "accepted" : "rejected"])));

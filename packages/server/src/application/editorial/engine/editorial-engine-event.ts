@@ -15,6 +15,10 @@ export type EditorialEngineEvent =
         claims?: FactCheckClaimPreview[]
     }
     | {
+        type: typeof EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS;
+        factCheck: FactCheck;
+    }
+    | {
         type: typeof EDITORIAL_ENGINE_EVENT.COMPLETED;
         responseId: string;
         continuationToken?: string;

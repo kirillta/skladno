@@ -129,6 +129,45 @@ test("a cancelled assistant stream does not change the Article", async ({ page }
 });
 
 
+test("extracted claims appear during Fact Check and an Author can skip one", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+    await page.getByRole("combobox", { name: "Editorial guidance" }).fill("inspect pending claims");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Fact checking" }).click();
+    await page.getByRole("button", { name: "Send editorial request" }).click();
+
+    const claims = page.getByRole("region", { name: "Claims to check" });
+    await expect(claims).toBeVisible();
+    await expect(page.getByText("Findings prepared")).toHaveCount(0);
+    await claims.getByRole("checkbox", { name: "The first fixture claim." }).focus();
+    await page.keyboard.press("Space");
+    await expect(page.getByText("Findings prepared")).toBeVisible();
+    await page.getByRole("tab", { name: /Fact Check/ }).click();
+    await expect(page.getByText("The second fixture claim.").first()).toBeVisible();
+    await expect(page.getByText("The first fixture claim.")).toHaveCount(0);
+});
+
+
+test("an Author can reselect a claim before Fact Check finishes", async ({ page }) => {
+    await page.goto("/");
+    await createArticle(page);
+    await page.getByRole("combobox", { name: "Editorial guidance" }).fill("restore pending claims");
+    await page.getByRole("button", { name: "Quick actions" }).click();
+    await page.getByRole("option", { name: "Fact checking" }).click();
+    await page.getByRole("button", { name: "Send editorial request" }).click();
+
+    const claim = page.getByRole("region", { name: "Claims to check" }).getByRole("checkbox", { name: "The first fixture claim." });
+    await claim.uncheck();
+    await expect(claim).toBeEnabled();
+    await claim.check();
+    await expect(page.getByText("Findings prepared")).toBeVisible();
+    await page.getByRole("tab", { name: /Fact Check/ }).click();
+    await expect(page.getByText("The first fixture claim.").first()).toBeVisible();
+    await expect(page.getByText("The second fixture claim.").first()).toBeVisible();
+});
+
+
 test("a provider failure does not change the Article", async ({ page }) => {
     await page.goto("/");
     await createArticle(page);

@@ -261,4 +261,26 @@ export const migrations = [
         ALTER TABLE assistant_messages ADD COLUMN applied_revision_id TEXT REFERENCES article_revisions(id);
         `,
     },
+    {
+        version: 22,
+        name: "durable_facts_and_occurrences",
+        sql: `
+        CREATE TABLE facts (
+            id TEXT PRIMARY KEY,
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            first_claim TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE fact_occurrences (
+            id TEXT PRIMARY KEY,
+            fact_id TEXT NOT NULL REFERENCES facts(id) ON DELETE CASCADE,
+            editorial_artifact_id TEXT NOT NULL REFERENCES fact_check_runs(editorial_artifact_id) ON DELETE CASCADE,
+            revision_id TEXT NOT NULL REFERENCES article_revisions(id) ON DELETE RESTRICT,
+            claim TEXT NOT NULL,
+            checked_at TEXT NOT NULL,
+            reused_from_revision_id TEXT REFERENCES article_revisions(id)
+        );
+        CREATE INDEX fact_occurrences_fact_revision ON fact_occurrences(fact_id, revision_id);
+        `,
+    },
 ] as const;

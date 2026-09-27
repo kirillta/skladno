@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import type { FactCheck } from "@skladno/shared";
 
@@ -20,8 +20,16 @@ export function persistFactCheckArtifact(input: {
         reviewedRevisionId: input.revisionId,
         createdAt: checkedAt,
         findings: input.factCheck.findings.map((finding) => {
-            const factId = createHash("sha256").update(finding.claim.trim().toLowerCase().replace(/\s+/g, " ")).digest("hex").slice(0, 16);
-            return { ...finding, factId, occurrenceId: `${input.revisionId}:${factId}`, checkedAt };
+            // Legacy claim hashes were shared across Articles; only locally assigned UUIDs are durable identities.
+            const factId = finding.factId && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(finding.factId) ? finding.factId : randomUUID();
+            return {
+                ...finding,
+                factId,
+                occurrenceId: randomUUID(),
+                checkedAt: finding.checkedAt ?? checkedAt,
+                ...(finding.reusedFromRevisionId && finding.resolution && finding.resolution !== "corrected_or_removed"
+                    ? { resolution: finding.resolution } : { resolution: undefined }),
+            };
         }),
     };
 
@@ -45,7 +53,7 @@ export function persistFactCheckArtifact(input: {
             }
         }
 
-        input.factChecks.saveFactCheckRun(created.id, input.articleId, input.revisionId);
+        input.factChecks.saveFactCheckRun(created.id, input.articleId, input.revisionId, factCheck);
         return created;
     });
 

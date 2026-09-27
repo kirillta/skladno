@@ -187,3 +187,15 @@ export async function createAssistantRequestRoute(request: IncomingMessage, resp
     const prepared = assistant.prepare({ ...input, articleId });
     await streamAssistantRequest(prepared, request, response, assistant, diagnostics);
 }
+
+
+export async function setAssistantClaimSelectedRoute(request: IncomingMessage, response: ServerResponse, articleId: string, requestId: string, assistant: AssistantService): Promise<void> {
+    const body = parseObject(await readJson(request));
+    if (typeof body.selected !== "boolean")
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    assistant.setClaimSelected(articleId, requestId, parseString(body.claim, "claim"), body.selected);
+
+    response.writeHead(HTTP_STATUS.NO_CONTENT);
+    response.end();
+}

@@ -3,6 +3,7 @@ import { ASSISTANT_EVENT, type AssistantEditorialResult, type AssistantEvent } f
 import type { ArticleWorkspaceState } from "./article-workspace-state.js";
 import type { AssistantRequestStore } from "./assistant-request-state.js";
 import { updateStreamedMessage } from "./assistant-streaming.js";
+import { messages } from "../../i18n/messages.js";
 
 
 interface AssistantStreamEventsOptions {
@@ -14,7 +15,7 @@ interface AssistantStreamEventsOptions {
 
 
 export function useAssistantStreamEvents({ articleId, workspace, store, onResult }: AssistantStreamEventsOptions) {
-    const { streamBuffers, setActivityByArticle, setFactCheckClaimsByArticle, setStreamedMessagesByArticle } = store;
+    const { streamBuffers, setActivityByArticle, setFactCheckClaimsByArticle, setActiveRequestIdByArticle, setStreamedMessagesByArticle } = store;
     const clearStream = useCallback((id: string) => {
         delete streamBuffers.current[id];
         setStreamedMessagesByArticle((current) => {
@@ -31,12 +32,16 @@ export function useAssistantStreamEvents({ articleId, workspace, store, onResult
     }, [articleId, setStreamedMessagesByArticle, streamBuffers]);
 
     const handleAssistantEvent = useCallback((event: AssistantEvent, id: string, revisionId: string, streamedId: string) => {
+        if (event.type === ASSISTANT_EVENT.ACCEPTED)
+            setActiveRequestIdByArticle((current) => ({ ...current, [id]: event.requestId }));
+
         if (event.type === ASSISTANT_EVENT.CAPABILITY_ACTIVITY)
             setActivityByArticle((current) => ({ ...current, [id]: event.activity }));
 
         if (event.type === ASSISTANT_EVENT.TOOL_STATUS && event.claims) {
             const { claims } = event;
             setFactCheckClaimsByArticle((current) => ({ ...current, [id]: claims }));
+            setActivityByArticle((current) => ({ ...current, [id]: { summary: messages["assistant.checkingClaims"], status: "started" } }));
         }
 
         if (event.type === ASSISTANT_EVENT.COMPLETED && event.result) {
@@ -55,7 +60,7 @@ export function useAssistantStreamEvents({ articleId, workspace, store, onResult
             event, articleId: id, streamedId, buffers: streamBuffers.current,
             update: (next) => setStreamedMessagesByArticle((current) => ({ ...current, [id]: { ...next, createdAt: current[id]?.createdAt ?? next.createdAt } })),
         });
-    }, [onResult, setActivityByArticle, setFactCheckClaimsByArticle, setStreamedMessagesByArticle, streamBuffers, workspace]);
+    }, [onResult, setActivityByArticle, setFactCheckClaimsByArticle, setActiveRequestIdByArticle, setStreamedMessagesByArticle, streamBuffers, workspace]);
 
     return { clearStream, handleAssistantEvent };
 }

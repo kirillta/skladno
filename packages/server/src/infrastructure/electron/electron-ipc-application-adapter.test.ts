@@ -84,6 +84,9 @@ test("Electron IPC invokes application services and serializes conflict details"
         const rejectedTranslation = await adapter.ipcMain.invoke({ method: ELECTRON_APPLICATION_METHOD.rejectTranslation, args: ["article", "artifact"] });
         assert.deepEqual(rejectedTranslation, { ok: true, value: undefined });
 
+        const invalidClaim = await adapter.ipcMain.invoke({ method: ELECTRON_APPLICATION_METHOD.setAssistantClaimSelected, args: ["article", "request", " ", false] });
+        assert.deepEqual(invalidClaim, { ok: false, error: { code: APPLICATION_ERROR.INVALID_REQUEST, status: HTTP_STATUS.BAD_REQUEST } });
+
         const created = await adapter.ipcMain.invoke({ method: "createArticle", args: [{ title: "Draft", content: "first" }] });
         assert.equal(created.ok, true);
         if (!created.ok)

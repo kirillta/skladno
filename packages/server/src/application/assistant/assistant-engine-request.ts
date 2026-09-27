@@ -33,7 +33,7 @@ export function streamAssistantEngineEvents(request: PreparedAssistantRequest, s
             ? { styleProfile: stores.styleCorpus.getStyleCorpus().profile, articleStyleRules: stores.styleCorpus.getArticleStyleRules(request.articleId) }
             : {}
         ),
-        ...(request.operation === EDITORIAL_OPERATION.FACT_CHECK ? { reusableFactFindings: getReusableFactFindings(stores.factChecks, request.articleId) } : {})
+        ...(request.operation === EDITORIAL_OPERATION.FACT_CHECK ? { reusableFactFindings: getReusableFactFindings(stores.factChecks, request.articleId), skipFactCheckClaim: request.skipFactCheckClaim } : {})
     }, signal);
 }
 

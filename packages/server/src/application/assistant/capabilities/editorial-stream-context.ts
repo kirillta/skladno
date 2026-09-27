@@ -8,6 +8,7 @@ export interface StreamContext {
     capability: Extract<EditorialCapabilityId, "generate_proposal" | "generate_finding_corrections" | "fact_check" | "style_review" | "translate">;
     context: EditorialCapabilityContext;
     requestId: string;
+    skipFactCheckClaim?: (claim: string) => boolean;
     authorContext: string;
     skillId?: BuiltInSkillId;
     targetArticleCharacterLimit?: number;

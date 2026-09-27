@@ -142,7 +142,8 @@ test("fact-check workflow passes the packaged instructions to its provider", asy
         completed ||= event.type === EDITORIAL_ENGINE_EVENT.COMPLETED;
 
     assert.ok(completed);
-    assert.match(instructions, /For claim extraction, extract up to 12 externally verifiable factual claims/);
+    assert.match(instructions, /For claim extraction, include every previously checked claim/);
+    assert.match(instructions, /Extract up to 12 additional externally verifiable factual claims/);
     assert.match(instructions, /For web research, research the factual claim using web search/);
     assert.match(instructions, /For evidence evaluation, evaluate each Article claim/);
 });

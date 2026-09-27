@@ -58,6 +58,7 @@ export class AiSdkEditorialEngine implements EditorialEngine {
                         article: getBoundedArticleContext(request.article),
                         instructions: getBuiltInSkillInstructions(BUILT_IN_SKILL.FACT_CHECKING),
                         reusableFactFindings: request.reusableFactFindings,
+                        skipFactCheckClaim: request.skipFactCheckClaim,
                     },
                     signal,
                     provider,

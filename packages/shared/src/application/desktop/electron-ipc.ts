@@ -52,6 +52,7 @@ export interface ElectronApplicationOperationMap {
     restoreRevision: { args: [string, string]; result: ArticleRevision };
     listAssistantSkills: { args: []; result: AssistantSkillSummary[] };
     listAssistantMessages: { args: [string]; result: import("../../assistant/assistant.js").AssistantMessage[] };
+    setAssistantClaimSelected: { args: [string, string, string, boolean]; result: void };
     getAssistantEditMode: { args: [string]; result: import("../../assistant/assistant.js").AssistantEditMode };
     setAssistantEditMode: { args: [string, import("../../assistant/assistant.js").AssistantEditMode]; result: import("../../assistant/assistant.js").AssistantEditMode };
     applyAssistantEdit: { args: [string, string]; result: ArticleRevision };
@@ -106,6 +107,7 @@ export const ELECTRON_APPLICATION_METHOD = {
     restoreRevision: "restoreRevision",
     listAssistantSkills: "listAssistantSkills",
     listAssistantMessages: "listAssistantMessages",
+    setAssistantClaimSelected: "setAssistantClaimSelected",
     getAssistantEditMode: "getAssistantEditMode",
     setAssistantEditMode: "setAssistantEditMode",
     applyAssistantEdit: "applyAssistantEdit",

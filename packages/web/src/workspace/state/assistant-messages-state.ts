@@ -25,17 +25,31 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
     const [checkpointPreview, setCheckpointPreview] = useState<AssistantCheckpointPreview>();
     const [restoredComposer, setRestoredComposer] = useState<RestoreAssistantCheckpointResult["composer"]>();
     const edits = useAssistantEdits(client, workspace, article?.id, reload);
-    const previewCheckpoint = useCallback(async (messageId: string) => {
+    const setClaimSelected = useCallback(async (claim: string, selected: boolean) => {
         if (!article)
             return;
 
-        store.controller.current?.abort();
+        const requestId = store.activeRequestIdByArticle[article.id];
+        if (!requestId)
+            return;
+
+        try {
+            await client.setAssistantClaimSelected(article.id, requestId, claim, selected);
+        } catch (error) {
+            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "assistant.changeClaimSelectionFailed" }) });
+            throw error;
+        }
+    }, [article, client, intl, notifyError, store.activeRequestIdByArticle]);
+    const previewCheckpoint = useCallback(async (messageId: string) => {
+        if (!article || store.stateByArticle[article.id] === "streaming")
+            return;
+
         try {
             setCheckpointPreview(await client.previewAssistantCheckpoint(article.id, messageId));
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.assistantCheckpointInvalid" }) });
         }
-    }, [article, client, intl, notifyError, store.controller]);
+    }, [article, client, intl, notifyError, store.stateByArticle]);
     const restoreCheckpoint = useCallback(async (draftMode?: AssistantCheckpointDraftMode) => {
         if (!article || !checkpointPreview)
             return;
@@ -66,6 +80,8 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         activity: article ? store.activityByArticle[article.id] : undefined,
         streamedMessage: article ? store.streamedMessagesByArticle[article.id] : undefined,
         factCheckClaims: article ? store.factCheckClaimsByArticle[article.id] : undefined,
+        activeRequestId: article ? store.activeRequestIdByArticle[article.id] : undefined,
+        setClaimSelected,
         request, retry, checkpointPreview, previewCheckpoint, restoreCheckpoint, closeCheckpoint: () => setCheckpointPreview(undefined), restoredComposer,
         ...edits,
         reload,

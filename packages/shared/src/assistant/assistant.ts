@@ -96,6 +96,7 @@ export type AssistantResponseKind = "editorial_conversation"
     | "skill_response"
     | "proposal_prepared"
     | "findings_prepared"
+    | "findings_partial"
     | "proposal_and_findings_prepared"
     | "translation_proposal_prepared"
     | "request_cancelled"
@@ -173,6 +174,7 @@ export interface AssistantEditorialResult {
 
 export const createAssistantMessagesPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/messages`;
 export const createAssistantRequestsPath = (articleId: string) => `/api/articles/${encodeURIComponent(articleId)}/assistant/requests`;
+export const createAssistantClaimSelectionPath = (articleId: string, requestId: string) => `${createAssistantRequestsPath(articleId)}/${encodeURIComponent(requestId)}/claims/selection`;
 export const assistantSkillsPath = "/api/assistant/skills";
 export const createAssistantTranslationRejectionPath = (articleId: string, editorialArtifactId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(editorialArtifactId)}/translation-rejection`;
 export const createAssistantCheckpointPreviewPath = (articleId: string, messageId: string) => `${createAssistantMessagesPath(articleId)}/${encodeURIComponent(messageId)}/checkpoint`;
@@ -254,6 +256,7 @@ export type { AssistantEvent, FactCheckClaimPreview } from "./assistant-events.j
 
 
 export interface AssistantClient {
+    setAssistantClaimSelected(articleId: string, requestId: string, claim: string, selected: boolean): Promise<void>;
     getAssistantEditMode(articleId: string): Promise<AssistantEditMode>;
     setAssistantEditMode(articleId: string, mode: AssistantEditMode): Promise<AssistantEditMode>;
     applyAssistantEdit(articleId: string, messageId: string): Promise<import("../articles/revision/revision.js").ArticleRevision>;

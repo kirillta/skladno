@@ -4,7 +4,7 @@ import type { FactCheckService } from "../../application/editorial/fact-checking
 import { ApplicationServiceError } from "../errors/application-error.js";
 import { parseObject, parseString, readJson, writeJson } from "../transport/json.js";
 
-const resolutions = new Set(["corrected_or_removed", "accepted_as_written", "evidence_accepted"]);
+const resolutions = new Set(["accepted_as_written", "evidence_accepted"]);
 
 
 export function listFactChecksRoute(response: ServerResponse, articleId: string, factChecks: FactCheckService): void {

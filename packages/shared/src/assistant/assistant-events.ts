@@ -5,6 +5,7 @@ import type { AssistantEditorialResult, AssistantResponseKind, AssistantSkillSou
 export interface FactCheckClaimPreview {
     claim: string;
     checked: boolean;
+    checking?: boolean;
 }
 
 
@@ -35,6 +36,7 @@ const assistantResponseKinds: readonly AssistantResponseKind[] = [
     "skill_response",
     "proposal_prepared",
     "findings_prepared",
+    "findings_partial",
     "proposal_and_findings_prepared",
     "translation_proposal_prepared",
     "request_cancelled",
@@ -66,6 +68,15 @@ function isCapabilityActivity(value: unknown): boolean {
 }
 
 
+function isClaimPreviews(value: unknown): value is FactCheckClaimPreview[] {
+    return Array.isArray(value) && value.every((claim) => isRecord(claim)
+        && typeof claim.claim === "string"
+        && typeof claim.checked === "boolean"
+        && (claim.checking === undefined || typeof claim.checking === "boolean")
+    );
+}
+
+
 export function isAssistantEvent(value: unknown): value is AssistantEvent {
     if (!isRecord(value) || typeof value.type !== "string" || typeof value.requestId !== "string")
         return false;
@@ -78,7 +89,7 @@ export function isAssistantEvent(value: unknown): value is AssistantEvent {
         case ASSISTANT_EVENT.TEXT_DELTA:
             return typeof value.delta === "string";
         case ASSISTANT_EVENT.TOOL_STATUS:
-            return typeof value.tool === "string" && (value.status === "started" || value.status === "completed");
+            return typeof value.tool === "string" && (value.status === "started" || value.status === "completed") && (value.claims === undefined || isClaimPreviews(value.claims));
         case ASSISTANT_EVENT.CAPABILITY_ACTIVITY:
             return isCapabilityActivity(value.activity);
         case ASSISTANT_EVENT.STAGED_COMPLETION:

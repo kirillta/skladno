@@ -177,6 +177,7 @@ export function createElectronApplicationClient(ipcRenderer: ElectronIpcRenderer
         getAssistantEditMode: (articleId) => invoke(ELECTRON_APPLICATION_METHOD.getAssistantEditMode, articleId),
         setAssistantEditMode: (articleId, mode) => invoke(ELECTRON_APPLICATION_METHOD.setAssistantEditMode, articleId, mode),
         applyAssistantEdit: (articleId, messageId) => invoke(ELECTRON_APPLICATION_METHOD.applyAssistantEdit, articleId, messageId),
+        setAssistantClaimSelected: (articleId, requestId, claim, selected) => invoke(ELECTRON_APPLICATION_METHOD.setAssistantClaimSelected, articleId, requestId, claim, selected),
         rejectTranslation: (articleId, editorialArtifactId) => invoke(ELECTRON_APPLICATION_METHOD.rejectTranslation, articleId, editorialArtifactId),
         previewAssistantCheckpoint: (articleId, messageId) => invoke(ELECTRON_APPLICATION_METHOD.previewAssistantCheckpoint, articleId, messageId),
         restoreAssistantCheckpoint: (articleId, messageId, input) => invoke(ELECTRON_APPLICATION_METHOD.restoreAssistantCheckpoint, articleId, messageId, input),

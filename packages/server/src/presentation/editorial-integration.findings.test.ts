@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EDITORIAL_OPERATION, HTTP_METHOD, type FactCheckFinding } from "@skladno/shared";
+import { createAssistantClaimSelectionPath, EDITORIAL_OPERATION, HTTP_METHOD, type FactCheckFinding } from "@skladno/shared";
 import type { EditorialEngine } from "../application/editorial/engine/editorial-engine.js";
 import { EDITORIAL_ENGINE_EVENT } from "../application/editorial/engine/editorial-engine-events.js";
 import { streamFactCheck } from "../infrastructure/editorial/workflows/fact-check-workflow.js";
@@ -146,5 +146,81 @@ test("Assistant Fact Check reuses an unchanged supported claim without researchi
 
         assert.equal(response.status, 200);
         assert.equal(researchCalls, 1);
+    });
+});
+
+
+test("Assistant streams claims before completion and restores a deselected claim through the local route", async () => {
+    let finishResearch: () => void = () => undefined;
+    const research = new Promise<void>((resolve) => {
+        finishResearch = resolve;
+    });
+    const provider: FactCheckProvider = {
+        researchStage: "web_research",
+        extractClaims: async () => ({ responseId: "extracted", claims: [{ claim: "First claim" }, { claim: "Second claim" }] }),
+        researchClaims: async ([item]) => {
+            await research;
+            return [{ claim: item!.claim, evidence: "Evidence", sources: [] }];
+        },
+        evaluateClaims: async ([item]) => ({ responseId: "evaluated", findings: [{ claim: item!.claim, status: "supported", rationale: "Evidence", uncertainty: "Low", sources: [] }] }),
+    };
+    const engine: EditorialEngine = {
+        async *stream(request, signal) {
+            yield* streamFactCheck({ request: { article: request.article, instructions: "Check", skipFactCheckClaim: request.skipFactCheckClaim }, signal, provider });
+        },
+        async *streamConversation() {
+            return;
+        },
+        async *streamAssistant(request, signal) {
+            const tool = request.tools.find((candidate) => candidate.capability === "fact_check");
+            assert.ok(tool);
+            await tool.execute({}, signal);
+            yield { type: EDITORIAL_ENGINE_EVENT.COMPLETED, responseId: "assistant", text: "" };
+        },
+    };
+
+    await withService(engine, async (baseUrl, repositories) => {
+        const article = repositories.articleService.createArticle({ title: "Draft", content: "First claim. Second claim." });
+        const requestId = "skip-claim-request";
+        const response = await fetch(`${baseUrl}/api/articles/${article.id}/assistant/requests`, {
+            method: HTTP_METHOD.POST,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ requestId, authorMessage: "Check", explicitSkillId: "fact_checking", scope: { kind: "article", baseRevisionId: article.currentRevisionId } }),
+        });
+        assert.ok(response.body);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let events = "";
+        while (!events.includes('"claims":[{"claim":"First claim"')) {
+            const chunk = await reader.read();
+            assert.equal(chunk.done, false);
+            events += decoder.decode(chunk.value);
+        }
+
+        const unknown = await fetch(`${baseUrl}${createAssistantClaimSelectionPath(article.id, requestId)}`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ claim: "Not extracted", selected: false }),
+        });
+        assert.equal(unknown.status, 400);
+
+        const skipped = await fetch(`${baseUrl}${createAssistantClaimSelectionPath(article.id, requestId)}`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ claim: "First claim", selected: false }),
+        });
+        assert.equal(skipped.status, 204);
+        const restored = await fetch(`${baseUrl}${createAssistantClaimSelectionPath(article.id, requestId)}`, {
+            method: HTTP_METHOD.PUT,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ claim: "First claim", selected: true }),
+        });
+        assert.equal(restored.status, 204);
+        finishResearch();
+        for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read())
+            events += decoder.decode(chunk.value);
+
+        assert.match(events, /"type":"completed"/);
+        assert.deepEqual(repositories.factChecks.listFactChecks(article.id)[0]?.findings.map(({ claim }) => claim), ["First claim", "Second claim"]);
     });
 });

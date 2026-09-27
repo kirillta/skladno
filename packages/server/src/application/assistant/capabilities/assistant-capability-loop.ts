@@ -16,6 +16,8 @@ import type { AssistantStore } from "../assistant-store.js";
 import type { EditorialEngineResolver } from "../../editorial/engine/editorial-engine-resolver.js";
 import type { ConversationHistory } from "../requests/conversation-history.js";
 import { AssistantSkillCatalog } from "../skills/assistant-skill-catalog.js";
+import { AssistantToolProgress } from "./assistant-tool-progress.js";
+import { captureArtifactProgress } from "./assistant-artifact-progress.js";
 import type { AuthorSkillService } from "../skills/author-skill-service.js";
 import { AuthorSkillChatActions } from "../skills/author-skill-chat-actions.js";
 import type { CommittedAuthorSkillChange } from "../skills/committed-author-skill-change.js";
@@ -104,9 +106,10 @@ export class AssistantCapabilityLoop {
             ? [request.authorMessage, ...selectedSkills.flatMap((skill) => [skill.instructions, ...(skill.references ?? [])])].filter(Boolean).join("\n\n")
             : request.authorMessage;
         let primary: CompletionEvent | undefined;
+        const progress = new AssistantToolProgress();
         const tools = this.createCapabilityTools(request, excerpt, authorContext, () => primary, (event) => {
             primary = event;
-        });
+        }, (event) => progress.push(event));
 
         const editorialRequest = {
             message: request.authorMessage,
@@ -120,12 +123,7 @@ export class AssistantCapabilityLoop {
             ...(initialActiveCapabilities ? { initialActiveCapabilities } : {}),
         };
 
-        const stream = request.engine.streamAssistant(editorialRequest, signal);
-        for await (const event of stream) {
-            const resolved = this.resolveStreamEvent(request, event, primary);
-            if (resolved)
-                yield resolved;
-        }
+        yield* progress.stream(request.engine.streamAssistant(editorialRequest, signal), (event) => this.resolveStreamEvent(request, event, primary));
     }
 
 
@@ -183,7 +181,7 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private createCapabilityTools(request: PreparedAssistantRequest, excerpt: string, authorContext: string, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): EditorialAssistantTool[] {
+    private createCapabilityTools(request: PreparedAssistantRequest, excerpt: string, authorContext: string, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void, onProgress: (event: EditorialEngineEvent) => void): EditorialAssistantTool[] {
         if (!this.dependencies.capabilities)
             return [];
 
@@ -194,7 +192,7 @@ export class AssistantCapabilityLoop {
             capability: definition.id,
             description: definition.activity,
             input: definition.input,
-            execute: (input, signal) => this.executeCapability(request, excerpt, authorContext, definition, input, signal, primary, setPrimary),
+            execute: (input, signal) => this.executeCapability(request, excerpt, authorContext, definition, input, signal, primary, setPrimary, onProgress),
         }));
 
         tools.push({
@@ -230,7 +228,7 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private async executeCapability(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<unknown> {
+    private async executeCapability(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void, onProgress: (event: EditorialEngineEvent) => void): Promise<unknown> {
         signal.throwIfAborted();
         if (!isValidatedEditorialCapabilityCall(definition.id, input))
             throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
@@ -244,7 +242,7 @@ export class AssistantCapabilityLoop {
         if (definition.execution === "action")
             return this.stageAction(request, definition, input, signal);
 
-        return this.streamArtifactCapability(request, excerpt, authorContext, definition, input, signal, primary, setPrimary);
+        return this.streamArtifactCapability(request, excerpt, authorContext, definition, input, signal, primary, setPrimary, onProgress);
     }
 
 
@@ -285,7 +283,7 @@ export class AssistantCapabilityLoop {
     }
 
 
-    private async streamArtifactCapability(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void): Promise<{ status: "prepared" }> {
+    private async streamArtifactCapability(request: PreparedAssistantRequest, excerpt: string, authorContext: string, definition: EditorialCapabilityDefinition, input: Readonly<Record<string, string>>, signal: AbortSignal, primary: () => CompletionEvent | undefined, setPrimary: (event: CompletionEvent) => void, onProgress: (event: EditorialEngineEvent) => void): Promise<{ status: "prepared" }> {
         const exactReplacement = definition.id === EDITORIAL_CAPABILITY.GENERATE_PROPOSAL ? getExactCharacterReplacement(request, excerpt) : undefined;
         if (exactReplacement) {
             request.completedCapability = definition.id;
@@ -298,11 +296,16 @@ export class AssistantCapabilityLoop {
         const stream = this.dependencies.capabilities!.stream(this.createStreamContext(request, excerpt, authorContext, definition, input), signal, true);
         for await (const event of stream) {
             signal.throwIfAborted();
-            if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED)
+            if (event.type !== EDITORIAL_ENGINE_EVENT.COMPLETED) {
+                captureArtifactProgress(request, definition, event, onProgress);
                 continue;
+            }
 
             if (primary())
                 throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
+            if (definition.id === EDITORIAL_CAPABILITY.FACT_CHECK && event.factCheck)
+                request.partialFactCheck = event.factCheck;
 
             request.completedCapability = definition.id;
             setPrimary(event);
@@ -319,6 +322,7 @@ export class AssistantCapabilityLoop {
             capability: definition.id as StreamContext["capability"],
             context: { articleId: request.articleId, baseRevisionId: request.scope.baseRevisionId },
             requestId: request.requestId,
+            skipFactCheckClaim: request.skipFactCheckClaim,
             authorContext,
             ...(request.resolvedSkillId && isBuiltInSkillId(request.resolvedSkillId) ? { skillId: request.resolvedSkillId } : {}),
             ...(request.publishingCharacterLimit ? { targetArticleCharacterLimit: request.publishingCharacterLimit } : {}),

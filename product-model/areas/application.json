@@ -29,11 +29,12 @@
             "owners": [
                 "packages/server/src/presentation/routes/health-route.ts",
                 "packages/web/src/application/client.ts",
+                "packages/web/src/application/desktop-client.ts",
                 "packages/web/src/notifications",
                 "packages/electron/src/presentation/preload-bridge.ts",
                 "packages/server/src/infrastructure/electron/electron-ipc-application-adapter.ts"
             ],
-            "contract": "Health and stable error codes allow the renderer to present recoverable failures without exposing secrets or full Article bodies.",
+            "contract": "Health and stable error codes, including streaming failures carried across the Electron bridge, allow the renderer to present recoverable failures without exposing secrets or full Article bodies.",
             "persistence": "Errors are transient UI state; sensitive values are not included in the transport contract."
         },
         {

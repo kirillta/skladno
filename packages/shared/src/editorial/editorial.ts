@@ -20,6 +20,7 @@ export interface StartEditorialRequest {
     operation: EditorialOperation;
     authorContext?: string;
     targetLanguage?: string;
+    correctionSelection?: { expectedRevisionId: string; occurrenceIds: string[] };
 }
 
 
@@ -121,6 +122,7 @@ export interface FactCheckFinding {
 export interface FactCheck {
     reviewedRevisionId?: string;
     createdAt?: string;
+    incomplete?: boolean;
     findings: FactCheckFinding[];
 }
 

@@ -22,6 +22,7 @@ interface WorkspaceViewContent {
     revisions: ArticleRevisionsState;
     corpus: StyleCorpusState;
     generalSettings: GeneralSettings;
+    checkingClaimCount?: number;
     publishProfile: PublishLimitProfile;
     publishProfileLabel: string;
 }
@@ -47,7 +48,7 @@ interface WorkspaceViewNavigation {
 
 
 export function WorkspaceViewRouter({ content, actions, navigation }: { content: WorkspaceViewContent; actions: WorkspaceViewActions; navigation: WorkspaceViewNavigation }) {
-    const { view, article, workspace, editorial, revisions, corpus, generalSettings, publishProfile, publishProfileLabel } = content;
+    const { view, article, workspace, editorial, revisions, corpus, generalSettings, checkingClaimCount, publishProfile, publishProfileLabel } = content;
     const { runFactCheck, runTranslation, rejectTranslation, onSelectionChange, assistantSelection } = actions;
     const { proposalWarningsDismissed, dismissProposalWarnings, openWrite, openAssistant, selectedTranslationLanguages, setSelectedTranslationLanguage } = navigation;
     const renderPanel = (children: ReactNode) => <section data-focus-area={view === "write" ? undefined : "article-editor"} role="tabpanel" id={`workspace-panel-${view}`} aria-labelledby={`workspace-tab-${view}`} className={view === "write" || view === "revisions" || view === "proposal" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : view === "translations" ? "flex min-h-0 flex-1 flex-col overflow-hidden p-5" : view === "style-profile" ? "min-h-0 flex-1 overflow-hidden p-5" : "min-h-0 flex-1 overflow-y-auto p-5 [scrollbar-color:var(--color-border-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border-strong"}>{children}</section>;
@@ -64,7 +65,7 @@ export function WorkspaceViewRouter({ content, actions, navigation }: { content:
     if (view === "fact-check") {
         const revisionNumber = revisions.revisions.findIndex((revision) => revision.id === editorial.factCheck?.reviewedRevisionId);
         const reusedRevisionNumbers = Object.fromEntries(revisions.revisions.map((revision, index) => [revision.id, index + 1]));
-        return renderPanel(<FactCheckView data={{ factCheck: editorial.factCheck, revisionNumber: revisionNumber < 0 ? undefined : revisionNumber + 1, reusedRevisionNumbers, stale: editorial.factCheckStale }} actions={{ runAgain: runFactCheck, resolve: editorial.resolveFactCheck, proposeCorrections: editorial.proposeFactCorrections }} />);
+        return renderPanel(<FactCheckView data={{ factCheck: editorial.factCheck, currentRevisionId: article.currentRevisionId, revisions: revisions.revisions.length ? revisions.revisions : [article.currentRevision], runs: editorial.factCheckRuns, selectedRun: editorial.selectedFactCheckRun, revisionNumber: revisionNumber < 0 ? undefined : revisionNumber + 1, reusedRevisionNumbers, stale: editorial.factCheckStale, historical: editorial.factCheckHistorical, generalSettings, checkingClaimCount }} actions={{ runAgain: runFactCheck, selectRun: editorial.selectFactCheckRun, resolve: editorial.resolveFactCheck, proposeCorrections: editorial.proposeFactCorrections }} />);
     }
 
     if (view === "style-profile")

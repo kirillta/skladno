@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
@@ -11,12 +11,14 @@ import { AssistantTimeline as RenderAssistantTimeline } from "./AssistantTimelin
 // Product scenario: workspace.assistant.checkpoint-keyboard
 
 
-function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, openView, onRetry, onCheckpoint, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings, authorSkills }: {
+function AssistantTimeline({ state, message, errorDetails, activity, factCheckClaims, activeRequestId, setClaimSelected, collapsed, assistantMessages, streamedMessage, openView, onRetry, onCheckpoint, generalSettings, elapsedDuration, hasUnavailableAiConnection, openSettings, authorSkills }: {
     state: "idle" | "streaming" | "error";
     message: string;
     errorDetails?: string;
     activity?: AssistantCapabilityActivity;
     factCheckClaims?: FactCheckClaimPreview[];
+    activeRequestId?: string;
+    setClaimSelected?: (claim: string, selected: boolean) => Promise<void>;
     collapsed: boolean;
     assistantMessages?: AssistantMessage[];
     streamedMessage?: Parameters<typeof RenderAssistantTimeline>[0]["data"]["streamedMessage"];
@@ -29,7 +31,7 @@ function AssistantTimeline({ state, message, errorDetails, activity, factCheckCl
     openSettings?: () => void;
     authorSkills?: readonly AssistantSkillSummary[];
 }) {
-    return <RenderAssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection, authorSkills }} actions={{ openView, onRetry, onCheckpoint, openSettings }} />;
+    return <RenderAssistantTimeline data={{ state, message, errorDetails, activity, factCheckClaims, activeRequestId, collapsed, assistantMessages, streamedMessage, generalSettings, elapsedDuration, hasUnavailableAiConnection, authorSkills }} actions={{ openView, onRetry, onCheckpoint, openSettings, setClaimSelected }} />;
 }
 
 
@@ -99,6 +101,38 @@ describe("AssistantTimeline", () => {
 
         expect(screen.getByRole("region", { name: getMessage("assistant.factCheckClaimsChecked") })).toBeTruthy();
         expect(screen.getByText("HTTP was standardized in 1999.")).toBeTruthy();
+    });
+
+
+    it("shows extracted claims during the check and lets the Author restore a skipped claim", async () => {
+        const setClaimSelected = vi.fn(async () => undefined);
+        const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="streaming" message="" collapsed={false} activeRequestId="request" factCheckClaims={[{ claim: "First claim", checked: false, checking: true }, { claim: "Second claim", checked: true }]} setClaimSelected={setClaimSelected} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+
+        expect(screen.getByRole("region", { name: "Claims to check" })).toBeTruthy();
+        const marks = view.container.querySelectorAll("li svg");
+        expect([...marks].every((mark) => mark.classList.contains("size-3"))).toBe(true);
+        expect(marks[0]?.querySelector("path")?.getAttribute("d")).toBe("M8 12h8");
+        expect(marks[1]?.querySelector("path")?.getAttribute("d")).toBe("m8 12 2.5 2.5L16 9");
+        const first = screen.getByRole("checkbox", { name: "First claim" });
+        expect(first.closest("label")?.className).toContain("text-ink");
+        expect(screen.getByText("Second claim").closest("li")?.querySelector("label")).toBeNull();
+        await userEvent.click(first);
+        expect(setClaimSelected).toHaveBeenCalledWith("First claim", false);
+        expect((first as HTMLInputElement).checked).toBe(false);
+        await waitFor(() => expect(first.hasAttribute("disabled")).toBe(false));
+        await userEvent.click(first);
+        expect(setClaimSelected).toHaveBeenCalledWith("First claim", true);
+        expect((first as HTMLInputElement).checked).toBe(true);
+        expect(screen.queryByRole("checkbox", { name: "Second claim" })).toBeNull();
+        view.unmount();
+    });
+
+
+    it("links a partial Fact Check result to its findings", () => {
+        const view = render(<IntlProvider locale="en" messages={messages}><AssistantTimeline state="idle" message="" collapsed={false} assistantMessages={[{ id: "partial", articleId: "article", role: "assistant", kind: "response", status: "completed", responseKind: "findings_partial", createdAt: "2026-08-13T20:30:00.000Z", updatedAt: "2026-08-13T20:30:00.000Z" }]} factCheckClaims={[{ claim: "The RFC was published in 1999.", checked: true }]} generalSettings={defaultGeneralSettings} elapsedDuration="1 second" /></IntlProvider>);
+
+        expect(within(view.container).getByText(getMessage("assistant.response.partialFindings"))).toBeTruthy();
+        expect(within(view.container).getByRole("region", { name: getMessage("assistant.factCheckClaimsChecked") })).toBeTruthy();
     });
 
 

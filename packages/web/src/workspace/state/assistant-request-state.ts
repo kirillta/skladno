@@ -28,6 +28,8 @@ export interface AssistantRequestStore {
     setAiConnectionUnavailableByArticle: Setter<Record<string, boolean>>;
     factCheckClaimsByArticle: Record<string, FactCheckClaimPreview[]>;
     setFactCheckClaimsByArticle: Setter<Record<string, FactCheckClaimPreview[]>>;
+    activeRequestIdByArticle: Record<string, string>;
+    setActiveRequestIdByArticle: Setter<Record<string, string>>;
     activityByArticle: Record<string, AssistantCapabilityActivity>;
     setActivityByArticle: Setter<Record<string, AssistantCapabilityActivity>>;
     streamedMessagesByArticle: Record<string, StreamedAssistantMessage>;
@@ -44,6 +46,7 @@ export function useAssistantRequestStore(): AssistantRequestStore {
     const [errorDetailsByArticle, setErrorDetailsByArticle] = useState<Record<string, string>>({});
     const [aiConnectionUnavailableByArticle, setAiConnectionUnavailableByArticle] = useState<Record<string, boolean>>({});
     const [factCheckClaimsByArticle, setFactCheckClaimsByArticle] = useState<Record<string, FactCheckClaimPreview[]>>({});
+    const [activeRequestIdByArticle, setActiveRequestIdByArticle] = useState<Record<string, string>>({});
     const [activityByArticle, setActivityByArticle] = useState<Record<string, AssistantCapabilityActivity>>({});
     const [streamedMessagesByArticle, setStreamedMessagesByArticle] = useState<Record<string, StreamedAssistantMessage>>({});
     const controller = useRef<AbortController>();
@@ -53,7 +56,7 @@ export function useAssistantRequestStore(): AssistantRequestStore {
         messagesByArticle, setMessagesByArticle, stateByArticle, setStateByArticle,
         messageByArticle, setMessageByArticle, errorDetailsByArticle, setErrorDetailsByArticle,
         aiConnectionUnavailableByArticle, setAiConnectionUnavailableByArticle,
-        factCheckClaimsByArticle, setFactCheckClaimsByArticle, activityByArticle, setActivityByArticle,
+        factCheckClaimsByArticle, setFactCheckClaimsByArticle, activeRequestIdByArticle, setActiveRequestIdByArticle, activityByArticle, setActivityByArticle,
         streamedMessagesByArticle, setStreamedMessagesByArticle, controller, streamBuffers,
     };
 }

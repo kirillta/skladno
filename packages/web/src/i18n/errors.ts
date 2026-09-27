@@ -25,6 +25,7 @@ const errorMessages: Record<ApplicationErrorCode, MessageId> = {
     target_language_required: "errors.targetLanguageRequired",
     editorial_operation_unsupported: "errors.editorialOperationUnsupported",
     editorial_configuration_missing: "errors.editorialConfigurationMissing",
+    fact_correction_selection_invalid: "errors.factCorrectionSelectionInvalid",
     editorial_provider_failed: "errors.editorialProviderFailed",
     assistant_request_timed_out: "errors.assistantRequestTimedOut",
     editorial_stream_incomplete: "errors.editorialStreamIncomplete",

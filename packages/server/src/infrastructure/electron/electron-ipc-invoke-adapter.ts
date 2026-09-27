@@ -7,7 +7,7 @@ import { ApplicationServiceError } from "../../application/errors/application-se
 
 
 function isFactCheckResolution(value: unknown): value is NonNullable<import("@skladno/shared").FactCheckFinding["resolution"]> {
-    return value === "corrected_or_removed" || value === "accepted_as_written" || value === "evidence_accepted";
+    return value === "accepted_as_written" || value === "evidence_accepted";
 }
 
 
@@ -31,6 +31,14 @@ function isValidInvokeRequest(value: unknown): value is ElectronInvokeRequest {
 
     const candidate = value as { method?: unknown; args?: unknown };
     return isElectronApplicationMethod(candidate.method) && Array.isArray(candidate.args);
+}
+
+
+function setAssistantClaimSelected(args: readonly unknown[], services: ApplicationServices): void {
+    if (typeof args[0] !== "string" || typeof args[1] !== "string" || typeof args[2] !== "string" || typeof args[3] !== "boolean")
+        throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
+
+    services.assistant.setClaimSelected(args[0], args[1], args[2], args[3]);
 }
 
 
@@ -69,6 +77,7 @@ async function invokeApplicationMethod(method: ElectronApplicationMethod, args: 
         case ELECTRON_APPLICATION_METHOD.restoreRevision: return services.articles.restoreRevision(String(args[0]), String(args[1]));
         case ELECTRON_APPLICATION_METHOD.listAssistantSkills: return services.skills.discover();
         case ELECTRON_APPLICATION_METHOD.listAssistantMessages: return services.assistant.listMessages(String(args[0]));
+        case ELECTRON_APPLICATION_METHOD.setAssistantClaimSelected: return setAssistantClaimSelected(args, services);
         case ELECTRON_APPLICATION_METHOD.getAssistantEditMode: return services.assistant.getEditMode(String(args[0]));
         case ELECTRON_APPLICATION_METHOD.setAssistantEditMode:
             if (args[1] !== "review" && args[1] !== "direct")

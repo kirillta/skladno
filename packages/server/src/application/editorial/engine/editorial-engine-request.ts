@@ -15,4 +15,5 @@ export interface EditorialEngineRequest {
     previousResponseId?: string;
     targetLanguage?: string;
     reusableFactFindings?: FactCheckFinding[];
+    skipFactCheckClaim?: (claim: string) => boolean;
 }

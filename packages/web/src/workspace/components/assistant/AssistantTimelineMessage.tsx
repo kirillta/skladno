@@ -72,6 +72,7 @@ function resolveMessageContent(message: AssistantMessage, intl: Intl): string | 
 function getMessageView(responseKind: AssistantMessage["responseKind"]): AssistantView | undefined {
     switch (responseKind) {
         case "findings_prepared":
+        case "findings_partial":
             return "fact-check";
         case "translation_proposal_prepared":
             return "translations";

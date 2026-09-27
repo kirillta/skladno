@@ -10,18 +10,42 @@ type FactCheckViewTestProps = Parameters<typeof RenderFactCheckView>[0]["data"] 
 
 
 function FactCheckView(props: FactCheckViewTestProps) {
-    const { factCheck, revisionNumber, reusedRevisionNumbers, stale, runAgain, resolve, proposeCorrections } = props;
-    return <RenderFactCheckView data={{ factCheck, revisionNumber, reusedRevisionNumbers, stale }} actions={{ runAgain, resolve, proposeCorrections }} />;
+    const { factCheck, currentRevisionId, revisions, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, checkingClaimCount, runAgain, selectRun, resolve, proposeCorrections } = props;
+    return <RenderFactCheckView data={{ factCheck, currentRevisionId, revisions, runs, selectedRun, revisionNumber, reusedRevisionNumbers, stale, historical, checkingClaimCount }} actions={{ runAgain, selectRun, resolve, proposeCorrections }} />;
 }
 
 
-// product: history-and-publishing.fact-findings-advisory
+// Product scenarios: history-and-publishing.fact-check-history
 
 const factCheck = { reviewedRevisionId: "revision-1", findings: [{ factId: "fact-1", occurrenceId: "revision-1:fact-1", claim: "A claim that needs evidence.", status: "disputed" as const, rationale: "The source contradicts the stated number.", uncertainty: "Medium", sources: [{ url: "https://example.com/source", title: "Primary source", quality: "primary" as const, publishedAt: "2026-01-01" }] }] };
 
 afterEach(cleanup);
 
 describe("FactCheckView", () => {
+    it("distinguishes previous findings from claims in a running check", () => {
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={factCheck} checkingClaimCount={7} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getByText(/checking 7 claims/).textContent).toContain("previous completed check");
+    });
+
+    // Product scenario: workspace.findings.incomplete-timeout
+    it("labels timed-out findings as incomplete", () => {
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, incomplete: true }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getByText(getMessage("views.factCheckIncomplete"))).toBeTruthy();
+        expect(screen.getAllByText("A claim that needs evidence.")).toHaveLength(2);
+        expect(screen.getByRole("button", { name: getMessage("views.runFactCheckAgain") })).toBeTruthy();
+    });
+
+    it("shows evidence reuse provenance and the original check time", () => {
+        const finding = { ...factCheck.findings[0]!, reusedFromRevisionId: "revision-1", checkedAt: "2026-01-01T12:00:00.000Z" };
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings: [finding] }} reusedRevisionNumbers={{ "revision-1": 1 }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getByText("Evidence reused from Revision v1.")).toBeTruthy();
+        expect(screen.getByText(/^Checked /)).toBeTruthy();
+        expect(screen.getByRole("link", { name: /Primary source/ }).textContent).toContain("2026-01-01");
+    });
+
     it("keeps stale findings readable but blocks correction selection", async () => {
         const user = userEvent.setup();
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={factCheck} stale runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
@@ -34,7 +58,7 @@ describe("FactCheckView", () => {
     });
 
 
-    it("keeps unchanged and accepted findings active after a Revision update", () => {
+    it("keeps earlier findings readable but blocks corrections until a current Fact Check", () => {
         const findings = [
             { ...factCheck.findings[0], stale: true },
             { ...factCheck.findings[0], occurrenceId: "revision-1:fact-2", claim: "An unchanged claim.", stale: false },
@@ -42,7 +66,8 @@ describe("FactCheckView", () => {
         ];
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings }} stale runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
-        expect(screen.getAllByRole("button", { name: getMessage("views.proposeFactCorrection") })).toHaveLength(1);
+        expect(screen.queryByRole("button", { name: getMessage("views.proposeFactCorrection") })).toBeNull();
+        expect(screen.getAllByText("An unchanged claim.")).toHaveLength(2);
         expect(screen.getByText("Corrected or removed")).toBeTruthy();
     });
 
@@ -68,8 +93,10 @@ describe("FactCheckView", () => {
         Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: scrollTo });
         render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings: [{ ...factCheck.findings[0], resolution: "accepted_as_written" }] }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
 
-        await user.click(screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!);
+        screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!.focus();
+        await user.keyboard("{Enter}");
         expect(scrollTo).toHaveBeenCalledOnce();
+        expect(scrollTo.mock.contexts[0]).toBe(screen.getByLabelText(getMessage("views.factCheckFindings")).nextElementSibling);
         expect(screen.getAllByRole("button", { name: /A claim that needs evidence/ })[0]!.getAttribute("aria-current")).toBe("true");
         expect(screen.getByText("Accepted as written")).toBeTruthy();
     });
@@ -82,5 +109,32 @@ describe("FactCheckView", () => {
 
         await user.click(screen.getByRole("button", { name: getMessage("views.runFactCheck") }));
         expect(runAgain).toHaveBeenCalledOnce();
+    });
+
+    it("offers retained runs when the current Revision has no Fact Check", async () => {
+        const user = userEvent.setup();
+        const selectRun = vi.fn();
+        const revisions = [{ id: "revision-1", articleId: "article-1", content: "Draft", createdAt: "2026-01-01T00:00:00.000Z", provenance: { kind: "initial" as const } }, { id: "revision-2", articleId: "article-1", content: "Updated", createdAt: "2026-01-02T00:00:00.000Z", description: "Updated opening", provenance: { kind: "author-draft" as const } }];
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={undefined} currentRevisionId="revision-2" revisions={revisions} runs={[{ ...factCheck, createdAt: "2026-01-02T12:00:00.000Z" }]} reusedRevisionNumbers={{ "revision-1": 1 }} stale={false} runAgain={vi.fn()} selectRun={selectRun} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        await user.click(screen.getByRole("button", { name: "Fact Check history" }));
+        expect(screen.getAllByText("v2 · Updated opening")).toHaveLength(2);
+        await user.click(screen.getByRole("menuitemradio", { name: /v1/ }));
+        expect(selectRun).toHaveBeenCalledWith(0);
+    });
+
+    it("keeps an older run for the current Revision read-only", () => {
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={factCheck} runs={[factCheck, factCheck]} selectedRun={1} stale={false} historical runAgain={vi.fn()} selectRun={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getByText(/earlier Fact Check run is read-only/)).toBeTruthy();
+        expect(screen.queryByRole("button", { name: getMessage("views.proposeFactCorrection") })).toBeNull();
+        expect(screen.queryByRole("button", { name: getMessage("views.acceptFactAsWritten") })).toBeNull();
+    });
+
+    it("distinguishes dated evidence from a stale Revision", () => {
+        render(<IntlProvider locale="en" messages={messages}><FactCheckView factCheck={{ ...factCheck, findings: [{ ...factCheck.findings[0]!, checkedAt: "2026-01-02T12:00:00.000Z" }] }} stale={false} runAgain={vi.fn()} resolve={vi.fn()} proposeCorrections={vi.fn()} /></IntlProvider>);
+
+        expect(screen.getByText(/Time-sensitive claims may have changed/)).toBeTruthy();
+        expect(screen.queryByText(/earlier Revision/)).toBeNull();
     });
 });

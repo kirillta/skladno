@@ -21,6 +21,7 @@ export const APPLICATION_ERROR = {
     TARGET_LANGUAGE_REQUIRED: "target_language_required",
     EDITORIAL_OPERATION_UNSUPPORTED: "editorial_operation_unsupported",
     EDITORIAL_CONFIGURATION_MISSING: "editorial_configuration_missing",
+    FACT_CORRECTION_SELECTION_INVALID: "fact_correction_selection_invalid",
     EDITORIAL_PROVIDER_FAILED: "editorial_provider_failed",
     ASSISTANT_REQUEST_TIMED_OUT: "assistant_request_timed_out",
     EDITORIAL_STREAM_INCOMPLETE: "editorial_stream_incomplete",

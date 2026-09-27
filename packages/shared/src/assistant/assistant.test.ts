@@ -66,4 +66,8 @@ test("describes source-neutral Skills and capability-run transport fixtures", ()
 test("validates renderer-safe capability activity stream events", () => {
     assert.equal(isAssistantEvent({ type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: "request-1", activity: { summary: "Checking facts.", status: "started" } }), true);
     assert.equal(isAssistantEvent({ type: ASSISTANT_EVENT.CAPABILITY_ACTIVITY, requestId: "request-1", activity: { summary: "Checking facts.", status: "running" } }), false);
+    assert.equal(isAssistantEvent({ type: ASSISTANT_EVENT.TOOL_STATUS, requestId: "request-1", tool: "claim_extraction", status: "completed", claims: [{ claim: "A fact", checked: false }] }), true);
+    assert.equal(isAssistantEvent({ type: ASSISTANT_EVENT.TOOL_STATUS, requestId: "request-1", tool: "claim_extraction", status: "completed", claims: [{ claim: "A fact", checked: "false" }] }), false);
+    assert.equal(isAssistantEvent({ type: ASSISTANT_EVENT.TOOL_STATUS, requestId: "request-1", tool: "claim_extraction", status: "completed", claims: [{ claim: "A fact", checked: false, checking: true }] }), true);
+    assert.equal(isAssistantEvent({ type: ASSISTANT_EVENT.TOOL_STATUS, requestId: "request-1", tool: "claim_extraction", status: "completed", claims: [{ claim: "A fact", checked: false, checking: "true" }] }), false);
 });

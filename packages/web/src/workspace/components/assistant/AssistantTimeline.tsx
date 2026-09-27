@@ -15,6 +15,7 @@ interface AssistantTimelineData {
     errorDetails?: string;
     activity?: AssistantCapabilityActivity;
     factCheckClaims?: FactCheckClaimPreview[];
+    activeRequestId?: string;
     collapsed: boolean;
     assistantMessages?: AssistantMessage[];
     streamedMessage?: StreamedAssistantMessage;
@@ -32,6 +33,7 @@ interface AssistantTimelineActions {
     openSettings?: () => void;
     onCheckpoint?: (messageId: string) => void;
     applyEdit?: (messageId: string) => Promise<void>;
+    setClaimSelected?: (claim: string, selected: boolean) => Promise<void>;
 }
 
 
@@ -49,7 +51,7 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
     const lastMessage = assistantMessages?.at(-1);
     const skillByRequest = new Map(assistantMessages?.flatMap((item) => item.requestId && item.skillId ? [[item.requestId, item.skillId] as const] : []));
     const skillNames = new Map(authorSkills.map((skill) => [skill.reference.id, skill.name] as const));
-    const completedFactCheck = state === "idle" ? [...(assistantMessages ?? [])].reverse().find((item) => item.responseKind === "findings_prepared") : undefined;
+    const completedFactCheck = state === "idle" ? [...(assistantMessages ?? [])].reverse().find((item) => item.responseKind === "findings_prepared" || item.responseKind === "findings_partial") : undefined;
 
     useLayoutEffect(() => {
         if (collapsed)
@@ -107,6 +109,9 @@ export function AssistantTimeline({ data, actions }: { data: AssistantTimelineDa
 
 
     function handleChatKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+        if (event.target instanceof HTMLInputElement)
+            return;
+
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Home" && event.key !== "End")
             return;
 
@@ -142,17 +147,17 @@ function AssistantTimelineMessages({ data, actions, greeting, lastMessage, compl
     skillByRequest: Map<string, string>;
     skillNames: ReadonlyMap<string, string>;
 }) {
-    const { assistantMessages, factCheckClaims, streamedMessage, generalSettings } = data;
-    const { openView, openSkillFolder, onRetry, onCheckpoint, applyEdit } = actions;
+    const { assistantMessages, factCheckClaims, activeRequestId, state, streamedMessage, generalSettings } = data;
+    const { openView, openSkillFolder, onRetry, onCheckpoint, applyEdit, setClaimSelected } = actions;
     const intl = useIntl();
     return <>
         {greeting && <AssistantTimelineMessage message={greeting} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />}
-        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={onCheckpoint} applyEdit={applyEdit} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />)}
+        {assistantMessages?.filter((item) => item !== greeting).map((item) => <AssistantTimelineMessage key={item.id} message={item} factCheckClaims={item === completedFactCheck ? factCheckClaims : undefined} openView={openView} openSkillFolder={openSkillFolder} onRetry={item === lastMessage && !streamedMessage ? onRetry : undefined} onCheckpoint={state === "streaming" ? undefined : onCheckpoint} applyEdit={applyEdit} generalSettings={generalSettings} skillByRequest={skillByRequest} skillNames={skillNames} />)}
         {streamedMessage?.responseKind
             ? <AssistantTimelineMessage message={{ id: streamedMessage.id, articleId: streamedMessage.articleId, role: "assistant", kind: "response", status: streamedMessage.status, responseKind: streamedMessage.responseKind, createdAt: streamedMessage.createdAt, updatedAt: streamedMessage.createdAt }} openView={openView} onRetry={onRetry} generalSettings={generalSettings} skillByRequest={skillByRequest} />
             : streamedMessage?.blocks.length ? <article className="p-0"><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "assistant.heading" })}</p>{streamedMessage.blocks.map((block, index) => <AssistantMarkdown key={`${streamedMessage.id}-${index}`} content={block} />)}</article> : null}
         {!assistantMessages?.length && <p className="text-sm leading-6 text-muted">{intl.formatMessage({ id: "assistant.intro" })}</p>}
-        {factCheckClaims?.length && !completedFactCheck ? <FactCheckClaims claims={factCheckClaims} className="mr-6" /> : null}
+        {factCheckClaims?.length && !completedFactCheck ? <FactCheckClaims key={activeRequestId} claims={factCheckClaims} className="mr-6" onSelectionChange={state === "streaming" && activeRequestId ? setClaimSelected : undefined} /> : null}
     </>;
 }
 

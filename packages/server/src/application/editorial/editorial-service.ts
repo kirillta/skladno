@@ -21,6 +21,8 @@ import type { EditorialServiceRequest } from "./editorial-request.js";
 import { getReusableFactFindings } from "./fact-checking/reusable-fact-findings.js";
 import { persistFactCheckArtifact } from "./fact-checking/persist-fact-check-artifact.js";
 import type { FactCheckArtifactStore } from "./fact-checking/fact-check-artifact-store.js";
+import type { FactCheckRunStore } from "./fact-checking/fact-check-run-store.js";
+import { correctionContext, verifyCorrectionSelection } from "./fact-checking/verified-correction-selection.js";
 import type { TelemetryObserver } from "../telemetry/telemetry-observer.js";
 
 
@@ -29,6 +31,8 @@ interface EditorialStreamContext {
     engine: EditorialEngine;
     factCheck: boolean;
     translation: boolean;
+    correctionSelection?: { expectedRevisionId: string; occurrenceIds: string[] };
+    correctionContext?: string;
     styleProfile?: StyleProfile;
     articleStyleRules?: string;
     previousResponseId?: string;
@@ -59,7 +63,7 @@ interface EditorialArtifactsStore extends FactCheckArtifactStore {
 }
 
 
-interface FactChecksStore { listFactChecks(articleId: string): FactCheck[]; saveFactCheckRun(artifactId: string, articleId: string, revisionId: string): void; }
+interface FactChecksStore extends FactCheckRunStore { listFactChecks(articleId: string): FactCheck[]; }
 
 
 interface EditorialServiceStores {
@@ -77,10 +81,12 @@ interface EditorialServiceRuntime {
 }
 
 
-function prepareEditorialStream(articles: EditorialArticleStore, sessions: EditorialSessionStore, styleCorpus: EditorialStyleCorpusStore, engines: EditorialEngineResolver, sessionContinuationEnabled: boolean, request: EditorialServiceRequest): EditorialStreamContext {
+function prepareEditorialStream(articles: EditorialArticleStore, sessions: EditorialSessionStore, styleCorpus: EditorialStyleCorpusStore, factChecks: FactChecksStore, engines: EditorialEngineResolver, sessionContinuationEnabled: boolean, request: EditorialServiceRequest): EditorialStreamContext {
     const article = articles.getArticle(request.articleId);
     if (!article)
         throw new ApplicationServiceError(APPLICATION_ERROR.ARTICLE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+
+    const correction = getVerifiedCorrection(request, article, factChecks);
 
     const factCheck = request.operation === EDITORIAL_OPERATION.FACT_CHECK;
     const translation = request.operation === EDITORIAL_OPERATION.TRANSLATION;
@@ -102,11 +108,25 @@ function prepareEditorialStream(articles: EditorialArticleStore, sessions: Edito
         engine,
         factCheck,
         translation,
+        ...correction,
         ...(styleProfile ? { styleProfile } : {}),
         ...(styleProfile ? { articleStyleRules: styleCorpus.getArticleStyleRules(request.articleId) } : {}),
         ...(continuationScope ? { continuationScope } : {}),
         ...(previousResponseId ? { previousResponseId } : {}),
     };
+}
+
+
+function getVerifiedCorrection(request: EditorialServiceRequest, article: Article, factChecks: FactChecksStore): Pick<EditorialStreamContext, "correctionSelection" | "correctionContext"> {
+    const selection = request.correctionSelection;
+    if (!selection)
+        return {};
+
+    if (request.operation !== EDITORIAL_OPERATION.FLOW_REVISION || article.currentRevisionId !== selection.expectedRevisionId)
+        throw new ApplicationServiceError(APPLICATION_ERROR.FACT_CORRECTION_SELECTION_INVALID, HTTP_STATUS.CONFLICT);
+
+    const findings = verifyCorrectionSelection(factChecks.listFactChecks(request.articleId), article.currentRevisionId, selection.occurrenceIds);
+    return { correctionSelection: selection, correctionContext: correctionContext(findings) };
 }
 
 
@@ -140,7 +160,7 @@ function createEngineRequest(request: EditorialServiceRequest, context: Editoria
         articleTitle: context.article.title,
         ...(request.articleSelection ? { articleSelection: true } : {}),
         ...(request.surroundingArticleCharacterCount !== undefined ? { surroundingArticleCharacterCount: request.surroundingArticleCharacterCount } : {}),
-        authorContext: request.authorContext,
+        authorContext: context.correctionContext ?? request.authorContext,
         ...(request.skillId ? { skillId: request.skillId } : {}),
         ...(request.targetArticleCharacterLimit ? { targetArticleCharacterLimit: request.targetArticleCharacterLimit } : {}),
         ...(context.styleProfile ? { styleProfile: context.styleProfile } : {}),
@@ -148,6 +168,7 @@ function createEngineRequest(request: EditorialServiceRequest, context: Editoria
         ...(request.targetLanguage ? { targetLanguage: request.targetLanguage } : {}),
         ...(context.previousResponseId ? { previousResponseId: context.previousResponseId } : {}),
         ...(context.factCheck ? { reusableFactFindings: getReusableFactFindings(factChecks, request.articleId) } : {}),
+        ...(context.factCheck ? { skipFactCheckClaim: request.skipFactCheckClaim } : {}),
     };
 }
 
@@ -173,6 +194,7 @@ function createEditorialArtifactMetadata(request: EditorialServiceRequest, conte
         findings: event.styleReview?.findings,
         ...(includeFactCheck ? { factCheck: event.factCheck } : {}),
         translation: event.translation,
+        ...(context.correctionSelection ? { correctionSelection: context.correctionSelection } : {}),
     };
 }
 
@@ -227,18 +249,24 @@ export class EditorialService {
     ) { }
 
 
-    async *stream(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
+    async *stream(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<Exclude<EditorialEngineEvent, { type: typeof EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS }>> {
         const observed = beginTimedTelemetryCapture(this.telemetry);
 
         try {
-            const context = prepareEditorialStream(this.stores.articles, this.stores.sessions, this.stores.styleCorpus, this.runtime.engines, this.runtime.sessionContinuationEnabled, request);
-            yield* streamEditorialOperation(
+            const context = prepareEditorialStream(this.stores.articles, this.stores.sessions, this.stores.styleCorpus, this.stores.factChecks, this.runtime.engines, this.runtime.sessionContinuationEnabled, request);
+            const events = streamEditorialOperation(
                 request,
                 context,
                 this.stores.factChecks,
                 signal,
                 (event) => persistCompletedEditorialOutput(this.stores.sessions, this.stores.artifacts, this.stores.factChecks, request, context, this.runtime.sessionContinuationEnabled, event),
             );
+
+            for await (const event of events) {
+                if (event.type !== EDITORIAL_ENGINE_EVENT.FACT_CHECK_PROGRESS)
+                    yield event;
+            }
+
             observed.capture({ kind: "ai_operation_finished", operation: request.operation, outcome: signal.aborted ? "cancelled" : "completed", elapsedMs: observed.elapsedMs(), ...(signal.aborted ? { failure: "cancelled" as const } : {}) });
         } catch (error) {
             if (error instanceof EditorialEngineError && error.code === EDITORIAL_ENGINE_ERROR.SESSION_EXPIRED)
@@ -251,7 +279,7 @@ export class EditorialService {
 
 
     async *streamStaged(request: EditorialServiceRequest, signal: AbortSignal): AsyncIterable<EditorialEngineEvent> {
-        const context = prepareEditorialStream(this.stores.articles, this.stores.sessions, this.stores.styleCorpus, this.runtime.engines, this.runtime.sessionContinuationEnabled, request);
+        const context = prepareEditorialStream(this.stores.articles, this.stores.sessions, this.stores.styleCorpus, this.stores.factChecks, this.runtime.engines, this.runtime.sessionContinuationEnabled, request);
 
         try {
             yield* streamEditorialOperation(request, context, this.stores.factChecks, signal, () => undefined);

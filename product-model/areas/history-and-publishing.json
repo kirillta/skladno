@@ -35,8 +35,8 @@
             "title": "Revision-tied findings, citations, uncertainty, and stale indication",
             "status": "implemented",
             "owners": ["packages/web/src/workspace/views/FactCheckView.tsx", "packages/server/src/application/assistant/assistant-service.ts", "packages/server/src/infrastructure/editorial/engines/ai-sdk-editorial-engine.ts", "packages/server/src/infrastructure/persistence/repositories/fact-checks-repository.ts"],
-            "contract": "Findings remain advisory, Revision-tied, cited, uncertain, stale-aware, and actionable from Fact Check or Assistant. Fact Check shows status badges, selected-finding navigation, concise Revision numbers, and independently scrolling navigation and detail panes. Accepting a finding records only local advisory resolution and creates no Revision. Accepting a correction Proposal marks covered findings corrected or removed; remaining findings become stale with the new Revision.",
-            "persistence": "Findings and citations persist locally without modifying Article text; focused updates to other editorial artifacts do not replace or detach their citations."
+            "contract": "Findings remain advisory, Revision-tied, cited, uncertain, stale-aware, and actionable from Fact Check or Assistant. Fact Check defaults to the current Revision and lets Authors inspect retained runs by reviewed Revision and check date. It shows status badges, selected-finding navigation, original checked Revision and time for reused evidence, source dates, and independently scrolling navigation and detail panes. Older Revision and earlier same-Revision runs remain readable but read-only. Dated evidence carries a separate freshness reminder and refreshes only on explicit recheck. Accepting a finding records only local advisory resolution and creates no Revision. Only accepting a complete server-verified correction Proposal marks its selected findings corrected or removed in the same transaction as the new immutable Revision; dismissal, partial acceptance, and Revision conflict leave findings unresolved.",
+            "persistence": "Durable Facts, separate occurrences, findings, citations, and resolutions persist locally without modifying Article text; focused updates to other editorial artifacts do not replace or detach their citations."
         },
         {
             "id": "history-and-publishing.translations",
@@ -127,6 +127,16 @@
             "expected": ["Findings retain source citations, uncertainty, and the reviewed Revision identifier."],
             "forbidden": ["Fact-check output modifies Article text."],
             "evidence": { "kind": "automated", "path": "packages/server/src/presentation/editorial-integration.findings.test.ts" }
+        },
+        {
+            "id": "history-and-publishing.fact-check-history",
+            "title": "Retained Fact Check runs remain readable by Revision",
+            "capabilityIds": ["history-and-publishing.fact-check-findings"],
+            "preconditions": ["Fact Check runs exist for current and earlier Revisions."],
+            "event": "The Author chooses a retained run in Fact Check history.",
+            "expected": ["The chosen run shows only its own findings, check dates, and source dates.", "Historical runs are read-only and rechecking is explicit."],
+            "forbidden": ["Historical findings creating corrections or modifying Article text."],
+            "evidence": { "kind": "automated", "path": "packages/web/src/workspace/views/FactCheckView.test.tsx" }
         },
         {
             "id": "history-and-publishing.translation-stale-source",

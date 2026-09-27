@@ -37,9 +37,8 @@ export function withFindingFreshness(factCheck: FactCheck, revisionId: string, c
 
 
 function useFactCheckResults(client: EditorialWorkspaceClient, workspace: ArticleWorkspaceState) {
-    const intl = useIntl();
-    const { notifyError } = useNotifications();
-    const [factCheckResult, setFactCheckResult] = useState<EditorialResult<FactCheck>>();
+    const [factCheckResult, setFactCheckResult] = useState<EditorialResult<FactCheck[]>>();
+    const [selectedRun, setSelectedRun] = useState<{ articleId: string; revisionId: string; index: number }>();
 
     const loadFactChecks = useCallback(async () => {
         const article = workspace.selectedArticle;
@@ -47,31 +46,24 @@ function useFactCheckResults(client: EditorialWorkspaceClient, workspace: Articl
             return;
 
         const checks = await client.listFactChecks(article.id);
-        const factCheck = checks.find((check) => check.reviewedRevisionId === article.currentRevisionId) ?? checks[0];
-        if (factCheck)
-            setFactCheckResult({ articleId: article.id, baseRevisionId: factCheck.reviewedRevisionId ?? article.currentRevisionId, value: factCheck });
+        setFactCheckResult({ articleId: article.id, baseRevisionId: article.currentRevisionId, value: checks });
     }, [client, workspace.selectedArticle]);
 
     useEffect(() => {
         void loadFactChecks();
     }, [loadFactChecks]);
 
-    const factCheck = factCheckResult && factCheckResult.articleId === workspace.selectedArticle?.id && workspace.selectedArticle
-        ? withFindingFreshness(factCheckResult.value, workspace.selectedArticle.currentRevisionId, workspace.selectedArticle.currentRevision.content)
+    const article = workspace.selectedArticle;
+    const factCheckRuns = factCheckResult && factCheckResult.articleId === article?.id ? factCheckResult.value : [];
+    const selectedIndex = selectedRun && article && selectedRun.articleId === article.id && selectedRun.revisionId === article.currentRevisionId ? selectedRun.index : undefined;
+    const viewedCheck = selectedIndex === undefined
+        ? factCheckRuns.find((check) => check.reviewedRevisionId === article?.currentRevisionId)
+        : factCheckRuns[selectedIndex];
+    const factCheck = viewedCheck && article
+        ? withFindingFreshness(viewedCheck, article.currentRevisionId, article.currentRevision.content)
         : undefined;
-    const factCheckStale = factCheck?.findings.some((finding) => finding.stale) ?? false;
-
-    const markCorrectedFindings = useCallback(async (articleId: string, findingIds: string[]) => {
-        if (!client.resolveFactCheckFinding)
-            return;
-
-        try {
-            await Promise.all(findingIds.map((findingId) => client.resolveFactCheckFinding!(articleId, findingId, "corrected_or_removed")));
-            setFactCheckResult((current) => current?.articleId === articleId ? { ...current, value: { ...current.value, findings: current.value.findings.map((finding) => findingIds.includes(finding.occurrenceId ?? "") ? { ...finding, resolution: "corrected_or_removed" } : finding) } } : current);
-        } catch (error) {
-            notifyError(error, { fallbackMessage: intl.formatMessage({ id: "workspace.resolveFindingFailed" }) });
-        }
-    }, [client, intl, notifyError]);
+    const factCheckStale = Boolean(factCheck && factCheck.reviewedRevisionId !== workspace.selectedArticle?.currentRevisionId);
+    const factCheckHistorical = selectedIndex !== undefined && selectedIndex !== factCheckRuns.findIndex((check) => check.reviewedRevisionId === article?.currentRevisionId);
 
     const resolveFactCheck = useCallback(async (findingId: string, resolution: NonNullable<FactCheck["findings"][number]["resolution"]>) => {
         const article = workspace.selectedArticle;
@@ -82,9 +74,16 @@ function useFactCheckResults(client: EditorialWorkspaceClient, workspace: Articl
         await loadFactChecks();
     }, [client, loadFactChecks, workspace.selectedArticle]);
 
-    const setFactCheck = useCallback((result: EditorialResult<FactCheck>) => setFactCheckResult(result), []);
+    const setFactCheck = useCallback((result: EditorialResult<FactCheck>) => {
+        setFactCheckResult((current) => ({ ...result, value: [result.value, ...(current?.articleId === result.articleId ? current.value : [])] }));
+        setSelectedRun(undefined);
+    }, []);
+    const selectFactCheckRun = useCallback((index: number | undefined) => {
+        const article = workspace.selectedArticle;
+        setSelectedRun(article && index !== undefined ? { articleId: article.id, revisionId: article.currentRevisionId, index } : undefined);
+    }, [workspace.selectedArticle]);
 
-    return { factCheck, factCheckStale, loadFactChecks, markCorrectedFindings, resolveFactCheck, setFactCheck };
+    return { factCheck, factCheckRuns, selectedFactCheckRun: selectedIndex, selectFactCheckRun, factCheckStale, factCheckHistorical, loadFactChecks, resolveFactCheck, setFactCheck };
 }
 
 

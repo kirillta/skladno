@@ -100,6 +100,7 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
                     streamedMessage: assistant.streamedMessage,
                     activity: assistant.activity,
                     factCheckClaims: assistant.factCheckClaims ?? editorial.factCheck?.findings.map(({ claim }) => ({ claim, checked: true })),
+                    activeRequestId: assistant.activeRequestId,
                     translationLanguages: generalSettings.defaultTranslationLanguages.filter((language) => language !== workspace.selectedArticle?.language),
                     assistantMessages: assistant.messages,
                     selection: assistantSelection,
@@ -109,11 +110,28 @@ export function WorkspaceScreen({ content, actions, environment, selection }: {
                     restoredComposer: assistant.restoredComposer,
                     authorSkills,
                 }}
-                actions={{ onRequest: assistant.request, onCancel: assistant.cancel, onRetry: assistant.retry, setEditMode: assistant.setEditMode, applyEdit: assistant.applyEdit, loadAuthorSkills, dispatcher, shortcutOverrides, openView: layout.setView, openSkillFolder: desktop?.revealCreatedSkillDirectory ? (requestId) => void desktop.revealCreatedSkillDirectory?.(requestId) : undefined, openSettings, clearSelection: clearAssistantSelection, previewCheckpoint: assistant.previewCheckpoint, restoreCheckpoint: assistant.restoreCheckpoint, closeCheckpoint: assistant.closeCheckpoint }}
+                actions={{
+                    onRequest: assistant.request,
+                    onCancel: assistant.cancel,
+                    onRetry: assistant.retry,
+                    setClaimSelected: assistant.setClaimSelected,
+                    setEditMode: assistant.setEditMode,
+                    applyEdit: assistant.applyEdit,
+                    loadAuthorSkills,
+                    dispatcher,
+                    shortcutOverrides,
+                    openView: layout.setView,
+                    openSkillFolder: desktop?.revealCreatedSkillDirectory ? (requestId) => void desktop.revealCreatedSkillDirectory?.(requestId) : undefined,
+                    openSettings,
+                    clearSelection: clearAssistantSelection,
+                    previewCheckpoint: assistant.previewCheckpoint,
+                    restoreCheckpoint: assistant.restoreCheckpoint,
+                    closeCheckpoint: assistant.closeCheckpoint
+                }}
                 layout={{ collapsed: layout.assistantCollapsed, setCollapsed: layout.setAssistantCollapsed }} />,
             children: <>
                 {hasUsableAiConnection === false && <AiConnectionWarning openModelSettings={openModelSettings} />}
-                <ArticleWorkspace state={{ workspace, layout, editorial, revisions, corpus, publishing, generalSettings }} actions={{ createBlank, runFactCheck, runTranslation, rejectTranslation, shortcutOverrides, onSelectionChange, assistantSelection: assistantSelection?.preview }} />
+                <ArticleWorkspace state={{ workspace, layout, editorial, revisions, corpus, publishing, generalSettings, checkingClaimCount: assistant.state === "streaming" ? assistant.factCheckClaims?.length : undefined }} actions={{ createBlank, runFactCheck, runTranslation, rejectTranslation, shortcutOverrides, onSelectionChange, assistantSelection: assistantSelection?.preview }} />
                 {overlays}
             </>,
         }}

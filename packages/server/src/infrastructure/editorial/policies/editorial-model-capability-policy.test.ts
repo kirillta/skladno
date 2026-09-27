@@ -12,6 +12,8 @@ test("allows manual model IDs only for basic text generation", () => {
     assert.equal(policy.supportsOperation(AI_PROVIDER.DEEPSEEK, "manual-model", EDITORIAL_OPERATION.STYLE_REVIEW), false);
     assert.equal(policy.supportsOperation(AI_PROVIDER.XAI, "grok-4", EDITORIAL_OPERATION.TRANSLATION), true);
     assert.equal(policy.getCapabilities(AI_PROVIDER.OPENAI, "gpt-5").sourcedResearch, true);
-    assert.equal(policy.getCapabilities(AI_PROVIDER.ANTHROPIC, "claude-sonnet").sourcedResearch, false);
-    assert.equal(policy.supportsOperation(AI_PROVIDER.ANTHROPIC, "claude-sonnet", EDITORIAL_OPERATION.FACT_CHECK), false);
+    assert.equal(policy.getCapabilities(AI_PROVIDER.ANTHROPIC, "claude-sonnet").sourcedResearch, true);
+    assert.equal(policy.supportsOperation(AI_PROVIDER.ANTHROPIC, "claude-sonnet", EDITORIAL_OPERATION.FACT_CHECK), true);
+    assert.equal(policy.supportsOperation(AI_PROVIDER.GOOGLE, "gemini-2.5-pro", EDITORIAL_OPERATION.FACT_CHECK), true);
+    assert.equal(policy.supportsOperation(AI_PROVIDER.XAI, "grok-4", EDITORIAL_OPERATION.FACT_CHECK), true);
 });
