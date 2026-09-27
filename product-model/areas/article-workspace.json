@@ -71,7 +71,7 @@
                 "packages/web/src/workspace/components/assistant/AssistantCheckpointDialog.tsx",
                 "packages/web/src/workspace/state/assistant-messages-state.ts"
             ],
-            "contract": "Every persisted Author message can restore the active conversation to the moment before it was sent. Confirmation reports rejected work and warns before replacing unsent Composer content. Restoration returns the message text, Skill, target language, and caret to the Composer without recreating an old Article selection. Conversation actions support Left, Right, Home, End, Enter, and Space without changing Workspace focus-area navigation.",
+            "contract": "Every persisted Author message can restore the active conversation to the moment before it was sent, except while Assistant work is streaming. Confirmation reports rejected work and warns before replacing unsent Composer content. Restoration returns the message text, Skill, target language, and caret to the Composer without recreating an old Article selection. Conversation actions support Left, Right, Home, End, Enter, and Space without changing Workspace focus-area navigation.",
             "persistence": "The renderer applies conversation, Article, Draft, and Composer state only after the atomic local-service restore succeeds."
         },
         {

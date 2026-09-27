@@ -41,16 +41,15 @@ export function useAssistantMessages(client: EditorialWorkspaceClient, workspace
         }
     }, [article, client, intl, notifyError, store.activeRequestIdByArticle]);
     const previewCheckpoint = useCallback(async (messageId: string) => {
-        if (!article)
+        if (!article || store.stateByArticle[article.id] === "streaming")
             return;
 
-        store.controller.current?.abort();
         try {
             setCheckpointPreview(await client.previewAssistantCheckpoint(article.id, messageId));
         } catch (error) {
             notifyError(error, { fallbackMessage: intl.formatMessage({ id: "errors.assistantCheckpointInvalid" }) });
         }
-    }, [article, client, intl, notifyError, store.controller]);
+    }, [article, client, intl, notifyError, store.stateByArticle]);
     const restoreCheckpoint = useCallback(async (draftMode?: AssistantCheckpointDraftMode) => {
         if (!article || !checkpointPreview)
             return;
