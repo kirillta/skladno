@@ -6,6 +6,7 @@ import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/ed
 import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
 import type { FactCheckRequest } from "../models/fact-check-request.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
+import type { FactCheckResearch } from "../models/fact-check-research.js";
 import { inheritFactIdentity, matchFactCandidates, partitionFactClaims } from "./fact-claim-matching.js";
 
 
@@ -148,6 +149,10 @@ async function checkClaim(claim: { claim: string }, instructions: string, signal
     if (!evaluation.findings.length)
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
+    const evidenceUrls = getEvidenceUrls(research);
+    if (evaluation.findings.some((finding) => finding.sources.some((source) => !evidenceUrls.has(source.url))))
+        throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
+
     return {
         responseId: evaluation.responseId,
         findings: evaluation.findings.map((finding) => ({
@@ -162,6 +167,28 @@ async function checkClaim(claim: { claim: string }, instructions: string, signal
                 })),
         })),
     };
+}
+
+
+function getEvidenceUrls(research: FactCheckResearch[]): Set<string> {
+    const urls = new Set<string>();
+    for (const { evidence, sources } of research) {
+        for (const url of evidence.match(/https?:\/\/[^\s<>"'`]+/g) ?? [])
+            urls.add(url.replace(/[.,;:!?)}\]]+$/, ""));
+
+        for (const url of getProviderSourceUrls(sources))
+            urls.add(url);
+    }
+
+    return urls;
+}
+
+
+function getProviderSourceUrls(sources: unknown): string[] {
+    if (!Array.isArray(sources))
+        return [];
+
+    return sources.flatMap((source) => source && typeof source === "object" && "url" in source && typeof source.url === "string" ? [source.url] : []);
 }
 
 

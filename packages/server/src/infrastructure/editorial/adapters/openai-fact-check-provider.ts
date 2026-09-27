@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { generateText, Output } from "ai";
 import type { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
@@ -5,7 +6,8 @@ import { z } from "zod";
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
 import { createAiSdkGenerationOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
-import { getOpenAiResponseId, getOpenAiResponsesProviderOptions } from "./openai-responses.js";
+import { createFactCheckClaimPrompt } from "./fact-check-claim-prompt.js";
+import { getOpenAiResponsesProviderOptions } from "./openai-responses.js";
 import type { FactCheckResearch } from "../models/fact-check-research.js";
 import type { FactCheckFindingDraft } from "../models/fact-check-finding-draft.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
@@ -33,14 +35,13 @@ async function extractClaims(article: string, instructions: string, signal: Abor
     const result = await generateText({
         ...createAiSdkGenerationOptions({ model: client.responses(model), signal, providerOptions: providerOptions() }),
         system: instructions,
-        prompt: `Phase: claim extraction\n\nPreviously checked claims (include only if still stated in the Article):\n${JSON.stringify(previousFindings.map(({ claim }) => claim))}\n\nArticle:\n${article}`,
+        prompt: createFactCheckClaimPrompt(article, previousFindings),
         output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12 + previousFindings.length) }) }),
     });
-    const completedResponseId = getOpenAiResponseId(result.providerMetadata);
-    if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))
+    if (!result.output || !isAcceptedFinish(result.finishReason))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-    return { responseId: completedResponseId, claims: result.output.claims };
+    return { responseId: randomUUID(), claims: result.output.claims };
 }
 
 
@@ -54,6 +55,9 @@ async function researchClaims(claims: { claim: string }[], instructions: string,
             tools: { web_search: client.tools.webSearch({ externalWebAccess: true, searchContextSize: "high" }) },
             toolChoice: { type: "tool", toolName: "web_search" },
         });
+
+        if (!isAcceptedFinish(result.finishReason))
+            throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
         research.push({ claim, evidence: result.text, sources: result.sources });
     }
@@ -69,9 +73,8 @@ async function evaluateClaims(research: FactCheckResearch[], instructions: strin
         prompt: `Phase: evidence evaluation\n\nResearch evidence:\n${JSON.stringify(research)}`,
         output: Output.object({ schema: z.object({ findings: z.array(findingSchema) }) }),
     });
-    const completedResponseId = getOpenAiResponseId(result.providerMetadata);
-    if (!result.output || !completedResponseId || !isAcceptedFinish(result.finishReason))
+    if (!result.output || !isAcceptedFinish(result.finishReason))
         throw new EditorialEngineError(EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT, EDITORIAL_ENGINE_ERROR.INVALID_OUTPUT);
 
-    return { responseId: completedResponseId, findings: result.output.findings };
+    return { responseId: randomUUID(), findings: result.output.findings };
 }

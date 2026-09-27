@@ -252,3 +252,33 @@ test("restores an in-flight claim before the Assistant finishes", async () => {
     await run;
     assert.deepEqual(completed?.findings.map(({ claim }) => claim), ["first", "second"]);
 });
+
+
+test("accepts only citations present in the research evidence", async () => {
+    const citedUrl = "https://example.org/report";
+    for (const { research, valid } of [
+        { research: { evidence: "See https://example.org/report.", sources: [] }, valid: true },
+        { research: { evidence: "Research summary", sources: [{ url: citedUrl }] }, valid: true },
+        { research: { evidence: "Research summary", sources: [] }, valid: false },
+        { research: { evidence: "See https://example.org/report-extra", sources: [] }, valid: false },
+    ]) {
+        const provider: FactCheckProvider = {
+            researchStage: "web_research",
+            extractClaims: async () => ({ responseId: "extracted", claims: [{ claim: "Claim" }] }),
+            researchClaims: async () => [{ claim: "Claim", ...research }],
+            evaluateClaims: async () => ({ responseId: "evaluated", findings: [{ claim: "Claim", status: "supported", rationale: "Evidence", uncertainty: "Low", sources: [{ url: citedUrl, title: "Report", excerpt: null, quality: "primary", publishedAt: null }] }] }),
+        };
+        const run = async () => {
+            let completed = false;
+            for await (const event of streamFactCheck({ request: { article: "Claim", instructions: "Check" }, signal: new AbortController().signal, provider }))
+                completed ||= event.type === "completed";
+
+            return completed;
+        };
+
+        if (valid)
+            assert.equal(await run(), true);
+        else
+            await assert.rejects(run(), { code: "invalid_output" });
+    }
+});

@@ -45,20 +45,25 @@ function createFactCheckProvider(options: Parameters<typeof createEditorialEngin
 function createNativeResearch(options: Parameters<typeof createEditorialEngine>[0], model: LanguageModel): FactCheckProvider["researchClaims"] | undefined {
     if (options.provider === AI_PROVIDER.ANTHROPIC) {
         const tool = createAnthropic({ apiKey: options.apiKey }).tools.webSearch_20250305({ maxUses: 3 });
-        return async (claims, instructions, signal) => researchClaims(claims, async (claim) => generateText({ ...createAiSdkGenerationOptions({ model, signal }), system: instructions, prompt: `Research this claim and identify dated sources:\n${claim}`, tools: { web_search: tool } as ToolSet }));
+        return async (claims, instructions, signal) => researchClaims(claims, async (claim) => generateText({ ...createAiSdkGenerationOptions({ model, signal }), system: instructions, prompt: createResearchPrompt(claim), tools: { web_search: tool } as ToolSet }));
     }
 
     if (options.provider === AI_PROVIDER.GOOGLE) {
         const tool = createGoogle({ apiKey: options.apiKey }).tools.googleSearch({});
-        return async (claims, instructions, signal) => researchClaims(claims, async (claim) => generateText({ ...createAiSdkGenerationOptions({ model, signal }), system: instructions, prompt: `Research this claim and identify dated sources:\n${claim}`, tools: { web_search: tool } as ToolSet }));
+        return async (claims, instructions, signal) => researchClaims(claims, async (claim) => generateText({ ...createAiSdkGenerationOptions({ model, signal }), system: instructions, prompt: createResearchPrompt(claim), tools: { web_search: tool } as ToolSet }));
     }
 
     if (options.provider === AI_PROVIDER.XAI) {
         const tool = createXai({ apiKey: options.apiKey }).tools.webSearch();
-        return async (claims, instructions, signal) => researchClaims(claims, async (claim) => generateText({ ...createAiSdkGenerationOptions({ model, signal }), system: instructions, prompt: `Research this claim and identify dated sources:\n${claim}`, tools: { web_search: tool } as ToolSet }));
+        return async (claims, instructions, signal) => researchClaims(claims, async (claim) => generateText({ ...createAiSdkGenerationOptions({ model, signal }), system: instructions, prompt: createResearchPrompt(claim), tools: { web_search: tool } as ToolSet }));
     }
 
     return undefined;
+}
+
+
+function createResearchPrompt(claim: string): string {
+    return `Research this claim and identify dated sources:\n${claim}`;
 }
 
 

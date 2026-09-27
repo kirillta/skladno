@@ -5,6 +5,7 @@ import { z } from "zod";
 import { EDITORIAL_ENGINE_ERROR } from "../../../application/editorial/engine/editorial-engine-errors.js";
 import { EditorialEngineError } from "../../../application/editorial/engine/editorial-engine-error.js";
 import { createAiSdkGenerationOptions, isAcceptedFinish } from "./ai-sdk-provider.js";
+import { createFactCheckClaimPrompt } from "./fact-check-claim-prompt.js";
 import type { FactCheckProvider } from "../models/fact-check-provider.js";
 import type { FactCheckResearch } from "../models/fact-check-research.js";
 import { claimSchema, findingSchema } from "../models/fact-check-schemas.js";
@@ -17,7 +18,7 @@ export function createSourcedFactCheckProvider(model: LanguageModel, research: F
             const result = await generateText({
                 ...createAiSdkGenerationOptions({ model, signal }),
                 system: instructions,
-                prompt: `Phase: claim extraction\n\nPreviously checked claims (include only if still stated in the Article):\n${JSON.stringify(previousFindings.map(({ claim }) => claim))}\n\nArticle:\n${article}`,
+                prompt: createFactCheckClaimPrompt(article, previousFindings),
                 output: Output.object({ schema: z.object({ claims: z.array(claimSchema).max(12 + previousFindings.length) }) }),
             });
             if (!result.output || !isAcceptedFinish(result.finishReason))
