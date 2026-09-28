@@ -63,7 +63,8 @@ export class SkillRevisionStore implements AuthorSkillRevisionStore {
 
 
     create(input: CreateAuthorSkillRevisionInput): AuthorSkillRevision {
-        if (!skillId.test(input.skillId) || Object.keys(input.files).length === 0 || Object.entries(input.files).some(([path, content]) => !isPackageFile(path) || typeof content !== "string"))
+        const files = Object.entries(input.files);
+        if (!skillId.test(input.skillId) || files.length === 0 || files.some(([path]) => !isPackageFile(path)))
             throw new Error("invalid_skill_revision");
 
         const revision: AuthorSkillRevision = {

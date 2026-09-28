@@ -14,13 +14,15 @@ function parseProposalChanges(value: unknown): ProposalChange[] {
     if (!Array.isArray(value) || value.length > 50)
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);
 
-    const result = value.filter((change): change is ProposalChange => Boolean(change)
-        && typeof change === "object"
-        && typeof (change as ProposalChange).id === "string"
-        && Array.isArray((change as ProposalChange).baseLines)
-        && Array.isArray((change as ProposalChange).proposalLines)
-        && (change as ProposalChange).baseLines.every((line) => typeof line === "string")
-        && (change as ProposalChange).proposalLines.every((line) => typeof line === "string"));
+    const result = value.filter((change: unknown): change is ProposalChange => {
+        if (!change || typeof change !== "object" || !("id" in change) || typeof change.id !== "string"
+            || !("baseLines" in change) || !Array.isArray(change.baseLines)
+            || !("proposalLines" in change) || !Array.isArray(change.proposalLines))
+            return false;
+
+        return change.baseLines.every((line: unknown) => typeof line === "string")
+            && change.proposalLines.every((line: unknown) => typeof line === "string");
+    });
 
     if (result.length !== value.length)
         throw new ApplicationServiceError(APPLICATION_ERROR.INVALID_REQUEST, HTTP_STATUS.BAD_REQUEST);

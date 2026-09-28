@@ -73,7 +73,7 @@ function sameFiles(first: BackupBundleManifest["files"], second: BackupBundleMan
 
 
 export function validateBackupBundle(directory: string, manifest: BackupBundleManifest): void {
-    if (manifest.format !== 1 || !Array.isArray(manifest.files) || manifest.files.length > 10_000)
+    if (manifest.files.length > 10_000)
         throw new Error("backup_bundle_invalid_manifest");
 
     const paths = manifest.files.map((file) => file.path);
