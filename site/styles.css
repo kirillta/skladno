@@ -128,17 +128,21 @@ summary:focus-visible {
 }
 .desktop-nav > a:not(.button):hover,
 .desktop-nav > a:not(.button):focus-visible,
+.desktop-nav > a:not(.button):active,
+.desktop-nav .current,
+.desktop-nav > a[aria-current="location"] {
+  color: var(--teal-dark);
+  font-weight: 700;
+}
 .footer-links a:hover {
   color: var(--teal-dark);
 }
 .desktop-nav > a:not(.button):hover::after,
 .desktop-nav > a:not(.button):focus-visible::after,
-.desktop-nav > .current::after {
+.desktop-nav > a:not(.button):active::after,
+.desktop-nav > .current::after,
+.desktop-nav > a[aria-current="location"]::after {
   transform: scaleX(1);
-}
-.desktop-nav .current {
-  color: var(--teal-dark);
-  font-weight: 700;
 }
 .button {
   min-height: 50px;
@@ -951,6 +955,11 @@ p {
   font-size: 12px;
   line-height: 1.8;
 }
+.faq-list p a {
+  color: var(--teal-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .plans-cta .section-wrap {
   display: flex;
   align-items: flex-start;
@@ -1101,11 +1110,15 @@ p {
     border-radius: 4px;
     font-size: 13px;
   }
-  .mobile-nav nav a:hover,
-  .mobile-nav nav a[aria-current="page"] {
-    background: #eef2ec;
-    color: var(--teal-dark);
-  }
+.mobile-nav nav a:hover,
+.mobile-nav nav a:focus-visible,
+.mobile-nav nav a:active,
+.mobile-nav nav a[aria-current="page"],
+.mobile-nav nav a[aria-current="location"] {
+  background: #eef2ec;
+  color: var(--teal-dark);
+  font-weight: 700;
+}
   .hero {
     padding-block: 61px 57px;
     gap: 28px;

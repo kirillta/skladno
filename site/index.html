@@ -87,7 +87,7 @@
             >
           </div>
           <p class="fine-print">
-            Free and MIT licensed
+            Always open source · Free features stay free
           </p>
         </div>
 
@@ -169,7 +169,7 @@
       <section class="proof-strip section-wrap" aria-label="At a glance">
         <p>Your Articles stay on this computer</p>
         <p>You choose which edits to accept</p>
-        <p>Open source under the MIT license</p>
+        <p>Open source, always</p>
       </section>
 
       <section class="features section-wrap" id="features">
@@ -330,7 +330,7 @@
         </div>
       </section>
 
-      <section class="providers section-wrap">
+      <section class="providers section-wrap" id="providers">
         <div>
           <p class="eyebrow">YOUR TOOLS, YOUR CHOICE</p>
           <h2>Bring the provider<br />that works for you.</h2>
@@ -370,7 +370,7 @@
             >
           </div>
           <small
-            >Free to use · MIT licensed</small
+            >Always open source · Free features stay free</small
           >
         </div>
       </section>
@@ -414,5 +414,44 @@
         ><span>Your writing stays on your computer.</span>
       </div>
     </footer>
+    <script>
+      const sectionLinks = [...document.querySelectorAll('.site-header nav a[href^="#"]')];
+      const sections = sectionLinks
+        .map((link) => document.querySelector(link.hash))
+        .filter(Boolean);
+
+      function updateActiveNavigation() {
+        const marker = document.querySelector(".site-header").getBoundingClientRect().bottom + 24;
+        const currentSection = sections.find((section) => {
+          const bounds = section.getBoundingClientRect();
+          return bounds.top <= marker && bounds.bottom > marker;
+        });
+
+        sectionLinks.forEach((link) => {
+          if (currentSection && link.hash === `#${currentSection.id}`) {
+            link.setAttribute("aria-current", "location");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+      }
+
+      let navigationUpdatePending = false;
+      window.addEventListener(
+        "scroll",
+        () => {
+          if (navigationUpdatePending) return;
+          navigationUpdatePending = true;
+          requestAnimationFrame(() => {
+            updateActiveNavigation();
+            navigationUpdatePending = false;
+          });
+        },
+        { passive: true },
+      );
+      window.addEventListener("resize", updateActiveNavigation);
+      window.addEventListener("hashchange", updateActiveNavigation);
+      updateActiveNavigation();
+    </script>
   </body>
 </html>
