@@ -34,7 +34,7 @@ Review a proposed translation before accepting it. Each translation becomes a se
 
 Your Articles and autosaved drafts stay on your computer. Save Revisions as you work; accepted AI edits also create a Revision. You can return to an earlier Revision while keeping the history that came after it.
 
-Choose a backup folder and create manual or daily automatic backups. See [Backups and recovery](docs/user/Backups-and-recovery.md) for details.
+Choose a backup folder and create manual or daily automatic backups. See [Backups and recovery](https://warplyn.com/docs/backups-and-recovery.html) for details.
 
 AI assistance requires an internet connection and an AI provider connection. When you request it, Skladno sends the relevant text and context to your chosen provider, whose data policies apply.
 
@@ -44,7 +44,9 @@ Preview your writing against your publishing preferences and length guidance, th
 
 ## Install Skladno
 
-Skladno is available for **Windows 11 x64**. The Debian preview is undergoing its installed Ubuntu 22.04 acceptance pass before it is supported.
+Skladno works on **Windows 11 x64 and Linux**. Debian packages are available as previews and have been tested on Debian.
+
+For Debian installation steps, see the [installation guide](https://warplyn.com/docs/installation.html).
 
 Currently supported AI providers:
 
@@ -59,18 +61,16 @@ Through OpenCode Zen, Authors can also use models from additional vendors availa
 
 1. Open the [latest release](https://github.com/kirillta/skladno/releases/latest) and download the Windows setup `.exe` from **Assets**.
 2. Run the installer and open Skladno.
-3. To use the Editorial Assistant, open **Settings > AI**, add your provider connection and API key, and verify the connection. Your provider's pricing applies.
+3. To use the Editorial Assistant, open **Settings > AI Assistant**, add your provider connection and API key, and verify the connection. Your provider's pricing applies.
 4. Create an Article and start writing. Set up a backup folder in **Settings > Data & backups** to protect your work.
 
 **Releases are not digitally signed.** Windows may show a SmartScreen warning. Check that you downloaded the installer from this repository's release page before continuing.
 
-On Windows, you control update checks, downloads, and restarts in **Settings > About**. If an update causes trouble, follow the [update recovery guide](docs/user/update-recovery.md).
+On Windows, you control update checks, downloads, and restarts in **Settings > About**. If an update causes trouble, follow the [update recovery guide](https://warplyn.com/docs/update-recovery.html).
 
 ## Help
 
-- [Using the Editorial Assistant](docs/user/Assistant.md)
-- [Creating Skills](docs/user/Skills.md)
-- [Backups and recovery](docs/user/Backups-and-recovery.md)
+- [User documentation](https://warplyn.com/docs/)
 - [Report a problem or suggest an improvement](https://github.com/kirillta/skladno/issues)
 
 ## License

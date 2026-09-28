@@ -84,7 +84,7 @@ Run this pass with a disposable `SKLADNO_DATA_DIR` and no private content:
 
 Create a public GitHub prerelease with the setup executable, `RELEASES`, and full `.nupkg`. Install an older preview into a disposable profile, create an Article, Draft, Revision, and Settings change, then use About Settings to allow update network access, check, explicitly download, and Restart and update. Confirm all data reopens and the update status becomes current.
 
-Exercise failed discovery, failed download, and failed snapshot paths. A failed checkpoint or snapshot must leave the existing preview open. For a failed upgraded startup, follow the public [update recovery guide](../../user/update-recovery.md): reinstall the previous preview and restore its matching pre-update snapshot. Record old and new versions, Windows architecture, pass/fail, recovery result, and remaining checks without private paths or Article content.
+Exercise failed discovery, failed download, and failed snapshot paths. A failed checkpoint or snapshot must leave the existing preview open. For a failed upgraded startup, follow the public [update recovery guide](https://warplyn.com/docs/update-recovery.html): reinstall the previous preview and restore its matching pre-update snapshot. Record old and new versions, Windows architecture, pass/fail, recovery result, and remaining checks without private paths or Article content.
 
 Mark the desktop pass failed if the renderer gains Node, filesystem, database, credential, or unrestricted IPC access; if generated content changes an Article without approval; or if install, upgrade, reinstall, or uninstall changes `.skladno` data.
 

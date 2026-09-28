@@ -6,11 +6,11 @@ Browser bundle transfers support files up to 100 MB each and 500 MB per backup. 
 
 In the Electron app, each database snapshot also has a neighboring `.sqlite.skills` folder containing current Author Skills, Skill Revision history, and a manifest. Keep the `.sqlite` file and its `.skills` folder together when copying or restoring a backup. Older database-only `.sqlite` backups remain selectable; restoring one retains the current Skill files and history.
 
-Set **Automatic backups** to Daily to create one snapshot the first time Skladno opens each day, while the browser still permits the chosen folder. Retention removes only older automatic snapshots; manually created backups are always kept.
+Set **Automatic backups** to **Daily** to create one snapshot the first time Skladno opens each day, while the browser still permits the chosen folder. **Automatic backup retention** removes only older automatic snapshots; manually created backups are always kept.
 
 ## Restore a backup
 
-Use **Restore a backup** in Settings to select a backup. Skladno checks its files before replacing active data and retains a local recovery copy of the prior database and Skill files. Restoring a `.skladno` backup replaces both the database and the saved Skill set. Restoring an older `.sqlite` backup replaces only the database.
+Use **Restore a backup** in **Settings → Data & backups** to select a backup. Skladno checks its files before replacing active data and retains a local recovery copy of the prior database and Skill files. Restoring a `.skladno` backup replaces both the database and the saved Skill set. Restoring an older `.sqlite` backup replaces only the database.
 
 For manual database-only recovery from a legacy `.sqlite` file while Skladno is stopped:
 

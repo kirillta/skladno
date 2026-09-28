@@ -1,0 +1,29 @@
+@import "../../../../packages/web/src/design-tokens.css";
+
+:root {
+    --vp-c-bg: var(--color-canvas);
+    --vp-c-bg-alt: var(--color-surface);
+    --vp-c-bg-elv: var(--color-surface-raised);
+    --vp-c-bg-soft: var(--color-surface-supporting);
+    --vp-c-text-1: var(--color-ink);
+    --vp-c-text-2: var(--color-muted);
+    --vp-c-text-3: var(--color-muted);
+    --vp-c-divider: var(--color-border);
+    --vp-c-gutter: var(--color-border);
+    --vp-c-border: var(--color-border-strong);
+    --vp-c-brand-1: var(--color-brand-hover);
+    --vp-c-brand-2: var(--color-brand);
+    --vp-c-brand-3: var(--color-brand);
+    --vp-c-brand-soft: var(--color-brand-soft);
+    --vp-c-tip-1: var(--color-brand-hover);
+    --vp-c-tip-2: var(--color-brand);
+    --vp-c-tip-3: var(--color-brand);
+    --vp-c-tip-soft: var(--color-brand-soft);
+    --vp-c-warning-1: var(--color-warning);
+    --vp-c-warning-soft: var(--color-warning-soft);
+    --vp-c-danger-1: var(--color-danger);
+    --vp-c-danger-soft: var(--color-danger-soft);
+    --vp-c-success-1: var(--color-success);
+    --vp-c-success-soft: var(--color-success-soft);
+    --vp-font-family-base: var(--font-ui);
+}

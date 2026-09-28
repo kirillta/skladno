@@ -8,7 +8,7 @@ Write an ADR only when the fix chooses a lasting boundary or rule that future wo
 
 ## Route terminology
 
-Update the [glossary](../../user/Glossary.md) only when a finding shows that an author-facing domain term is missing, ambiguous, or no longer describes implemented behavior. Add the term when authors need it to understand a product concept. Correct it when the concept remains but its definition is wrong. Retire it when no implemented concept uses it. Do not add visual labels, implementation names, or one-off test language.
+Update the [glossary](../../../site/user-docs/glossary.md) only when a finding shows that an author-facing domain term is missing, ambiguous, or no longer describes implemented behavior. Add the term when authors need it to understand a product concept. Correct it when the concept remains but its definition is wrong. Retire it when no implemented concept uses it. Do not add visual labels, implementation names, or one-off test language.
 
 ## Close the finding
 

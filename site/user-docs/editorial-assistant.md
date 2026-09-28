@@ -1,6 +1,6 @@
 # Editorial Assistant
 
-Use the Editorial Assistant when you want help composing, revising, checking facts, reviewing style, or preparing a translation. Every request is explicit. Choosing a Quick Action only puts a Skill starter in the composer. Select **Send** to start work.
+Use the Editorial Assistant when you want help composing, revising, checking facts, reviewing style, or preparing a translation. Every request is explicit. Choosing from **Quick actions** only puts a Skill starter in the Composer. Select **Send editorial request** to start work.
 
 If you have selected text, the request uses that selection. Ask again for the whole Article when you want to widen the scope.
 
@@ -17,4 +17,4 @@ Skills help shape a request but do not add permissions. The Assistant chooses re
 
 Ask the Assistant to create a reusable Skill when a procedure should be available again. It may ask a short follow-up when the purpose, steps, or references are unclear. A created Skill is available at once and has its own local Skill Revision history. Creating it does not read your Article body or change its Draft, Proposal, or Revision.
 
-You can ask Assistant to inspect Revision history, saved editorial work, publishing guidance, or Style Corpus readiness. On an explicit request, it can add the current immutable Revision to the local Style Corpus and rebuild the Style Profile. It cannot accept Proposals, restore Revisions, resolve Findings, edit Drafts, delete style samples, or publish.
+You can ask the Editorial Assistant to inspect Revision History, saved editorial work, publishing guidance, or Style Corpus readiness. On an explicit request, it can add the current immutable Revision to the local Style Corpus and rebuild the Style Profile. It cannot accept Proposals, restore Revisions, resolve Findings, edit Drafts, delete style samples, or publish.

@@ -18,6 +18,7 @@ export default defineConfig(
             "**/coverage/**",
             "**/dist/**",
             "**/node_modules/**",
+            "site/public/docs/**",
         ],
     },
     {

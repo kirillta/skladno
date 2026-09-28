@@ -45,3 +45,4 @@ dist/
 .env.local
 packages/electron/telemetry.json
 /site/tokens.css
+/site/public/docs/

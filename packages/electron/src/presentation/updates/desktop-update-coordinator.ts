@@ -6,7 +6,7 @@ import { getAvailableUpdateState, getNewestCompatibleRelease, updatePreferences,
 
 const releasesUrl = "https://api.github.com/repos/kirillta/skladno/releases";
 const releasesDownloadUrl = "https://github.com/kirillta/skladno/releases/download";
-const recoveryGuideUrl = "https://github.com/kirillta/skladno/blob/main/docs/user/update-recovery.md";
+const recoveryGuideUrl = "https://warplyn.com/docs/update-recovery.html";
 const automaticUpdateCheckInitialDelay = 5_000;
 const automaticUpdateCheckInterval = 86_400_000;
 
