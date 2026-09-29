@@ -15,6 +15,7 @@ export default defineConfig({
                 text: "Installation",
                 items: [
                     { text: "Install Skladno", link: "/installation" },
+                    { text: "Moving from Skladno", link: "/migration" },
                 ],
             },
             {
