@@ -5,6 +5,7 @@ export type DesktopUpdateState = {
     networkAccess: boolean;
     recoveryAvailable?: boolean;
 } & (
+    | { kind: "migration" }
     | { kind: "unsupported" }
     | { kind: "current"; lastCheckedAt?: string }
     | { kind: "checking"; lastCheckedAt?: string }
@@ -63,7 +64,7 @@ export function isDesktopUpdateState(value: unknown): value is DesktopUpdateStat
     if (!hasCommonState(value))
         return false;
 
-    if (value.kind === "unsupported")
+    if (value.kind === "unsupported" || value.kind === "migration")
         return true;
 
     if (value.kind === "current" || value.kind === "checking")

@@ -1,6 +1,6 @@
 # Company repository and product-name migration
 
-Status: execution in progress. Prepared 2026-09-28 against version 0.5.5. The original repository was transferred to `punk-link/skladno-legacy` on 2026-09-29. No release, issue move, or application migration has been performed.
+Status: execution in progress. Prepared 2026-09-28 against version 0.5.5. The original repository was transferred to `punk-link/skladno-legacy` and 60 active issues moved to `punk-link/warplyn`. Warplyn v0.6.0 is published. Phase 6 legacy implementation is prepared; announcement publication and installed acceptance remain pending.
 
 ## Outcome and decisions
 
@@ -190,15 +190,25 @@ Gate: the full journey succeeds on disposable Windows and Ubuntu profiles, and s
 
 Owner: implementation maintainer and release owner, in the legacy repository. Prepare in parallel; publish only after new installers and migration instructions are available.
 
-- [ ] Keep every legacy installer identity, executable, data path, credential namespace, and backup format unchanged.
-- [ ] Add a clear About/Updates notice and explicit external action, such as `Download NEW NAME`, linking to the stable migration page. State that this installs a separate app and requires backup restore and API-key setup.
-- [ ] In this final build, replace routine update discovery/download controls with the migration notice. Do not fetch the new release feed, automatically download the new installer, or launch it.
-- [ ] Update any shared update-state contract, status-bar controller, key binding, and localized copy needed so the final build does not retain misleading check/download actions. Preserve startup recovery completion for users arriving through a staged legacy update.
+- [x] Keep every legacy installer identity, executable, data path, credential namespace, and backup format unchanged.
+- [x] Add a clear About/Updates notice and explicit external action, such as `Download NEW NAME`, linking to the stable migration page. State that this installs a separate app and requires backup restore and API-key setup.
+- [x] In this final build, replace routine update discovery/download controls with the migration notice. Do not fetch the new release feed, automatically download the new installer, or launch it.
+- [x] Update any shared update-state contract, status-bar controller, key binding, and localized copy needed so the final build does not retain misleading check/download actions. Preserve startup recovery completion for users arriving through a staged legacy update.
 - [ ] Publish a normal legacy stable release greater than every supported published legacy version. Include the existing installer, `RELEASES`, full `.nupkg`, and Debian package. Stable publication makes the announcement reachable from stable-only and preview-inclusive clients.
 - [ ] Put migration instructions in its release notes as well. Older builds can read them without first installing the final build; Linux users continue to install packages manually.
 - [ ] Do not assume users will install this final build. The backup journey must also work from tested earlier Skladno versions with supported backup formats. Users with checks disabled can use the website and manual downloads.
 
 Gate: a real older Windows installation discovers only the final Skladno release, updates safely, and then offers the external new-app download. Neither that build nor older builds ever receive renamed-app packages from the legacy feed.
+
+### Phase 6 preparation record, 2026-09-29
+
+Prepared in the isolated legacy worktree on `migration/final-skladno-announcement`, targeting stable `0.5.6`, greater than legacy stable `0.5.5` and preview `0.4.0-preview.3`. The original checkout's existing changes are preserved. Warplyn `v0.6.0` is published with its separate setup, RELEASES, full package, and Debian assets.
+
+The final legacy production composition uses a migration-only coordinator. About explains separate installation, backup restore, and API-key setup; Download Warplyn and the relabeled update shortcut explicitly open `https://warplyn.com/docs/migration.html`. Routine release fetching, scheduling, download, and apply are disabled. Startup success completion and existing recovery references remain supported. Legacy installer, executable, profile, data paths, credential services, and backup identifiers are unchanged. Both release workflows use `final-skladno-release-notes.md` so Authors can read the journey without installing the announcement build.
+
+Publication remains pending: the stable migration URL returns HTTP 421. AWS Amplify is the chosen hosting target, but its deployment and domain setup are not verified. Do not tag or publish the announcement until the guide is accessible with working downloads. Installed older-Windows upgrade and keyboard/screen-reader acceptance also remain pending; the earlier waiver covers only the repository-transfer updater drill.
+
+Verification passed: `npm run verify` (including 243 UI tests), production dependency audit, application/site builds, 17 browser E2E journeys, Windows Squirrel packaging, and the packaged Electron failure/restart test. The native package retains `io.github.kirillta.skladno-0.5.6-full.nupkg`, `Skladno-0.5.6-win32-x64-setup.exe`, and `RELEASES`. The focused test proves both Windows/Linux migration-only states cannot fetch, schedule, download, or apply an update and preserve recovery metadata. About controls have accessible names and the migration action is described by its persistent hint. Linux package build and the real installed upgrade drill remain pending CI/manual checks.
 
 ## Phase 7: release validation and publication order
 

@@ -105,7 +105,7 @@ jobs:
                   assets=(packages/electron/out/make/deb/x64/*.deb)
                   test "${#assets[@]}" -eq 1
                   if [[ "$RELEASE_TAG" == *-preview.* ]]; then prerelease=--prerelease; else prerelease=; fi
-                  if ! gh release create "$RELEASE_TAG" $prerelease --title "Skladno $RELEASE_TAG" --notes "Unsigned Skladno preview release."; then
+                  if ! gh release create "$RELEASE_TAG" $prerelease --title "Skladno $RELEASE_TAG" --notes-file docs/development/guides/final-skladno-release-notes.md; then
                     gh release view "$RELEASE_TAG" >/dev/null
                   fi
                   gh release upload "$RELEASE_TAG" "${assets[0]}" --clobber

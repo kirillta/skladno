@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { app, autoUpdater, BrowserWindow, dialog, ipcMain, Menu, net, screen, shell } from "electron";
+import { app, autoUpdater, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 import { createLocalApplication, loadServerConfig, loadServerEnvironment, registerElectronIpcApplicationAdapter, validateDatabaseSnapshot } from "@skladno/server/electron";
 import { defaultInterfaceLocale, getElectronMessagesFor } from "@skladno/shared";
@@ -15,7 +15,8 @@ import { getBuiltInSkillRoot } from "./desktop-skill-path.js";
 import { registerDesktopSettingsAdapter } from "./settings/desktop-settings.js";
 import { registerDesktopTelemetryAdapter } from "./telemetry/desktop-telemetry.js";
 import { registerDesktopShellAdapter } from "./shell/desktop-shell.js";
-import { createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter, supportsNativeUpdates, supportsReleaseDiscovery } from "./updates/desktop-updates.js";
+import { type createDesktopUpdateCoordinator, desktopUpdatesEvent, registerDesktopUpdatesAdapter, supportsNativeUpdates, supportsReleaseDiscovery } from "./updates/desktop-updates.js";
+import { createLegacyAnnouncementCoordinator } from "./updates/legacy-announcement-coordinator.js";
 
 
 const rendererUrl = "http://localhost:5173";
@@ -108,7 +109,7 @@ async function createMainWindow(): Promise<void> {
     registerDesktopShellAdapter({
         ipcMain,
         window,
-        checkForUpdates: () => void updates?.checkNow(),
+        checkForUpdates: () => void updates?.openReleaseNotes(),
         quit: () => void quitFrom(window),
     });
 
@@ -234,10 +235,9 @@ if (supportsNativeUpdates() && squirrelStartup) {
         };
 
         if (supportsReleaseDiscovery())
-            updates = createDesktopUpdateCoordinator(
+            updates = createLegacyAnnouncementCoordinator(
                 { runtimePath, currentVersion: app.getVersion(), supported: app.isPackaged, platform: supportsNativeUpdates() ? "win32" : "linux" },
                 {
-                    fetchReleases: () => net.fetch("https://api.github.com/repos/kirillta/skladno/releases"),
                     openExternal: (url) => shell.openExternal(url),
                 },
                 {
