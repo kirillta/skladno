@@ -125,6 +125,13 @@ export function UpdatesSettingsGroup({ client, desktop }: { client: DesktopUpdat
     if (!state)
         return null;
 
+    if (state.kind === "migration")
+        return <SettingsGroup label={intl.formatMessage({ id: "settings.updates" })}>
+            <SettingRow headingLevel={3} label={intl.formatMessage({ id: "settings.migrationTitle" })} hint={intl.formatMessage({ id: "settings.migrationHint" })}>
+                <Button onClick={() => void client.openReleaseNotes()}>{intl.formatMessage({ id: "settings.downloadWarplyn" })}</Button>
+            </SettingRow>
+        </SettingsGroup>;
+
     const status = getUpdateStatus(state, intl);
 
     return <SettingsGroup label={intl.formatMessage({ id: "settings.updates" })}>

@@ -18,6 +18,22 @@ import { resetApplicationSettingsTestEnvironment, settingsSnapshot } from "./App
 describe("ApplicationSettings updates", () => {
     afterEach(resetApplicationSettingsTestEnvironment);
 
+    it("offers only explicit migration guidance in the final legacy build", async () => {
+        const openReleaseNotes = vi.fn();
+        const client: DesktopUpdateClient = {
+            getState: vi.fn().mockResolvedValue({ kind: "migration", currentVersion: "0.5.6", automaticChecks: false, includePrereleases: false, networkAccess: false }),
+            setNetworkAccess: vi.fn(), setAutomaticChecks: vi.fn(), setIncludePrereleases: vi.fn(), checkNow: vi.fn(), download: vi.fn(), restartAndUpdate: vi.fn(), openReleaseNotes, openRecoveryGuide: vi.fn(), rendererReady: vi.fn(), subscribe: () => () => undefined,
+        };
+        render(<IntlProvider locale="en" messages={messages}><UpdatesSettingsGroup client={client} desktop /></IntlProvider>);
+        await userEvent.setup().click(await screen.findByRole("button", { name: getMessage("settings.downloadWarplyn") }));
+        expect(openReleaseNotes).toHaveBeenCalledOnce();
+        expect(screen.queryByRole("switch")).toBeNull();
+        expect(screen.queryByRole("button", { name: getMessage("settings.checkNow") })).toBeNull();
+        expect(screen.getByText(getMessage("settings.migrationHint"))).toBeTruthy();
+        expect(client.checkNow).not.toHaveBeenCalled();
+        expect(client.download).not.toHaveBeenCalled();
+    });
+
     it("shows update availability guidance in an Electron development build", async () => {
         window.skladnoDesktop = {} as DesktopSettingsClient;
         const setAutomaticChecks = vi.fn().mockResolvedValue({ kind: "unsupported", currentVersion: "0.0.0", automaticChecks: false, includePrereleases: false, networkAccess: true });

@@ -31,6 +31,10 @@ CI creates a public GitHub release or prerelease, uploads the installer, `RELEAS
 
 ## Consequences
 
+### Final legacy announcement build
+
+The final Skladno build uses `legacy-announcement-coordinator.ts` instead of routine release discovery. About provides an explicit external migration action for separately installing Warplyn, restoring a backup, and configuring API keys. The existing update shortcut opens that guide; update status alerts and routine controls are hidden. No release requests, schedules, installer downloads, or native apply operations occur. Renderer-ready completion still marks staged legacy startup recovery successful without deleting its snapshot reference. Installer and storage identities remain unchanged. Publish only after the new installers and stable public migration guide are accessible.
+
 Preview users receive updates without a signing certificate or a separate update server. They still see unsigned-publisher warnings, and Windows policy may block installation. HTTPS and Squirrel package integrity do not establish Authenticode publisher identity, so the preview must not be described as signed or suitable for general enterprise distribution.
 
 The renderer gains only a narrow desktop update client and validated state. GitHub access, release selection, Squirrel control, snapshots, and restart authority stay in Electron main. Browser and development builds expose no updater imitation.

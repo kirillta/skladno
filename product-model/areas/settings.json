@@ -110,7 +110,7 @@
             "title": "Author-controlled desktop release checks",
             "status": "implemented",
             "owners": ["packages/web/src/settings/components/UpdatesSettingsGroup.tsx", "packages/web/src/workspace/components/ArticleLibraryPanel.tsx", "packages/electron/src/presentation/updates/desktop-updates.ts"],
-            "contract": "About Settings asks the author in a confirmation dialog to allow GitHub update network access before any discovery request. After consent, it exposes automatic checks and a stable-only or prerelease-inclusive channel preference. Windows exposes explicit download, guarded restart, release notes, and recovery guidance; Linux exposes the newest matching Debian release and its release notes, but no in-app download or apply action. An available release appears in the Article Library utility area and opens About Settings with Updates focused. Browser builds omit the group; Electron development builds expose the persisted preferences but no discovery or download actions.",
+            "contract": "The final Skladno desktop build displays a localized About migration notice explaining separate Warplyn installation, backup restore, and API-key setup. Download Warplyn explicitly opens the stable public migration guide. Routine discovery, download, channel switches, and update status alerts are absent. The existing update key binding opens the migration guide and is labeled accordingly. Browser builds omit the desktop group. Legacy recovery metadata remains intact.",
             "persistence": "The desktop runtime file stores the network-permission, automatic-check, and prerelease-channel preferences plus non-content update recovery metadata."
         },
         {

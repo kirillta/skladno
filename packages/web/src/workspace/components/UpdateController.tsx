@@ -18,7 +18,7 @@ export function UpdateController({ className = "" }: { className?: string }) {
         return client.subscribe(setState);
     }, [client]);
 
-    if (!state || state.kind === "unsupported" || state.kind === "current" || state.kind === "checking")
+    if (!state || state.kind === "migration" || state.kind === "unsupported" || state.kind === "current" || state.kind === "checking")
         return null;
 
     const label = state.kind === "failed" ? intl.formatMessage({ id: "status.updateFailed" }) : state.kind === "ready" ? intl.formatMessage({ id: "status.updateReady" }) : state.kind === "downloading" ? intl.formatMessage({ id: "status.updateDownloading" }) : intl.formatMessage({ id: "status.updateAvailable" }, { version: state.version });
