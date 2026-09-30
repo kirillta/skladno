@@ -1,5 +1,7 @@
 # Skladno
 
+Skladno development continues in [Warplyn](https://github.com/punk-link/warplyn). This repository preserves Skladno history, conversations, and installers. [Move to Warplyn](https://main.dhsgh2xsr7g3j.amplifyapp.com/docs/migration.html) by installing it separately, restoring a backup, and adding your API keys again. Keep Skladno and its backups until you verify the restore. Active issues are tracked in the Warplyn repository.
+
 > Your ideas, in your voice.
 
 Skladno is an open-source, local-first desktop writing workspace for Authors. Work with an AI Editorial Assistant on your writing, in your voice. You decide what to ask for and which changes to keep.

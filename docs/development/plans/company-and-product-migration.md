@@ -255,6 +255,12 @@ Do not add code signing, a custom update service, automatic secret migration, or
 
 ## Failure handling and completion
 
+### Phase 7 rollout record, 2026-09-30
+
+The maintainer merged Phase 6 PR #249 with Quality and both desktop checks passing. Warplyn v0.6.0's four downloaded assets match every GitHub SHA-256 digest, and an anonymous RELEASES request returns HTTP 200. The initial Amplify landing responds successfully; its migration route is missing because the build uploads source instead of the compiled site. Warplyn PR #63 corrects the build and publishes installer guidance.
+
+The maintainer authorized beginning the rollout while custom-domain certificate verification is pending. The final legacy migration action therefore uses `https://main.dhsgh2xsr7g3j.amplifyapp.com/docs/migration.html`; `https://warplyn.com/docs/migration.html` remains the eventual canonical address. Wait for the Amplify guide to deploy before tagging the legacy release. Manual installed-release gates require recorded checks or an explicit maintainer waiver; none is inferred from permission to begin without the custom domain.
+
 If transfer redirects fail, pause the announcement rollout and keep manual legacy downloads available while fixing the observed problem. If new-app restore fails, keep the Author on Skladno; retain the failed destination for recovery only as needed and retry from the untouched backup after a fix. Do not point Skladno at a database migrated by the new app.
 
 If the renamed release is faulty, publish a corrected release and update download guidance. Do not overwrite a published version with different installer contents. Returning to Skladno recovers the pre-migration state; writing done later in the new app requires a separate export and is not automatically merged back.
