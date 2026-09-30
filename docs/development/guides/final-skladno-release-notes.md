@@ -2,7 +2,7 @@
 
 Skladno continues as **Warplyn**, a separately installed application. This is the final Skladno announcement release. Skladno no longer checks for or downloads further updates in this build.
 
-Open the [migration guide](https://main.dhsgh2xsr7g3j.amplifyapp.com/docs/migration.html) for Warplyn downloads and recovery instructions. This is the initial AWS Amplify address while the canonical `warplyn.com/docs/migration.html` domain certificate is being verified.
+Open the [migration guide](https://warplyn.com/docs/migration.html) for Warplyn downloads and recovery instructions.
 
 1. Finish active AI work and reopen Skladno so the latest Draft is checkpointed.
 2. In Data & backups, create a manual backup. Keep the `.sqlite` snapshot and adjacent `.sqlite.skills` directory together with their original names.
