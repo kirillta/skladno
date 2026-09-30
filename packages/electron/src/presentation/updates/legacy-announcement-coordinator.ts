@@ -2,7 +2,7 @@ import type { DesktopUpdateState } from "@skladno/shared";
 import { readRuntimeSettings, writeRuntimeSettings } from "../../infrastructure/runtime/runtime-settings.js";
 import type { createDesktopUpdateCoordinator } from "./desktop-update-coordinator.js";
 
-const migrationUrl = "https://warplyn.com/docs/migration.html";
+const migrationUrl = "https://main.dhsgh2xsr7g3j.amplifyapp.com/docs/migration.html";
 
 
 export function createLegacyAnnouncementCoordinator(...[runtime, source]: Parameters<typeof createDesktopUpdateCoordinator>): ReturnType<typeof createDesktopUpdateCoordinator> {

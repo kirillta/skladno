@@ -36,7 +36,7 @@ test("final legacy build never discovers or applies releases and completes stage
             coordinator.markStartupSuccessful();
         }
 
-        assert.deepEqual(opened, Array(2).fill("https://warplyn.com/docs/migration.html"));
+        assert.deepEqual(opened, Array(2).fill("https://main.dhsgh2xsr7g3j.amplifyapp.com/docs/migration.html"));
         const settings = JSON.parse(readFileSync(runtimePath, "utf8"));
         assert.equal(settings.startupSuccess, true);
         assert.equal(settings.recoverySnapshotPath, "fixture.sqlite");
